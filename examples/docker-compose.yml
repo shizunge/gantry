@@ -1,0 +1,31 @@
+version: "3.8"
+
+services:
+  gantry:
+    image: shizunge/gantry
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock
+    environment:
+      - "GANTRY_NODE_NAME={{.Node.Hostname}}"
+      - "GANTRY_SERVICES_SELF=${STACK}_gantry"
+      - "GANTRY_SLEEP_SECONDS=0"
+    deploy:
+      replicas: 0
+      placement:
+        constraints:
+          - node.role==manager
+      restart_policy:
+        condition: none
+      labels:
+        - swarm.cronjob.enable=true
+        - swarm.cronjob.schedule=45 23 0 * * *
+        - swarm.cronjob.skip-running=true
+
+  cronjob:
+    image: crazymax/swarm-cronjob:latest
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock
+    deploy:
+      placement:
+        constraints:
+          - node.role==manager
