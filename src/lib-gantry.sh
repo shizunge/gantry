@@ -15,6 +15,12 @@
 # along with this program.  If not, see <https://www.gnu.org/licenses/>.
 #
 
+is_true() {
+  local CONFIG=${1}
+  CONFIG=$(echo "${CONFIG}" | cut -d ' ' -f 1)
+  echo "${CONFIG}" | grep -q -i "true"
+}
+
 login_registry() {
   local USER=${1}
   local PASSWORD=${2}
@@ -100,8 +106,8 @@ add_image_to_remove() {
 }
 
 remove_images() {
-  local SKIP_CLEANUP_IMAGES=${GANTRY_CLEANUP_IMAGES_SKIP}
-  if [ -n "${SKIP_CLEANUP_IMAGES}" ]; then
+  local CLEANUP_IMAGES=${GANTRY_CLEANUP_IMAGES:-"true"}
+  if ! is_true ${CLEANUP_IMAGES}; then
     log INFO "Skip removing images."
     return 0
   fi
@@ -271,25 +277,25 @@ get_image_info() {
   local MANIFEST_OPTIONS=${GANTRY_MANIFEST_OPTIONS}
   local IMAGE=${1}
   local DOCKER_CONFIG=${2}
-  if [ -z "${USE_MANIFEST_CMD}" ]; then
-    # https://github.com/orgs/community/discussions/45779
-    docker ${DOCKER_CONFIG} buildx imagetools inspect ${MANIFEST_OPTIONS} ${IMAGE}
+  if is_true ${USE_MANIFEST_CMD}; then
+    docker ${DOCKER_CONFIG} manifest inspect ${MANIFEST_OPTIONS} ${IMAGE}
     return $?
   fi
-  docker ${DOCKER_CONFIG} manifest inspect ${MANIFEST_OPTIONS} ${IMAGE}
+  # https://github.com/orgs/community/discussions/45779
+  docker ${DOCKER_CONFIG} buildx imagetools inspect ${MANIFEST_OPTIONS} ${IMAGE}
 }
 
 # echo a non empty message if we found no new images.
 # echo nothing if we found a new image.
 # return the number of errors.
 inspect_image() {
-  local SKIP_MANIFEST_INSPECTION=${GANTRY_MANIFEST_SKIP_INSPECTION}
+  local MANIFEST_INSPECT=${GANTRY_MANIFEST_INSPECT:-"true"}
   local SERVICE_NAME=${1}
   local IMAGE=${2}
   local DIGEST=${3}
   local DOCKER_CONFIG=${4}
-  # never skip inspection on self
-  if [ -n "${SKIP_MANIFEST_INSPECTION}" ] && ! service_is_self ${SERVICE_NAME}; then
+  # Always inspect self
+  if ! is_true ${MANIFEST_INSPECT} && ! service_is_self ${SERVICE_NAME}; then
     return 0
   fi
   if in_list "${GLOBAL_NO_NEW_IMAGES}" "${DIGEST}"; then
@@ -338,11 +344,11 @@ get_service_update_additional_option() {
 }
 
 rollback_service() {
-  local ROLLBACK_SKIP_ON_FAILURE=${GANTRY_ROLLBACK_SKIP_ON_FAILURE}
+  local ROLLBACK_ON_FAILURE=${GANTRY_ROLLBACK_ON_FAILURE:-"true"}
   local ROLLBACK_OPTIONS=${GANTRY_ROLLBACK_OPTIONS}
   local SERVICE_NAME=${1}
   local DOCKER_CONFIG=${2}
-  if [ -n "${ROLLBACK_SKIP_ON_FAILURE}" ]; then
+  if ! is_true ${ROLLBACK_ON_FAILURE}; then
     return 0
   fi
   log INFO "Rolling ${SERVICE_NAME} back."
@@ -365,7 +371,7 @@ update_single_service() {
   fi
   local SERVICE_NAME=${1}
   local MODE=
-  if [ -z "${UPDATE_JOBS}" ] && MODE=$(service_is_job ${SERVICE_NAME}); then
+  if ! is_true ${UPDATE_JOBS} && MODE=$(service_is_job ${SERVICE_NAME}); then
     log DEBUG "Skip updating service ${SERVICE_NAME} that is a ${MODE}."
     return 0;
   fi

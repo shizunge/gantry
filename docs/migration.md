@@ -15,6 +15,7 @@ This guide helps you migrate from *shepherd* to *gantry* by highlighting the dif
 | UPDATE_OPTIONS      | GANTRY_UPDATE_OPTIONS           |
 | TIMEOUT             | GANTRY_UPDATE_TIMEOUT_SECONDS   |
 | ROLLBACK_OPTIONS    | GANTRY_ROLLBACK_OPTIONS         |
+| ROLLBACK_ON_FAILURE | GANTRY_ROLLBACK_ON_FAILURE      |
 | APPRISE_SIDECAR_URL | GANTRY_NOTIFICATION_APPRISE_URL |
 | REGISTRY_USER       | GANTRY_REGISTRY_USER            |
 | REGISTRY_PASSWORD   | GANTRY_REGISTRY_PASSWORD        |
@@ -31,18 +32,17 @@ The label on the services to select config to enable authentication is renamed t
 | WITH_REGISTRY_AUTH     | Manually add `--with-registry-auth` to `GANTRY_UPDATE_OPTIONS` and `GANTRY_ROLLBACK_OPTIONS`. |
 | WITH_INSECURE_REGISTRY | Manually add `--insecure` to `GANTRY_MANIFEST_OPTIONS`, `GANTRY_UPDATE_OPTIONS` and `GANTRY_ROLLBACK_OPTIONS`. |
 | WITH_NO_RESOLVE_IMAGE  | Manually add `--no-resolve-image` to `GANTRY_UPDATE_OPTIONS` and `GANTRY_ROLLBACK_OPTIONS`. |
-| ROLLBACK_ON_FAILURE    | Use `GANTRY_ROLLBACK_SKIP_ON_FAILURE` |
-| IMAGE_AUTOCLEAN_LIMIT  | Use `GANTRY_CLEANUP_IMAGES_SKIP` to control the cleanup. *Gantry* will only clean up the updated images. |
+| IMAGE_AUTOCLEAN_LIMIT  | Use `GANTRY_CLEANUP_IMAGES`. *Gantry* will only clean up the updated images. |
 | RUN_ONCE_AND_EXIT      | Set `GANTRY_SLEEP_SECONDS` to 0. |
 
 ### New configurations
 
 | *Gantry* Env  |
 |---------------|
-| GANTRY_CLEANUP_IMAGES_SKIP       |
+| GANTRY_CLEANUP_IMAGES            |
 | GANTRY_LOG_LEVEL                 |
 | GANTRY_MANIFEST_OPTIONS          |
-| GANTRY_MANIFEST_SKIP_INSPECTION  |
+| GANTRY_MANIFEST_INSPECT          |
 | GANTRY_MANIFEST_USE_MANIFEST_CMD |
 | GANTRY_NOTIFICATION_TITLE        |
 | GANTRY_REGISTRY_CONFIG           |

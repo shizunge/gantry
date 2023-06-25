@@ -59,24 +59,24 @@ You can configure the most behaviors of *Gantry* via environment variables.
 | Environment Variable  | Description | Default value |
 |-----------------------|-------------|---------------|
 | GANTRY_MANIFEST_OPTIONS          | Options added to the `docker buildx imagetools inspect` or `docker manifest inspect` command. | |
-| GANTRY_MANIFEST_SKIP_INSPECTION  | Set to a non empty string to skip checking manifest of the image.  As a result, `docker service update` always runs. In case you add `--force` to `GANTRY_UPDATE_OPTIONS`, you also want to skip the inspection. | |
-| GANTRY_MANIFEST_USE_MANIFEST_CMD | Set to a non empty string to run `docker manifest inspect` instead of `docker buildx imagetools inspect`. `docker manifest inspect` could [fail on some registries](https://github.com/orgs/community/discussions/45779). | |
+| GANTRY_MANIFEST_INSPECT          | Set to `true` to skip checking manifest of the image.  As a result, `docker service update` always runs. In case you add `--force` to `GANTRY_UPDATE_OPTIONS`, you also want to skip the inspection. | |
+| GANTRY_MANIFEST_USE_MANIFEST_CMD | Set to `true` to run `docker manifest inspect` instead of `docker buildx imagetools inspect`. `docker manifest inspect` could [fail on some registries](https://github.com/orgs/community/discussions/45779). | true |
 
 ### To add options to services update
 
 | Environment Variable  | Description | Default value |
 |-----------------------|-------------|---------------|
-| GANTRY_ROLLBACK_OPTIONS         | Options added to the `docker service update --rollback` command. | |
-| GANTRY_ROLLBACK_SKIP_ON_FAILURE | Set to a non empty string to disable rollback when updating fails. Set to an empty string to enable the rollback. | |
-| GANTRY_UPDATE_JOBS              | Set to a non empty string to update replicated-job or global-job. Set to an empty string to disable updating jobs. | |
-| GANTRY_UPDATE_OPTIONS           | Options added to the `docker service update` command. | |
-| GANTRY_UPDATE_TIMEOUT_SECONDS   | Error out if updating of a single service takes longer than the given time. | 300 |
+| GANTRY_ROLLBACK_OPTIONS       | Options added to the `docker service update --rollback` command. | |
+| GANTRY_ROLLBACK_ON_FAILURE    | Set to `true` to disable rollback when updating fails. Set to an empty string to enable the rollback. | true |
+| GANTRY_UPDATE_JOBS            | Set to `true` to update replicated-job or global-job. Set to an empty string to disable updating jobs. | |
+| GANTRY_UPDATE_OPTIONS         | Options added to the `docker service update` command. | |
+| GANTRY_UPDATE_TIMEOUT_SECONDS | Error out if updating of a single service takes longer than the given time. | 300 |
 
 ### After updating
 
 | Environment Variable  | Description | Default value |
 |-----------------------|-------------|---------------|
-| GANTRY_CLEANUP_IMAGES_SKIP      | Set to a non empty string to skip cleaning up the updated images. Set to an empty string to enable the cleanup. Before cleaning up, *Gantry* will try to remove any *exited* and *dead* containers that are using the images. | |
+| GANTRY_CLEANUP_IMAGES           | Set to `true` to skip cleaning up the updated images. Set to an empty string to enable the cleanup. Before cleaning up, *Gantry* will try to remove any *exited* and *dead* containers that are using the images. | true |
 | GANTRY_NOTIFICATION_APPRISE_URL | Enable notifications on service update with [apprise](https://github.com/djmaze/apprise-microservice). | |
 | GANTRY_NOTIFICATION_TITLE       | Add an additional message to the notification title. | |
 
