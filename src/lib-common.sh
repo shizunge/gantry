@@ -144,6 +144,12 @@ read_config() {
   echo ${CONFIG}
 }
 
+is_true() {
+  local CONFIG=${1}
+  CONFIG=$(echo "${CONFIG}" | cut -d ' ' -f 1)
+  echo "${CONFIG}" | grep -q -i "true"
+}
+
 swarm_network_arguments() {
   if [ -z "${NETWORK_NAME}" ]; then
     echo ""

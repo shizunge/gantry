@@ -15,12 +15,6 @@
 # along with this program.  If not, see <https://www.gnu.org/licenses/>.
 #
 
-is_true() {
-  local CONFIG=${1}
-  CONFIG=$(echo "${CONFIG}" | cut -d ' ' -f 1)
-  echo "${CONFIG}" | grep -q -i "true"
-}
-
 login_registry() {
   local USER=${1}
   local PASSWORD=${2}
@@ -285,33 +279,38 @@ get_image_info() {
   docker ${DOCKER_CONFIG} buildx imagetools inspect ${MANIFEST_OPTIONS} ${IMAGE}
 }
 
-# echo a non empty message if we found no new images.
-# echo nothing if we found a new image.
+# echo nothing if we found no new images.
+# echo the image if we found a new image.
 # return the number of errors.
 inspect_image() {
   local MANIFEST_INSPECT=${GANTRY_MANIFEST_INSPECT:-"true"}
   local SERVICE_NAME=${1}
-  local IMAGE=${2}
-  local DIGEST=${3}
-  local DOCKER_CONFIG=${4}
+  local DOCKER_CONFIG=${2}
+  local IMAGE_WITH_DIGEST=
+  IMAGE_WITH_DIGEST=$(docker service inspect -f '{{.Spec.TaskTemplate.ContainerSpec.Image}}' "${SERVICE_NAME}" 2>&1)
+  if [ $? -ne 0 ]; then
+    log ERROR "Failed to obtain image from service ${SERVICE_NAME}. $(echo ${IMAGE_WITH_DIGEST})"
+    return 1
+  fi
+  local IMAGE=$(echo "${IMAGE_WITH_DIGEST}" | cut -d@ -f1)
+  local DIGEST=$(echo "${IMAGE_WITH_DIGEST}" | cut -d@ -f2)
   # Always inspect self
   if ! is_true ${MANIFEST_INSPECT} && ! service_is_self ${SERVICE_NAME}; then
     return 0
   fi
   if in_list "${GLOBAL_NO_NEW_IMAGES}" "${DIGEST}"; then
-    echo "No new images."
     return 0
   fi
   local IMAGE_INFO=
   if ! IMAGE_INFO=$(get_image_info "${IMAGE}" "${DOCKER_CONFIG}" 2>&1); then
-    echo "Image ${IMAGE} does not exist or it is not available. $(echo ${IMAGE_INFO})" >&2
+    log ERROR "Image ${IMAGE} does not exist or it is not available. $(echo ${IMAGE_INFO})"
     return 1
   fi
   if [ -n "${DIGEST}" ] && echo "${IMAGE_INFO}" | grep -q "${DIGEST}"; then
-    echo "No new images."
     GLOBAL_NO_NEW_IMAGES=$(echo -e "${GLOBAL_NO_NEW_IMAGES}\n${DIGEST}" | sort | uniq)
     return 0
   fi
+  echo ${IMAGE}
   return 0
 }
 
@@ -377,25 +376,11 @@ update_single_service() {
   fi
   local DOCKER_CONFIG=$(get_config_from_service ${SERVICE_NAME})
   [ -n "${DOCKER_CONFIG}" ] && log DEBUG "Add option \"${DOCKER_CONFIG}\" to docker commands."
-  local IMAGE_WITH_DIGEST=
-  IMAGE_WITH_DIGEST=$(docker service inspect -f '{{.Spec.TaskTemplate.ContainerSpec.Image}}' "${SERVICE_NAME}" 2>&1)
-  if [ $? -ne 0 ]; then
-    log ERROR "Failed to obtain image from service ${SERVICE_NAME}. $(echo ${IMAGE_WITH_DIGEST})"
-    return 1
-  fi
-  local IMAGE=$(echo "${IMAGE_WITH_DIGEST}" | cut -d@ -f1)
-  local DIGEST=$(echo "${IMAGE_WITH_DIGEST}" | cut -d@ -f2)
-  local MANIFEST_MSG=
-  MANIFEST_MSG=$(inspect_image "${SERVICE_NAME}" "${IMAGE}" "${DIGEST}" "${DOCKER_CONFIG}" 2>&1)
+  local IMAGE=
+  IMAGE=$(inspect_image "${SERVICE_NAME}" "${DOCKER_CONFIG}")
   local RETURN_VALUE=$?
-  if [ ${RETURN_VALUE} -ne 0 ]; then
-    log ERROR "${MANIFEST_MSG}"
-    return ${RETURN_VALUE}
-  fi
-  if [ -n "${MANIFEST_MSG}" ]; then
-    log INFO "${MANIFEST_MSG}"
-    return 0
-  fi
+  [ ${RETURN_VALUE} -ne 0 ] && return ${RETURN_VALUE}
+  [ -z "${IMAGE}" ] && log INFO "No new images." && return 0
   log INFO "Updating with image ${IMAGE}"
   local ADDITIONAL_OPTION=$(get_service_update_additional_option ${SERVICE_NAME})
   [ -n "${ADDITIONAL_OPTION}" ] && log DEBUG "Add option \"${ADDITIONAL_OPTION}\" to the docker service update command."
