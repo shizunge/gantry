@@ -233,6 +233,12 @@ in_list() {
   return 1
 }
 
+service_is_self() {
+  local SELF=${GANTRY_SERVICES_SELF}
+  local SERVICE_NAME=${1}
+  [ "${SERVICE_NAME}" = "${SELF}" ]
+}
+
 # echo the mode when the service is replicated job or global job
 # return whether a service is replicated job or global job
 service_is_job() {
@@ -245,6 +251,19 @@ service_is_job() {
   fi
   # Looking for replicated-job or global-job
   echo ${MODE} | grep "job"
+}
+
+get_config_from_service() {
+  local SERVICE_NAME=${1}
+  local AUTH_CONFIG_LABEL="gantry.auth.config"
+  local AUTH_CONFIG=
+  AUTH_CONFIG=$(docker service inspect -f '{{index .Spec.Labels "${AUTH_CONFIG_LABEL}"}}' "${SERVICE_NAME}" 2>&1)
+  if [ $? -ne 0 ]; then
+    log ERROR "Failed to obtain authentication config from service ${SERVICE_NAME}. $(echo ${AUTH_CONFIG})"
+    AUTH_CONFIG=
+  fi
+  [ -z "${AUTH_CONFIG}" ] && return 0
+  echo "--config ${AUTH_CONFIG}"
 }
 
 get_image_info() {
@@ -264,14 +283,13 @@ get_image_info() {
 # echo nothing if we found a new image.
 # return the number of errors.
 inspect_image() {
-  local SELF=${GANTRY_SERVICES_SELF}
   local SKIP_MANIFEST_INSPECTION=${GANTRY_MANIFEST_SKIP_INSPECTION}
   local SERVICE_NAME=${1}
   local IMAGE=${2}
   local DIGEST=${3}
   local DOCKER_CONFIG=${4}
   # never skip inspection on self
-  if [ -n "${SKIP_MANIFEST_INSPECTION}" ] && [ "${SERVICE_NAME}" != "${SELF}" ]; then
+  if [ -n "${SKIP_MANIFEST_INSPECTION}" ] && ! service_is_self ${SERVICE_NAME}; then
     return 0
   fi
   if in_list "${GLOBAL_NO_NEW_IMAGES}" "${DIGEST}"; then
@@ -351,13 +369,8 @@ update_single_service() {
     log DEBUG "Skip updating service ${SERVICE_NAME} that is a ${MODE}."
     return 0;
   fi
-  local AUTH_CONFIG_LABEL="gantry.auth.config"
-  local AUTH_CONFIG=$(docker service inspect -f '{{index .Spec.Labels "${AUTH_CONFIG_LABEL}"}}' "${SERVICE_NAME}" 2>&1)
-  if [ $? -ne 0 ]; then
-    LOG ERROR "Failed to obtain authentication config from service ${SERVICE_NAME}. $(echo ${AUTH_CONFIG})"
-    AUTH_CONFIG=
-  fi
-  [ -n "${AUTH_CONFIG}" ] && local DOCKER_CONFIG="--config ${AUTH_CONFIG}"
+  local DOCKER_CONFIG=$(get_config_from_service ${SERVICE_NAME})
+  [ -n "${DOCKER_CONFIG}" ] && log DEBUG "Add option \"${DOCKER_CONFIG}\" to docker commands."
   local IMAGE_WITH_DIGEST=
   IMAGE_WITH_DIGEST=$(docker service inspect -f '{{.Spec.TaskTemplate.ContainerSpec.Image}}' "${SERVICE_NAME}" 2>&1)
   if [ $? -ne 0 ]; then
@@ -427,7 +440,6 @@ gantry_get_services_list() {
   local SERVICES_EXCLUDED=${GANTRY_SERVICES_EXCLUDED}
   local SERVICES_EXCLUDED_FILTERS=${GANTRY_SERVICES_EXCLUDED_FILTERS}
   local SERVICES_FILTERS=${GANTRY_SERVICES_FILTERS}
-  local SELF=${GANTRY_SERVICES_SELF}
   local SERVICES=
   SERVICES=$(get_services_filted "${SERVICES_FILTERS}")
   [ $? -ne 0 ] && return 1
@@ -444,7 +456,7 @@ gantry_get_services_list() {
       continue
     fi
     # Add self to the first of the list.
-    if [ "${S}" = "${SELF}" ]; then
+    if service_is_self ${S}; then
       HAS_SELF=${S}
       continue
     fi
