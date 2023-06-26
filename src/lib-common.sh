@@ -79,7 +79,8 @@ log_docker_line() {
   NODE=$(echo "${@}" | cut -d ' ' -f 2 | cut -d '@' -f 2);
   MESSAGE=$(echo "${@}" | cut -d '|' -f 2-);
   # Remove the leading space.
-  MESSAGE=$(echo "${MESSAGE}" | cut -d ' ' -f 2-)
+  SPACE=$(echo "${MESSAGE}" | cut -d ' ' -f 1)
+  [ -z "${SPACE}" ] && MESSAGE=$(echo "${MESSAGE}" | cut -d ' ' -f 2-)
   FIRST_WORD=$(echo "${MESSAGE}" | cut -d ' ' -f 1);
   if log_level "${FIRST_WORD}" >/dev/null; then
     LEVEL=${FIRST_WORD};
