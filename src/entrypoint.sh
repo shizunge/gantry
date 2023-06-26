@@ -20,7 +20,8 @@ source ./lib-common.sh
 source ./lib-gantry.sh
 
 skip_current_node() {
-  local SELF_ID=$(docker node inspect self --format {{.Description.Hostname}} 2>/dev/null);
+  local SELF_ID=
+  SELF_ID=$(docker node inspect self --format "{{.Description.Hostname}}" 2>/dev/null);
   if [ -z "${SELF_ID}" ]; then
     log WARN "Skip because the current node is not a swarm manager.";
     return 0
@@ -30,63 +31,72 @@ skip_current_node() {
 }
 
 gantry() {
-  local STACK=${1:-gantry}
-  local START_TIME=$(date +%s)
+  local STACK="${1:-gantry}"
+  local START_TIME=
+  START_TIME=$(date +%s)
 
   if skip_current_node ; then
     return 0
   fi
   local ACCUMULATED_ERRORS=0
+  local DOCKER_HUB_RATE_BEFORE=
+  local DOCKER_HUB_RATE_AFTER=
+  local DOCKER_HUB_RATE_USED=
+  local TIME_ELAPSED=
 
   log INFO "Starting."
   gantry_initialize "${STACK}"
   ACCUMULATED_ERRORS=$((ACCUMULATED_ERRORS + $?))
 
-  local DOCKER_HUB_RATE_BEFORE=$(docker_hub_rate)
+  # SC2119: Use docker_hub_rate "$@" if function's $1 should mean script's $1.
+  # shellcheck disable=SC2119
+  DOCKER_HUB_RATE_BEFORE=$(docker_hub_rate)
   ACCUMULATED_ERRORS=$((ACCUMULATED_ERRORS + $?))
   log INFO "Before updating, Docker Hub rate remains ${DOCKER_HUB_RATE_BEFORE}."
 
   log INFO "Starting updating."
-  gantry_update_services_list $(gantry_get_services_list)
+  gantry_update_services_list "$(gantry_get_services_list)"
   ACCUMULATED_ERRORS=$((ACCUMULATED_ERRORS + $?))
 
-  local DOCKER_HUB_RATE_AFTER=$(docker_hub_rate)
+  # SC2119: Use docker_hub_rate "$@" if function's $1 should mean script's $1.
+  # shellcheck disable=SC2119
+  DOCKER_HUB_RATE_AFTER=$(docker_hub_rate)
   ACCUMULATED_ERRORS=$((ACCUMULATED_ERRORS + $?))
-  local DOCKER_HUB_RATE_USED=$(difference_between "${DOCKER_HUB_RATE_BEFORE}" "${DOCKER_HUB_RATE_AFTER}")
+  DOCKER_HUB_RATE_USED=$(difference_between "${DOCKER_HUB_RATE_BEFORE}" "${DOCKER_HUB_RATE_AFTER}")
   log INFO "After updating, Docker Hub rate remains ${DOCKER_HUB_RATE_AFTER}. Used rate ${DOCKER_HUB_RATE_USED}."
 
   gantry_finalize "${STACK}";
   ACCUMULATED_ERRORS=$((ACCUMULATED_ERRORS + $?))
 
-  local TIME_ELAPSED=$(time_elapsed_since ${START_TIME})
+  TIME_ELAPSED=$(time_elapsed_since "${START_TIME}")
   local MESSAGE="Done. Use ${TIME_ELAPSED}. ${ACCUMULATED_ERRORS} errors."
   if [ ${ACCUMULATED_ERRORS} -gt 0 ]; then
-    log WARN ${MESSAGE}
+    log WARN "${MESSAGE}"
   else
-    log INFO ${MESSAGE}
+    log INFO "${MESSAGE}"
   fi
   return ${ACCUMULATED_ERRORS}
 }
 
 main() {
-  LOG_LEVEL=${GANTRY_LOG_LEVEL:-${LOG_LEVEL}}
-  NODE_NAME=${GANTRY_NODE_NAME:-${NODE_NAME}}
-  local SLEEP_SECONDS=${GANTRY_SLEEP_SECONDS:-0}
+  LOG_LEVEL="${GANTRY_LOG_LEVEL:-${LOG_LEVEL}}"
+  NODE_NAME="${GANTRY_NODE_NAME:-${NODE_NAME}}"
+  local SLEEP_SECONDS="${GANTRY_SLEEP_SECONDS:-0}"
   if ! is_number "${SLEEP_SECONDS}"; then 
     log ERROR "GANTRY_SLEEP_SECONDS must be a number. Got \"${GANTRY_SLEEP_SECONDS}\"."
     return 1;
   fi
-  local STACK=${1:-gantry}
+  local STACK="${1:-gantry}"
   local RETURN_VALUE=0
   while true; do
     LOG_SCOPE=${STACK}
-    gantry ${@}
+    gantry "${@}"
     RETURN_VALUE=$?
     [ "${SLEEP_SECONDS}" -le 0 ] && break;
     log INFO "Sleeping ${SLEEP_SECONDS} seconds before next update."
-    sleep ${SLEEP_SECONDS}
+    sleep "${SLEEP_SECONDS}"
   done
   return ${RETURN_VALUE}
 }
 
-main ${@}
+main "${@}"

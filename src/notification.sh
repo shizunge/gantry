@@ -16,17 +16,17 @@
 #
 
 notify_via_apprise() {
-  local URL=${GANTRY_NOTIFICATION_APPRISE_URL}
+  local URL="${GANTRY_NOTIFICATION_APPRISE_URL}"
   local TITLE="${1}"
   local BODY="${2}"
   if [ -z "${URL}" ]; then
     return 0
   fi
-  curl -X POST -H "Content-Type: application/json" --data "{\"title\": \"${TITLE}\", \"body\": \"${BODY}\"}" "$URL"
+  curl -X POST -H "Content-Type: application/json" --data "{\"title\": \"${TITLE}\", \"body\": \"${BODY}\"}" "${URL}"
 }
 
 notify_summary() {
-  local CUSTOMIZED_TITLE=${GANTRY_NOTIFICATION_TITLE}
+  local CUSTOMIZED_TITLE="${GANTRY_NOTIFICATION_TITLE}"
   local TITLE="${1}"
   local BODY="${2}"
   [ -n "${CUSTOMIZED_TITLE}" ] && TITLE="${TITLE} ${CUSTOMIZED_TITLE}"

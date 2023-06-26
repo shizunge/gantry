@@ -19,27 +19,31 @@
 # return 0 if LEVEL is supported.
 # return 1 if LEVLE is unsupported.
 log_level() {
-  local LEVEL=${1};
-  [ -z "${LEVEL}" ] && echo $(log_level "INFO") && return 1;
+  local LEVEL="${1}";
+  [ -z "${LEVEL}" ] && log_level "INFO" && return 1;
   [ "${LEVEL}" = "DEBUG" ] && echo 0 && return 0;
   [ "${LEVEL}" = "INFO"  ] && echo 1 && return 0;
   [ "${LEVEL}" = "WARN"  ] && echo 2 && return 0;
   [ "${LEVEL}" = "ERROR" ] && echo 3 && return 0;
   [ "${LEVEL}" = "NONE"  ] && echo 4 && return 0;
-  echo $(log_level "NONE");
+  log_level "NONE";
   return 1;
 }
 
 log_formatter() {
-  local LOG_LEVEL=${LOG_LEVEL}
-  local LEVEL=${1}; shift;
-  [ $(log_level ${LEVEL}) -lt $(log_level ${LOG_LEVEL}) ] && return 0;
-  local TIME=${1}; shift;
-  local LOCATION=${1}; shift;
-  local SCOPE=${1}; shift;
-  local LOCATION_STR=$(if [ -n "${LOCATION}" ]; then echo "[${LOCATION}]"; else echo ""; fi);
-  local SCOPE_STR=$(if [ -n "${SCOPE}" ]; then echo "${SCOPE}: "; else echo ""; fi);
-  local MESSAGE="[${TIME}]${LOCATION_STR}[${LEVEL}] ${SCOPE_STR}$@";
+  local LOG_LEVEL="${LOG_LEVEL}"
+  local LEVEL="${1}"; shift;
+  [ "$(log_level "${LEVEL}")" -lt "$(log_level "${LOG_LEVEL}")" ] && return 0;
+  local TIME="${1}"; shift;
+  local LOCATION="${1}"; shift;
+  local SCOPE="${1}"; shift;
+  local LOCATION_STR=
+  local SCOPE_STR=
+  local MESSAGE_STR=
+  LOCATION_STR=$(if [ -n "${LOCATION}" ]; then echo "[${LOCATION}]"; else echo ""; fi);
+  SCOPE_STR=$(if [ -n "${SCOPE}" ]; then echo "${SCOPE}: "; else echo ""; fi);
+  MESSAGE_STR=$(echo "${*}" | tr '\n' ' ')
+  local MESSAGE="[${TIME}]${LOCATION_STR}[${LEVEL}] ${SCOPE_STR}${MESSAGE_STR}";
   if [ "${LEVEL}" = "ERROR" ]; then
     echo "${MESSAGE}" >&2;
   else
@@ -50,7 +54,7 @@ log_formatter() {
 # We want to print an empty line for log without an argument. Thus we do not run the following check.
 # [ -z "${1}" ] && return 0
 log() {
-  local NODE_NAME=${NODE_NAME}
+  local NODE_NAME="${NODE_NAME}"
   local LEVEL="INFO";
   if log_level "${1}" >/dev/null; then
     LEVEL="${1}";
@@ -63,17 +67,18 @@ log() {
 # 2023-06-22T01:20:54.535860111Z <task>@<node>    | <msg>
 log_docker_line() {
   local LEVEL="INFO";
-  local TIME_SEC=$(echo ${@} | cut -d ' ' -f 1 | cut -d '.' -f 1);
+  local TIME_SEC TIMEZONE TZH TZM TIME SCOPE NODE MESSAGE FIRST_WORD
+  TIME_SEC=$(echo "${@}" | cut -d ' ' -f 1 | cut -d '.' -f 1);
   # To match the timezone in $(date -Iseconds) (ISO-8601)
   # busybox date does not support +%:z which outputs "-07:00". %z outputs "-0700".
-  local TIMEZONE=$(date +%z);
-  local TZH=${TIMEZONE%??};
-  local TZM=${TIMEZONE#"${TZH}"};
-  local TIME="${TIME_SEC}${TZH}:${TZM}"
-  local SCOPE=$(echo ${@} | cut -d ' ' -f 2 | cut -d '@' -f 1);
-  local NODE=$(echo ${@} | cut -d ' ' -f 2 | cut -d '@' -f 2);
-  local MESSAGE=$(echo $(echo ${@} | cut -d '|' -f 2-));
-  local FIRST_WORD=$(echo "${MESSAGE}" | cut -d ' ' -f 1);
+  TIMEZONE=$(date +%z);
+  TZH=${TIMEZONE%??};
+  TZM=${TIMEZONE#"${TZH}"};
+  TIME="${TIME_SEC}${TZH}:${TZM}"
+  SCOPE=$(echo "${@}" | cut -d ' ' -f 2 | cut -d '@' -f 1);
+  NODE=$(echo "${@}" | cut -d ' ' -f 2 | cut -d '@' -f 2);
+  MESSAGE=$(echo "${@}" | cut -d '|' -f 2-);
+  FIRST_WORD=$(echo "${MESSAGE}" | cut -d ' ' -f 1);
   if log_level "${FIRST_WORD}" >/dev/null; then
     LEVEL=${FIRST_WORD};
     MESSAGE=$(echo "${MESSAGE}" | cut -d ' ' -f 2-);
@@ -83,10 +88,10 @@ log_docker_line() {
 
 # Usage: echo "${LOGS}" | log_lines INFO
 log_lines() {
-  local LEVEL=${1};
+  local LEVEL="${1}";
   while read -r LINE; do
     [ -z "${LINE}" ] && continue;
-    log ${LEVEL} ${LINE};
+    log "${LEVEL}" "${LINE}";
   done
 }
 
@@ -95,10 +100,10 @@ is_number() {
 }
 
 difference_between() {
-  local NUM0=${1}
-  local NUM1=${2}
+  local NUM0="${1}"
+  local NUM1="${2}"
   if is_number "${NUM0}" && is_number "${NUM1}"; then
-    if [ ${NUM0} -gt ${NUM1} ]; then
+    if [ "${NUM0}" -gt "${NUM1}" ]; then
       echo "$((NUM0 - NUM1))"
     else
       echo "$((NUM1 - NUM0))"
@@ -110,42 +115,41 @@ difference_between() {
 }
 
 time_elapsed_between() {
-  local TIME0=${1}
-  local TIME1=${2}
+  local TIME0="${1}"
+  local TIME1="${2}"
   local SECONDS_ELAPSED=
   if ! SECONDS_ELAPSED=$(difference_between "${TIME0}" "${TIME1}"); then
     echo "NaN"
     return 1
   fi
-  local TIME_ELAPSED=$(date -u -d @${SECONDS_ELAPSED} +'%-Mm %-Ss')
-  echo "${TIME_ELAPSED}"
+  date -u -d "@${SECONDS_ELAPSED}" +'%-Mm %-Ss'
 }
 
 time_elapsed_since() {
-  local START_TIME=${1}
+  local START_TIME="${1}"
   time_elapsed_between "$(date +%s)" "${START_TIME}"
 }
 
 # For a givne variable name <VAR>, try to read content of <VAR>_FILE if file exists.
 # otherwise echo the content of <VAR>.
 read_config() {
-  local CONFIG_NAME=${1}
+  local CONFIG_NAME="${1}"
   [ -z "${CONFIG_NAME}" ] && return 1
   local CONFIG_FILE_NAME="${CONFIG_NAME}_FILE"
   eval "local CONFIG_FILE=\${${CONFIG_FILE_NAME}}"
   if [ -r "${CONFIG_FILE}" ]; then
-    cat ${CONFIG_FILE}
+    cat "${CONFIG_FILE}"
     return $?
   elif [ -n "${CONFIG_FILE}" ]; then
     echo "Failed to read ${CONFIG_FILE}" >&2
     return 1
   fi
   eval "local CONFIG=\${${CONFIG_NAME}}"
-  echo ${CONFIG}
+  echo "${CONFIG}"
 }
 
 is_true() {
-  local CONFIG=${1}
+  local CONFIG="${1}"
   CONFIG=$(echo "${CONFIG}" | cut -d ' ' -f 1)
   echo "${CONFIG}" | grep -q -i "true"
 }
@@ -155,7 +159,7 @@ swarm_network_arguments() {
     echo ""
     return 0
   fi
-  NETWORK_NAME=$(docker network ls --filter name=${NETWORK_NAME} --format {{.Name}})
+  NETWORK_NAME=$(docker network ls --filter "name=${NETWORK_NAME}" --format '{{.Name}}')
   if [ -z "${NETWORK_NAME}" ]; then
     echo ""
     return 0
@@ -170,7 +174,7 @@ swarm_network_arguments() {
 
 get_docker_command_name_arg() {
   # get <NAME> from "--name <NAME>" or "--name=<NAME>"
-  echo ${@} | sed -E 's/.*-name[ =]([^ ]*).*/\1/'
+  echo "${@}" | tr '\n' ' ' | sed -E 's/.*--name[ =]([^ ]*).*/\1/'
 }
 
 get_docker_command_detach() {
@@ -182,64 +186,67 @@ get_docker_command_detach() {
 }
 
 docker_service_logs () {
-  local SERVICE_NAME=${1}
-  local LOGS=$(docker service logs --timestamps --no-task-ids ${SERVICE_NAME} 2>&1)
-  if [ $? -ne 0 ]; then
-    log ERROR "Failed to obtain logs of service ${SERVICE_NAME}. $(echo ${LOGS})"
+  local SERVICE_NAME="${1}"
+  local LOGS=
+  if ! LOGS=$(docker service logs --timestamps --no-task-ids "${SERVICE_NAME}" 2>&1); then
+    log ERROR "Failed to obtain logs of service ${SERVICE_NAME}. ${LOGS})"
     return 1
   fi
   echo "${LOGS}" |
   while read -r LINE; do
-    log_docker_line ${LINE}
+    log_docker_line "${LINE}"
   done
 }
 
 docker_service_logs_follow() {
-  local SERVICE_NAME=${1}
-  docker service logs --timestamps --no-task-ids --follow ${SERVICE_NAME} 2>&1 |
+  local SERVICE_NAME="${1}"
+  docker service logs --timestamps --no-task-ids --follow "${SERVICE_NAME}" 2>&1 |
   while read -r LINE; do
-    log_docker_line ${LINE}
+    log_docker_line "${LINE}"
   done
 }
 
 docker_service_task_states() {
-  local SERVICE_NAME=${1}
+  local SERVICE_NAME="${1}"
   # We won't get the return value of the command via $? if we use "local STATES=$(command)".
   local STATES=
-  STATES=$(docker service ps --no-trunc --format "[{{.Name}}][{{.Node}}] {{.CurrentState}} {{.Error}}" ${SERVICE_NAME} 2>&1)
-  if [ $? -ne 0 ]; then
+  if ! STATES=$(docker service ps --no-trunc --format '[{{.Name}}][{{.Node}}] {{.CurrentState}} {{.Error}}' "${SERVICE_NAME}" 2>&1); then
     echo "${STATES}" >&2
     return 1
   fi
+  local NAME_LIST=
   echo "${STATES}" | while read -r LINE; do
-    local NAME=$(echo ${LINE} | cut -d ']' -f 1 | cut -d '[' -f 2)
-    local NODE_STATE_AND_ERROR=$(echo ${LINE} | cut -d ']' -f 2-)
+    local NAME=
+    local NODE_STATE_AND_ERROR=
+    NAME=$(echo "${LINE}" | cut -d ']' -f 1 | cut -d '[' -f 2)
+    NODE_STATE_AND_ERROR=$(echo "${LINE}" | cut -d ']' -f 2-)
     # We assume that the first State of each task is the latest one that we want to report.
-    if ! $(echo "${NAME_LIST}" | grep -q "${NAME}"); then
+    if ! echo "${NAME_LIST}" | grep -q "${NAME}"; then
       echo "${NODE_STATE_AND_ERROR}"
     fi
-    local NAME_LIST=$(echo -e "${NAME_LIST}\n${NAME}" | sort | uniq)
+    NAME_LIST=$(echo -e "${NAME_LIST}\n${NAME}" | sort | uniq)
   done
 }
 
 wait_service_state() {
-  local SERVICE_NAME=${1}
-  local WAIT_RUNNING=${2:-"false"}
-  local WAIT_COMPLETE=${3:-"false"}
-  local RETURN_VALUE=${4:-0}
-  local SLEEP_SECONDS=${5:-1}
-  local STATES=$(docker_service_task_states ${SERVICE_NAME} 2>&1)
-  while ${WAIT_RUNNING} || ${WAIT_COMPLETE} ; do
+  local SERVICE_NAME="${1}"
+  local WAIT_RUNNING="${2:-"false"}"
+  local WAIT_COMPLETE="${3:-"false"}"
+  local RETURN_VALUE="${4:-0}"
+  local SLEEP_SECONDS="${5:-1}"
+  local STATES=
+  STATES=$(docker_service_task_states "${SERVICE_NAME}" 2>&1)
+  while is_true "${WAIT_RUNNING}" || is_true "${WAIT_COMPLETE}" ; do
     local NUM_LINES=0
     local NUM_RUNS=0
     local NUM_DONES=0
     local NUM_FAILS=0
     while read -r LINE; do
       [ -z "${LINE}" ] && continue;
-      NUM_LINES=$((NUM_LINES+1))
-      echo "${LINE}" | grep -q "Running" && NUM_RUNS=$((NUM_RUNS+1))
-      echo "${LINE}" | grep -q "Complete" && NUM_DONES=$((NUM_DONES+1))
-      echo "${LINE}" | grep -q "Failed" && NUM_FAILS=$((NUM_FAILS+1))
+      NUM_LINES=$((NUM_LINES+1));
+      echo "${LINE}" | grep -q "Running" && NUM_RUNS=$((NUM_RUNS+1));
+      echo "${LINE}" | grep -q "Complete" && NUM_DONES=$((NUM_DONES+1));
+      echo "${LINE}" | grep -q "Failed" && NUM_FAILS=$((NUM_FAILS+1));
     done < <(echo "${STATES}")
     if [ ${NUM_LINES} -gt 0 ]; then
       if ${WAIT_RUNNING} && [ ${NUM_RUNS} -eq ${NUM_LINES} ]; then
@@ -250,33 +257,34 @@ wait_service_state() {
       fi
       if ${WAIT_COMPLETE} && [ ${NUM_FAILS} -gt 0 ]; then
         # Get return value of the task from the string "task: non-zero exit (1)".
-        local TASK_STATE=$(echo "${STATES}" | grep "Failed")
-        local TASK_RETURN_VALUE=$(echo "${TASK_STATE}" | sed -n 's/.*task: non-zero exit (\([0-9]\+\)).*/\1/p')
+        local TASK_STATE=
+        local TASK_RETURN_VALUE=
+        TASK_STATE=$(echo "${STATES}" | grep "Failed")
+        TASK_RETURN_VALUE=$(echo "${TASK_STATE}" | sed -n 's/.*task: non-zero exit (\([0-9]\+\)).*/\1/p')
         # Get the first error code.
-        RETURN_VALUE=$(echo ${TASK_RETURN_VALUE:-1} | cut -d ' ' -f 1)
+        RETURN_VALUE=$(echo "${TASK_RETURN_VALUE:-1}" | cut -d ' ' -f 1)
         break
       fi
     fi
-    sleep ${SLEEP_SECONDS}
-    STATES=$(docker_service_task_states ${SERVICE_NAME} 2>&1)
-    if [ $? -ne 0 ]; then
-      log ERROR "Failed to obtain task states of service ${SERVICE_NAME}: $(echo ${STATES})"
+    sleep "${SLEEP_SECONDS}"
+    if ! STATES=$(docker_service_task_states "${SERVICE_NAME}" 2>&1); then
+      log ERROR "Failed to obtain task states of service ${SERVICE_NAME}: ${STATES})"
       return 1
     fi
   done
   echo "${STATES}" | while read -r LINE; do
-    log INFO "Service ${SERVICE_NAME}: $(echo ${LINE})."
+    log INFO "Service ${SERVICE_NAME}: ${LINE})."
   done
-  return ${RETURN_VALUE}
+  return "${RETURN_VALUE}"
 }
 
 docker_service_remove() {
-  local SERVICE_NAME=${1}
-  if ! docker service inspect --format {{.JobStatus}} ${SERVICE_NAME} >/dev/null 2>&1; then
+  local SERVICE_NAME="${1}"
+  if ! docker service inspect --format '{{.JobStatus}}' "${SERVICE_NAME}" >/dev/null 2>&1; then
     return 0
   fi
   log INFO "Removing service ${SERVICE_NAME}."
-  docker service rm ${SERVICE_NAME} >/dev/null
+  docker service rm "${SERVICE_NAME}" >/dev/null
   local RETURN_VALUE=$?
   log INFO "Removed service ${SERVICE_NAME}."
   return ${RETURN_VALUE}
@@ -286,51 +294,51 @@ docker_service_remove() {
 # Docker will try to restart the failed tasks.
 # We do not check the converge of the service. It must be used togther with wait_service_state.
 docker_global_job() {
-  local SERVICE_NAME=$(get_docker_command_name_arg ${@})
-  local IS_DETACH=$(get_docker_command_detach ${@})
-  local WAIT_RUNNING=${IS_DETACH}
-  local WAIT_COMPLETE="false"
+  local SERVICE_NAME=
+  SERVICE_NAME=$(get_docker_command_name_arg "${@}")
   log INFO "Starting service ${SERVICE_NAME}."
   docker service create \
     --mode global-job \
     "${@}" >/dev/null
-  local RETURN_VALUE=$?
-  return ${RETURN_VALUE}
 }
 
 # A job could fail when using docker_replicated_job.
 docker_replicated_job() {
-  local SERVICE_NAME=$(get_docker_command_name_arg ${@})
-  local IS_DETACH=$(get_docker_command_detach ${@})
+  local SERVICE_NAME=
+  local IS_DETACH=
+  SERVICE_NAME=$(get_docker_command_name_arg "${@}")
+  IS_DETACH=$(get_docker_command_detach "${@}")
   # Add "--detach" to work around https://github.com/docker/cli/issues/2979
   # The Docker CLI does not exit on failures.
   local WAIT_RUNNING="false"
-  local WAIT_COMPLETE=$(if ${IS_DETACH}; then echo "false"; else echo "true"; fi)
+  local WAIT_COMPLETE=
+  WAIT_COMPLETE=$(if ${IS_DETACH}; then echo "false"; else echo "true"; fi)
   log INFO "Starting service ${SERVICE_NAME}."
   docker service create \
     --mode replicated-job --detach \
     "${@}" >/dev/null
   local RETURN_VALUE=$?
   # return the code from wait_service_state
-  wait_service_state ${SERVICE_NAME} ${WAIT_RUNNING} ${WAIT_COMPLETE} ${RETURN_VALUE}
+  wait_service_state "${SERVICE_NAME}" "${WAIT_RUNNING}" "${WAIT_COMPLETE}" "${RETURN_VALUE}"
 }
 
 container_status() {
-  local CNAME=${1}
-  docker container inspect --format '{{.State.Status}}' ${CNAME} 2>/dev/null
+  local CNAME="${1}"
+  docker container inspect --format '{{.State.Status}}' "${CNAME}" 2>/dev/null
 }
 
 docker_remove() {
-  local CNAME=${1}
-  local STATUS=$(container_status ${CNAME})
+  local CNAME="${1}"
+  local STATUS=
+  STATUS=$(container_status "${CNAME}")
   if [ -z "${STATUS}" ]; then
     return 0
   fi
   log INFO "Removing container ${CNAME}."
   if [ "${STATUS}" = "running" ]; then
-    docker stop ${CNAME} >/dev/null 2>/dev/null
+    docker stop "${CNAME}" >/dev/null 2>/dev/null
   fi
-  docker rm ${CNAME} >/dev/null
+  docker rm "${CNAME}" >/dev/null
 }
 
 docker_run() {
