@@ -275,7 +275,7 @@ get_config_from_service() {
 }
 
 get_image_info() {
-  local USE_MANIFEST_CMD="${GANTRY_MANIFEST_USE_MANIFEST_CMD}"
+  local USE_MANIFEST_CMD="${GANTRY_MANIFEST_USE_MANIFEST_CMD:-"false"}"
   local MANIFEST_OPTIONS="${GANTRY_MANIFEST_OPTIONS}"
   local IMAGE="${1}"
   local DOCKER_CONFIG="${2}"
@@ -378,7 +378,7 @@ rollback_service() {
 }
 
 update_single_service() {
-  local UPDATE_JOBS="${GANTRY_UPDATE_JOBS}"
+  local UPDATE_JOBS="${GANTRY_UPDATE_JOBS:-"false"}"
   local UPDATE_TIMEOUT_SECONDS="${GANTRY_UPDATE_TIMEOUT_SECONDS:-300}"
   local UPDATE_OPTIONS="${GANTRY_UPDATE_OPTIONS}"
   if ! is_number "${UPDATE_TIMEOUT_SECONDS}"; then
