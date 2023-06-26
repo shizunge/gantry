@@ -1,6 +1,14 @@
 ## Migration from shepherd
 
-*Gantry* is inspired by [*shepherd*](https://github.com/containrrr/shepherd), but rewritten. Although I have tried to keep backward compatibility, not all configurations in *shepherd* are supported.
+*Gantry* started to fix the following problems I found in [*shepherd*](https://github.com/containrrr/shepherd), then it became refactored and totally rewritten.
+
+* `docker manifest` CLI failed to get the image meta data for some registries.
+* High usage of docker hub rate. Getting manifest and then pulling the image double the usage.
+* Removing images related: Failure of removing old images will exit and block subsequent updating. `docker rmi` only works for the current host.
+* `docker service update` CLI hangs when updating services without running tasks.
+* Other UX issues when running it as a script outside the provided container.
+
+Although I have tried to keep backward compatibility, not all configurations in *shepherd* are supported.
 
 This guide helps you migrate from *shepherd* to *gantry* by highlighting the difference between them. Please refer to the [README](../README.md) for the full description of the configurations.
 

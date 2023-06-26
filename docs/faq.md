@@ -2,7 +2,7 @@
 
 ### How does *Gantry* work?
 
-Fundamentally *Gantry* calls [`docker service update`](https://docs.docker.com/engine/reference/commandline/service_update/) and let docker engine [applies rolling updates to a service](https://docs.docker.com/engine/swarm/swarm-tutorial/rolling-update/).
+Fundamentally *Gantry* calls [`docker service update`](https://docs.docker.com/engine/reference/commandline/service_update/) CLI and let docker engine [applies rolling updates to a service](https://docs.docker.com/engine/swarm/swarm-tutorial/rolling-update/).
 
 Before updating a service, *Gantry* will try to obtain the manifest of the image used by the service to decide whether there is a new image.
 
