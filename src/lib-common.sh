@@ -55,6 +55,7 @@ log_formatter() {
 # [ -z "${1}" ] && return 0
 log() {
   local NODE_NAME="${NODE_NAME}"
+  local LOG_SCOPE="${LOG_SCOPE}"
   local LEVEL="INFO";
   if log_level "${1}" >/dev/null; then
     LEVEL="${1}";

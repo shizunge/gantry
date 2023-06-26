@@ -43,7 +43,7 @@ login_registry() {
 }
 
 authenticate_to_registries() {
-  local CONFIGS_FILE="${GANTRY_REGISTRY_CONFIGS_FILE}"
+  local CONFIGS_FILE="${GANTRY_REGISTRY_CONFIGS_FILE:-""}"
   local CONFIG HOST PASSWORD USER
   if ! CONFIG=$(read_config GANTRY_REGISTRY_CONFIG 2>&1); then
     log ERROR "Failed to set CONFIG: ${CONFIG}" && return 1;
@@ -244,7 +244,7 @@ in_list() {
 }
 
 service_is_self() {
-  local SELF="${GANTRY_SERVICES_SELF}"
+  local SELF="${GANTRY_SERVICES_SELF:-""}"
   local SERVICE_NAME="${1}"
   [ "${SERVICE_NAME}" = "${SELF}" ]
 }
@@ -276,7 +276,7 @@ get_config_from_service() {
 
 get_image_info() {
   local USE_MANIFEST_CMD="${GANTRY_MANIFEST_USE_MANIFEST_CMD:-"false"}"
-  local MANIFEST_OPTIONS="${GANTRY_MANIFEST_OPTIONS}"
+  local MANIFEST_OPTIONS="${GANTRY_MANIFEST_OPTIONS:-""}"
   local IMAGE="${1}"
   local DOCKER_CONFIG="${2}"
   if is_true "${USE_MANIFEST_CMD}"; then
@@ -359,7 +359,7 @@ get_service_update_additional_option() {
 
 rollback_service() {
   local ROLLBACK_ON_FAILURE="${GANTRY_ROLLBACK_ON_FAILURE:-"true"}"
-  local ROLLBACK_OPTIONS="${GANTRY_ROLLBACK_OPTIONS}"
+  local ROLLBACK_OPTIONS="${GANTRY_ROLLBACK_OPTIONS:-""}"
   local SERVICE_NAME="${1}"
   local DOCKER_CONFIG="${2}"
   if ! is_true "${ROLLBACK_ON_FAILURE}"; then
@@ -380,7 +380,7 @@ rollback_service() {
 update_single_service() {
   local UPDATE_JOBS="${GANTRY_UPDATE_JOBS:-"false"}"
   local UPDATE_TIMEOUT_SECONDS="${GANTRY_UPDATE_TIMEOUT_SECONDS:-300}"
-  local UPDATE_OPTIONS="${GANTRY_UPDATE_OPTIONS}"
+  local UPDATE_OPTIONS="${GANTRY_UPDATE_OPTIONS:-""}"
   if ! is_number "${UPDATE_TIMEOUT_SECONDS}"; then
     log ERROR "GANTRY_UPDATE_TIMEOUT_SECONDS must be a number. Got \"${GANTRY_UPDATE_TIMEOUT_SECONDS}\"."
     return 1;
@@ -452,9 +452,9 @@ gantry_initialize() {
 }
 
 gantry_get_services_list() {
-  local SERVICES_EXCLUDED="${GANTRY_SERVICES_EXCLUDED}"
-  local SERVICES_EXCLUDED_FILTERS="${GANTRY_SERVICES_EXCLUDED_FILTERS}"
-  local SERVICES_FILTERS="${GANTRY_SERVICES_FILTERS}"
+  local SERVICES_EXCLUDED="${GANTRY_SERVICES_EXCLUDED:-""}"
+  local SERVICES_EXCLUDED_FILTERS="${GANTRY_SERVICES_EXCLUDED_FILTERS:-""}"
+  local SERVICES_FILTERS="${GANTRY_SERVICES_FILTERS:-""}"
   local SERVICES=
   if ! SERVICES=$(get_services_filted "${SERVICES_FILTERS}"); then
     return 1

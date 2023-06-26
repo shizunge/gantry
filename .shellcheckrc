@@ -3,14 +3,13 @@
 # https://github.com/koalaman/shellcheck/wiki/Optional
 enable=add-default-case
 enable=avoid-nullary-conditions
-# enable=check-unassigned-uppercase
+enable=check-unassigned-uppercase
 enable=deprecate-which
 enable=require-variable-braces
 
 # SC2039: In POSIX sh, 'local' is undefined.
 disable=SC2039
 
-# TODO: Try to fix and enable SC3001
 # SC3001 (warning): In POSIX sh, process substitution is undefined.
 disable=SC3001
 
