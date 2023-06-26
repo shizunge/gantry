@@ -67,7 +67,7 @@ log() {
 # 2023-06-22T01:20:54.535860111Z <task>@<node>    | <msg>
 log_docker_line() {
   local LEVEL="INFO";
-  local TIME_SEC TIMEZONE TZH TZM TIME SCOPE NODE MESSAGE FIRST_WORD
+  local TIME_SEC TIMEZONE TZH TZM TIME SCOPE NODE MESSAGE SPACE FIRST_WORD
   TIME_SEC=$(echo "${@}" | cut -d ' ' -f 1 | cut -d '.' -f 1);
   # To match the timezone in $(date -Iseconds) (ISO-8601)
   # busybox date does not support +%:z which outputs "-07:00". %z outputs "-0700".
