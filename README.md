@@ -58,18 +58,18 @@ You can configure the most behaviors of *Gantry* via environment variables.
 
 | Environment Variable  | Description | Default value |
 |-----------------------|-------------|---------------|
-| GANTRY_MANIFEST_OPTIONS          | Options added to the `docker buildx imagetools inspect` or `docker manifest inspect` command. | |
 | GANTRY_MANIFEST_INSPECT          | Set to `true` to check manifest of the image. Set to an empty string to skip checking the manifest. As a result of skipping, `docker service update` always runs. In case you add `--force` to `GANTRY_UPDATE_OPTIONS`, you also want to disable the inspection. | true |
+| GANTRY_MANIFEST_OPTIONS          | [Options](https://docs.docker.com/engine/reference/commandline/buildx_imagetools_inspect/#options) added to the `docker buildx imagetools inspect` or [options](https://docs.docker.com/engine/reference/commandline/manifest_inspect/#options) to `docker manifest inspect`, depending on `GANTRY_MANIFEST_USE_MANIFEST_CMD` value. | |
 | GANTRY_MANIFEST_USE_MANIFEST_CMD | Set to `true` to run `docker manifest inspect` instead of `docker buildx imagetools inspect`. `docker manifest inspect` could [fail on some registries](https://github.com/orgs/community/discussions/45779). | |
 
 ### To add options to services update
 
 | Environment Variable  | Description | Default value |
 |-----------------------|-------------|---------------|
-| GANTRY_ROLLBACK_OPTIONS       | Options added to the `docker service update --rollback` command. | |
 | GANTRY_ROLLBACK_ON_FAILURE    | Set to `true` to enable rollback when updating fails. Set to an empty string to disable the rollback. | true |
+| GANTRY_ROLLBACK_OPTIONS       | [Options](https://docs.docker.com/engine/reference/commandline/service_update/#options) added to the `docker service update --rollback` command. | |
 | GANTRY_UPDATE_JOBS            | Set to `true` to update replicated-job or global-job. Set to an empty string to disable updating jobs. | |
-| GANTRY_UPDATE_OPTIONS         | Options added to the `docker service update` command. | |
+| GANTRY_UPDATE_OPTIONS         | [Options](https://docs.docker.com/engine/reference/commandline/service_update/#options) added to the `docker service update` command. | |
 | GANTRY_UPDATE_TIMEOUT_SECONDS | Error out if updating of a single service takes longer than the given time. | 300 |
 
 ### After updating
