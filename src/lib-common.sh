@@ -64,18 +64,28 @@ log() {
   log_formatter "${LEVEL}" "$(date -Iseconds)" "${NODE_NAME}" "${LOG_SCOPE}" "${@}";
 }
 
+log_docker_time() {
+  # Convert timestamps from `docker service logs` to ISO-8601. The timestamps is in UTC.
+  # docker service logs --timestamps --no-task-ids <service>
+  # 2023-06-22T01:20:54.535860111Z <task>@<node>    | <msg>
+  local TIME_INPUT="${1}"
+  local EPOCH=
+  if ! EPOCH="$(busybox date -d "${TIME_INPUT}" -D "%Y-%m-%dT%H:%M:%S" -u +%s 2>/dev/null)"; then
+    local TIME=
+    TIME=$(echo "${TIME_INPUT}" | cut -d '.' -f 1)
+    echo "${TIME}+00:00"
+    return 0
+  fi
+  busybox date -d "@${EPOCH}" -Iseconds 2>&1
+}
+
 # docker service logs --timestamps --no-task-ids <service>
 # 2023-06-22T01:20:54.535860111Z <task>@<node>    | <msg>
 log_docker_line() {
   local LEVEL="INFO";
-  local TIME_SEC TIMEZONE TZH TZM TIME SCOPE NODE MESSAGE SPACE FIRST_WORD
-  TIME_SEC=$(echo "${@}" | cut -d ' ' -f 1 | cut -d '.' -f 1);
-  # To match the timezone in $(date -Iseconds) (ISO-8601)
-  # busybox date does not support +%:z which outputs "-07:00". %z outputs "-0700".
-  TIMEZONE=$(date +%z);
-  TZH=${TIMEZONE%??};
-  TZM=${TIMEZONE#"${TZH}"};
-  TIME="${TIME_SEC}${TZH}:${TZM}"
+  local TIME_DOCKER TIME SCOPE NODE MESSAGE SPACE FIRST_WORD
+  TIME_DOCKER=$(echo "${@}" | cut -d ' ' -f 1);
+  TIME=$(log_docker_time "${TIME_DOCKER}")
   SCOPE=$(echo "${@}" | cut -d ' ' -f 2 | cut -d '@' -f 1);
   NODE=$(echo "${@}" | cut -d ' ' -f 2 | cut -d '@' -f 2);
   MESSAGE=$(echo "${@}" | cut -d '|' -f 2-);
