@@ -14,10 +14,25 @@
 # You should have received a copy of the GNU General Public License
 # along with this program.  If not, see <https://www.gnu.org/licenses/>.
 #
-source ./notification.sh
-source ./docker_hub_rate.sh
-source ./lib-common.sh
-source ./lib-gantry.sh
+
+load_libraries() {
+  local LIB_DIR=
+  if [ -n "${GANTRY_LIB_DIR:-""}" ]; then
+    LIB_DIR="${GANTRY_LIB_DIR}"
+  elif [ -n "${BASH_SOURCE:-""}" ]; then
+    # SC3054 (warning): In POSIX sh, array references are undefined.
+    # shellcheck disable=SC3054
+    LIB_DIR="$( cd "$(dirname "${BASH_SOURCE[0]}")" || return 1; pwd -P )"
+  elif [ -r "./src/lib-gantry.sh" ]; then
+    LIB_DIR="./src"
+  elif [ -r "./lib-gantry.sh" ]; then
+    LIB_DIR="."
+  fi
+  . ${LIB_DIR}/notification.sh
+  . ${LIB_DIR}/docker_hub_rate.sh
+  . ${LIB_DIR}/lib-common.sh
+  . ${LIB_DIR}/lib-gantry.sh
+}
 
 skip_current_node() {
   local SELF_ID=
@@ -99,4 +114,5 @@ main() {
   return ${RETURN_VALUE}
 }
 
+load_libraries
 main "${@}"

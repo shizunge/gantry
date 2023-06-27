@@ -18,7 +18,7 @@ docker service create \
 
 Or with docker compose, see the [example](examples/docker-compose.yml).
 
-You can also run *Gantry* as a script outside the container `cd src; source ./entrypoint.sh`.
+You can also run *Gantry* as a script outside the container `source ./src/entrypoint.sh`. *Gantry* is written to work with `busybox ash`. It should also work with `bash`.
 
 ## Configurations
 
