@@ -249,17 +249,36 @@ service_is_self() {
   [ "${SERVICE_NAME}" = "${SELF}" ]
 }
 
-# echo the mode when the service is replicated job or global job
-# return whether a service is replicated job or global job
-service_is_job() {
+get_service_mode() {
   local SERVICE_NAME="${1}"
   local MODE=
   if ! MODE=$(docker service ls --filter "name=${SERVICE_NAME}" --format '{{.Mode}}' 2>&1); then
     log ERROR "Failed to obtain the mode of the service ${SERVICE_NAME}: ${MODE}"
     return 1
   fi
+  echo "${MODE}"
+}
+
+# echo the mode when the service is replicated job or global job
+# return whether a service is replicated job or global job
+service_is_job() {
+  local SERVICE_NAME="${1}"
+  local MODE=
+  if ! MODE=$(get_service_mode "${SERVICE_NAME}"); then
+    return 1
+  fi
   # Looking for replicated-job or global-job
   echo "${MODE}" | grep "job"
+}
+
+service_is_replicated() {
+  local SERVICE_NAME="${1}"
+  local MODE=
+  if ! MODE=$(get_service_mode "${SERVICE_NAME}"); then
+    return 1
+  fi
+  # Looking for replicated
+  echo "${MODE}" | grep "replicated"
 }
 
 get_config_from_service() {
@@ -344,17 +363,22 @@ get_number_of_running_tasks() {
 
 get_service_update_additional_option() {
   local SERVICE_NAME="${1}"
-  local OPTION="--detach=true"
   local NUM_RUNS=
   NUM_RUNS=$(get_number_of_running_tasks "${SERVICE_NAME}")
   if ! is_number "${NUM_RUNS}"; then
     return 1
   fi
+  local OPTIONS=
   if [ "${NUM_RUNS}" -eq 0 ]; then
     # Add "--detach=true" when there is no running tasks.
     # https://github.com/docker/cli/issues/627
-    echo -n "${OPTION}"
+    OPTIONS="${OPTIONS} --detach=true"
+    # Do not start a new task. Only works for replicated, not global.
+    if service_is_replicated "${SERVICE_NAME}"; then
+      OPTIONS="${OPTIONS} --replicas=0"
+    fi
   fi
+  echo "${OPTIONS}"
 }
 
 rollback_service() {
