@@ -392,9 +392,10 @@ rollback_service() {
   fi
   log INFO "Rolling ${SERVICE_NAME} back."
   local ROLLBACK_MSG=
+  # Add "-quiet" to suppress progress output.
   # SC2086: Double quote to prevent globbing and word splitting.
   # shellcheck disable=SC2086
-  ROLLBACK_MSG=$(docker ${DOCKER_CONFIG} service update ${ADDITIONAL_OPTION} ${ROLLBACK_OPTIONS} --rollback "${SERVICE_NAME}" 2>&1)
+  ROLLBACK_MSG=$(docker ${DOCKER_CONFIG} service update -quiet ${ADDITIONAL_OPTION} ${ROLLBACK_OPTIONS} --rollback "${SERVICE_NAME}" 2>&1)
   local RETURN_VALUE=$?
   if [ ${RETURN_VALUE} -ne 0 ]; then
     log ERROR "Failed to roll back ${SERVICE_NAME}. ${ROLLBACK_MSG}"
@@ -428,9 +429,10 @@ update_single_service() {
   local ADDITIONAL_OPTION=
   ADDITIONAL_OPTION=$(get_service_update_additional_option "${SERVICE_NAME}")
   [ -n "${ADDITIONAL_OPTION}" ] && log DEBUG "Add option \"${ADDITIONAL_OPTION}\" to the docker service update command."
+  # Add "-quiet" to suppress progress output.
   # SC2086: Double quote to prevent globbing and word splitting.
   # shellcheck disable=SC2086
-  if ! UPDATE_MSG=$(timeout "${UPDATE_TIMEOUT_SECONDS}" docker ${DOCKER_CONFIG} service update ${ADDITIONAL_OPTION} ${UPDATE_OPTIONS} --image="${IMAGE}" "${SERVICE_NAME}" 2>&1); then
+  if ! UPDATE_MSG=$(timeout "${UPDATE_TIMEOUT_SECONDS}" docker ${DOCKER_CONFIG} service update --quiet ${ADDITIONAL_OPTION} ${UPDATE_OPTIONS} --image="${IMAGE}" "${SERVICE_NAME}" 2>&1); then
     log ERROR "docker service update failed or timeout. ${UPDATE_MSG}"
     rollback_service "${SERVICE_NAME}" "${DOCKER_CONFIG}" "${ADDITIONAL_OPTION}"
     add_service_update_failed "${SERVICE_NAME}"
