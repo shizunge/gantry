@@ -22,6 +22,7 @@ init_swarm() {
     echo "Host ${SELF_ID} is already a swarm manager."
     return 0
   fi
+  echo "Run docker swarm init"
   docker swarm init
 }
 
