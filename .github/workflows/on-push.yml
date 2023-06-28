@@ -4,7 +4,7 @@ on:
   push:
     paths:
       - 'src/*'
-      - 'test/*'
+      - 'tests/*'
   pull_request:
     branches:
       - 'main'
