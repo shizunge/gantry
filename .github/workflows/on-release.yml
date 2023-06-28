@@ -10,6 +10,8 @@ env:
   
 jobs:
   shellcheck:
+    strategy:
+      max-parallel: 1
     runs-on: ubuntu-latest
     steps:
       - name: Checkout Code
@@ -27,6 +29,8 @@ jobs:
           popd
 
   run_tests:
+    strategy:
+      max-parallel: 1
     runs-on: ubuntu-latest
     steps:
       - name: Checkout Code
@@ -42,6 +46,8 @@ jobs:
           bash ${GITHUB_WORKSPACE}/tests/run_all_tests.sh ghcr.io/${{ github.repository }}
 
   build_and_push:
+    strategy:
+      max-parallel: 1
     name: Build and push Docker image
     runs-on: ubuntu-latest
     steps:
