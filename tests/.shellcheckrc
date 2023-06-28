@@ -1,0 +1,7 @@
+# .shellcheckrc
+
+# SC2034 (warning): <ENV> appears unused. Verify use (or export if used externally).
+disable=SC2034
+
+# SC1090 (warning): ShellCheck can't follow non-constant source. Use a directive to specify location.
+disable=SC1090

@@ -26,7 +26,7 @@ init_swarm() {
 }
 
 main() {
-  if [ -z "${BASH_SOURCE}" ]; then
+  if [ -z "${BASH_SOURCE[0]}" ]; then
     echo "BASH_SOURCE is empty" >&2
     return 1
   fi
