@@ -113,7 +113,9 @@ remove_images() {
     log INFO "No images to remove."
     return 0
   fi
-  log INFO "Try to remove the following images:"
+  local IMAGE_NUM=
+  IMAGE_NUM=$(get_number_of_elements "${GLOBAL_IMAGES_TO_REMOVE}")
+  log INFO "Removing ${IMAGE_NUM} image(s):"
   for I in $(echo "${GLOBAL_IMAGES_TO_REMOVE}" | tr '\n' ' '); do
     log INFO "- ${I}"
   done
@@ -178,7 +180,9 @@ report_services_updated() {
     echo "No services updated."
     return 0
   fi
-  echo "Services updated:"
+  local UPDATED_NUM=
+  UPDATED_NUM=$(get_number_of_elements "${GLOBAL_SERVICES_UPDATED}")
+  echo "${UPDATED_NUM} service(s) updated:"
   for S in ${GLOBAL_SERVICES_UPDATED}; do
     echo "- ${S}"
   done
@@ -197,7 +201,9 @@ report_services_update_failed() {
   if [ -z "${GLOBAL_SERVICES_UPDATE_FAILED}" ]; then
     return 0
   fi
-  echo "Services update failed:"
+  local FAILED_NUM=
+  FAILED_NUM=$(get_number_of_elements "${GLOBAL_SERVICES_UPDATE_FAILED}")
+  echo "${FAILED_NUM} service(s) update failed:"
   for S in ${GLOBAL_SERVICES_UPDATE_FAILED}; do
     echo "- ${S}"
   done
@@ -221,10 +227,7 @@ report_services() {
   FAILED_MSG=$(report_services_update_failed)
   echo "${FAILED_MSG}" | log_lines INFO
   # Send notification
-  local UPDATED_NUM=
-  local FAILED_NUM=
-  local TITLE=
-  local BODY=
+  local UPDATED_NUM FAILED_NUM TITLE BODY
   UPDATED_NUM=$(get_number_of_elements "${GLOBAL_SERVICES_UPDATED}")
   FAILED_NUM=$(get_number_of_elements "${GLOBAL_SERVICES_UPDATE_FAILED}")
   TITLE="[gantry] ${UPDATED_NUM} services updated ${FAILED_NUM} failed"

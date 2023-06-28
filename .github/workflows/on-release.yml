@@ -9,6 +9,37 @@ env:
   PLATFORMS: "linux/amd64,linux/arm64,linux/arm/v7"
   
 jobs:
+  shellcheck:
+    runs-on: ubuntu-latest
+    steps:
+    - name: Checkout Code
+      uses: actions/checkout@v3
+    - name: Install shellcheck
+      run: sudo apt-get install -y bash shellcheck
+    - name: Analyse with shellcheck
+      run: |
+        shellcheck -V
+        pushd src
+        shellcheck *
+        popd
+        pushd test
+        shellcheck *
+        popd
+  run_tests:
+    steps:
+    - name: Checkout Code
+      uses: actions/checkout@v3
+    - name: Login to GitHub Container Registry
+        uses: docker/login-action@v2.2.0
+        with:
+          registry: ghcr.io
+          username: ${{ github.repository_owner }}
+          password: ${{ github.token }}
+    - name: Run tests
+      run: |
+        pushd tests
+        ./tests.sh ghcr.io/${{ github.repository }}
+        popd
   build_and_push:
     name: Build and push Docker image
     runs-on: ubuntu-latest
