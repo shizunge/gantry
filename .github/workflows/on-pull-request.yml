@@ -1,0 +1,47 @@
+name: On pull request
+
+on:
+  pull_request:
+    branches:
+      - 'main'
+  workflow_dispatch:
+
+env:
+  PLATFORMS: "linux/amd64,linux/arm64,linux/arm/v7"
+  
+jobs:
+  shellcheck:
+    strategy:
+      max-parallel: 1
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v3
+      - name: Install shellcheck
+        run: sudo apt-get install -y bash shellcheck
+      - name: Analyse with shellcheck
+        run: |
+          shellcheck -V
+          pushd ${GITHUB_WORKSPACE}/src
+          shellcheck *
+          popd
+          pushd ${GITHUB_WORKSPACE}/tests
+          shellcheck *
+          popd
+
+  run_tests:
+    strategy:
+      max-parallel: 1
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v3
+      - name: Login to GitHub Container Registry
+        uses: docker/login-action@v2.2.0
+        with:
+          registry: ghcr.io
+          username: ${{ github.repository_owner }}
+          password: ${{ github.token }}
+      - name: Run tests
+        run: |
+          bash ${GITHUB_WORKSPACE}/tests/run_all_tests.sh ghcr.io/${{ github.repository }}
