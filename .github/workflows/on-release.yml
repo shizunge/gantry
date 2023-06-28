@@ -12,67 +12,61 @@ jobs:
   shellcheck:
     runs-on: ubuntu-latest
     steps:
-    - name: Checkout Code
-      uses: actions/checkout@v3
-    - name: Install shellcheck
-      run: sudo apt-get install -y bash shellcheck
-    - name: Analyse with shellcheck
-      run: |
-        shellcheck -V
-        pushd src
-        shellcheck *
-        popd
-        pushd test
-        shellcheck *
-        popd
+      - name: Checkout Code
+        uses: actions/checkout@v3
+      - name: Install shellcheck
+        run: sudo apt-get install -y bash shellcheck
+      - name: Analyse with shellcheck
+        run: |
+          shellcheck -V
+          pushd src
+          shellcheck *
+          popd
+          pushd test
+          shellcheck *
+          popd
   run_tests:
     steps:
-    - name: Checkout Code
-      uses: actions/checkout@v3
-    - name: Login to GitHub Container Registry
-        uses: docker/login-action@v2.2.0
-        with:
-          registry: ghcr.io
-          username: ${{ github.repository_owner }}
-          password: ${{ github.token }}
-    - name: Run tests
-      run: |
-        pushd tests
-        ./tests.sh ghcr.io/${{ github.repository }}
-        popd
-  build_and_push:
-    name: Build and push Docker image
-    runs-on: ubuntu-latest
-    steps:
-      - name: Checkout code
+      - name: Checkout Code
         uses: actions/checkout@v3
-        
-      - name: Extract tag string
-        id: git
-        shell: bash
-        run: |
-          RELEASE_VERSION=${GITHUB_REF#refs/*/}
-          echo "image_tag=${RELEASE_VERSION}" >> ${GITHUB_OUTPUT}
-      
-      - name: Set up QEMU
-        uses: docker/setup-qemu-action@v2
-        
-      - name: Install buildx
-        uses: docker/setup-buildx-action@v2.7.0
-        
-      - name: Login to docker hub
-        uses: docker/login-action@v2.2.0
-        with:
-          username: ${{ secrets.DOCKERHUB_USERNAME }}
-          password: ${{ secrets.DOCKERHUB_PASSWORD }}
-
       - name: Login to GitHub Container Registry
         uses: docker/login-action@v2.2.0
         with:
           registry: ghcr.io
           username: ${{ github.repository_owner }}
           password: ${{ github.token }}
-        
+      - name: Run tests
+        run: |
+          pushd tests
+          ./tests.sh ghcr.io/${{ github.repository }}
+          popd
+  build_and_push:
+    name: Build and push Docker image
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v3  
+      - name: Extract tag string
+        id: git
+        shell: bash
+        run: |
+          RELEASE_VERSION=${GITHUB_REF#refs/*/}
+          echo "image_tag=${RELEASE_VERSION}" >> ${GITHUB_OUTPUT}
+      - name: Set up QEMU
+        uses: docker/setup-qemu-action@v2
+      - name: Install buildx
+        uses: docker/setup-buildx-action@v2.7.0
+      - name: Login to docker hub
+        uses: docker/login-action@v2.2.0
+        with:
+          username: ${{ secrets.DOCKERHUB_USERNAME }}
+          password: ${{ secrets.DOCKERHUB_PASSWORD }}
+      - name: Login to GitHub Container Registry
+        uses: docker/login-action@v2.2.0
+        with:
+          registry: ghcr.io
+          username: ${{ github.repository_owner }}
+          password: ${{ github.token }}
       - name: Build and push ${{ github.repository }}:${{ steps.git.outputs.image_tag }}
         uses: docker/build-push-action@v4.1.1
         with:
@@ -83,7 +77,6 @@ jobs:
             ${{ github.repository }}:latest
             ghcr.io/${{ github.repository }}:${{ steps.git.outputs.image_tag }}
             ghcr.io/${{ github.repository }}:latest
-
       - name: Update dockerhub description
         uses: peter-evans/dockerhub-description@v3
         with:
