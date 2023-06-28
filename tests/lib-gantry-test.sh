@@ -61,7 +61,8 @@ build_and_push_test_image() {
   FILE=$(mktemp)
   echo "FROM alpinelinux/docker-cli:latest" > "${FILE}"
   echo "ENTRYPOINT [\"sh\", \"-c\", \"\"echo $(date -Iseconds); tail -f /dev/null;\"\"]" >> "${FILE}"
-  docker build --tag "${IMAGE_WITH_TAG}" --push --file "${FILE}" .
+  docker build --tag "${IMAGE_WITH_TAG}" --file "${FILE}" .
+  docker push "${IMAGE_WITH_TAG}"
 }
 
 start_service() {
