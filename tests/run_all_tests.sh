@@ -28,16 +28,22 @@ init_swarm() {
 
 main() {
   if [ -z "${BASH_SOURCE[0]}" ]; then
-    echo "BASH_SOURCE is empty" | tee >(cat >&2)
+    echo "BASH_SOURCE is empty." >&2
     return 1
   fi
   echo "Starting tests"
-  set -e
   local IMAGE="${1}"
+  if [ -z "${IMAGE}" ]; then
+    echo "IMAGE is empty."
+    return 1
+  fi
   local SCRIPT_DIR ENTRYPOINT_SH IMAGE_WITH_TAG
   SCRIPT_DIR="$( cd "$(dirname "${BASH_SOURCE[0]}")" || return 1; pwd -P )"
   ENTRYPOINT_SH="${SCRIPT_DIR}/../src/entrypoint.sh"
-  IMAGE_WITH_TAG="${IMAGE}:test"
+  IMAGE_WITH_TAG="${IMAGE}"
+  if ! echo "${IMAGE_WITH_TAG}" | grep -q ":"; then
+    IMAGE_WITH_TAG="${IMAGE_WITH_TAG}:test"
+  fi
   echo "ENTRYPOINT_SH=${ENTRYPOINT_SH}"
   echo "IMAGE_WITH_TAG=${IMAGE_WITH_TAG}"
 

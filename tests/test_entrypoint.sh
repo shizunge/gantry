@@ -28,12 +28,12 @@ test_no_new_image() {
   export GANTRY_SERVICES_FILTERS="name=${SERVICE_NAME}"
   STDOUT=$(source "${ENTRYPOINT_SH}" "${FUNCNAME[0]}" | tee /dev/tty)
 
-  set -x
+  set -x -e
   LINE=$(echo -e "${STDOUT}" | grep "${SERVICE_NAME}")
   LINE=$(echo -e "${LINE}" | grep "No new image")
   LINE=$(echo -e "${STDOUT}" | grep "No services updated")
   LINE=$(echo -e "${STDOUT}" | grep "No images to remove")
-  set +x
+  set +x +e
 
   stop_service "${SERVICE_NAME}"
   test_end_no_error "${FUNCNAME[0]}"
@@ -54,13 +54,13 @@ test_new_image() {
   export GANTRY_SERVICES_FILTERS="name=${SERVICE_NAME}"
   STDOUT=$(source "${ENTRYPOINT_SH}" "${FUNCNAME[0]}" | tee /dev/tty)
 
-  set -x
+  set -x -e
   LINE=$(echo -e "${STDOUT}" | grep "${SERVICE_NAME}")
   LINE=$(echo -e "${LINE}" | grep "UPDATED")
   LINE=$(echo -e "${STDOUT}" | grep "1 service(s) updated")
   LINE=$(echo -e "${STDOUT}" | grep "Removing 1 image(s)")
   LINE=$(echo -e "${STDOUT}" | grep "Removed image ${IMAGE_WITH_TAG}")
-  set +x
+  set +x +e
 
   stop_service "${SERVICE_NAME}"
   test_end_no_error "${FUNCNAME[0]}"
@@ -82,10 +82,10 @@ test_SERVICES_EXCLUDED() {
   export GANTRY_SERVICES_EXCLUDED="${SERVICE_NAME}"
   STDOUT=$(source "${ENTRYPOINT_SH}" "${FUNCNAME[0]}" | tee /dev/tty)
 
-  set -x
+  set -x -e
   LINE=$(echo -e "${STDOUT}" | grep "No services updated")
   LINE=$(echo -e "${STDOUT}" | grep "No images to remove")
-  set +x
+  set +x +e
 
   stop_service "${SERVICE_NAME}"
   test_end_no_error "${FUNCNAME[0]}"
@@ -107,10 +107,10 @@ test_SERVICES_EXCLUDED_FILTERS() {
   export GANTRY_SERVICES_EXCLUDED_FILTERS="name=${SERVICE_NAME}"
   STDOUT=$(source "${ENTRYPOINT_SH}" "${FUNCNAME[0]}" | tee /dev/tty)
 
-  set -x
+  set -x -e
   LINE=$(echo -e "${STDOUT}" | grep "No services updated")
   LINE=$(echo -e "${STDOUT}" | grep "No images to remove")
-  set +x
+  set +x +e
 
   stop_service "${SERVICE_NAME}"
   test_end_no_error "${FUNCNAME[0]}"
@@ -132,10 +132,10 @@ test_CLEANUP_IMAGES_off() {
   export GANTRY_CLEANUP_IMAGES="false"
   STDOUT=$(source "${ENTRYPOINT_SH}" "${FUNCNAME[0]}" | tee /dev/tty)
 
-  set -x
+  set -x -e
   LINE=$(echo -e "${STDOUT}" | grep "1 service(s) updated")
   LINE=$(echo -e "${STDOUT}" | grep "Skip removing images")
-  set +x
+  set +x +e
 
   stop_service "${SERVICE_NAME}"
   test_end_no_error "${FUNCNAME[0]}"
@@ -158,14 +158,14 @@ test_MANIFEST_INSPECT_off() {
   export GANTRY_UPDATE_OPTIONS="--force"
   STDOUT=$(source "${ENTRYPOINT_SH}" "${FUNCNAME[0]}" | tee /dev/tty)
 
-  set -x
+  set -x -e
   # Gantry is still trying to update the service.
   # But it will see no new images.
   LINE=$(echo -e "${STDOUT}" | grep "${SERVICE_NAME}")
   LINE=$(echo -e "${LINE}" | grep "No updates")
   LINE=$(echo -e "${STDOUT}" | grep "No services updated")
   LINE=$(echo -e "${STDOUT}" | grep "No images to remove")
-  set +x
+  set +x +e
 
   stop_service "${SERVICE_NAME}"
   test_end_no_error "${FUNCNAME[0]}"
