@@ -33,15 +33,15 @@ main() {
   fi
   set -e
   local IMAGE="${1}"
-  local CURRENT_DIR ENTRYPOINT_SH IMAGE_WITH_TAG
-  CURRENT_DIR="$( cd "$(dirname "${BASH_SOURCE[0]}")" || return 1; pwd -P )"
-  ENTRYPOINT_SH="${CURRENT_DIR}/../src/entrypoint.sh"
+  local SCRIPT_DIR ENTRYPOINT_SH IMAGE_WITH_TAG
+  SCRIPT_DIR="$( cd "$(dirname "${BASH_SOURCE[0]}")" || return 1; pwd -P )"
+  ENTRYPOINT_SH="${SCRIPT_DIR}/../src/entrypoint.sh"
   IMAGE_WITH_TAG="${IMAGE}:test"
 
   init_swarm
 
-  source "${CURRENT_DIR}/lib-gantry-test.sh"
-  source "${CURRENT_DIR}/test_entrypoint.sh" "${ENTRYPOINT_SH}" "${IMAGE_WITH_TAG}"
+  source "${SCRIPT_DIR}/lib-gantry-test.sh"
+  source "${SCRIPT_DIR}/test_entrypoint.sh" "${ENTRYPOINT_SH}" "${IMAGE_WITH_TAG}"
 
   return 0
 }

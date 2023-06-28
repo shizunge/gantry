@@ -43,7 +43,7 @@ jobs:
           password: ${{ github.token }}
       - name: Run tests
         run: |
-          bash ${GITHUB_WORKSPACE}/tests/run_all_tests.sh ghcr.io/${{ github.repository }}
+          ${GITHUB_WORKSPACE}/tests/run_all_tests.sh ghcr.io/${{ github.repository }}
 
   build_and_push:
     strategy:
