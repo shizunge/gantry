@@ -43,7 +43,9 @@ jobs:
           password: ${{ github.token }}
       - name: Run tests
         run: |
+          echo "Start running tests"
           ${GITHUB_WORKSPACE}/tests/run_all_tests.sh ghcr.io/${{ github.repository }}
+          echo "Done running tests"
 
   build_and_push:
     strategy:
