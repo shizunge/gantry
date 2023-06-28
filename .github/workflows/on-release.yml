@@ -19,12 +19,13 @@ jobs:
       - name: Analyse with shellcheck
         run: |
           shellcheck -V
-          pushd src
+          pushd ${GITHUB_WORKSPACE}/src
           shellcheck *
           popd
-          pushd test
+          pushd ${GITHUB_WORKSPACE}/tests
           shellcheck *
           popd
+
   run_tests:
     runs-on: ubuntu-latest
     steps:
@@ -38,9 +39,8 @@ jobs:
           password: ${{ github.token }}
       - name: Run tests
         run: |
-          pushd tests
-          ./tests.sh ghcr.io/${{ github.repository }}
-          popd
+          bash ${GITHUB_WORKSPACE}/tests/tests.sh ghcr.io/${{ github.repository }}
+
   build_and_push:
     name: Build and push Docker image
     runs-on: ubuntu-latest
