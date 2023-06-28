@@ -28,21 +28,32 @@ init_swarm() {
 
 main() {
   if [ -z "${BASH_SOURCE[0]}" ]; then
-    echo "BASH_SOURCE is empty" >&2
+    echo "BASH_SOURCE is empty" | tee >(cat >&2)
     return 1
   fi
+  echo "Starting tests"
   set -e
   local IMAGE="${1}"
   local SCRIPT_DIR ENTRYPOINT_SH IMAGE_WITH_TAG
   SCRIPT_DIR="$( cd "$(dirname "${BASH_SOURCE[0]}")" || return 1; pwd -P )"
   ENTRYPOINT_SH="${SCRIPT_DIR}/../src/entrypoint.sh"
   IMAGE_WITH_TAG="${IMAGE}:test"
+  echo "ENTRYPOINT_SH=${ENTRYPOINT_SH}"
+  echo "IMAGE_WITH_TAG=${IMAGE_WITH_TAG}"
 
   init_swarm
 
   source "${SCRIPT_DIR}/lib-gantry-test.sh"
-  source "${SCRIPT_DIR}/test_entrypoint.sh" "${ENTRYPOINT_SH}" "${IMAGE_WITH_TAG}"
+  source "${SCRIPT_DIR}/test_entrypoint.sh"
 
+  test_no_new_image "${ENTRYPOINT_SH}" "${IMAGE_WITH_TAG}"
+  test_new_image "${ENTRYPOINT_SH}" "${IMAGE_WITH_TAG}"
+  test_SERVICES_EXCLUDED "${ENTRYPOINT_SH}" "${IMAGE_WITH_TAG}"
+  test_SERVICES_EXCLUDED_FILTERS "${ENTRYPOINT_SH}" "${IMAGE_WITH_TAG}"
+  test_CLEANUP_IMAGES_off "${ENTRYPOINT_SH}" "${IMAGE_WITH_TAG}"
+  test_MANIFEST_INSPECT_off "${ENTRYPOINT_SH}" "${IMAGE_WITH_TAG}"
+
+  echo "Done tests"
   return 0
 }
 

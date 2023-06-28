@@ -329,8 +329,9 @@ inspect_image() {
   local DIGEST=
   IMAGE=$(echo "${IMAGE_WITH_DIGEST}" | cut -d@ -f1)
   DIGEST=$(echo "${IMAGE_WITH_DIGEST}" | cut -d@ -f2)
-  # Always inspect self
+  # Never skip inspecting self
   if ! is_true "${MANIFEST_INSPECT}" && ! service_is_self "${SERVICE_NAME}"; then
+    echo "${IMAGE}"
     return 0
   fi
   if in_list "${GLOBAL_NO_NEW_IMAGES}" "${DIGEST}"; then

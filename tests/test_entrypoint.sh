@@ -25,7 +25,7 @@ test_no_new_image() {
   build_and_push_test_image "${IMAGE_WITH_TAG}"
   start_service "${SERVICE_NAME}" "${IMAGE_WITH_TAG}"
 
-  GANTRY_SERVICES_FILTERS="name=${SERVICE_NAME}"
+  export GANTRY_SERVICES_FILTERS="name=${SERVICE_NAME}"
   STDOUT=$(source "${ENTRYPOINT_SH}" "${FUNCNAME[0]}" | tee /dev/tty)
 
   set -x
@@ -43,7 +43,6 @@ test_no_new_image() {
 test_new_image() {
   local ENTRYPOINT_SH="${1}"
   local IMAGE_WITH_TAG="${2}"
-  LOG_SCOPE="${FUNCNAME[0]}"
 
   test_start "${FUNCNAME[0]}"
   local SERVICE_NAME STDOUT LINE
@@ -52,7 +51,7 @@ test_new_image() {
   start_service "${SERVICE_NAME}" "${IMAGE_WITH_TAG}"
   build_and_push_test_image "${IMAGE_WITH_TAG}"
 
-  GANTRY_SERVICES_FILTERS="name=${SERVICE_NAME}"
+  export GANTRY_SERVICES_FILTERS="name=${SERVICE_NAME}"
   STDOUT=$(source "${ENTRYPOINT_SH}" "${FUNCNAME[0]}" | tee /dev/tty)
 
   set -x
@@ -79,8 +78,8 @@ test_SERVICES_EXCLUDED() {
   start_service "${SERVICE_NAME}" "${IMAGE_WITH_TAG}"
   build_and_push_test_image "${IMAGE_WITH_TAG}"
 
-  GANTRY_SERVICES_FILTERS="name=${SERVICE_NAME}"
-  GANTRY_SERVICES_EXCLUDED="${SERVICE_NAME}"
+  export GANTRY_SERVICES_FILTERS="name=${SERVICE_NAME}"
+  export GANTRY_SERVICES_EXCLUDED="${SERVICE_NAME}"
   STDOUT=$(source "${ENTRYPOINT_SH}" "${FUNCNAME[0]}" | tee /dev/tty)
 
   set -x
@@ -104,8 +103,8 @@ test_SERVICES_EXCLUDED_FILTERS() {
   start_service "${SERVICE_NAME}" "${IMAGE_WITH_TAG}"
   build_and_push_test_image "${IMAGE_WITH_TAG}"
 
-  GANTRY_SERVICES_FILTERS="name=${SERVICE_NAME}"
-  GANTRY_SERVICES_EXCLUDED_FILTERS="name=${SERVICE_NAME}"
+  export GANTRY_SERVICES_FILTERS="name=${SERVICE_NAME}"
+  export GANTRY_SERVICES_EXCLUDED_FILTERS="name=${SERVICE_NAME}"
   STDOUT=$(source "${ENTRYPOINT_SH}" "${FUNCNAME[0]}" | tee /dev/tty)
 
   set -x
@@ -129,8 +128,8 @@ test_CLEANUP_IMAGES_off() {
   start_service "${SERVICE_NAME}" "${IMAGE_WITH_TAG}"
   build_and_push_test_image "${IMAGE_WITH_TAG}"
 
-  GANTRY_SERVICES_FILTERS="name=${SERVICE_NAME}"
-  GANTRY_CLEANUP_IMAGES="false"
+  export GANTRY_SERVICES_FILTERS="name=${SERVICE_NAME}"
+  export GANTRY_CLEANUP_IMAGES="false"
   STDOUT=$(source "${ENTRYPOINT_SH}" "${FUNCNAME[0]}" | tee /dev/tty)
 
   set -x
@@ -154,16 +153,16 @@ test_MANIFEST_INSPECT_off() {
   start_service "${SERVICE_NAME}" "${IMAGE_WITH_TAG}"
   # No image updates after service started.
 
-  GANTRY_SERVICES_FILTERS="name=${SERVICE_NAME}"
-  GANTRY_MANIFEST_INSPECT="false"
-  GANTRY_UPDATE_OPTIONS="--force"
+  export GANTRY_SERVICES_FILTERS="name=${SERVICE_NAME}"
+  export GANTRY_MANIFEST_INSPECT="false"
+  export GANTRY_UPDATE_OPTIONS="--force"
   STDOUT=$(source "${ENTRYPOINT_SH}" "${FUNCNAME[0]}" | tee /dev/tty)
 
   set -x
   # Gantry is still trying to update the service.
   # But it will see no new images.
   LINE=$(echo -e "${STDOUT}" | grep "${SERVICE_NAME}")
-  LINE=$(echo -e "${LINE}" | grep "No new image")
+  LINE=$(echo -e "${LINE}" | grep "No updates")
   LINE=$(echo -e "${STDOUT}" | grep "No services updated")
   LINE=$(echo -e "${STDOUT}" | grep "No images to remove")
   set +x
@@ -172,19 +171,3 @@ test_MANIFEST_INSPECT_off() {
   test_end_no_error "${FUNCNAME[0]}"
   return 0
 }
-
-main() {
-  local ENTRYPOINT_SH="${1}"
-  local IMAGE_WITH_TAG="${2}"
-
-  test_no_new_image "${ENTRYPOINT_SH}" "${IMAGE_WITH_TAG}"
-  test_new_image "${ENTRYPOINT_SH}" "${IMAGE_WITH_TAG}"
-  test_SERVICES_EXCLUDED "${ENTRYPOINT_SH}" "${IMAGE_WITH_TAG}"
-  test_SERVICES_EXCLUDED_FILTERS "${ENTRYPOINT_SH}" "${IMAGE_WITH_TAG}"
-  test_CLEANUP_IMAGES_off "${ENTRYPOINT_SH}" "${IMAGE_WITH_TAG}"
-  test_MANIFEST_INSPECT_off "${ENTRYPOINT_SH}" "${IMAGE_WITH_TAG}"
-
-  return 0
-}
-
-main "${@}"
