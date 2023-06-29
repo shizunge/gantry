@@ -20,13 +20,10 @@ init_swarm() {
   SELF_ID=$(docker node inspect self --format "{{.Description.Hostname}}" 2>/dev/null);
   if [ -n "${SELF_ID}" ]; then
     echo "Host ${SELF_ID} is already a swarm manager."
-    GLOBAL_HOSTNAME="${SELF_ID}"
     return 0
   fi
   echo "Run docker swarm init"
   docker swarm init
-  SELF_ID=$(docker node inspect self --format "{{.Description.Hostname}}" 2>/dev/null);
-  GLOBAL_HOSTNAME="${SELF_ID}"
 }
 
 get_image_with_tag() {

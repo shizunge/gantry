@@ -122,8 +122,20 @@ wait_zero_running_tasks() {
   done
 }
 
+hostname() {
+  if [ -z "${GLOBAL_HOSTNAME}" ]; then
+    local SELF_ID=
+    SELF_ID=$(docker node inspect self --format "{{.Description.Hostname}}" 2>/dev/null);
+    if [ -n "${SELF_ID}" ]; then
+      GLOBAL_HOSTNAME="${SELF_ID}"
+    fi
+  fi
+  echo "${GLOBAL_HOSTNAME}"
+}
+
 location_constraints() {
-  local NODE_NAME="${GLOBAL_HOSTNAME:-""}"
+  local NODE_NAME=
+  NODE_NAME="$(hostname)"
   [ -z "${NODE_NAME}" ] && echo "" && return 0
   local ARGS="--constraint node.hostname==${NODE_NAME}";
   echo "${ARGS}"
