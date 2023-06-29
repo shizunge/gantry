@@ -69,6 +69,7 @@ main() {
 
   test_no_new_image "${IMAGE_WITH_TAG}"
   test_new_image "${IMAGE_WITH_TAG}"
+  test_login_config "${IMAGE_WITH_TAG}" "${REGISTRY}" "${USER}" "${PASS}"
   test_SERVICES_EXCLUDED "${IMAGE_WITH_TAG}"
   test_SERVICES_EXCLUDED_FILTERS "${IMAGE_WITH_TAG}"
   test_SERVICES_EXCLUDED_combined "${IMAGE_WITH_TAG}"

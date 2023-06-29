@@ -92,6 +92,62 @@ test_new_image() {
   return 0
 }
 
+test_login_config() {
+  # It would be difficult to test updating failure due to authorization errors.
+  # We may need to setup a private registry to test that.
+  # Here are just a simple login test.
+  local IMAGE_WITH_TAG="${1}"
+  local REGISTRY="${2}"
+  local USER="${3}"
+  local PASS="${4}"
+  local LABEL="gantry.auth.config"
+  local CONFIG=
+  CONFIG="C$(date +%s)"
+  if [ -z "${USER}" ] || [ -z "${PASS}" ]; then
+    echo "Skip ${FUNCNAME[0]}. No user or pass provided."
+    return 0
+  fi
+
+  test_start "${FUNCNAME[0]}"
+  local SERVICE_NAME STDOUT
+  SERVICE_NAME="gantry-test-$(date +%s)"
+  build_and_push_test_image "${IMAGE_WITH_TAG}"
+  start_service "${SERVICE_NAME}" "${IMAGE_WITH_TAG}"
+  docker service update --label-add "${LABEL}=${CONFIG}" "${SERVICE_NAME}"
+  build_and_push_test_image "${IMAGE_WITH_TAG}"
+
+  local USER_FILE PASS_FILE
+  USER_FILE=$(mktemp)
+  PASS_FILE=$(mktemp)
+  echo "${USER}" > "${USER_FILE}"
+  echo "${PASS}" > "${PASS_FILE}"
+
+  export GANTRY_SERVICES_FILTERS="name=${SERVICE_NAME}"
+  export GANTRY_REGISTRY_CONFIG="${CONFIG}"
+  export GANTRY_REGISTRY_HOST="${REGISTRY}"
+  export GANTRY_REGISTRY_PASSWORD_FILE="${PASS_FILE}"
+  export GANTRY_REGISTRY_USER_FILE="${USER_FILE}"
+  STDOUT=$(run_gantry "${FUNCNAME[0]}" 2>&1 | tee /dev/tty)
+
+  expect_no_message "${STDOUT}" "${SERVICE_NAME}.*${NO_NEW_IMAGE}"
+  expect_message    "${STDOUT}" "${SERVICE_NAME}.*${UPDATED}"
+  expect_no_message "${STDOUT}" "${SERVICE_NAME}.*${NO_UPDATES}"
+  expect_no_message "${STDOUT}" "${ROLLING_BACK}.*${SERVICE_NAME}"
+  expect_no_message "${STDOUT}" "${FAILED_TO_ROLLBACK}.*${SERVICE_NAME}"
+  expect_no_message "${STDOUT}" "${ROLLED_BACK}.*${SERVICE_NAME}"
+  expect_no_message "${STDOUT}" "${NO_SERVICES_UPDATED}"
+  expect_message    "${STDOUT}" "${NUM_SERVICES_UPDATED}"
+  expect_no_message "${STDOUT}" "${NO_IMAGES_TO_REMOVE}"
+  expect_message    "${STDOUT}" "${REMOVING_NUM_IMAGES}"
+  expect_no_message "${STDOUT}" "${SKIP_REMOVING_IMAGES}"
+  expect_message    "${STDOUT}" "${REMOVED_IMAGE}.*${IMAGE_WITH_TAG}"
+  expect_no_message "${STDOUT}" "${FAILED_TO_REMOVE_IMAGE}.*${IMAGE_WITH_TAG}"
+
+  stop_service "${SERVICE_NAME}"
+  test_end "${FUNCNAME[0]}"
+  return 0
+}
+
 test_SERVICES_EXCLUDED() {
   local IMAGE_WITH_TAG="${1}"
 
@@ -210,62 +266,6 @@ test_SERVICES_EXCLUDED_combined() {
   stop_service "${SERVICE_NAME2}"
   stop_service "${SERVICE_NAME1}"
   stop_service "${SERVICE_NAME0}"
-  test_end "${FUNCNAME[0]}"
-  return 0
-}
-
-test_login_config() {
-  # It would be difficult to test updating failure due to authorization errors.
-  # We may need to setup a private registry to test that.
-  # Here are just a simple login test.
-  local IMAGE_WITH_TAG="${1}"
-  local REGISTRY="${2}"
-  local USER="${3}"
-  local PASS="${4}"
-  local LABEL="gantry.auth.config"
-  local CONFIG=
-  CONFIG="C$(date +%s)"
-  if [ -z "${USER}" ] || [ -z "${PASS}" ]; then
-    echo "Skip ${FUNCNAME[0]}. No user or pass provided."
-    return 0
-  fi
-
-  test_start "${FUNCNAME[0]}"
-  local SERVICE_NAME STDOUT
-  SERVICE_NAME="gantry-test-$(date +%s)"
-  build_and_push_test_image "${IMAGE_WITH_TAG}"
-  start_service "${SERVICE_NAME}" "${IMAGE_WITH_TAG}"
-  docker service update --label-add "${LABEL}=${CONFIG}" "${SERVICE_NAME}"
-  build_and_push_test_image "${IMAGE_WITH_TAG}"
-
-  local USER_FILE PASS_FILE
-  USER_FILE=$(mktemp)
-  PASS_FILE=$(mktemp)
-  echo "${USER}" > "${USER_FILE}"
-  echo "${PASS}" > "${PASS_FILE}"
-
-  export GANTRY_SERVICES_FILTERS="name=${SERVICE_NAME}"
-  export GANTRY_REGISTRY_CONFIG="${CONFIG}"
-  export GANTRY_REGISTRY_HOST="${REGISTRY}"
-  export GANTRY_REGISTRY_PASSWORD_FILE="${PASS_FILE}"
-  export GANTRY_REGISTRY_USER_FILE="${USER_FILE}"
-  STDOUT=$(run_gantry "${FUNCNAME[0]}" 2>&1 | tee /dev/tty)
-
-  expect_no_message "${STDOUT}" "${SERVICE_NAME}.*${NO_NEW_IMAGE}"
-  expect_message    "${STDOUT}" "${SERVICE_NAME}.*${UPDATED}"
-  expect_no_message "${STDOUT}" "${SERVICE_NAME}.*${NO_UPDATES}"
-  expect_no_message "${STDOUT}" "${ROLLING_BACK}.*${SERVICE_NAME}"
-  expect_no_message "${STDOUT}" "${FAILED_TO_ROLLBACK}.*${SERVICE_NAME}"
-  expect_no_message "${STDOUT}" "${ROLLED_BACK}.*${SERVICE_NAME}"
-  expect_no_message "${STDOUT}" "${NO_SERVICES_UPDATED}"
-  expect_message    "${STDOUT}" "${NUM_SERVICES_UPDATED}"
-  expect_no_message "${STDOUT}" "${NO_IMAGES_TO_REMOVE}"
-  expect_message    "${STDOUT}" "${REMOVING_NUM_IMAGES}"
-  expect_no_message "${STDOUT}" "${SKIP_REMOVING_IMAGES}"
-  expect_message    "${STDOUT}" "${REMOVED_IMAGE}.*${IMAGE_WITH_TAG}"
-  expect_no_message "${STDOUT}" "${FAILED_TO_REMOVE_IMAGE}.*${IMAGE_WITH_TAG}"
-
-  stop_service "${SERVICE_NAME}"
   test_end "${FUNCNAME[0]}"
   return 0
 }
