@@ -45,10 +45,17 @@ main() {
     echo "IMAGE is empty."
     return 1
   fi
+  # Optional arguments. They may be used by some tests. Missing them will disable the corresponding tests.
+  local REGISTRY="${2}"
+  local USER="${3}"
+  local PASS="${4}"
   local SCRIPT_DIR IMAGE_WITH_TAG
   SCRIPT_DIR="$( cd "$(dirname "${BASH_SOURCE[0]}")" || return 1; pwd -P )"
   GLOBAL_ENTRYPOINT_SH="${SCRIPT_DIR}/../src/entrypoint.sh"
   IMAGE_WITH_TAG="${IMAGE}"
+  if [ -n "${REGISTRY}" ]; then
+    IMAGE_WITH_TAG="${REGISTRY}/${IMAGE_WITH_TAG}"
+  fi
   if ! echo "${IMAGE_WITH_TAG}" | grep -q ":"; then
     IMAGE_WITH_TAG="${IMAGE_WITH_TAG}:test"
   fi
