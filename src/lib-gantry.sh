@@ -377,8 +377,9 @@ get_service_update_additional_option() {
     # Add "--detach=true" when there is no running tasks.
     # https://github.com/docker/cli/issues/627
     OPTIONS="${OPTIONS} --detach=true"
+    local MODE=
     # Do not start a new task. Only works for replicated, not global.
-    if service_is_replicated "${SERVICE_NAME}"; then
+    if MODE=$(service_is_replicated "${SERVICE_NAME}"); then
       OPTIONS="${OPTIONS} --replicas=0"
     fi
   fi
@@ -432,13 +433,13 @@ update_single_service() {
   [ ${RETURN_VALUE} -ne 0 ] && return ${RETURN_VALUE}
   [ -z "${IMAGE}" ] && log INFO "No new images." && return 0
   log INFO "Updating with image ${IMAGE}"
-  local ADDITIONAL_OPTION=
-  ADDITIONAL_OPTION=$(get_service_update_additional_option "${SERVICE_NAME}")
-  [ -n "${ADDITIONAL_OPTION}" ] && log DEBUG "Add option \"${ADDITIONAL_OPTION}\" to the docker service update command."
+  local ADDITIONAL_OPTIONS=
+  ADDITIONAL_OPTIONS=$(get_service_update_additional_option "${SERVICE_NAME}")
+  [ -n "${ADDITIONAL_OPTIONS}" ] && log DEBUG "Add option \"${ADDITIONAL_OPTIONS}\" to the docker service update command."
   # Add "-quiet" to suppress progress output.
   # SC2086: Double quote to prevent globbing and word splitting.
   # shellcheck disable=SC2086
-  if ! UPDATE_MSG=$(timeout "${UPDATE_TIMEOUT_SECONDS}" docker ${DOCKER_CONFIG} service update --quiet ${ADDITIONAL_OPTION} ${UPDATE_OPTIONS} --image="${IMAGE}" "${SERVICE_NAME}" 2>&1); then
+  if ! UPDATE_MSG=$(timeout "${UPDATE_TIMEOUT_SECONDS}" docker ${DOCKER_CONFIG} service update --quiet ${ADDITIONAL_OPTIONS} ${UPDATE_OPTIONS} --image="${IMAGE}" "${SERVICE_NAME}" 2>&1); then
     log ERROR "docker service update failed or timeout. ${UPDATE_MSG}"
     rollback_service "${SERVICE_NAME}" "${DOCKER_CONFIG}" "${ADDITIONAL_OPTION}"
     add_service_update_failed "${SERVICE_NAME}"

@@ -74,6 +74,7 @@ main() {
   test_SERVICES_EXCLUDED_FILTERS "${IMAGE_WITH_TAG}"
   test_SERVICES_EXCLUDED_combined "${IMAGE_WITH_TAG}"
   test_MANIFEST_INSPECT_off "${IMAGE_WITH_TAG}"
+  test_replicated_job_no_running_tasks "${IMAGE_WITH_TAG}"
   test_timeout_rollback "${IMAGE_WITH_TAG}"
   test_rollback_failed  "${IMAGE_WITH_TAG}"
   test_ROLLBACK_ON_FAILURE_off "${IMAGE_WITH_TAG}"
