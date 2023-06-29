@@ -55,12 +55,17 @@ test_end() {
   echo "== ${TEST_NAME} Done"
 }
 
+handle_failure() {
+  exit 1
+}
+
 expect_message() {
   TEXT=${1}
   MESSAGE=${2}
   if ! ACTUAL_MSG=$(echo "${TEXT}" | grep -P "${MESSAGE}"); then
     echo "ERROR failed to find expected message \"${MESSAGE}\"."
-    exit 1
+    handle_failure
+    return 1
   fi
   echo "EXPECTED found message: ${ACTUAL_MSG}"
 }
@@ -70,7 +75,8 @@ expect_no_message() {
   MESSAGE=${2}
   if ACTUAL_MSG=$(echo "${TEXT}" | grep -P "${MESSAGE}"); then
     echo "ERROR Message \"${ACTUAL_MSG}\" should not present."
-    exit 1
+    handle_failure
+    return 1
   fi
   echo "EXPECTED found no message matches: ${MESSAGE}"
 }
@@ -91,6 +97,12 @@ build_and_push_test_image() {
   echo -n "Pushing ${IMAGE_WITH_TAG} "
   docker push --quiet "${IMAGE_WITH_TAG}"
   rm "${FILE}"
+}
+
+prune_local_test_image() {
+  local IMAGE_WITH_TAG="${1}"
+  echo "Removing image ${IMAGE_WITH_TAG} "
+  docker image rm "${IMAGE_WITH_TAG}"
 }
 
 wait_zero_running_tasks() {
@@ -128,28 +140,46 @@ wait_service_state() {
 start_replicated_service() {
   local SERVICE_NAME="${1}"
   local IMAGE_WITH_TAG="${2}"
-  echo -n "Creating ${SERVICE_NAME} "
+  echo -n "Creating ${SERVICE_NAME} in replicated mode "
   # SC2046 (warning): Quote this to prevent word splitting.
   # shellcheck disable=SC2046
-  docker service create --quiet --name "${SERVICE_NAME}" $(location_constraints) --mode=replicated "${IMAGE_WITH_TAG}"
+  docker service create --quiet \
+    --name "${SERVICE_NAME}" \
+    --restart-condition "on-failure" \
+    --restart-max-attempts 5 \
+    $(location_constraints) \
+    --mode=replicated \
+    "${IMAGE_WITH_TAG}"
 }
 
 start_global_service() {
   local SERVICE_NAME="${1}"
   local IMAGE_WITH_TAG="${2}"
-  echo -n "Creating ${SERVICE_NAME} "
+  echo -n "Creating ${SERVICE_NAME} in global mode "
   # SC2046 (warning): Quote this to prevent word splitting.
   # shellcheck disable=SC2046
-  docker service create --quiet --name "${SERVICE_NAME}" $(location_constraints) --mode=global "${IMAGE_WITH_TAG}"
+  docker service create --quiet \
+    --name "${SERVICE_NAME}" \
+    --restart-condition "on-failure" \
+    --restart-max-attempts 5 \
+    $(location_constraints) \
+    --mode=global \
+    "${IMAGE_WITH_TAG}"
 }
 
 start_replicated_job() {
   local SERVICE_NAME="${1}"
   local IMAGE_WITH_TAG="${2}"
-  echo -n "Creating ${SERVICE_NAME} "
+  echo -n "Creating ${SERVICE_NAME} in replicated job mode "
   # SC2046 (warning): Quote this to prevent word splitting.
   # shellcheck disable=SC2046
-  docker service create --quiet --name "${SERVICE_NAME}" $(location_constraints) --mode=replicated-job --detach=true "${IMAGE_WITH_TAG}"
+  docker service create --quiet \
+    --name "${SERVICE_NAME}" \
+    --restart-condition "on-failure" \
+    --restart-max-attempts 5 \
+    $(location_constraints) \
+    --mode=replicated-job --detach=true \
+    "${IMAGE_WITH_TAG}"
   # wait until the job is running
   wait_service_state "${SERVICE_NAME}" "Running"
 }
@@ -158,4 +188,33 @@ stop_service() {
   local SERVICE_NAME="${1}"
   echo -n "Removing ${SERVICE_NAME} "
   docker service rm "${SERVICE_NAME}"
+}
+
+get_script_dir() {
+  if [ -z "${BASH_SOURCE[0]}" ]; then
+    echo "BASH_SOURCE is empty." >&2
+    echo "."
+    return 1
+  fi
+  local SCRIPT_DIR=
+  SCRIPT_DIR="$( cd "$(dirname "${BASH_SOURCE[0]}")" || return 1; pwd -P )"
+  echo "${SCRIPT_DIR}"
+}
+
+get_entrypoint_sh() {
+  if [ -n "${GLOBAL_ENTRYPOINT_SH}" ]; then
+    echo "${GLOBAL_ENTRYPOINT_SH}"
+    return 0
+  fi
+  local SCRIPT_DIR=
+  SCRIPT_DIR="$(get_script_dir)" || return 1
+  GLOBAL_ENTRYPOINT_SH="${SCRIPT_DIR}/../src/entrypoint.sh"
+  echo "${GLOBAL_ENTRYPOINT_SH}"
+}
+
+run_gantry() {
+  local STACK="${1}"
+  local ENTRYPOINT_SH=
+  ENTRYPOINT_SH=$(get_entrypoint_sh) || return 1
+  source "${ENTRYPOINT_SH}" "${STACK}"
 }

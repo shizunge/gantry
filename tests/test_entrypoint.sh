@@ -17,6 +17,7 @@
 
 SKIP_UPDATING_SERVICE="Skip updating service in .*job mode"
 NO_NEW_IMAGE="No new image"
+ADD_OPTION="Add option"
 NO_UPDATES="No updates"
 UPDATED="UPDATED"
 ROLLING_BACK="Rolling back"
@@ -32,10 +33,10 @@ FAILED_TO_REMOVE_IMAGE="Failed to remove image"
 
 test_no_new_image() {
   local IMAGE_WITH_TAG="${1}"
-
-  test_start "${FUNCNAME[0]}"
   local SERVICE_NAME STDOUT
   SERVICE_NAME="gantry-test-$(date +%s)"
+
+  test_start "${FUNCNAME[0]}"
   build_and_push_test_image "${IMAGE_WITH_TAG}"
   start_replicated_service "${SERVICE_NAME}" "${IMAGE_WITH_TAG}"
 
@@ -58,16 +59,17 @@ test_no_new_image() {
   expect_no_message "${STDOUT}" "${FAILED_TO_REMOVE_IMAGE}.*${IMAGE_WITH_TAG}"
 
   stop_service "${SERVICE_NAME}"
+  prune_local_test_image "${IMAGE_WITH_TAG}"
   test_end "${FUNCNAME[0]}"
   return 0
 }
 
 test_new_image() {
   local IMAGE_WITH_TAG="${1}"
-
-  test_start "${FUNCNAME[0]}"
   local SERVICE_NAME STDOUT
   SERVICE_NAME="gantry-test-$(date +%s)"
+
+  test_start "${FUNCNAME[0]}"
   build_and_push_test_image "${IMAGE_WITH_TAG}"
   start_replicated_service "${SERVICE_NAME}" "${IMAGE_WITH_TAG}"
   build_and_push_test_image "${IMAGE_WITH_TAG}"
@@ -91,6 +93,7 @@ test_new_image() {
   expect_no_message "${STDOUT}" "${FAILED_TO_REMOVE_IMAGE}.*${IMAGE_WITH_TAG}"
 
   stop_service "${SERVICE_NAME}"
+  prune_local_test_image "${IMAGE_WITH_TAG}"
   test_end "${FUNCNAME[0]}"
   return 0
 }
@@ -98,10 +101,10 @@ test_new_image() {
 test_new_image_LOG_LEVEL_none() {
   # Same as test_new_image, except set LOG_LEVEL to NONE
   local IMAGE_WITH_TAG="${1}"
-
-  test_start "${FUNCNAME[0]}"
   local SERVICE_NAME STDOUT
   SERVICE_NAME="gantry-test-$(date +%s)"
+
+  test_start "${FUNCNAME[0]}"
   build_and_push_test_image "${IMAGE_WITH_TAG}"
   start_replicated_service "${SERVICE_NAME}" "${IMAGE_WITH_TAG}"
   build_and_push_test_image "${IMAGE_WITH_TAG}"
@@ -126,6 +129,7 @@ test_new_image_LOG_LEVEL_none() {
   expect_no_message "${STDOUT}" "${FAILED_TO_REMOVE_IMAGE}.*${IMAGE_WITH_TAG}"
 
   stop_service "${SERVICE_NAME}"
+  prune_local_test_image "${IMAGE_WITH_TAG}"
   test_end "${FUNCNAME[0]}"
   return 0
 }
@@ -138,6 +142,8 @@ test_login_config() {
   local REGISTRY="${2}"
   local USER="${3}"
   local PASS="${4}"
+  local SERVICE_NAME STDOUT
+  SERVICE_NAME="gantry-test-$(date +%s)"
   local LABEL="gantry.auth.config"
   local CONFIG=
   CONFIG="C$(date +%s)"
@@ -147,8 +153,6 @@ test_login_config() {
   fi
 
   test_start "${FUNCNAME[0]}"
-  local SERVICE_NAME STDOUT
-  SERVICE_NAME="gantry-test-$(date +%s)"
   build_and_push_test_image "${IMAGE_WITH_TAG}"
   start_replicated_service "${SERVICE_NAME}" "${IMAGE_WITH_TAG}"
   docker service update --quiet --label-add "${LABEL}=${CONFIG}" "${SERVICE_NAME}"
@@ -186,16 +190,17 @@ test_login_config() {
   expect_no_message "${STDOUT}" "${FAILED_TO_REMOVE_IMAGE}.*${IMAGE_WITH_TAG}"
 
   stop_service "${SERVICE_NAME}"
+  prune_local_test_image "${IMAGE_WITH_TAG}"
   test_end "${FUNCNAME[0]}"
   return 0
 }
 
 test_SERVICES_EXCLUDED() {
   local IMAGE_WITH_TAG="${1}"
-
-  test_start "${FUNCNAME[0]}"
   local SERVICE_NAME STDOUT
   SERVICE_NAME="gantry-test-$(date +%s)"
+
+  test_start "${FUNCNAME[0]}"
   build_and_push_test_image "${IMAGE_WITH_TAG}"
   start_replicated_service "${SERVICE_NAME}" "${IMAGE_WITH_TAG}"
   build_and_push_test_image "${IMAGE_WITH_TAG}"
@@ -220,16 +225,17 @@ test_SERVICES_EXCLUDED() {
   expect_no_message "${STDOUT}" "${FAILED_TO_REMOVE_IMAGE}.*${IMAGE_WITH_TAG}"
  
   stop_service "${SERVICE_NAME}"
+  prune_local_test_image "${IMAGE_WITH_TAG}"
   test_end "${FUNCNAME[0]}"
   return 0
 }
 
 test_SERVICES_EXCLUDED_FILTERS() {
   local IMAGE_WITH_TAG="${1}"
-
-  test_start "${FUNCNAME[0]}"
   local SERVICE_NAME STDOUT
   SERVICE_NAME="gantry-test-$(date +%s)"
+
+  test_start "${FUNCNAME[0]}"
   build_and_push_test_image "${IMAGE_WITH_TAG}"
   start_replicated_service "${SERVICE_NAME}" "${IMAGE_WITH_TAG}"
   build_and_push_test_image "${IMAGE_WITH_TAG}"
@@ -254,21 +260,22 @@ test_SERVICES_EXCLUDED_FILTERS() {
   expect_no_message "${STDOUT}" "${FAILED_TO_REMOVE_IMAGE}.*${IMAGE_WITH_TAG}"
 
   stop_service "${SERVICE_NAME}"
+  prune_local_test_image "${IMAGE_WITH_TAG}"
   test_end "${FUNCNAME[0]}"
   return 0
 }
 
 test_SERVICES_EXCLUDED_combined() {
   local IMAGE_WITH_TAG="${1}"
+  local BASE_NAME STDOUT
+  BASE_NAME="gantry-test-$(date +%s)"
+  local SERVICE_NAME0="${BASE_NAME}-0"
+  local SERVICE_NAME1="${BASE_NAME}-1"
+  local SERVICE_NAME2="${BASE_NAME}-2"
+  local SERVICE_NAME3="${BASE_NAME}-3"
+  local SERVICE_NAME4="${BASE_NAME}-4"
 
   test_start "${FUNCNAME[0]}"
-  local SERVICE_NAME STDOUT
-  BASE_NAME="gantry-test-$(date +%s)"
-  SERVICE_NAME0="${BASE_NAME}-0"
-  SERVICE_NAME1="${BASE_NAME}-1"
-  SERVICE_NAME2="${BASE_NAME}-2"
-  SERVICE_NAME3="${BASE_NAME}-3"
-  SERVICE_NAME4="${BASE_NAME}-4"
   build_and_push_test_image "${IMAGE_WITH_TAG}"
   start_replicated_service "${SERVICE_NAME0}" "${IMAGE_WITH_TAG}"
   start_replicated_service "${SERVICE_NAME1}" "${IMAGE_WITH_TAG}"
@@ -311,16 +318,17 @@ test_SERVICES_EXCLUDED_combined() {
   stop_service "${SERVICE_NAME2}"
   stop_service "${SERVICE_NAME1}"
   stop_service "${SERVICE_NAME0}"
+  prune_local_test_image "${IMAGE_WITH_TAG}"
   test_end "${FUNCNAME[0]}"
   return 0
 }
 
 test_jobs_skipping() {
   local IMAGE_WITH_TAG="${1}"
-
-  test_start "${FUNCNAME[0]}"
   local SERVICE_NAME STDOUT
   SERVICE_NAME="gantry-test-$(date +%s)"
+
+  test_start "${FUNCNAME[0]}"
   build_and_push_test_image "${IMAGE_WITH_TAG}"
   start_replicated_job "${SERVICE_NAME}" "${IMAGE_WITH_TAG}"
   build_and_push_test_image "${IMAGE_WITH_TAG}"
@@ -344,16 +352,17 @@ test_jobs_skipping() {
   expect_no_message "${STDOUT}" "${FAILED_TO_REMOVE_IMAGE}.*${IMAGE_WITH_TAG}"
 
   stop_service "${SERVICE_NAME}"
+  prune_local_test_image "${IMAGE_WITH_TAG}"
   test_end "${FUNCNAME[0]}"
   return 0
 }
 
 test_jobs_UPDATE_JOBS_on() {
   local IMAGE_WITH_TAG="${1}"
-
-  test_start "${FUNCNAME[0]}"
   local SERVICE_NAME STDOUT
   SERVICE_NAME="gantry-test-$(date +%s)"
+
+  test_start "${FUNCNAME[0]}"
   build_and_push_test_image "${IMAGE_WITH_TAG}"
   start_replicated_job "${SERVICE_NAME}" "${IMAGE_WITH_TAG}"
   build_and_push_test_image "${IMAGE_WITH_TAG}"
@@ -377,20 +386,62 @@ test_jobs_UPDATE_JOBS_on() {
   expect_message    "${STDOUT}" "${REMOVING_NUM_IMAGES}"
   expect_no_message "${STDOUT}" "${SKIP_REMOVING_IMAGES}"
   # Since the job may not reach the desired state, they are still using the image. Image remover will fail.
-  expect_no_message    "${STDOUT}" "${REMOVED_IMAGE}.*${IMAGE_WITH_TAG}"
-  expect_message "${STDOUT}" "${FAILED_TO_REMOVE_IMAGE}.*${IMAGE_WITH_TAG}"
+  expect_no_message "${STDOUT}" "${REMOVED_IMAGE}.*${IMAGE_WITH_TAG}"
+  expect_message    "${STDOUT}" "${FAILED_TO_REMOVE_IMAGE}.*${IMAGE_WITH_TAG}"
 
   stop_service "${SERVICE_NAME}"
+  prune_local_test_image "${IMAGE_WITH_TAG}"
+  test_end "${FUNCNAME[0]}"
+  return 0
+}
+
+test_jobs_UPDATE_JOBS_on_no_running_tasks() {
+  local IMAGE_WITH_TAG="${1}"
+  local SERVICE_NAME SLEEP_SECONDS STDOUT
+  SERVICE_NAME="gantry-test-$(date +%s)"
+  SLEEP_SECONDS=15
+
+  test_start "${FUNCNAME[0]}"
+  build_and_push_test_image "${IMAGE_WITH_TAG}" "${SLEEP_SECONDS}"
+  start_replicated_job "${SERVICE_NAME}" "${IMAGE_WITH_TAG}"
+  wait_zero_running_tasks "${SERVICE_NAME}"
+  build_and_push_test_image "${IMAGE_WITH_TAG}"
+
+  export GANTRY_SERVICES_FILTERS="name=${SERVICE_NAME}"
+  export GANTRY_UPDATE_JOBS="true"
+  STDOUT=$(run_gantry "${FUNCNAME[0]}" 2>&1 | tee /dev/tty)
+
+  expect_message    "${STDOUT}" "${ADD_OPTION}.*--detach=true"
+  # Cannot add "--replicas" to replicated job
+  expect_no_message "${STDOUT}" "${ADD_OPTION}.*--replicas=0"
+  expect_no_message "${STDOUT}" "${SKIP_UPDATING_SERVICE}.*${SERVICE_NAME}"
+  expect_no_message "${STDOUT}" "${SERVICE_NAME}.*${NO_NEW_IMAGE}"
+  expect_message    "${STDOUT}" "${SERVICE_NAME}.*${UPDATED}"
+  expect_no_message "${STDOUT}" "${SERVICE_NAME}.*${NO_UPDATES}"
+  expect_no_message "${STDOUT}" "${ROLLING_BACK}.*${SERVICE_NAME}"
+  expect_no_message "${STDOUT}" "${FAILED_TO_ROLLBACK}.*${SERVICE_NAME}"
+  expect_no_message "${STDOUT}" "${ROLLED_BACK}.*${SERVICE_NAME}"
+  expect_no_message "${STDOUT}" "${NO_SERVICES_UPDATED}"
+  expect_message    "${STDOUT}" "${NUM_SERVICES_UPDATED}"
+  expect_no_message "${STDOUT}" "${NO_IMAGES_TO_REMOVE}"
+  expect_message    "${STDOUT}" "${REMOVING_NUM_IMAGES}"
+  expect_no_message "${STDOUT}" "${SKIP_REMOVING_IMAGES}"
+  # Since the job may not reach the desired state, they are still using the image. Image remover will fail.
+  expect_no_message "${STDOUT}" "${REMOVED_IMAGE}.*${IMAGE_WITH_TAG}"
+  expect_message    "${STDOUT}" "${FAILED_TO_REMOVE_IMAGE}.*${IMAGE_WITH_TAG}"
+
+  stop_service "${SERVICE_NAME}"
+  prune_local_test_image "${IMAGE_WITH_TAG}"
   test_end "${FUNCNAME[0]}"
   return 0
 }
 
 test_MANIFEST_INSPECT_off() {
   local IMAGE_WITH_TAG="${1}"
-
-  test_start "${FUNCNAME[0]}"
   local SERVICE_NAME STDOUT
   SERVICE_NAME="gantry-test-$(date +%s)"
+
+  test_start "${FUNCNAME[0]}"
   build_and_push_test_image "${IMAGE_WITH_TAG}"
   start_replicated_service "${SERVICE_NAME}" "${IMAGE_WITH_TAG}"
   # No image updates after service started.
@@ -418,6 +469,7 @@ test_MANIFEST_INSPECT_off() {
   expect_no_message "${STDOUT}" "${FAILED_TO_REMOVE_IMAGE}.*${IMAGE_WITH_TAG}"
 
   stop_service "${SERVICE_NAME}"
+  prune_local_test_image "${IMAGE_WITH_TAG}"
   test_end "${FUNCNAME[0]}"
   return 0
 }
@@ -426,10 +478,10 @@ test_replicated_no_running_tasks() {
   # Add "--detach=true" when there is no running tasks.
   # https://github.com/docker/cli/issues/627
   local IMAGE_WITH_TAG="${1}"
-
-  test_start "${FUNCNAME[0]}"
   local SERVICE_NAME STDOUT
   SERVICE_NAME="gantry-test-$(date +%s)"
+
+  test_start "${FUNCNAME[0]}"
   build_and_push_test_image "${IMAGE_WITH_TAG}"
   start_replicated_service "${SERVICE_NAME}" "${IMAGE_WITH_TAG}"
   docker service update --quiet --replicas=0 "${SERVICE_NAME}"
@@ -439,8 +491,8 @@ test_replicated_no_running_tasks() {
   export GANTRY_SERVICES_FILTERS="name=${SERVICE_NAME}"
   STDOUT=$(run_gantry "${FUNCNAME[0]}" 2>&1 | tee /dev/tty)
 
-  expect_message    "${STDOUT}" "Add option.*--detach=true"
-  expect_message    "${STDOUT}" "Add option.*--replicas=0"
+  expect_message    "${STDOUT}" "${ADD_OPTION}.*--detach=true"
+  expect_message    "${STDOUT}" "${ADD_OPTION}.*--replicas=0"
   expect_no_message "${STDOUT}" "${SKIP_UPDATING_SERVICE}.*${SERVICE_NAME}"
   expect_no_message "${STDOUT}" "${SERVICE_NAME}.*${NO_NEW_IMAGE}"
   expect_message    "${STDOUT}" "${SERVICE_NAME}.*${UPDATED}"
@@ -457,6 +509,7 @@ test_replicated_no_running_tasks() {
   expect_no_message "${STDOUT}" "${FAILED_TO_REMOVE_IMAGE}.*${IMAGE_WITH_TAG}"
 
   stop_service "${SERVICE_NAME}"
+  prune_local_test_image "${IMAGE_WITH_TAG}"
   test_end "${FUNCNAME[0]}"
   return 0
 }
@@ -465,11 +518,11 @@ test_global_no_running_tasks() {
   # Add "--detach=true" when there is no running tasks.
   # https://github.com/docker/cli/issues/627
   local IMAGE_WITH_TAG="${1}"
-
-  test_start "${FUNCNAME[0]}"
   local SERVICE_NAME SLEEP_SECONDS STDOUT
   SERVICE_NAME="gantry-test-$(date +%s)"
   SLEEP_SECONDS=15
+
+  test_start "${FUNCNAME[0]}"
   build_and_push_test_image "${IMAGE_WITH_TAG}" "${SLEEP_SECONDS}"
   start_global_service "${SERVICE_NAME}" "${IMAGE_WITH_TAG}"
   # The tasks should exit after SLEEP_SECONDS seconds sleep. Then it will have 0 running tasks.
@@ -479,9 +532,9 @@ test_global_no_running_tasks() {
   export GANTRY_SERVICES_FILTERS="name=${SERVICE_NAME}"
   STDOUT=$(run_gantry "${FUNCNAME[0]}" 2>&1 | tee /dev/tty)
 
-  expect_message    "${STDOUT}" "Add option.*--detach=true"
+  expect_message    "${STDOUT}" "${ADD_OPTION}.*--detach=true"
   # Cannot add "--replicas" to global
-  expect_no_message "${STDOUT}" "Add option.*--replicas=0"
+  expect_no_message "${STDOUT}" "${ADD_OPTION}.*--replicas=0"
   expect_no_message "${STDOUT}" "${SKIP_UPDATING_SERVICE}.*${SERVICE_NAME}"
   expect_no_message "${STDOUT}" "${SERVICE_NAME}.*${NO_NEW_IMAGE}"
   expect_message    "${STDOUT}" "${SERVICE_NAME}.*${UPDATED}"
@@ -498,16 +551,17 @@ test_global_no_running_tasks() {
   expect_no_message "${STDOUT}" "${FAILED_TO_REMOVE_IMAGE}.*${IMAGE_WITH_TAG}"
 
   stop_service "${SERVICE_NAME}"
+  prune_local_test_image "${IMAGE_WITH_TAG}"
   test_end "${FUNCNAME[0]}"
   return 0
 }
 
 test_timeout_rollback() {
   local IMAGE_WITH_TAG="${1}"
-
-  test_start "${FUNCNAME[0]}"
   local SERVICE_NAME STDOUT
   SERVICE_NAME="gantry-test-$(date +%s)"
+
+  test_start "${FUNCNAME[0]}"
   build_and_push_test_image "${IMAGE_WITH_TAG}"
   start_replicated_service "${SERVICE_NAME}" "${IMAGE_WITH_TAG}"
   build_and_push_test_image "${IMAGE_WITH_TAG}"
@@ -533,16 +587,17 @@ test_timeout_rollback() {
   expect_no_message "${STDOUT}" "${FAILED_TO_REMOVE_IMAGE}.*${IMAGE_WITH_TAG}"
 
   stop_service "${SERVICE_NAME}"
+  prune_local_test_image "${IMAGE_WITH_TAG}"
   test_end "${FUNCNAME[0]}"
   return 0
 }
 
 test_timeout_rollback_failed() {
   local IMAGE_WITH_TAG="${1}"
-
-  test_start "${FUNCNAME[0]}"
   local SERVICE_NAME STDOUT
   SERVICE_NAME="gantry-test-$(date +%s)"
+
+  test_start "${FUNCNAME[0]}"
   build_and_push_test_image "${IMAGE_WITH_TAG}"
   start_replicated_service "${SERVICE_NAME}" "${IMAGE_WITH_TAG}"
   build_and_push_test_image "${IMAGE_WITH_TAG}"
@@ -569,16 +624,17 @@ test_timeout_rollback_failed() {
   expect_no_message "${STDOUT}" "${FAILED_TO_REMOVE_IMAGE}.*${IMAGE_WITH_TAG}"
 
   stop_service "${SERVICE_NAME}"
+  prune_local_test_image "${IMAGE_WITH_TAG}"
   test_end "${FUNCNAME[0]}"
   return 0
 }
 
 test_timeout_ROLLBACK_ON_FAILURE_off() {
   local IMAGE_WITH_TAG="${1}"
-
-  test_start "${FUNCNAME[0]}"
   local SERVICE_NAME STDOUT
   SERVICE_NAME="gantry-test-$(date +%s)"
+
+  test_start "${FUNCNAME[0]}"
   build_and_push_test_image "${IMAGE_WITH_TAG}"
   start_replicated_service "${SERVICE_NAME}" "${IMAGE_WITH_TAG}"
   build_and_push_test_image "${IMAGE_WITH_TAG}"
@@ -605,16 +661,17 @@ test_timeout_ROLLBACK_ON_FAILURE_off() {
   expect_no_message "${STDOUT}" "${FAILED_TO_REMOVE_IMAGE}.*${IMAGE_WITH_TAG}"
 
   stop_service "${SERVICE_NAME}"
+  prune_local_test_image "${IMAGE_WITH_TAG}"
   test_end "${FUNCNAME[0]}"
   return 0
 }
 
 test_CLEANUP_IMAGES_off() {
   local IMAGE_WITH_TAG="${1}"
-
-  test_start "${FUNCNAME[0]}"
   local SERVICE_NAME STDOUT
   SERVICE_NAME="gantry-test-$(date +%s)"
+
+  test_start "${FUNCNAME[0]}"
   build_and_push_test_image "${IMAGE_WITH_TAG}"
   start_replicated_service "${SERVICE_NAME}" "${IMAGE_WITH_TAG}"
   build_and_push_test_image "${IMAGE_WITH_TAG}"
@@ -639,6 +696,7 @@ test_CLEANUP_IMAGES_off() {
   expect_no_message "${STDOUT}" "${FAILED_TO_REMOVE_IMAGE}.*${IMAGE_WITH_TAG}"
 
   stop_service "${SERVICE_NAME}"
+  prune_local_test_image "${IMAGE_WITH_TAG}"
   test_end "${FUNCNAME[0]}"
   return 0
 }

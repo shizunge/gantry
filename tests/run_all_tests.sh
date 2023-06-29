@@ -29,43 +29,57 @@ init_swarm() {
   GLOBAL_HOSTNAME="${SELF_ID}"
 }
 
-run_gantry() {
-  local STACK="${1}"
-  source "${GLOBAL_ENTRYPOINT_SH}" "${STACK}"
-}
-
-main() {
-  if [ -z "${BASH_SOURCE[0]}" ]; then
-    echo "BASH_SOURCE is empty." >&2
-    return 1
-  fi
-  echo "Starting tests"
+get_image_with_tag() {
   local IMAGE="${1}"
+  local REGISTRY="${2}"
   if [ -z "${IMAGE}" ]; then
-    echo "IMAGE is empty."
+    echo "IMAGE is empty." >&2
     return 1
   fi
-  # Optional arguments. They may be used by some tests. Missing them will disable the corresponding tests.
-  local REGISTRY="${2}"
-  local USER="${3}"
-  local PASS="${4}"
-  local SCRIPT_DIR IMAGE_WITH_TAG
-  SCRIPT_DIR="$( cd "$(dirname "${BASH_SOURCE[0]}")" || return 1; pwd -P )"
-  GLOBAL_ENTRYPOINT_SH="${SCRIPT_DIR}/../src/entrypoint.sh"
-  IMAGE_WITH_TAG="${IMAGE}"
+  local IMAGE_WITH_TAG="${IMAGE}"
   if [ -n "${REGISTRY}" ]; then
     IMAGE_WITH_TAG="${REGISTRY}/${IMAGE_WITH_TAG}"
   fi
   if ! echo "${IMAGE_WITH_TAG}" | grep -q ":"; then
     IMAGE_WITH_TAG="${IMAGE_WITH_TAG}:for-test-$(date +%s)"
   fi
-  echo "GLOBAL_ENTRYPOINT_SH=${GLOBAL_ENTRYPOINT_SH}"
+  echo "${IMAGE_WITH_TAG}"
+}
+
+get_script_dir() {
+  if [ -z "${BASH_SOURCE[0]}" ]; then
+    echo "BASH_SOURCE is empty." >&2
+    echo "."
+    return 1
+  fi
+  local SCRIPT_DIR=
+  SCRIPT_DIR="$( cd "$(dirname "${BASH_SOURCE[0]}")" || return 1; pwd -P )"
+  echo "${SCRIPT_DIR}"
+}
+
+main() {
+  local IMAGE="${1}"
+  # Optional arguments. They may be used by some tests. Missing them will disable the corresponding tests.
+  local REGISTRY="${2}"
+  local USER="${3}"
+  local PASS="${4}"
+  
+  echo "Starting tests"
+
+  local IMAGE_WITH_TAG=
+  IMAGE_WITH_TAG="$(get_image_with_tag "${IMAGE}" "${REGISTRY}")" || return 1
   echo "IMAGE_WITH_TAG=${IMAGE_WITH_TAG}"
 
-  init_swarm
-
+  local SCRIPT_DIR=
+  SCRIPT_DIR="$(get_script_dir)" || return 1
+  echo "SCRIPT_DIR=${SCRIPT_DIR}"
   source "${SCRIPT_DIR}/lib-gantry-test.sh"
   source "${SCRIPT_DIR}/test_entrypoint.sh"
+
+  GLOBAL_ENTRYPOINT_SH=$(get_entrypoint_sh) || return 1
+  echo "GLOBAL_ENTRYPOINT_SH=${GLOBAL_ENTRYPOINT_SH}"
+
+  init_swarm
 
   test_no_new_image "${IMAGE_WITH_TAG}"
   test_new_image "${IMAGE_WITH_TAG}"
@@ -76,6 +90,7 @@ main() {
   test_SERVICES_EXCLUDED_combined "${IMAGE_WITH_TAG}"
   test_jobs_skipping "${IMAGE_WITH_TAG}"
   test_jobs_UPDATE_JOBS_on "${IMAGE_WITH_TAG}"
+  test_jobs_UPDATE_JOBS_on_no_running_tasks "${IMAGE_WITH_TAG}"
   test_MANIFEST_INSPECT_off "${IMAGE_WITH_TAG}"
   test_replicated_no_running_tasks "${IMAGE_WITH_TAG}"
   test_global_no_running_tasks "${IMAGE_WITH_TAG}"
