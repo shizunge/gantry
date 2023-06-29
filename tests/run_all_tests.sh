@@ -20,10 +20,13 @@ init_swarm() {
   SELF_ID=$(docker node inspect self --format "{{.Description.Hostname}}" 2>/dev/null);
   if [ -n "${SELF_ID}" ]; then
     echo "Host ${SELF_ID} is already a swarm manager."
+    GLOBAL_HOSTNAME="${SELF_ID}"
     return 0
   fi
   echo "Run docker swarm init"
   docker swarm init
+  SELF_ID=$(docker node inspect self --format "{{.Description.Hostname}}" 2>/dev/null);
+  GLOBAL_HOSTNAME="${SELF_ID}"
 }
 
 run_gantry() {
@@ -49,7 +52,7 @@ main() {
   if ! echo "${IMAGE_WITH_TAG}" | grep -q ":"; then
     IMAGE_WITH_TAG="${IMAGE_WITH_TAG}:test"
   fi
-  echo "ENTRYPOINT_SH=${ENTRYPOINT_SH}"
+  echo "GLOBAL_ENTRYPOINT_SH=${GLOBAL_ENTRYPOINT_SH}"
   echo "IMAGE_WITH_TAG=${IMAGE_WITH_TAG}"
 
   init_swarm
@@ -64,6 +67,7 @@ main() {
   test_ROLLBACK_ON_FAILURE_off "${IMAGE_WITH_TAG}"
   test_SERVICES_EXCLUDED "${IMAGE_WITH_TAG}"
   test_SERVICES_EXCLUDED_FILTERS "${IMAGE_WITH_TAG}"
+  test_SERVICES_EXCLUDED_combined "${IMAGE_WITH_TAG}"
   test_CLEANUP_IMAGES_off "${IMAGE_WITH_TAG}"
   test_MANIFEST_INSPECT_off "${IMAGE_WITH_TAG}"
 

@@ -27,12 +27,13 @@ NUM_SERVICES_UPDATED="[1-9] service\(s\) updated"
 REMOVING_NUM_IMAGES="Removing [1-9] image\(s\)"
 SKIP_REMOVING_IMAGES="Skip removing images"
 REMOVED_IMAGE="Removed image"
+FAILED_TO_REMOVE_IMAGE="Failed to remove image"
 
 test_no_new_image() {
   local IMAGE_WITH_TAG="${1}"
 
   test_start "${FUNCNAME[0]}"
-  local SERVICE_NAME STDOUT LINE
+  local SERVICE_NAME STDOUT
   SERVICE_NAME="gantry-test-$(date +%s)"
   build_and_push_test_image "${IMAGE_WITH_TAG}"
   start_service "${SERVICE_NAME}" "${IMAGE_WITH_TAG}"
@@ -52,6 +53,7 @@ test_no_new_image() {
   expect_no_message "${STDOUT}" "${REMOVING_NUM_IMAGES}"
   expect_no_message "${STDOUT}" "${SKIP_REMOVING_IMAGES}"
   expect_no_message "${STDOUT}" "${REMOVED_IMAGE}.*${IMAGE_WITH_TAG}"
+  expect_no_message "${STDOUT}" "${FAILED_TO_REMOVE_IMAGE}.*${IMAGE_WITH_TAG}"
 
   stop_service "${SERVICE_NAME}"
   test_end "${FUNCNAME[0]}"
@@ -62,7 +64,7 @@ test_new_image() {
   local IMAGE_WITH_TAG="${1}"
 
   test_start "${FUNCNAME[0]}"
-  local SERVICE_NAME STDOUT LINE
+  local SERVICE_NAME STDOUT
   SERVICE_NAME="gantry-test-$(date +%s)"
   build_and_push_test_image "${IMAGE_WITH_TAG}"
   start_service "${SERVICE_NAME}" "${IMAGE_WITH_TAG}"
@@ -83,6 +85,7 @@ test_new_image() {
   expect_message    "${STDOUT}" "${REMOVING_NUM_IMAGES}"
   expect_no_message "${STDOUT}" "${SKIP_REMOVING_IMAGES}"
   expect_message    "${STDOUT}" "${REMOVED_IMAGE}.*${IMAGE_WITH_TAG}"
+  expect_no_message "${STDOUT}" "${FAILED_TO_REMOVE_IMAGE}.*${IMAGE_WITH_TAG}"
 
   stop_service "${SERVICE_NAME}"
   test_end "${FUNCNAME[0]}"
@@ -93,7 +96,7 @@ test_timeout_rollback() {
   local IMAGE_WITH_TAG="${1}"
 
   test_start "${FUNCNAME[0]}"
-  local SERVICE_NAME STDOUT LINE
+  local SERVICE_NAME STDOUT
   SERVICE_NAME="gantry-test-$(date +%s)"
   build_and_push_test_image "${IMAGE_WITH_TAG}"
   start_service "${SERVICE_NAME}" "${IMAGE_WITH_TAG}"
@@ -116,6 +119,7 @@ test_timeout_rollback() {
   expect_no_message "${STDOUT}" "${REMOVING_NUM_IMAGES}"
   expect_no_message "${STDOUT}" "${SKIP_REMOVING_IMAGES}"
   expect_no_message "${STDOUT}" "${REMOVED_IMAGE}.*${IMAGE_WITH_TAG}"
+  expect_no_message "${STDOUT}" "${FAILED_TO_REMOVE_IMAGE}.*${IMAGE_WITH_TAG}"
 
   stop_service "${SERVICE_NAME}"
   test_end "${FUNCNAME[0]}"
@@ -126,7 +130,7 @@ test_timeout_rollback_failed() {
   local IMAGE_WITH_TAG="${1}"
 
   test_start "${FUNCNAME[0]}"
-  local SERVICE_NAME STDOUT LINE
+  local SERVICE_NAME STDOUT
   SERVICE_NAME="gantry-test-$(date +%s)"
   build_and_push_test_image "${IMAGE_WITH_TAG}"
   start_service "${SERVICE_NAME}" "${IMAGE_WITH_TAG}"
@@ -150,6 +154,7 @@ test_timeout_rollback_failed() {
   expect_no_message "${STDOUT}" "${REMOVING_NUM_IMAGES}"
   expect_no_message "${STDOUT}" "${SKIP_REMOVING_IMAGES}"
   expect_no_message "${STDOUT}" "${REMOVED_IMAGE}.*${IMAGE_WITH_TAG}"
+  expect_no_message "${STDOUT}" "${FAILED_TO_REMOVE_IMAGE}.*${IMAGE_WITH_TAG}"
 
   stop_service "${SERVICE_NAME}"
   test_end "${FUNCNAME[0]}"
@@ -160,7 +165,7 @@ test_timeout_ROLLBACK_ON_FAILURE_off() {
   local IMAGE_WITH_TAG="${1}"
 
   test_start "${FUNCNAME[0]}"
-  local SERVICE_NAME STDOUT LINE
+  local SERVICE_NAME STDOUT
   SERVICE_NAME="gantry-test-$(date +%s)"
   build_and_push_test_image "${IMAGE_WITH_TAG}"
   start_service "${SERVICE_NAME}" "${IMAGE_WITH_TAG}"
@@ -184,6 +189,7 @@ test_timeout_ROLLBACK_ON_FAILURE_off() {
   expect_no_message "${STDOUT}" "${REMOVING_NUM_IMAGES}"
   expect_no_message "${STDOUT}" "${SKIP_REMOVING_IMAGES}"
   expect_no_message "${STDOUT}" "${REMOVED_IMAGE}.*${IMAGE_WITH_TAG}"
+  expect_no_message "${STDOUT}" "${FAILED_TO_REMOVE_IMAGE}.*${IMAGE_WITH_TAG}"
 
   stop_service "${SERVICE_NAME}"
   test_end "${FUNCNAME[0]}"
@@ -194,7 +200,7 @@ test_SERVICES_EXCLUDED() {
   local IMAGE_WITH_TAG="${1}"
 
   test_start "${FUNCNAME[0]}"
-  local SERVICE_NAME STDOUT LINE
+  local SERVICE_NAME STDOUT
   SERVICE_NAME="gantry-test-$(date +%s)"
   build_and_push_test_image "${IMAGE_WITH_TAG}"
   start_service "${SERVICE_NAME}" "${IMAGE_WITH_TAG}"
@@ -216,6 +222,7 @@ test_SERVICES_EXCLUDED() {
   expect_no_message "${STDOUT}" "${REMOVING_NUM_IMAGES}"
   expect_no_message "${STDOUT}" "${SKIP_REMOVING_IMAGES}"
   expect_no_message "${STDOUT}" "${REMOVED_IMAGE}.*${IMAGE_WITH_TAG}"
+  expect_no_message "${STDOUT}" "${FAILED_TO_REMOVE_IMAGE}.*${IMAGE_WITH_TAG}"
  
   stop_service "${SERVICE_NAME}"
   test_end "${FUNCNAME[0]}"
@@ -226,7 +233,7 @@ test_SERVICES_EXCLUDED_FILTERS() {
   local IMAGE_WITH_TAG="${1}"
 
   test_start "${FUNCNAME[0]}"
-  local SERVICE_NAME STDOUT LINE
+  local SERVICE_NAME STDOUT
   SERVICE_NAME="gantry-test-$(date +%s)"
   build_and_push_test_image "${IMAGE_WITH_TAG}"
   start_service "${SERVICE_NAME}" "${IMAGE_WITH_TAG}"
@@ -248,8 +255,65 @@ test_SERVICES_EXCLUDED_FILTERS() {
   expect_no_message "${STDOUT}" "${REMOVING_NUM_IMAGES}"
   expect_no_message "${STDOUT}" "${SKIP_REMOVING_IMAGES}"
   expect_no_message "${STDOUT}" "${REMOVED_IMAGE}.*${IMAGE_WITH_TAG}"
+  expect_no_message "${STDOUT}" "${FAILED_TO_REMOVE_IMAGE}.*${IMAGE_WITH_TAG}"
 
   stop_service "${SERVICE_NAME}"
+  test_end "${FUNCNAME[0]}"
+  return 0
+}
+
+test_SERVICES_EXCLUDED_combined() {
+  local IMAGE_WITH_TAG="${1}"
+
+  test_start "${FUNCNAME[0]}"
+  local SERVICE_NAME STDOUT
+  BASE_NAME="gantry-test-$(date +%s)"
+  SERVICE_NAME0="${BASE_NAME}-0"
+  SERVICE_NAME1="${BASE_NAME}-1"
+  SERVICE_NAME2="${BASE_NAME}-2"
+  SERVICE_NAME3="${BASE_NAME}-3"
+  SERVICE_NAME4="${BASE_NAME}-4"
+  build_and_push_test_image "${IMAGE_WITH_TAG}"
+  start_service "${SERVICE_NAME0}" "${IMAGE_WITH_TAG}"
+  start_service "${SERVICE_NAME1}" "${IMAGE_WITH_TAG}"
+  start_service "${SERVICE_NAME2}" "${IMAGE_WITH_TAG}"
+  start_service "${SERVICE_NAME3}" "${IMAGE_WITH_TAG}"
+  build_and_push_test_image "${IMAGE_WITH_TAG}"
+  start_service "${SERVICE_NAME4}" "${IMAGE_WITH_TAG}"
+
+  export GANTRY_SERVICES_FILTERS="name=${BASE_NAME}"
+  # test both the list of names and the filters
+  export GANTRY_SERVICES_EXCLUDED="${SERVICE_NAME1}"
+  export GANTRY_SERVICES_EXCLUDED_FILTERS="name=${SERVICE_NAME2}"
+  STDOUT=$(run_gantry "${FUNCNAME[0]}" 2>&1 | tee /dev/tty)
+
+  # Service 0 and 3 should get updated.
+  # Service 1 and 2 should be excluded.
+  # Service 4 created with new image, no update.
+  # Failed to remove the image as service 1 and 2 are still using it.
+  expect_no_message "${STDOUT}" "${SERVICE_NAME0}.*${NO_NEW_IMAGE}"
+  expect_no_message "${STDOUT}" "${SERVICE_NAME1}.*${NO_NEW_IMAGE}"
+  expect_no_message "${STDOUT}" "${SERVICE_NAME2}.*${NO_NEW_IMAGE}"
+  expect_no_message "${STDOUT}" "${SERVICE_NAME3}.*${NO_NEW_IMAGE}"
+  expect_message    "${STDOUT}" "${SERVICE_NAME4}.*${NO_NEW_IMAGE}"
+  expect_message    "${STDOUT}" "${SERVICE_NAME0}.*${UPDATED}"
+  expect_no_message "${STDOUT}" "${SERVICE_NAME1}.*${UPDATED}"
+  expect_no_message "${STDOUT}" "${SERVICE_NAME2}.*${UPDATED}"
+  expect_message    "${STDOUT}" "${SERVICE_NAME3}.*${UPDATED}"
+  expect_no_message "${STDOUT}" "${SERVICE_NAME4}.*${UPDATED}"
+  expect_no_message "${STDOUT}" "${NO_SERVICES_UPDATED}"
+  expect_message    "${STDOUT}" "${NUM_SERVICES_UPDATED}"
+  expect_no_message "${STDOUT}" "${NO_IMAGES_TO_REMOVE}"
+  expect_message    "${STDOUT}" "${REMOVING_NUM_IMAGES}"
+  expect_no_message "${STDOUT}" "${SKIP_REMOVING_IMAGES}"
+  expect_no_message "${STDOUT}" "${REMOVED_IMAGE}.*${IMAGE_WITH_TAG}"
+  expect_message    "${STDOUT}" "${FAILED_TO_REMOVE_IMAGE}.*${IMAGE_WITH_TAG}"
+
+  stop_service "${SERVICE_NAME4}"
+  stop_service "${SERVICE_NAME3}"
+  stop_service "${SERVICE_NAME2}"
+  stop_service "${SERVICE_NAME1}"
+  stop_service "${SERVICE_NAME0}"
   test_end "${FUNCNAME[0]}"
   return 0
 }
@@ -258,7 +322,7 @@ test_CLEANUP_IMAGES_off() {
   local IMAGE_WITH_TAG="${1}"
 
   test_start "${FUNCNAME[0]}"
-  local SERVICE_NAME STDOUT LINE
+  local SERVICE_NAME STDOUT
   SERVICE_NAME="gantry-test-$(date +%s)"
   build_and_push_test_image "${IMAGE_WITH_TAG}"
   start_service "${SERVICE_NAME}" "${IMAGE_WITH_TAG}"
@@ -280,6 +344,7 @@ test_CLEANUP_IMAGES_off() {
   expect_no_message "${STDOUT}" "${REMOVING_NUM_IMAGES}"
   expect_message    "${STDOUT}" "${SKIP_REMOVING_IMAGES}"
   expect_no_message "${STDOUT}" "${REMOVED_IMAGE}.*${IMAGE_WITH_TAG}"
+  expect_no_message "${STDOUT}" "${FAILED_TO_REMOVE_IMAGE}.*${IMAGE_WITH_TAG}"
 
   stop_service "${SERVICE_NAME}"
   test_end "${FUNCNAME[0]}"
@@ -290,7 +355,7 @@ test_MANIFEST_INSPECT_off() {
   local IMAGE_WITH_TAG="${1}"
 
   test_start "${FUNCNAME[0]}"
-  local SERVICE_NAME STDOUT LINE
+  local SERVICE_NAME STDOUT
   SERVICE_NAME="gantry-test-$(date +%s)"
   build_and_push_test_image "${IMAGE_WITH_TAG}"
   start_service "${SERVICE_NAME}" "${IMAGE_WITH_TAG}"
@@ -315,6 +380,7 @@ test_MANIFEST_INSPECT_off() {
   expect_no_message "${STDOUT}" "${REMOVING_NUM_IMAGES}"
   expect_no_message "${STDOUT}" "${SKIP_REMOVING_IMAGES}"
   expect_no_message "${STDOUT}" "${REMOVED_IMAGE}.*${IMAGE_WITH_TAG}"
+  expect_no_message "${STDOUT}" "${FAILED_TO_REMOVE_IMAGE}.*${IMAGE_WITH_TAG}"
 
   stop_service "${SERVICE_NAME}"
   test_end "${FUNCNAME[0]}"

@@ -20,7 +20,7 @@ test_start() {
   echo "=============================="
   echo "== ${TEST_NAME} started"
   echo "=============================="
-  export GANTRY_LOG_LEVEL=
+  export GANTRY_LOG_LEVEL="DEBUG"
   export GANTRY_NODE_NAME=
   export GANTRY_SLEEP_SECONDS=
   export GANTRY_REGISTRY_CONFIG=
@@ -83,14 +83,24 @@ build_and_push_test_image() {
   echo "ENTRYPOINT [\"sh\", \"-c\", \"\"echo $(date -Iseconds); tail -f /dev/null;\"\"]" >> "${FILE}"
   echo -n "Building ${IMAGE_WITH_TAG} "
   docker build --quiet --tag "${IMAGE_WITH_TAG}" --file "${FILE}" .
-  docker push "${IMAGE_WITH_TAG}"
+  echo -n "Pushing ${IMAGE_WITH_TAG} "
+  docker push --quiet "${IMAGE_WITH_TAG}"
+}
+
+location_constraints() {
+  local NODE_NAME="${GLOBAL_HOSTNAME:-""}"
+  [ -z "${NODE_NAME}" ] && echo "" && return 0
+  local ARGS="--constraint node.hostname==${NODE_NAME}";
+  echo "${ARGS}"
 }
 
 start_service() {
   local SERVICE_NAME="${1}"
   local IMAGE_WITH_TAG="${2}"
   echo -n "Creating ${SERVICE_NAME} "
-  docker service create --name "${SERVICE_NAME}" --mode=replicated "${IMAGE_WITH_TAG}"
+  # SC2046 (warning): Quote this to prevent word splitting.
+  # shellcheck disable=SC2046
+  docker service create --quiet --name "${SERVICE_NAME}" $(location_constraints) --mode=replicated "${IMAGE_WITH_TAG}"
 }
 
 stop_service() {
