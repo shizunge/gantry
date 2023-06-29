@@ -49,10 +49,30 @@ test_start() {
   export GANTRY_NOTIFICATION_TITLE=
 }
 
-test_end_no_error() {
+test_end() {
   local TEST_NAME=${1}
   echo "=============================="
-  echo "== ${TEST_NAME} no errors"
+  echo "== ${TEST_NAME} Done"
+}
+
+expect_message() {
+  TEXT=${1}
+  MESSAGE=${2}
+  if ! ACTUAL_MSG=$(echo "${TEXT}" | grep -P "${MESSAGE}"); then
+    echo "ERROR failed to find expected message \"${MESSAGE}\"."
+    exit 1
+  fi
+  echo "EXPECTED found message: ${ACTUAL_MSG}"
+}
+
+expect_no_message() {
+  TEXT=${1}
+  MESSAGE=${2}
+  if ACTUAL_MSG=$(echo "${TEXT}" | grep -P "${MESSAGE}"); then
+    echo "ERROR Message \"${ACTUAL_MSG}\" should not present."
+    exit 1
+  fi
+  echo "EXPECTED found no message matches: ${MESSAGE}"
 }
 
 build_and_push_test_image() {

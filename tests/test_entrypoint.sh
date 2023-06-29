@@ -15,6 +15,16 @@
 # along with this program.  If not, see <https://www.gnu.org/licenses/>.
 #
 
+NO_NEW_IMAGE="No new image"
+NO_UPDATES="No updates"
+UPDATED="UPDATED"
+NO_SERVICES_UPDATED="No services updated"
+NO_IMAGES_TO_REMOVE="No images to remove"
+NUM_SERVICES_UPDATED="[1-9] service\(s\) updated"
+REMOVING_NUM_IMAGES="Removing [1-9] image\(s\)"
+SKIP_REMOVING_IMAGES="Skip removing images"
+REMOVED_IMAGE="Removed image"
+
 test_no_new_image() {
   local ENTRYPOINT_SH="${1}"
   local IMAGE_WITH_TAG="${2}"
@@ -28,15 +38,18 @@ test_no_new_image() {
   export GANTRY_SERVICES_FILTERS="name=${SERVICE_NAME}"
   STDOUT=$(source "${ENTRYPOINT_SH}" "${FUNCNAME[0]}" | tee /dev/tty)
 
-  set -x -e
-  LINE=$(echo -e "${STDOUT}" | grep "${SERVICE_NAME}")
-  LINE=$(echo -e "${LINE}" | grep "No new image")
-  LINE=$(echo -e "${STDOUT}" | grep "No services updated")
-  LINE=$(echo -e "${STDOUT}" | grep "No images to remove")
-  set +x +e
+  expect_message    "${STDOUT}" "${SERVICE_NAME}.*${NO_NEW_IMAGE}"
+  expect_no_message "${STDOUT}" "${SERVICE_NAME}.*${UPDATED}"
+  expect_no_message "${STDOUT}" "${SERVICE_NAME}.*${NO_UPDATES}"
+  expect_message    "${STDOUT}" "${NO_SERVICES_UPDATED}"
+  expect_no_message "${STDOUT}" "${NUM_SERVICES_UPDATED}"
+  expect_message    "${STDOUT}" "${NO_IMAGES_TO_REMOVE}"
+  expect_no_message "${STDOUT}" "${REMOVING_NUM_IMAGES}"
+  expect_no_message "${STDOUT}" "${SKIP_REMOVING_IMAGES}"
+  expect_no_message "${STDOUT}" "${REMOVED_IMAGE}.*${IMAGE_WITH_TAG}"
 
   stop_service "${SERVICE_NAME}"
-  test_end_no_error "${FUNCNAME[0]}"
+  test_end "${FUNCNAME[0]}"
   return 0
 }
 
@@ -54,16 +67,18 @@ test_new_image() {
   export GANTRY_SERVICES_FILTERS="name=${SERVICE_NAME}"
   STDOUT=$(source "${ENTRYPOINT_SH}" "${FUNCNAME[0]}" | tee /dev/tty)
 
-  set -x -e
-  LINE=$(echo -e "${STDOUT}" | grep "${SERVICE_NAME}")
-  LINE=$(echo -e "${LINE}" | grep "UPDATED")
-  LINE=$(echo -e "${STDOUT}" | grep "1 service(s) updated")
-  LINE=$(echo -e "${STDOUT}" | grep "Removing 1 image(s)")
-  LINE=$(echo -e "${STDOUT}" | grep "Removed image ${IMAGE_WITH_TAG}")
-  set +x +e
+  expect_no_message "${STDOUT}" "${SERVICE_NAME}.*${NO_NEW_IMAGE}"
+  expect_message    "${STDOUT}" "${SERVICE_NAME}.*${UPDATED}"
+  expect_no_message "${STDOUT}" "${SERVICE_NAME}.*${NO_UPDATES}"
+  expect_no_message "${STDOUT}" "${NO_SERVICES_UPDATED}"
+  expect_message    "${STDOUT}" "${NUM_SERVICES_UPDATED}"
+  expect_no_message "${STDOUT}" "${NO_IMAGES_TO_REMOVE}"
+  expect_message    "${STDOUT}" "${REMOVING_NUM_IMAGES}"
+  expect_no_message "${STDOUT}" "${SKIP_REMOVING_IMAGES}"
+  expect_message    "${STDOUT}" "${REMOVED_IMAGE}.*${IMAGE_WITH_TAG}"
 
   stop_service "${SERVICE_NAME}"
-  test_end_no_error "${FUNCNAME[0]}"
+  test_end "${FUNCNAME[0]}"
   return 0
 }
 
@@ -82,13 +97,18 @@ test_SERVICES_EXCLUDED() {
   export GANTRY_SERVICES_EXCLUDED="${SERVICE_NAME}"
   STDOUT=$(source "${ENTRYPOINT_SH}" "${FUNCNAME[0]}" | tee /dev/tty)
 
-  set -x -e
-  LINE=$(echo -e "${STDOUT}" | grep "No services updated")
-  LINE=$(echo -e "${STDOUT}" | grep "No images to remove")
-  set +x +e
-
+  expect_no_message "${STDOUT}" "${SERVICE_NAME}.*${NO_NEW_IMAGE}"
+  expect_no_message "${STDOUT}" "${SERVICE_NAME}.*${UPDATED}"
+  expect_no_message "${STDOUT}" "${SERVICE_NAME}.*${NO_UPDATES}"
+  expect_message    "${STDOUT}" "${NO_SERVICES_UPDATED}"
+  expect_no_message "${STDOUT}" "${NUM_SERVICES_UPDATED}"
+  expect_message    "${STDOUT}" "${NO_IMAGES_TO_REMOVE}"
+  expect_no_message "${STDOUT}" "${REMOVING_NUM_IMAGES}"
+  expect_no_message "${STDOUT}" "${SKIP_REMOVING_IMAGES}"
+  expect_no_message "${STDOUT}" "${REMOVED_IMAGE}.*${IMAGE_WITH_TAG}"
+ 
   stop_service "${SERVICE_NAME}"
-  test_end_no_error "${FUNCNAME[0]}"
+  test_end "${FUNCNAME[0]}"
   return 0
 }
 
@@ -107,13 +127,18 @@ test_SERVICES_EXCLUDED_FILTERS() {
   export GANTRY_SERVICES_EXCLUDED_FILTERS="name=${SERVICE_NAME}"
   STDOUT=$(source "${ENTRYPOINT_SH}" "${FUNCNAME[0]}" | tee /dev/tty)
 
-  set -x -e
-  LINE=$(echo -e "${STDOUT}" | grep "No services updated")
-  LINE=$(echo -e "${STDOUT}" | grep "No images to remove")
-  set +x +e
+  expect_no_message "${STDOUT}" "${SERVICE_NAME}.*${NO_NEW_IMAGE}"
+  expect_no_message "${STDOUT}" "${SERVICE_NAME}.*${UPDATED}"
+  expect_no_message "${STDOUT}" "${SERVICE_NAME}.*${NO_UPDATES}"
+  expect_message    "${STDOUT}" "${NO_SERVICES_UPDATED}"
+  expect_no_message "${STDOUT}" "${NUM_SERVICES_UPDATED}"
+  expect_message    "${STDOUT}" "${NO_IMAGES_TO_REMOVE}"
+  expect_no_message "${STDOUT}" "${REMOVING_NUM_IMAGES}"
+  expect_no_message "${STDOUT}" "${SKIP_REMOVING_IMAGES}"
+  expect_no_message "${STDOUT}" "${REMOVED_IMAGE}.*${IMAGE_WITH_TAG}"
 
   stop_service "${SERVICE_NAME}"
-  test_end_no_error "${FUNCNAME[0]}"
+  test_end "${FUNCNAME[0]}"
   return 0
 }
 
@@ -132,13 +157,18 @@ test_CLEANUP_IMAGES_off() {
   export GANTRY_CLEANUP_IMAGES="false"
   STDOUT=$(source "${ENTRYPOINT_SH}" "${FUNCNAME[0]}" | tee /dev/tty)
 
-  set -x -e
-  LINE=$(echo -e "${STDOUT}" | grep "1 service(s) updated")
-  LINE=$(echo -e "${STDOUT}" | grep "Skip removing images")
-  set +x +e
+  expect_no_message "${STDOUT}" "${SERVICE_NAME}.*${NO_NEW_IMAGE}"
+  expect_message    "${STDOUT}" "${SERVICE_NAME}.*${UPDATED}"
+  expect_no_message "${STDOUT}" "${SERVICE_NAME}.*${NO_UPDATES}"
+  expect_no_message "${STDOUT}" "${NO_SERVICES_UPDATED}"
+  expect_message    "${STDOUT}" "${NUM_SERVICES_UPDATED}"
+  expect_no_message "${STDOUT}" "${NO_IMAGES_TO_REMOVE}"
+  expect_no_message "${STDOUT}" "${REMOVING_NUM_IMAGES}"
+  expect_message    "${STDOUT}" "${SKIP_REMOVING_IMAGES}"
+  expect_no_message "${STDOUT}" "${REMOVED_IMAGE}.*${IMAGE_WITH_TAG}"
 
   stop_service "${SERVICE_NAME}"
-  test_end_no_error "${FUNCNAME[0]}"
+  test_end "${FUNCNAME[0]}"
   return 0
 }
 
@@ -158,16 +188,19 @@ test_MANIFEST_INSPECT_off() {
   export GANTRY_UPDATE_OPTIONS="--force"
   STDOUT=$(source "${ENTRYPOINT_SH}" "${FUNCNAME[0]}" | tee /dev/tty)
 
-  set -x -e
   # Gantry is still trying to update the service.
   # But it will see no new images.
-  LINE=$(echo -e "${STDOUT}" | grep "${SERVICE_NAME}")
-  LINE=$(echo -e "${LINE}" | grep "No updates")
-  LINE=$(echo -e "${STDOUT}" | grep "No services updated")
-  LINE=$(echo -e "${STDOUT}" | grep "No images to remove")
-  set +x +e
+  expect_no_message "${STDOUT}" "${SERVICE_NAME}.*${NO_NEW_IMAGE}"
+  expect_no_message "${STDOUT}" "${SERVICE_NAME}.*${UPDATED}"
+  expect_message    "${STDOUT}" "${SERVICE_NAME}.*${NO_UPDATES}"
+  expect_message    "${STDOUT}" "${NO_SERVICES_UPDATED}"
+  expect_no_message "${STDOUT}" "${NUM_SERVICES_UPDATED}"
+  expect_message    "${STDOUT}" "${NO_IMAGES_TO_REMOVE}"
+  expect_no_message "${STDOUT}" "${REMOVING_NUM_IMAGES}"
+  expect_no_message "${STDOUT}" "${SKIP_REMOVING_IMAGES}"
+  expect_no_message "${STDOUT}" "${REMOVED_IMAGE}.*${IMAGE_WITH_TAG}"
 
   stop_service "${SERVICE_NAME}"
-  test_end_no_error "${FUNCNAME[0]}"
+  test_end "${FUNCNAME[0]}"
   return 0
 }
