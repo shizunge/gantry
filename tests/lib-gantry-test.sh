@@ -77,20 +77,27 @@ expect_no_message() {
 
 build_and_push_test_image() {
   local IMAGE_WITH_TAG="${1}"
+  local SLEEP_SECONDS="${2}"
+  local SLEEP_CMD="sleep ${SLEEP_SECONDS}"
+  if [ -z "${SLEEP_SECONDS}" ]; then
+    SLEEP_CMD="tail -f /dev/null"
+  fi
   local FILE=
   FILE=$(mktemp)
   echo "FROM alpinelinux/docker-cli:latest" > "${FILE}"
-  echo "ENTRYPOINT [\"sh\", \"-c\", \"\"echo $(date -Iseconds); tail -f /dev/null;\"\"]" >> "${FILE}"
+  echo "ENTRYPOINT [\"sh\", \"-c\", \"echo $(date -Iseconds); ${SLEEP_CMD};\"]" >> "${FILE}"
   echo -n "Building ${IMAGE_WITH_TAG} "
   docker build --quiet --tag "${IMAGE_WITH_TAG}" --file "${FILE}" .
   echo -n "Pushing ${IMAGE_WITH_TAG} "
   docker push --quiet "${IMAGE_WITH_TAG}"
+  rm "${FILE}"
 }
 
 wait_zero_running_tasks() {
   local SERVICE_NAME="${1}"
   local NUM_RUNS=1
   local REPLICAS=
+  echo "Wait until ${SERVICE_NAME} has zero running tasks."
   while [ "${NUM_RUNS}" -ne 0 ]; do
     if ! REPLICAS=$(docker service ls --filter "name=${SERVICE_NAME}" --format '{{.Replicas}}' 2>&1); then
       echo "Failed to obtain task states of service ${SERVICE_NAME}: ${REPLICAS}" >&2
@@ -110,13 +117,30 @@ location_constraints() {
   echo "${ARGS}"
 }
 
-start_service() {
+wait_service_state() {
+  local SERVICE_NAME="${1}"
+  local STATE="${2}"
+  while ! docker service ps --format "{{.CurrentState}}" "${SERVICE_NAME}" | grep -q "${STATE}"; do
+    sleep 1
+  done
+}
+
+start_replicated_service() {
   local SERVICE_NAME="${1}"
   local IMAGE_WITH_TAG="${2}"
   echo -n "Creating ${SERVICE_NAME} "
   # SC2046 (warning): Quote this to prevent word splitting.
   # shellcheck disable=SC2046
   docker service create --quiet --name "${SERVICE_NAME}" $(location_constraints) --mode=replicated "${IMAGE_WITH_TAG}"
+}
+
+start_global_service() {
+  local SERVICE_NAME="${1}"
+  local IMAGE_WITH_TAG="${2}"
+  echo -n "Creating ${SERVICE_NAME} "
+  # SC2046 (warning): Quote this to prevent word splitting.
+  # shellcheck disable=SC2046
+  docker service create --quiet --name "${SERVICE_NAME}" $(location_constraints) --mode=global "${IMAGE_WITH_TAG}"
 }
 
 start_replicated_job() {
@@ -127,9 +151,7 @@ start_replicated_job() {
   # shellcheck disable=SC2046
   docker service create --quiet --name "${SERVICE_NAME}" $(location_constraints) --mode=replicated-job --detach=true "${IMAGE_WITH_TAG}"
   # wait until the job is running
-  while ! docker service ps --format "{{.CurrentState}}" "${SERVICE_NAME}" | grep -q "Running"; do
-    sleep 1
-  done
+  wait_service_state "${SERVICE_NAME}" "Running"
 }
 
 stop_service() {
