@@ -9,9 +9,8 @@ env:
   PLATFORMS: "linux/amd64,linux/arm64,linux/arm/v7"
   
 jobs:
-  shellcheck:
-    strategy:
-      max-parallel: 1
+  build_and_push:
+    name: Build and push Docker image
     runs-on: ubuntu-latest
     steps:
       - name: Checkout Code
@@ -27,42 +26,6 @@ jobs:
           pushd ${GITHUB_WORKSPACE}/tests
           shellcheck *
           popd
-
-  run_tests:
-    strategy:
-      max-parallel: 1
-    runs-on: ubuntu-latest
-    steps:
-      - name: Checkout Code
-        uses: actions/checkout@v3
-      - name: Login to GitHub Container Registry
-        uses: docker/login-action@v2.2.0
-        with:
-          registry: ghcr.io
-          username: ${{ github.repository_owner }}
-          password: ${{ github.token }}
-      - name: Run tests
-        run: |
-          echo "Start running tests"
-          ${GITHUB_WORKSPACE}/tests/run_all_tests.sh ghcr.io/${{ github.repository }}
-          echo "Done running tests"
-
-  build_and_push:
-    strategy:
-      max-parallel: 1
-    name: Build and push Docker image
-    runs-on: ubuntu-latest
-    steps:
-      - name: Checkout code
-        uses: actions/checkout@v3  
-      - name: Extract tag string
-        id: git
-        shell: bash
-        run: |
-          RELEASE_VERSION=${GITHUB_REF#refs/*/}
-          echo "image_tag=${RELEASE_VERSION}" >> ${GITHUB_OUTPUT}
-      - name: Set up QEMU
-        uses: docker/setup-qemu-action@v2
       - name: Install buildx
         uses: docker/setup-buildx-action@v2.7.0
       - name: Login to docker hub
@@ -76,6 +39,19 @@ jobs:
           registry: ghcr.io
           username: ${{ github.repository_owner }}
           password: ${{ github.token }}
+      - name: Run tests
+        run: |
+          echo "Start running tests"
+          ${GITHUB_WORKSPACE}/tests/run_all_tests.sh ghcr.io/${{ github.repository }}
+          echo "Done running tests"
+      - name: Extract tag string
+        id: git
+        shell: bash
+        run: |
+          RELEASE_VERSION=${GITHUB_REF#refs/*/}
+          echo "image_tag=${RELEASE_VERSION}" >> ${GITHUB_OUTPUT}
+      - name: Set up QEMU
+        uses: docker/setup-qemu-action@v2
       - name: Build and push ${{ github.repository }}:${{ steps.git.outputs.image_tag }}
         uses: docker/build-push-action@v4.1.1
         with:
