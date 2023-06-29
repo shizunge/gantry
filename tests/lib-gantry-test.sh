@@ -103,6 +103,15 @@ start_service() {
   docker service create --quiet --name "${SERVICE_NAME}" $(location_constraints) --mode=replicated "${IMAGE_WITH_TAG}"
 }
 
+start_replicated_job() {
+  local SERVICE_NAME="${1}"
+  local IMAGE_WITH_TAG="${2}"
+  echo -n "Creating ${SERVICE_NAME} "
+  # SC2046 (warning): Quote this to prevent word splitting.
+  # shellcheck disable=SC2046
+  docker service create --quiet --name "${SERVICE_NAME}" $(location_constraints) --mode=replicated-job --detach=true "${IMAGE_WITH_TAG}"
+}
+
 stop_service() {
   local SERVICE_NAME="${1}"
   echo -n "Removing ${SERVICE_NAME} "

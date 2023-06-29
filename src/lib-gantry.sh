@@ -280,8 +280,11 @@ service_is_replicated() {
   if ! MODE=$(get_service_mode "${SERVICE_NAME}"); then
     return 1
   fi
-  # Looking for replicated
-  echo "${MODE}" | grep "replicated"
+  # Looking for replicated, not replicated-job
+  if [ "${MODE}" != "replicated" ]; then
+    return 1
+  fi
+  echo "${MODE}"
 }
 
 get_config_from_service() {
@@ -421,7 +424,7 @@ update_single_service() {
   local SERVICE_NAME="${1}"
   local MODE=
   if ! is_true "${UPDATE_JOBS}" && MODE=$(service_is_job "${SERVICE_NAME}"); then
-    log DEBUG "Skip updating service ${SERVICE_NAME} that is a ${MODE}."
+    log DEBUG "Skip updating service in ${MODE} mode: ${SERVICE_NAME}."
     return 0;
   fi
   local DOCKER_CONFIG=
