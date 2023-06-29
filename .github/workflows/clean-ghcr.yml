@@ -1,0 +1,21 @@
+name: Clean ghcr images
+
+on:
+  workflow_dispatch:
+  
+jobs:
+  clean-ghcr:
+    name: Delete old unused container images
+    runs-on: ubuntu-latest
+    steps:
+      - name: Delete old images
+        uses: snok/container-retention-policy@v2
+        with:
+          image-names: ${{ github.repository }}
+          cut-off: One day ago UTC
+          account-type: personal
+          token: ${{ github.token }}
+          keep-at-least: 20
+          skip-tags: latest, development
+          filter-tags: for-test-*, dev-*
+          dry-run: True
