@@ -64,3 +64,19 @@ jobs:
             ${{ github.repository }}:development
             ghcr.io/${{ github.repository }}:${{ steps.git.outputs.image_tag }}
             ghcr.io/${{ github.repository }}:development
+
+  clean-ghcr:
+    name: Delete old unused container images
+    runs-on: ubuntu-latest
+    steps:
+      - name: Delete old images
+        uses: snok/container-retention-policy@v2
+        with:
+          image-names: ${{ github.repository }}
+          cut-off: One day ago UTC
+          skip-tags: latest, development
+          filter-tags: for-test-*, dev-*
+          keep-at-least: 20
+          account-type: personal
+          token: ${{ github.token }}
+          dry-run: true
