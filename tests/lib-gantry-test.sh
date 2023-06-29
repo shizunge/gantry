@@ -110,6 +110,10 @@ start_replicated_job() {
   # SC2046 (warning): Quote this to prevent word splitting.
   # shellcheck disable=SC2046
   docker service create --quiet --name "${SERVICE_NAME}" $(location_constraints) --mode=replicated-job --detach=true "${IMAGE_WITH_TAG}"
+  # wait until the job is running
+  while ! docker service ps --format "{{.CurrentState}}" "${SERVICE_NAME}" | grep -q "Running"; do
+    sleep 1
+  done
 }
 
 stop_service() {
