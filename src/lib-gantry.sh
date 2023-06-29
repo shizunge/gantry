@@ -394,15 +394,17 @@ rollback_service() {
   if ! is_true "${ROLLBACK_ON_FAILURE}"; then
     return 0
   fi
-  log INFO "Rolling ${SERVICE_NAME} back."
+  log INFO "Rolling back ${SERVICE_NAME}."
   local ROLLBACK_MSG=
   # Add "-quiet" to suppress progress output.
   # SC2086: Double quote to prevent globbing and word splitting.
   # shellcheck disable=SC2086
-  ROLLBACK_MSG=$(docker ${DOCKER_CONFIG} service update -quiet ${ADDITIONAL_OPTION} ${ROLLBACK_OPTIONS} --rollback "${SERVICE_NAME}" 2>&1)
+  ROLLBACK_MSG=$(docker ${DOCKER_CONFIG} service update --quiet ${ADDITIONAL_OPTION} ${ROLLBACK_OPTIONS} --rollback "${SERVICE_NAME}" 2>&1)
   local RETURN_VALUE=$?
   if [ ${RETURN_VALUE} -ne 0 ]; then
     log ERROR "Failed to roll back ${SERVICE_NAME}. ${ROLLBACK_MSG}"
+  else
+    log INFO "Rolled back ${SERVICE_NAME}."
   fi
   return ${RETURN_VALUE}
 }

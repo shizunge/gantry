@@ -81,19 +81,20 @@ build_and_push_test_image() {
   FILE=$(mktemp)
   echo "FROM alpinelinux/docker-cli:latest" > "${FILE}"
   echo "ENTRYPOINT [\"sh\", \"-c\", \"\"echo $(date -Iseconds); tail -f /dev/null;\"\"]" >> "${FILE}"
-  docker build --tag "${IMAGE_WITH_TAG}" --file "${FILE}" .
+  echo -n "Building ${IMAGE_WITH_TAG} "
+  docker build --quiet --tag "${IMAGE_WITH_TAG}" --file "${FILE}" .
   docker push "${IMAGE_WITH_TAG}"
 }
 
 start_service() {
   local SERVICE_NAME="${1}"
   local IMAGE_WITH_TAG="${2}"
-  echo -n "Creating: ${SERVICE_NAME} "
-  docker service create --name "${SERVICE_NAME}" "${IMAGE_WITH_TAG}"
+  echo -n "Creating ${SERVICE_NAME} "
+  docker service create --name "${SERVICE_NAME}" --mode=replicated "${IMAGE_WITH_TAG}"
 }
 
 stop_service() {
   local SERVICE_NAME="${1}"
-  echo -n "Removing: "
+  echo -n "Removing ${SERVICE_NAME} "
   docker service rm "${SERVICE_NAME}"
 }

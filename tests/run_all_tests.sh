@@ -26,6 +26,11 @@ init_swarm() {
   docker swarm init
 }
 
+run_gantry() {
+  local STACK="${1}"
+  source "${GLOBAL_ENTRYPOINT_SH}" "${STACK}"
+}
+
 main() {
   if [ -z "${BASH_SOURCE[0]}" ]; then
     echo "BASH_SOURCE is empty." >&2
@@ -37,9 +42,9 @@ main() {
     echo "IMAGE is empty."
     return 1
   fi
-  local SCRIPT_DIR ENTRYPOINT_SH IMAGE_WITH_TAG
+  local SCRIPT_DIR IMAGE_WITH_TAG
   SCRIPT_DIR="$( cd "$(dirname "${BASH_SOURCE[0]}")" || return 1; pwd -P )"
-  ENTRYPOINT_SH="${SCRIPT_DIR}/../src/entrypoint.sh"
+  GLOBAL_ENTRYPOINT_SH="${SCRIPT_DIR}/../src/entrypoint.sh"
   IMAGE_WITH_TAG="${IMAGE}"
   if ! echo "${IMAGE_WITH_TAG}" | grep -q ":"; then
     IMAGE_WITH_TAG="${IMAGE_WITH_TAG}:test"
@@ -52,12 +57,15 @@ main() {
   source "${SCRIPT_DIR}/lib-gantry-test.sh"
   source "${SCRIPT_DIR}/test_entrypoint.sh"
 
-  test_no_new_image "${ENTRYPOINT_SH}" "${IMAGE_WITH_TAG}"
-  test_new_image "${ENTRYPOINT_SH}" "${IMAGE_WITH_TAG}"
-  test_SERVICES_EXCLUDED "${ENTRYPOINT_SH}" "${IMAGE_WITH_TAG}"
-  test_SERVICES_EXCLUDED_FILTERS "${ENTRYPOINT_SH}" "${IMAGE_WITH_TAG}"
-  test_CLEANUP_IMAGES_off "${ENTRYPOINT_SH}" "${IMAGE_WITH_TAG}"
-  test_MANIFEST_INSPECT_off "${ENTRYPOINT_SH}" "${IMAGE_WITH_TAG}"
+  test_no_new_image "${IMAGE_WITH_TAG}"
+  test_new_image "${IMAGE_WITH_TAG}"
+  test_timeout_rollback "${IMAGE_WITH_TAG}"
+  test_rollback_failed  "${IMAGE_WITH_TAG}"
+  test_ROLLBACK_ON_FAILURE_off "${IMAGE_WITH_TAG}"
+  test_SERVICES_EXCLUDED "${IMAGE_WITH_TAG}"
+  test_SERVICES_EXCLUDED_FILTERS "${IMAGE_WITH_TAG}"
+  test_CLEANUP_IMAGES_off "${IMAGE_WITH_TAG}"
+  test_MANIFEST_INSPECT_off "${IMAGE_WITH_TAG}"
 
   echo "Done tests"
   return 0
