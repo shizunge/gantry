@@ -11,7 +11,7 @@ jobs:
       - name: Delete old images
         uses: snok/container-retention-policy@v2
         with:
-          image-names: ${{ github.repository }}
+          image-names: gantry
           cut-off: One day ago UTC
           account-type: personal
           token: ${{ github.token }}
