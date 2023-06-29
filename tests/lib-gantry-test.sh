@@ -87,6 +87,22 @@ build_and_push_test_image() {
   docker push --quiet "${IMAGE_WITH_TAG}"
 }
 
+wait_zero_running_tasks() {
+  local SERVICE_NAME="${1}"
+  local NUM_RUNS=1
+  local REPLICAS=
+  while [ "${NUM_RUNS}" -ne 0 ]; do
+    if ! REPLICAS=$(docker service ls --filter "name=${SERVICE_NAME}" --format '{{.Replicas}}' 2>&1); then
+      echo "Failed to obtain task states of service ${SERVICE_NAME}: ${REPLICAS}" >&2
+      exit 1
+    fi
+    # https://docs.docker.com/engine/reference/commandline/service_ls/#examples
+    # The REPLICAS is like "5/5" or "1/1 (3/5 completed)"
+    # Get the number before the first "/".
+    NUM_RUNS=$(echo "${REPLICAS}" | cut -d '/' -f 1)
+  done
+}
+
 location_constraints() {
   local NODE_NAME="${GLOBAL_HOSTNAME:-""}"
   [ -z "${NODE_NAME}" ] && echo "" && return 0

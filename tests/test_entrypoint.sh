@@ -396,6 +396,7 @@ test_replicated_no_running_tasks() {
   build_and_push_test_image "${IMAGE_WITH_TAG}"
   start_service "${SERVICE_NAME}" "${IMAGE_WITH_TAG}"
   docker service update --quiet --replicas=0 "${SERVICE_NAME}"
+  wait_zero_running_tasks "${SERVICE_NAME}"
   build_and_push_test_image "${IMAGE_WITH_TAG}"
 
   export GANTRY_SERVICES_FILTERS="name=${SERVICE_NAME}"
@@ -435,6 +436,7 @@ test_replicated_no_running_tasks_rollback() {
   build_and_push_test_image "${IMAGE_WITH_TAG}"
   start_service "${SERVICE_NAME}" "${IMAGE_WITH_TAG}"
   docker service update --quiet --replicas=0 "${SERVICE_NAME}"
+  wait_zero_running_tasks "${SERVICE_NAME}"
   build_and_push_test_image "${IMAGE_WITH_TAG}"
 
   export GANTRY_SERVICES_FILTERS="name=${SERVICE_NAME}"
