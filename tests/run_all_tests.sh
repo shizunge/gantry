@@ -62,14 +62,14 @@ main() {
 
   test_no_new_image "${IMAGE_WITH_TAG}"
   test_new_image "${IMAGE_WITH_TAG}"
-  test_timeout_rollback "${IMAGE_WITH_TAG}"
-  test_rollback_failed  "${IMAGE_WITH_TAG}"
-  test_ROLLBACK_ON_FAILURE_off "${IMAGE_WITH_TAG}"
   test_SERVICES_EXCLUDED "${IMAGE_WITH_TAG}"
   test_SERVICES_EXCLUDED_FILTERS "${IMAGE_WITH_TAG}"
   test_SERVICES_EXCLUDED_combined "${IMAGE_WITH_TAG}"
-  test_CLEANUP_IMAGES_off "${IMAGE_WITH_TAG}"
   test_MANIFEST_INSPECT_off "${IMAGE_WITH_TAG}"
+  test_timeout_rollback "${IMAGE_WITH_TAG}"
+  test_rollback_failed  "${IMAGE_WITH_TAG}"
+  test_ROLLBACK_ON_FAILURE_off "${IMAGE_WITH_TAG}"
+  test_CLEANUP_IMAGES_off "${IMAGE_WITH_TAG}"
 
   echo "Done tests"
   return 0
