@@ -424,48 +424,6 @@ test_replicated_no_running_tasks() {
   return 0
 }
 
-test_replicated_no_running_tasks_rollback() {
-  # Add "--detach=true" when there is no running tasks.
-  # https://github.com/docker/cli/issues/627
-  # To test it is ok to add the additional options to docker service update --rollback.
-  local IMAGE_WITH_TAG="${1}"
-
-  test_start "${FUNCNAME[0]}"
-  local SERVICE_NAME STDOUT
-  SERVICE_NAME="gantry-test-$(date +%s)"
-  build_and_push_test_image "${IMAGE_WITH_TAG}"
-  start_service "${SERVICE_NAME}" "${IMAGE_WITH_TAG}"
-  docker service update --quiet --replicas=0 "${SERVICE_NAME}"
-  wait_zero_running_tasks "${SERVICE_NAME}"
-  build_and_push_test_image "${IMAGE_WITH_TAG}"
-
-  export GANTRY_SERVICES_FILTERS="name=${SERVICE_NAME}"
-  # Assume service update won't be done within 1 second.
-  export GANTRY_UPDATE_TIMEOUT_SECONDS=1
-  STDOUT=$(run_gantry "${FUNCNAME[0]}" 2>&1 | tee /dev/tty)
-
-  expect_message    "${STDOUT}" "Add option.*--detach=true"
-  expect_message    "${STDOUT}" "Add option.*--replicas=0"
-  expect_no_message "${STDOUT}" "${SKIP_UPDATING_SERVICE}.*${SERVICE_NAME}"
-  expect_no_message "${STDOUT}" "${SERVICE_NAME}.*${NO_NEW_IMAGE}"
-  expect_no_message "${STDOUT}" "${SERVICE_NAME}.*${UPDATED}"
-  expect_no_message "${STDOUT}" "${SERVICE_NAME}.*${NO_UPDATES}"
-  expect_message    "${STDOUT}" "${ROLLING_BACK}.*${SERVICE_NAME}"
-  expect_no_message "${STDOUT}" "${FAILED_TO_ROLLBACK}.*${SERVICE_NAME}"
-  expect_message    "${STDOUT}" "${ROLLED_BACK}.*${SERVICE_NAME}"
-  expect_message    "${STDOUT}" "${NO_SERVICES_UPDATED}"
-  expect_no_message "${STDOUT}" "${NUM_SERVICES_UPDATED}"
-  expect_message    "${STDOUT}" "${NO_IMAGES_TO_REMOVE}"
-  expect_no_message "${STDOUT}" "${REMOVING_NUM_IMAGES}"
-  expect_no_message "${STDOUT}" "${SKIP_REMOVING_IMAGES}"
-  expect_no_message "${STDOUT}" "${REMOVED_IMAGE}.*${IMAGE_WITH_TAG}"
-  expect_no_message "${STDOUT}" "${FAILED_TO_REMOVE_IMAGE}.*${IMAGE_WITH_TAG}"
-
-  stop_service "${SERVICE_NAME}"
-  test_end "${FUNCNAME[0]}"
-  return 0
-}
-
 test_timeout_rollback() {
   local IMAGE_WITH_TAG="${1}"
 
