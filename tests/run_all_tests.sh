@@ -57,7 +57,7 @@ main() {
     IMAGE_WITH_TAG="${REGISTRY}/${IMAGE_WITH_TAG}"
   fi
   if ! echo "${IMAGE_WITH_TAG}" | grep -q ":"; then
-    IMAGE_WITH_TAG="${IMAGE_WITH_TAG}:test"
+    IMAGE_WITH_TAG="${IMAGE_WITH_TAG}:for-test-$(date +%s)"
   fi
   echo "GLOBAL_ENTRYPOINT_SH=${GLOBAL_ENTRYPOINT_SH}"
   echo "IMAGE_WITH_TAG=${IMAGE_WITH_TAG}"
