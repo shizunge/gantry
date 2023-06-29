@@ -113,7 +113,7 @@ test_login_config() {
   SERVICE_NAME="gantry-test-$(date +%s)"
   build_and_push_test_image "${IMAGE_WITH_TAG}"
   start_service "${SERVICE_NAME}" "${IMAGE_WITH_TAG}"
-  docker service update --label-add "${LABEL}=${CONFIG}" "${SERVICE_NAME}"
+  docker service update --quiet --label-add "${LABEL}=${CONFIG}" "${SERVICE_NAME}"
   build_and_push_test_image "${IMAGE_WITH_TAG}"
 
   local USER_FILE PASS_FILE
@@ -129,6 +129,7 @@ test_login_config() {
   export GANTRY_REGISTRY_USER_FILE="${USER_FILE}"
   STDOUT=$(run_gantry "${FUNCNAME[0]}" 2>&1 | tee /dev/tty)
 
+  expect_message    "${STDOUT}" "Logged into registry *${REGISTRY} for config ${CONFIG}"
   expect_no_message "${STDOUT}" "${SERVICE_NAME}.*${NO_NEW_IMAGE}"
   expect_message    "${STDOUT}" "${SERVICE_NAME}.*${UPDATED}"
   expect_no_message "${STDOUT}" "${SERVICE_NAME}.*${NO_UPDATES}"
