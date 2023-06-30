@@ -399,7 +399,7 @@ rollback_service() {
   local ROLLBACK_OPTIONS="${GANTRY_ROLLBACK_OPTIONS:-""}"
   local SERVICE_NAME="${1}"
   local DOCKER_CONFIG="${2}"
-  local ADDITIONAL_OPTION="${3}"
+  local ADDITIONAL_OPTIONS="${3}"
   if ! is_true "${ROLLBACK_ON_FAILURE}"; then
     return 0
   fi
@@ -408,7 +408,7 @@ rollback_service() {
   # Add "-quiet" to suppress progress output.
   # SC2086: Double quote to prevent globbing and word splitting.
   # shellcheck disable=SC2086
-  ROLLBACK_MSG=$(docker ${DOCKER_CONFIG} service update --quiet ${ADDITIONAL_OPTION} ${ROLLBACK_OPTIONS} --rollback "${SERVICE_NAME}" 2>&1)
+  ROLLBACK_MSG=$(docker ${DOCKER_CONFIG} service update --quiet ${ADDITIONAL_OPTIONS} ${ROLLBACK_OPTIONS} --rollback "${SERVICE_NAME}" 2>&1)
   local RETURN_VALUE=$?
   if [ ${RETURN_VALUE} -ne 0 ]; then
     log ERROR "Failed to roll back ${SERVICE_NAME}. ${ROLLBACK_MSG}"
@@ -449,7 +449,10 @@ update_single_service() {
   # shellcheck disable=SC2086
   if ! UPDATE_MSG=$(timeout "${UPDATE_TIMEOUT_SECONDS}" docker ${DOCKER_CONFIG} service update --quiet ${ADDITIONAL_OPTIONS} ${UPDATE_OPTIONS} --image="${IMAGE}" "${SERVICE_NAME}" 2>&1); then
     log ERROR "docker service update failed or timeout. ${UPDATE_MSG}"
-    rollback_service "${SERVICE_NAME}" "${DOCKER_CONFIG}" "${ADDITIONAL_OPTION}"
+    # "service update --rollback" needs to take different options from "service update"
+    # Today no options are added based on services label/status. This is just a placeholder now.
+    local ROLLBACK_ADDITIONAL_OPTIONS=
+    rollback_service "${SERVICE_NAME}" "${DOCKER_CONFIG}" "${ROLLBACK_ADDITIONAL_OPTIONS}"
     add_service_update_failed "${SERVICE_NAME}"
     return 1
   fi
