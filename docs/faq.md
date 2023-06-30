@@ -20,9 +20,12 @@ To filter multiple services, you can set a label on each service then let *Gantr
 
 Advanced user can also create their own entrypoint using functions in [lib-gantry.sh](../src/lib-gantry.sh).
 ```
-gantry_initialize
-gantry_update_services_list "${LIST_OF_SERVICES_TO_UPDATE}"
-gantry_finalize
+# notification.sh is optional.
+source ./src/lib-common.sh;
+source ./src/lib-gantry.sh;
+gantry_initialize;
+gantry_update_services_list "${LIST_OF_SERVICES_TO_UPDATE}";
+gantry_finalize;
 ```
 
 ### How to run *Gantry* on a cron schedule?
@@ -41,7 +44,7 @@ Before updating a service, *Gantry* will try to obtain the image's meta data to 
 
 `docker buildx imagetools inspect` is selected as the default, because `docker manifest inspect` could [fail on some registries](https://github.com/orgs/community/discussions/45779). Additionally, `docker buildx imagetools` can obtain the digest of multi-arch images, which could help not to run the `docker service update` CLI when there is no new images.
 
-You can switch back to use [`docker manifest inspect`](https://docs.docker.com/engine/reference/commandline/manifest_inspect/) for the features that are not supported [`docker buildx imagetools inspect`](https://docs.docker.com/engine/reference/commandline/buildx_imagetools_inspect/).
+You can switch back to use [`docker manifest inspect`](https://docs.docker.com/engine/reference/commandline/manifest_inspect/) for the features that are not supported by [`docker buildx imagetools inspect`](https://docs.docker.com/engine/reference/commandline/buildx_imagetools_inspect/).
 
 ### I logged in my Docker Hub account, but the Docker Hub rate reported seems incorrect.
 
