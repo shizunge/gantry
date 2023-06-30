@@ -47,18 +47,41 @@ initialize_test() {
   export GANTRY_CLEANUP_IMAGES=
   export GANTRY_NOTIFICATION_APPRISE_URL=
   export GANTRY_NOTIFICATION_TITLE=
+  GLOBAL_THIS_TEST_ERRORS=0
 }
 
 finalize_test() {
   local TEST_NAME=${1}
+  local TSET_STATUS="OK"
+  local RETURN_VALUE=0
+  if [ "${GLOBAL_THIS_TEST_ERRORS}" -ne 0 ]; then
+    TSET_STATUS="${GLOBAL_THIS_TEST_ERRORS} ERRORS"
+    RETURN_VALUE=1
+  fi
   echo "=============================="
-  echo "== ${TEST_NAME} Done"
+  echo "== ${TEST_NAME} ${TSET_STATUS}"
+  return "${RETURN_VALUE}"
+}
+
+# finish_all_tests should return non zero when there are errors.
+finish_all_tests() {
+  local NUM_ERRORS="${GLOBAL_ALL_ERRORS:-0}"
+  if [ "${NUM_ERRORS}" -ne 0 ]; then
+    echo "=============================="
+    echo "== There are total ${NUM_ERRORS} error(s)."
+    return 1
+  fi
+  echo "=============================="
+  echo "== All tests pass."
+  # Intentionally return 1 to verify github workflow could fail. Will remove later.
+  return 1
 }
 
 handle_failure() {
   local MESSAGE="${1}"
   echo "${MESSAGE}" >&2
-  exit 1
+  GLOBAL_THIS_TEST_ERRORS=$((GLOBAL_THIS_TEST_ERRORS+1))
+  GLOBAL_ALL_ERRORS=$((GLOBAL_ALL_ERRORS+1))
 }
 
 expect_message() {

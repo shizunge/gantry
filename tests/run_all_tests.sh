@@ -98,8 +98,8 @@ main() {
   test_ROLLBACK_ON_FAILURE_false "${IMAGE_WITH_TAG}"
   test_CLEANUP_IMAGES_false "${IMAGE_WITH_TAG}"
 
-  echo "Done tests"
-  return 0
+  # finish_all_tests should return non zero when there are errors.
+  finish_all_tests
 }
 
 main "${@}"

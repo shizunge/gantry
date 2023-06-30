@@ -63,7 +63,6 @@ test_no_new_image() {
   stop_service "${SERVICE_NAME}"
   prune_local_test_image "${IMAGE_WITH_TAG}"
   finalize_test "${FUNCNAME[0]}"
-  return 0
 }
 
 test_new_image() {
@@ -98,7 +97,6 @@ test_new_image() {
   stop_service "${SERVICE_NAME}"
   prune_local_test_image "${IMAGE_WITH_TAG}"
   finalize_test "${FUNCNAME[0]}"
-  return 0
 }
 
 test_new_image_LOG_LEVEL_none() {
@@ -135,7 +133,6 @@ test_new_image_LOG_LEVEL_none() {
   stop_service "${SERVICE_NAME}"
   prune_local_test_image "${IMAGE_WITH_TAG}"
   finalize_test "${FUNCNAME[0]}"
-  return 0
 }
 
 test_login_config() {
@@ -197,7 +194,6 @@ test_login_config() {
   stop_service "${SERVICE_NAME}"
   prune_local_test_image "${IMAGE_WITH_TAG}"
   finalize_test "${FUNCNAME[0]}"
-  return 0
 }
 
 test_SERVICES_EXCLUDED() {
@@ -233,7 +229,6 @@ test_SERVICES_EXCLUDED() {
   stop_service "${SERVICE_NAME}"
   prune_local_test_image "${IMAGE_WITH_TAG}"
   finalize_test "${FUNCNAME[0]}"
-  return 0
 }
 
 test_SERVICES_EXCLUDED_FILTERS() {
@@ -269,7 +264,6 @@ test_SERVICES_EXCLUDED_FILTERS() {
   stop_service "${SERVICE_NAME}"
   prune_local_test_image "${IMAGE_WITH_TAG}"
   finalize_test "${FUNCNAME[0]}"
-  return 0
 }
 
 test_updating_multiple_services() {
@@ -328,7 +322,6 @@ test_updating_multiple_services() {
   stop_service "${SERVICE_NAME0}"
   prune_local_test_image "${IMAGE_WITH_TAG}"
   finalize_test "${FUNCNAME[0]}"
-  return 0
 }
 
 test_jobs_skipping() {
@@ -363,7 +356,6 @@ test_jobs_skipping() {
   stop_service "${SERVICE_NAME}"
   prune_local_test_image "${IMAGE_WITH_TAG}"
   finalize_test "${FUNCNAME[0]}"
-  return 0
 }
 
 test_jobs_UPDATE_JOBS_true() {
@@ -402,7 +394,6 @@ test_jobs_UPDATE_JOBS_true() {
   stop_service "${SERVICE_NAME}"
   prune_local_test_image "${IMAGE_WITH_TAG}"
   finalize_test "${FUNCNAME[0]}"
-  return 0
 }
 
 test_jobs_UPDATE_JOBS_true_no_running_tasks() {
@@ -443,7 +434,6 @@ test_jobs_UPDATE_JOBS_true_no_running_tasks() {
   stop_service "${SERVICE_NAME}"
   prune_local_test_image "${IMAGE_WITH_TAG}"
   finalize_test "${FUNCNAME[0]}"
-  return 0
 }
 
 test_MANIFEST_INSPECT_false() {
@@ -482,7 +472,6 @@ test_MANIFEST_INSPECT_false() {
   stop_service "${SERVICE_NAME}"
   prune_local_test_image "${IMAGE_WITH_TAG}"
   finalize_test "${FUNCNAME[0]}"
-  return 0
 }
 
 test_MANIFEST_USE_MANIFEST_CMD_true() {
@@ -519,7 +508,6 @@ test_MANIFEST_USE_MANIFEST_CMD_true() {
   stop_service "${SERVICE_NAME}"
   prune_local_test_image "${IMAGE_WITH_TAG}"
   finalize_test "${FUNCNAME[0]}"
-  return 0
 }
 
 test_UPDATE_OPTIONS() {
@@ -563,7 +551,6 @@ test_UPDATE_OPTIONS() {
   stop_service "${SERVICE_NAME}"
   prune_local_test_image "${IMAGE_WITH_TAG}"
   finalize_test "${FUNCNAME[0]}"
-  return 0
 }
 
 test_replicated_no_running_tasks() {
@@ -604,7 +591,6 @@ test_replicated_no_running_tasks() {
   stop_service "${SERVICE_NAME}"
   prune_local_test_image "${IMAGE_WITH_TAG}"
   finalize_test "${FUNCNAME[0]}"
-  return 0
 }
 
 test_global_no_running_tasks() {
@@ -647,7 +633,6 @@ test_global_no_running_tasks() {
   stop_service "${SERVICE_NAME}"
   prune_local_test_image "${IMAGE_WITH_TAG}"
   finalize_test "${FUNCNAME[0]}"
-  return 0
 }
 
 test_timeout_rollback() {
@@ -684,7 +669,6 @@ test_timeout_rollback() {
   stop_service "${SERVICE_NAME}"
   prune_local_test_image "${IMAGE_WITH_TAG}"
   finalize_test "${FUNCNAME[0]}"
-  return 0
 }
 
 test_timeout_rollback_failed() {
@@ -722,7 +706,6 @@ test_timeout_rollback_failed() {
   stop_service "${SERVICE_NAME}"
   prune_local_test_image "${IMAGE_WITH_TAG}"
   finalize_test "${FUNCNAME[0]}"
-  return 0
 }
 
 test_timeout_ROLLBACK_ON_FAILURE_false() {
@@ -760,7 +743,6 @@ test_timeout_ROLLBACK_ON_FAILURE_false() {
   stop_service "${SERVICE_NAME}"
   prune_local_test_image "${IMAGE_WITH_TAG}"
   finalize_test "${FUNCNAME[0]}"
-  return 0
 }
 
 test_CLEANUP_IMAGES_false() {
@@ -796,5 +778,4 @@ test_CLEANUP_IMAGES_false() {
   stop_service "${SERVICE_NAME}"
   prune_local_test_image "${IMAGE_WITH_TAG}"
   finalize_test "${FUNCNAME[0]}"
-  return 0
 }
