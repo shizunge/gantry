@@ -373,7 +373,7 @@ get_number_of_running_tasks() {
   echo "${NUM_RUNS}"
 }
 
-get_service_update_additional_option() {
+get_service_update_additional_options() {
   local SERVICE_NAME="${1}"
   local NUM_RUNS=
   NUM_RUNS=$(get_number_of_running_tasks "${SERVICE_NAME}")
@@ -442,7 +442,7 @@ update_single_service() {
   [ -z "${IMAGE}" ] && log INFO "No new images." && return 0
   log INFO "Updating with image ${IMAGE}"
   local ADDITIONAL_OPTIONS=
-  ADDITIONAL_OPTIONS=$(get_service_update_additional_option "${SERVICE_NAME}")
+  ADDITIONAL_OPTIONS=$(get_service_update_additional_options "${SERVICE_NAME}")
   [ -n "${ADDITIONAL_OPTIONS}" ] && log DEBUG "Add option \"${ADDITIONAL_OPTIONS}\" to the docker service update command."
   # Add "-quiet" to suppress progress output.
   # SC2086: Double quote to prevent globbing and word splitting.
