@@ -517,7 +517,7 @@ test_MANIFEST_INSPECT_false() {
   finalize_test "${FUNCNAME[0]}"
 }
 
-test_MANIFEST_USE_MANIFEST_CMD_true() {
+test_MANIFEST_CMD_manifest() {
   local IMAGE_WITH_TAG="${1}"
   local SERVICE_NAME STDOUT
   SERVICE_NAME="gantry-test-$(date +%s)"
@@ -529,7 +529,7 @@ test_MANIFEST_USE_MANIFEST_CMD_true() {
 
   export GANTRY_SERVICES_FILTERS="name=${SERVICE_NAME}"
   export GANTRY_MANIFEST_OPTIONS="--insecure"
-  export GANTRY_MANIFEST_USE_MANIFEST_CMD="true"
+  export GANTRY_MANIFEST_CMD="manifest"
   STDOUT=$(run_gantry "${FUNCNAME[0]}" 2>&1 | tee /dev/tty)
 
   expect_no_message "${STDOUT}" "${SKIP_UPDATING_SERVICE}.*${SERVICE_NAME}"

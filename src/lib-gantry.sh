@@ -300,11 +300,11 @@ get_config_from_service() {
 }
 
 get_image_info() {
-  local USE_MANIFEST_CMD="${GANTRY_MANIFEST_USE_MANIFEST_CMD:-"false"}"
+  local MANIFEST_CMD="${GANTRY_MANIFEST_CMD:-"buildx"}"
   local MANIFEST_OPTIONS="${GANTRY_MANIFEST_OPTIONS:-""}"
   local IMAGE="${1}"
   local DOCKER_CONFIG="${2}"
-  if is_true "${USE_MANIFEST_CMD}"; then
+  if echo "${MANIFEST_CMD}" | grep -q -i "manifest"; then
     # SC2086: Double quote to prevent globbing and word splitting.
     # shellcheck disable=SC2086
     docker ${DOCKER_CONFIG} manifest inspect ${MANIFEST_OPTIONS} "${IMAGE}"

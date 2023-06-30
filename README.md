@@ -60,9 +60,9 @@ You can configure the most behaviors of *Gantry* via environment variables.
 
 | Environment Variable  | Default | Description |
 |-----------------------|---------|-------------|
-| GANTRY_MANIFEST_INSPECT          | true  | Set to `true` to check manifest of the image. Set to `false` to skip checking the manifest. As a result of skipping, `docker service update` always runs. In case you add `--force` to `GANTRY_UPDATE_OPTIONS`, you also want to disable the inspection. |
-| GANTRY_MANIFEST_OPTIONS          |       | [Options](https://docs.docker.com/engine/reference/commandline/buildx_imagetools_inspect/#options) added to the `docker buildx imagetools inspect` or [options](https://docs.docker.com/engine/reference/commandline/manifest_inspect/#options) to `docker manifest inspect`, depending on `GANTRY_MANIFEST_USE_MANIFEST_CMD` value. |
-| GANTRY_MANIFEST_USE_MANIFEST_CMD | false |Set to `true` to run `docker manifest inspect`. Set to `false` to run `docker buildx imagetools inspect`. `docker manifest inspect` could [fail on some registries](https://github.com/orgs/community/discussions/45779). |
+| GANTRY_MANIFEST_INSPECT | true  | Set to `true` to check manifest of the image. Set to `false` to skip checking the manifest. As a result of skipping, `docker service update` always runs. In case you add `--force` to `GANTRY_UPDATE_OPTIONS`, you also want to disable the inspection. |
+| GANTRY_MANIFEST_OPTIONS |       | [Options](https://docs.docker.com/engine/reference/commandline/buildx_imagetools_inspect/#options) added to the `docker buildx imagetools inspect` or [options](https://docs.docker.com/engine/reference/commandline/manifest_inspect/#options) to `docker manifest inspect`, depending on `GANTRY_MANIFEST_CMD` value. |
+| GANTRY_MANIFEST_CMD     | buildx | Valid values are `buildx` and `manifest`. Set which command for manifest inspect: `docker buildx imagetools inspect` or `docker manifest inspect`. |
 
 ### To add options to services update
 
