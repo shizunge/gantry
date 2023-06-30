@@ -37,11 +37,11 @@ As discussed [here](https://github.com/docker/cli/issues/627), the CLI will hang
 
 ### When to set `GANTRY_MANIFEST_CMD`?
 
-Before updating a service, *Gantry* will try to obtain the image's meta data to decide whether there is a new image. If there is no new image, *Gantry* skips the updating.
+Before updating a service, *Gantry* will try to obtain the image's meta data to decide whether there is a new image. If there is no new image, *Gantry* skips calling `docker service update`.
 
-I found `docker manifest inspect` [failed on some registries](https://github.com/orgs/community/discussions/45779), so I use `docker buildx imagetools inspect` to obtain the image digest by default. Additionally, `docker buildx imagetools` can obtain the digest of multi-arch images, which could help not to run the `docker service update` CLI when there is no new images.
+`docker buildx imagetools inspect` is selected as the default, because `docker manifest inspect` could [fail on some registries](https://github.com/orgs/community/discussions/45779). Additionally, `docker buildx imagetools` can obtain the digest of multi-arch images, which could help not to run the `docker service update` CLI when there is no new images.
 
-You can switch back to use `docker manifest inspect` in case `docker buildx imagetools inspect` does not support some features you need.
+You can switch back to use [`docker manifest inspect`](https://docs.docker.com/engine/reference/commandline/manifest_inspect/) for the features that are not supported [`docker buildx imagetools inspect`](https://docs.docker.com/engine/reference/commandline/buildx_imagetools_inspect/).
 
 ### I logged in my Docker Hub account, but the Docker Hub rate reported seems incorrect.
 
