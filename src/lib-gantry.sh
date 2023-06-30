@@ -340,6 +340,10 @@ inspect_image() {
   if in_list "${GLOBAL_NO_NEW_IMAGES}" "${DIGEST}"; then
     return 0
   fi
+  if in_list "${GLOBAL_NEW_IMAGES}" "${DIGEST}"; then
+    echo "${IMAGE}"
+    return 0
+  fi
   local IMAGE_INFO=
   if ! IMAGE_INFO=$(get_image_info "${IMAGE}" "${DOCKER_CONFIG}" 2>&1); then
     log ERROR "Image ${IMAGE} does not exist or it is not available. ${IMAGE_INFO}"
@@ -349,6 +353,7 @@ inspect_image() {
     GLOBAL_NO_NEW_IMAGES=$(echo -e "${GLOBAL_NO_NEW_IMAGES}\n${DIGEST}" | sort | uniq)
     return 0
   fi
+  GLOBAL_NEW_IMAGES=$(echo -e "${GLOBAL_NEW_IMAGES}\n${DIGEST}" | sort | uniq)
   echo "${IMAGE}"
   return 0
 }
@@ -485,6 +490,7 @@ gantry_initialize() {
   GLOBAL_SERVICES_UPDATED=
   GLOBAL_SERVICES_UPDATE_FAILED=
   GLOBAL_NO_NEW_IMAGES=
+  GLOBAL_NEW_IMAGES=
   authenticate_to_registries
 }
 
