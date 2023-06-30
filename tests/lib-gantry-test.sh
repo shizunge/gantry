@@ -15,7 +15,7 @@
 # along with this program.  If not, see <https://www.gnu.org/licenses/>.
 #
 
-test_start() {
+initialize_test() {
   local TEST_NAME=${1}
   echo "=============================="
   echo "== ${TEST_NAME} started"
@@ -49,7 +49,7 @@ test_start() {
   export GANTRY_NOTIFICATION_TITLE=
 }
 
-test_end() {
+finalize_test() {
   local TEST_NAME=${1}
   echo "=============================="
   echo "== ${TEST_NAME} Done"

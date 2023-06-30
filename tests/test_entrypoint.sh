@@ -36,7 +36,7 @@ test_no_new_image() {
   local SERVICE_NAME STDOUT
   SERVICE_NAME="gantry-test-$(date +%s)"
 
-  test_start "${FUNCNAME[0]}"
+  initialize_test "${FUNCNAME[0]}"
   build_and_push_test_image "${IMAGE_WITH_TAG}"
   start_replicated_service "${SERVICE_NAME}" "${IMAGE_WITH_TAG}"
 
@@ -60,7 +60,7 @@ test_no_new_image() {
 
   stop_service "${SERVICE_NAME}"
   prune_local_test_image "${IMAGE_WITH_TAG}"
-  test_end "${FUNCNAME[0]}"
+  finalize_test "${FUNCNAME[0]}"
   return 0
 }
 
@@ -69,7 +69,7 @@ test_new_image() {
   local SERVICE_NAME STDOUT
   SERVICE_NAME="gantry-test-$(date +%s)"
 
-  test_start "${FUNCNAME[0]}"
+  initialize_test "${FUNCNAME[0]}"
   build_and_push_test_image "${IMAGE_WITH_TAG}"
   start_replicated_service "${SERVICE_NAME}" "${IMAGE_WITH_TAG}"
   build_and_push_test_image "${IMAGE_WITH_TAG}"
@@ -94,7 +94,7 @@ test_new_image() {
 
   stop_service "${SERVICE_NAME}"
   prune_local_test_image "${IMAGE_WITH_TAG}"
-  test_end "${FUNCNAME[0]}"
+  finalize_test "${FUNCNAME[0]}"
   return 0
 }
 
@@ -104,7 +104,7 @@ test_new_image_LOG_LEVEL_none() {
   local SERVICE_NAME STDOUT
   SERVICE_NAME="gantry-test-$(date +%s)"
 
-  test_start "${FUNCNAME[0]}"
+  initialize_test "${FUNCNAME[0]}"
   build_and_push_test_image "${IMAGE_WITH_TAG}"
   start_replicated_service "${SERVICE_NAME}" "${IMAGE_WITH_TAG}"
   build_and_push_test_image "${IMAGE_WITH_TAG}"
@@ -130,7 +130,7 @@ test_new_image_LOG_LEVEL_none() {
 
   stop_service "${SERVICE_NAME}"
   prune_local_test_image "${IMAGE_WITH_TAG}"
-  test_end "${FUNCNAME[0]}"
+  finalize_test "${FUNCNAME[0]}"
   return 0
 }
 
@@ -152,7 +152,7 @@ test_login_config() {
     return 0
   fi
 
-  test_start "${FUNCNAME[0]}"
+  initialize_test "${FUNCNAME[0]}"
   build_and_push_test_image "${IMAGE_WITH_TAG}"
   start_replicated_service "${SERVICE_NAME}" "${IMAGE_WITH_TAG}"
   docker service update --quiet --label-add "${LABEL}=${CONFIG}" "${SERVICE_NAME}"
@@ -191,7 +191,7 @@ test_login_config() {
 
   stop_service "${SERVICE_NAME}"
   prune_local_test_image "${IMAGE_WITH_TAG}"
-  test_end "${FUNCNAME[0]}"
+  finalize_test "${FUNCNAME[0]}"
   return 0
 }
 
@@ -200,7 +200,7 @@ test_SERVICES_EXCLUDED() {
   local SERVICE_NAME STDOUT
   SERVICE_NAME="gantry-test-$(date +%s)"
 
-  test_start "${FUNCNAME[0]}"
+  initialize_test "${FUNCNAME[0]}"
   build_and_push_test_image "${IMAGE_WITH_TAG}"
   start_replicated_service "${SERVICE_NAME}" "${IMAGE_WITH_TAG}"
   build_and_push_test_image "${IMAGE_WITH_TAG}"
@@ -226,7 +226,7 @@ test_SERVICES_EXCLUDED() {
  
   stop_service "${SERVICE_NAME}"
   prune_local_test_image "${IMAGE_WITH_TAG}"
-  test_end "${FUNCNAME[0]}"
+  finalize_test "${FUNCNAME[0]}"
   return 0
 }
 
@@ -235,7 +235,7 @@ test_SERVICES_EXCLUDED_FILTERS() {
   local SERVICE_NAME STDOUT
   SERVICE_NAME="gantry-test-$(date +%s)"
 
-  test_start "${FUNCNAME[0]}"
+  initialize_test "${FUNCNAME[0]}"
   build_and_push_test_image "${IMAGE_WITH_TAG}"
   start_replicated_service "${SERVICE_NAME}" "${IMAGE_WITH_TAG}"
   build_and_push_test_image "${IMAGE_WITH_TAG}"
@@ -261,7 +261,7 @@ test_SERVICES_EXCLUDED_FILTERS() {
 
   stop_service "${SERVICE_NAME}"
   prune_local_test_image "${IMAGE_WITH_TAG}"
-  test_end "${FUNCNAME[0]}"
+  finalize_test "${FUNCNAME[0]}"
   return 0
 }
 
@@ -275,7 +275,7 @@ test_SERVICES_EXCLUDED_combined() {
   local SERVICE_NAME3="${BASE_NAME}-3"
   local SERVICE_NAME4="${BASE_NAME}-4"
 
-  test_start "${FUNCNAME[0]}"
+  initialize_test "${FUNCNAME[0]}"
   build_and_push_test_image "${IMAGE_WITH_TAG}"
   start_replicated_service "${SERVICE_NAME0}" "${IMAGE_WITH_TAG}"
   start_replicated_service "${SERVICE_NAME1}" "${IMAGE_WITH_TAG}"
@@ -319,7 +319,7 @@ test_SERVICES_EXCLUDED_combined() {
   stop_service "${SERVICE_NAME1}"
   stop_service "${SERVICE_NAME0}"
   prune_local_test_image "${IMAGE_WITH_TAG}"
-  test_end "${FUNCNAME[0]}"
+  finalize_test "${FUNCNAME[0]}"
   return 0
 }
 
@@ -328,7 +328,7 @@ test_jobs_skipping() {
   local SERVICE_NAME STDOUT
   SERVICE_NAME="gantry-test-$(date +%s)"
 
-  test_start "${FUNCNAME[0]}"
+  initialize_test "${FUNCNAME[0]}"
   build_and_push_test_image "${IMAGE_WITH_TAG}"
   start_replicated_job "${SERVICE_NAME}" "${IMAGE_WITH_TAG}"
   build_and_push_test_image "${IMAGE_WITH_TAG}"
@@ -353,7 +353,7 @@ test_jobs_skipping() {
 
   stop_service "${SERVICE_NAME}"
   prune_local_test_image "${IMAGE_WITH_TAG}"
-  test_end "${FUNCNAME[0]}"
+  finalize_test "${FUNCNAME[0]}"
   return 0
 }
 
@@ -362,7 +362,7 @@ test_jobs_UPDATE_JOBS_on() {
   local SERVICE_NAME STDOUT
   SERVICE_NAME="gantry-test-$(date +%s)"
 
-  test_start "${FUNCNAME[0]}"
+  initialize_test "${FUNCNAME[0]}"
   build_and_push_test_image "${IMAGE_WITH_TAG}"
   start_replicated_job "${SERVICE_NAME}" "${IMAGE_WITH_TAG}"
   build_and_push_test_image "${IMAGE_WITH_TAG}"
@@ -391,7 +391,7 @@ test_jobs_UPDATE_JOBS_on() {
 
   stop_service "${SERVICE_NAME}"
   prune_local_test_image "${IMAGE_WITH_TAG}"
-  test_end "${FUNCNAME[0]}"
+  finalize_test "${FUNCNAME[0]}"
   return 0
 }
 
@@ -401,7 +401,7 @@ test_jobs_UPDATE_JOBS_on_no_running_tasks() {
   SERVICE_NAME="gantry-test-$(date +%s)"
   SLEEP_SECONDS=15
 
-  test_start "${FUNCNAME[0]}"
+  initialize_test "${FUNCNAME[0]}"
   build_and_push_test_image "${IMAGE_WITH_TAG}" "${SLEEP_SECONDS}"
   start_replicated_job "${SERVICE_NAME}" "${IMAGE_WITH_TAG}"
   wait_zero_running_tasks "${SERVICE_NAME}"
@@ -426,13 +426,12 @@ test_jobs_UPDATE_JOBS_on_no_running_tasks() {
   expect_no_message "${STDOUT}" "${NO_IMAGES_TO_REMOVE}"
   expect_message    "${STDOUT}" "${REMOVING_NUM_IMAGES}"
   expect_no_message "${STDOUT}" "${SKIP_REMOVING_IMAGES}"
-  # Since the job may not reach the desired state, they are still using the image. Image remover will fail.
-  expect_no_message "${STDOUT}" "${REMOVED_IMAGE}.*${IMAGE_WITH_TAG}"
-  expect_message    "${STDOUT}" "${FAILED_TO_REMOVE_IMAGE}.*${IMAGE_WITH_TAG}"
+  expect_message    "${STDOUT}" "${REMOVED_IMAGE}.*${IMAGE_WITH_TAG}"
+  expect_no_message "${STDOUT}" "${FAILED_TO_REMOVE_IMAGE}.*${IMAGE_WITH_TAG}"
 
   stop_service "${SERVICE_NAME}"
   prune_local_test_image "${IMAGE_WITH_TAG}"
-  test_end "${FUNCNAME[0]}"
+  finalize_test "${FUNCNAME[0]}"
   return 0
 }
 
@@ -441,7 +440,7 @@ test_MANIFEST_INSPECT_off() {
   local SERVICE_NAME STDOUT
   SERVICE_NAME="gantry-test-$(date +%s)"
 
-  test_start "${FUNCNAME[0]}"
+  initialize_test "${FUNCNAME[0]}"
   build_and_push_test_image "${IMAGE_WITH_TAG}"
   start_replicated_service "${SERVICE_NAME}" "${IMAGE_WITH_TAG}"
   # No image updates after service started.
@@ -470,7 +469,7 @@ test_MANIFEST_INSPECT_off() {
 
   stop_service "${SERVICE_NAME}"
   prune_local_test_image "${IMAGE_WITH_TAG}"
-  test_end "${FUNCNAME[0]}"
+  finalize_test "${FUNCNAME[0]}"
   return 0
 }
 
@@ -481,7 +480,7 @@ test_replicated_no_running_tasks() {
   local SERVICE_NAME STDOUT
   SERVICE_NAME="gantry-test-$(date +%s)"
 
-  test_start "${FUNCNAME[0]}"
+  initialize_test "${FUNCNAME[0]}"
   build_and_push_test_image "${IMAGE_WITH_TAG}"
   start_replicated_service "${SERVICE_NAME}" "${IMAGE_WITH_TAG}"
   docker service update --quiet --replicas=0 "${SERVICE_NAME}"
@@ -510,7 +509,7 @@ test_replicated_no_running_tasks() {
 
   stop_service "${SERVICE_NAME}"
   prune_local_test_image "${IMAGE_WITH_TAG}"
-  test_end "${FUNCNAME[0]}"
+  finalize_test "${FUNCNAME[0]}"
   return 0
 }
 
@@ -522,7 +521,7 @@ test_global_no_running_tasks() {
   SERVICE_NAME="gantry-test-$(date +%s)"
   SLEEP_SECONDS=15
 
-  test_start "${FUNCNAME[0]}"
+  initialize_test "${FUNCNAME[0]}"
   build_and_push_test_image "${IMAGE_WITH_TAG}" "${SLEEP_SECONDS}"
   start_global_service "${SERVICE_NAME}" "${IMAGE_WITH_TAG}"
   # The tasks should exit after SLEEP_SECONDS seconds sleep. Then it will have 0 running tasks.
@@ -552,7 +551,7 @@ test_global_no_running_tasks() {
 
   stop_service "${SERVICE_NAME}"
   prune_local_test_image "${IMAGE_WITH_TAG}"
-  test_end "${FUNCNAME[0]}"
+  finalize_test "${FUNCNAME[0]}"
   return 0
 }
 
@@ -561,7 +560,7 @@ test_timeout_rollback() {
   local SERVICE_NAME STDOUT
   SERVICE_NAME="gantry-test-$(date +%s)"
 
-  test_start "${FUNCNAME[0]}"
+  initialize_test "${FUNCNAME[0]}"
   build_and_push_test_image "${IMAGE_WITH_TAG}"
   start_replicated_service "${SERVICE_NAME}" "${IMAGE_WITH_TAG}"
   build_and_push_test_image "${IMAGE_WITH_TAG}"
@@ -588,7 +587,7 @@ test_timeout_rollback() {
 
   stop_service "${SERVICE_NAME}"
   prune_local_test_image "${IMAGE_WITH_TAG}"
-  test_end "${FUNCNAME[0]}"
+  finalize_test "${FUNCNAME[0]}"
   return 0
 }
 
@@ -597,7 +596,7 @@ test_timeout_rollback_failed() {
   local SERVICE_NAME STDOUT
   SERVICE_NAME="gantry-test-$(date +%s)"
 
-  test_start "${FUNCNAME[0]}"
+  initialize_test "${FUNCNAME[0]}"
   build_and_push_test_image "${IMAGE_WITH_TAG}"
   start_replicated_service "${SERVICE_NAME}" "${IMAGE_WITH_TAG}"
   build_and_push_test_image "${IMAGE_WITH_TAG}"
@@ -625,7 +624,7 @@ test_timeout_rollback_failed() {
 
   stop_service "${SERVICE_NAME}"
   prune_local_test_image "${IMAGE_WITH_TAG}"
-  test_end "${FUNCNAME[0]}"
+  finalize_test "${FUNCNAME[0]}"
   return 0
 }
 
@@ -634,7 +633,7 @@ test_timeout_ROLLBACK_ON_FAILURE_off() {
   local SERVICE_NAME STDOUT
   SERVICE_NAME="gantry-test-$(date +%s)"
 
-  test_start "${FUNCNAME[0]}"
+  initialize_test "${FUNCNAME[0]}"
   build_and_push_test_image "${IMAGE_WITH_TAG}"
   start_replicated_service "${SERVICE_NAME}" "${IMAGE_WITH_TAG}"
   build_and_push_test_image "${IMAGE_WITH_TAG}"
@@ -662,7 +661,7 @@ test_timeout_ROLLBACK_ON_FAILURE_off() {
 
   stop_service "${SERVICE_NAME}"
   prune_local_test_image "${IMAGE_WITH_TAG}"
-  test_end "${FUNCNAME[0]}"
+  finalize_test "${FUNCNAME[0]}"
   return 0
 }
 
@@ -671,7 +670,7 @@ test_CLEANUP_IMAGES_off() {
   local SERVICE_NAME STDOUT
   SERVICE_NAME="gantry-test-$(date +%s)"
 
-  test_start "${FUNCNAME[0]}"
+  initialize_test "${FUNCNAME[0]}"
   build_and_push_test_image "${IMAGE_WITH_TAG}"
   start_replicated_service "${SERVICE_NAME}" "${IMAGE_WITH_TAG}"
   build_and_push_test_image "${IMAGE_WITH_TAG}"
@@ -697,6 +696,6 @@ test_CLEANUP_IMAGES_off() {
 
   stop_service "${SERVICE_NAME}"
   prune_local_test_image "${IMAGE_WITH_TAG}"
-  test_end "${FUNCNAME[0]}"
+  finalize_test "${FUNCNAME[0]}"
   return 0
 }
