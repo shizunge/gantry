@@ -112,23 +112,10 @@ test_new_image_LOG_LEVEL_none() {
 
   export GANTRY_SERVICES_FILTERS="name=${SERVICE_NAME}"
   export GANTRY_LOG_LEVEL=NONE
+  echo "Start running Gantry."
   STDOUT=$(run_gantry "${FUNCNAME[0]}" 2>&1 | tee /dev/tty)
 
-  expect_no_message "${STDOUT}" "${SKIP_UPDATING_SERVICE}.*${SERVICE_NAME}"
-  expect_no_message "${STDOUT}" "${SERVICE_NAME}.*${NO_NEW_IMAGE}"
-  expect_no_message "${STDOUT}" "${SERVICE_NAME}.*${UPDATED}"
-  expect_no_message "${STDOUT}" "${SERVICE_NAME}.*${NO_UPDATES}"
-  expect_no_message "${STDOUT}" "${ROLLING_BACK}.*${SERVICE_NAME}"
-  expect_no_message "${STDOUT}" "${FAILED_TO_ROLLBACK}.*${SERVICE_NAME}"
-  expect_no_message "${STDOUT}" "${ROLLED_BACK}.*${SERVICE_NAME}"
-  expect_no_message "${STDOUT}" "${NO_SERVICES_UPDATED}"
-  expect_no_message "${STDOUT}" "${NUM_SERVICES_UPDATED}"
-  expect_no_message "${STDOUT}" "${NUM_SERVICES_UPDATE_FAILED}"
-  expect_no_message "${STDOUT}" "${NO_IMAGES_TO_REMOVE}"
-  expect_no_message "${STDOUT}" "${REMOVING_NUM_IMAGES}"
-  expect_no_message "${STDOUT}" "${SKIP_REMOVING_IMAGES}"
-  expect_no_message "${STDOUT}" "${REMOVED_IMAGE}.*${IMAGE_WITH_TAG}"
-  expect_no_message "${STDOUT}" "${FAILED_TO_REMOVE_IMAGE}.*${IMAGE_WITH_TAG}"
+  expect_no_message "${STDOUT}" ".+"
 
   stop_service "${SERVICE_NAME}"
   prune_local_test_image "${IMAGE_WITH_TAG}"

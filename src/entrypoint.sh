@@ -16,6 +16,7 @@
 #
 
 load_libraries() {
+  local LOCAL_LOG_LEVEL="${GANTRY_LOG_LEVEL}"
   local LIB_DIR=
   if [ -n "${GANTRY_LIB_DIR:-""}" ]; then
     LIB_DIR="${GANTRY_LIB_DIR}"
@@ -28,7 +29,10 @@ load_libraries() {
   elif [ -r "./lib-gantry.sh" ]; then
     LIB_DIR="."
   fi
-  echo "Loading libraries from ${LIB_DIR}"
+  # log function is not available before loading the library.
+  if ! echo "${LOCAL_LOG_LEVEL}" | grep -q -i "NONE"; then
+    echo "Loading libraries from ${LIB_DIR}"
+  fi
   . ${LIB_DIR}/notification.sh
   . ${LIB_DIR}/docker_hub_rate.sh
   . ${LIB_DIR}/lib-common.sh
