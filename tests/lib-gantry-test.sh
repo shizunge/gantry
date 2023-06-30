@@ -73,8 +73,6 @@ finish_all_tests() {
   fi
   echo "=============================="
   echo "== All tests pass."
-  # Intentionally return 1 to verify github workflow could fail. Will remove later.
-  return 1
 }
 
 handle_failure() {
@@ -102,6 +100,12 @@ expect_no_message() {
     return 1
   fi
   echo "EXPECTED found no message matches: ${MESSAGE}"
+}
+
+read_service_label() {
+  local SERVICE_NAME="${1}"
+  local LABEL="${2}"
+  docker service inspect -f "{{index .Spec.Labels \"${LABEL}\"}}" "${SERVICE_NAME}"
 }
 
 build_and_push_test_image() {
