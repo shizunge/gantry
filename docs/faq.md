@@ -18,6 +18,13 @@ You can set multiple filters. However filters are **ANDED**. So multiple filters
 
 To filter multiple services, you can set a label on each service then let *Gantry* filter on that label. Or you can run multiple *Gantry* instances.
 
+Advanced user can also create their own entrypoint using functions in [lib-gantry.sh](../src/lib-gantry.sh).
+```
+gantry_initialize
+gantry_update_services_list "${LIST_OF_SERVICES_TO_UPDATE}"
+gantry_finalize
+```
+
 ### How to run *Gantry* on a cron schedule?
 
 You can start *Gantry* as a docker swarm service and use [`swarm-cronjob`](https://github.com/crazy-max/swarm-cronjob) to run it at a given time. When use `swarm-cronjob`, you need to set `GANTRY_SLEEP_SECONDS` to 0. See the [example](examples/docker-compose.yml).
@@ -32,7 +39,7 @@ As discussed [here](https://github.com/docker/cli/issues/627), the CLI will hang
 
 Before updating a service, *Gantry* will try to obtain the image's meta data to decide whether there is a new image. If there is no new image, *Gantry* skips the updating.
 
-I found `docker manifest inspect` [failed on some registries](https://github.com/orgs/community/discussions/45779), so I use `docker buildx imagetools inspect` to obtain the image digest by default.
+I found `docker manifest inspect` [failed on some registries](https://github.com/orgs/community/discussions/45779), so I use `docker buildx imagetools inspect` to obtain the image digest by default. Additionally, `docker buildx imagetools` can obtain the digest of multi-arch images, which could help not to run the `docker service update` CLI when there is no new images.
 
 You can switch back to use `docker manifest inspect` in case `docker buildx imagetools inspect` does not support some features you need.
 
