@@ -1,6 +1,6 @@
 # Gantry
 
-*Gantry* is a tool to update docker swarm services, enhanced [Shepherd](https://github.com/containrrr/shepherd).
+[*Gantry*](https://github.com/shizunge/gantry) is a tool to update docker swarm services, enhanced [Shepherd](https://github.com/containrrr/shepherd).
 
 ## Usage
 
