@@ -16,7 +16,7 @@
 #
 
 load_libraries() {
-  local LOCAL_LOG_LEVEL="${GANTRY_LOG_LEVEL}"
+  local LOCAL_LOG_LEVEL="${GANTRY_LOG_LEVEL:-""}"
   local LIB_DIR=
   if [ -n "${GANTRY_LIB_DIR:-""}" ]; then
     LIB_DIR="${GANTRY_LIB_DIR}"
