@@ -98,7 +98,7 @@ add_image_to_remove() {
     GLOBAL_IMAGES_TO_REMOVE=${IMAGE}
     return 0
   fi
-  GLOBAL_IMAGES_TO_REMOVE=$(echo -e "${GLOBAL_IMAGES_TO_REMOVE}\n${IMAGE}" | sort | uniq)
+  GLOBAL_IMAGES_TO_REMOVE=$(add_uniq_to_list "${GLOBAL_IMAGES_TO_REMOVE}" "${IMAGE}")
 }
 
 remove_images() {
@@ -172,7 +172,7 @@ add_service_updated() {
     GLOBAL_SERVICES_UPDATED=${SERVICE_NAME}
     return 0
   fi
-  GLOBAL_SERVICES_UPDATED=$(echo -e "${GLOBAL_SERVICES_UPDATED}\n${SERVICE_NAME}" | sort | uniq)
+  GLOBAL_SERVICES_UPDATED=$(add_uniq_to_list "${GLOBAL_SERVICES_UPDATED}" "${SERVICE_NAME}")
 }
 
 report_services_updated() {
@@ -194,7 +194,7 @@ add_service_update_failed() {
     GLOBAL_SERVICES_UPDATE_FAILED=${SERVICE_NAME}
     return 0
   fi
-  GLOBAL_SERVICES_UPDATE_FAILED=$(echo -e "${GLOBAL_SERVICES_UPDATE_FAILED}\n${SERVICE_NAME}" | sort | uniq)
+  GLOBAL_SERVICES_UPDATE_FAILED=$(add_uniq_to_list "${GLOBAL_SERVICES_UPDATE_FAILED}" "${SERVICE_NAME}")
 }
 
 report_services_update_failed() {
@@ -350,10 +350,10 @@ inspect_image() {
     return 1
   fi
   if [ -n "${DIGEST}" ] && echo "${IMAGE_INFO}" | grep -q "${DIGEST}"; then
-    GLOBAL_NO_NEW_IMAGES=$(echo -e "${GLOBAL_NO_NEW_IMAGES}\n${DIGEST}" | sort | uniq)
+    GLOBAL_NO_NEW_IMAGES=$(add_uniq_to_list "${GLOBAL_NO_NEW_IMAGES}" "${DIGEST}")
     return 0
   fi
-  GLOBAL_NEW_IMAGES=$(echo -e "${GLOBAL_NEW_IMAGES}\n${DIGEST}" | sort | uniq)
+  GLOBAL_NEW_IMAGES=$(add_uniq_to_list "${GLOBAL_NEW_IMAGES}" "${DIGEST}")
   echo "${IMAGE}"
   return 0
 }

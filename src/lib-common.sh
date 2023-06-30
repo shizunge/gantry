@@ -113,6 +113,12 @@ is_number() {
   [ "${1}" -eq "${1}" ] 2>/dev/null;
 }
 
+is_true() {
+  local CONFIG="${1}"
+  CONFIG=$(echo "${CONFIG}" | cut -d ' ' -f 1)
+  echo "${CONFIG}" | grep -q -i "true"
+}
+
 difference_between() {
   local NUM0="${1}"
   local NUM1="${2}"
@@ -144,6 +150,12 @@ time_elapsed_since() {
   time_elapsed_between "$(date +%s)" "${START_TIME}"
 }
 
+add_uniq_to_list() {
+  local OLD_LIST="${1}"
+  local NEW_ITEM="${2}"
+  echo -e "${OLD_LIST}\n${NEW_ITEM}" | sort | uniq
+}
+
 # For a givne variable name <VAR>, try to read content of <VAR>_FILE if file exists.
 # otherwise echo the content of <VAR>.
 read_config() {
@@ -160,12 +172,6 @@ read_config() {
   fi
   eval "local CONFIG=\${${CONFIG_NAME}}"
   echo "${CONFIG}"
-}
-
-is_true() {
-  local CONFIG="${1}"
-  CONFIG=$(echo "${CONFIG}" | cut -d ' ' -f 1)
-  echo "${CONFIG}" | grep -q -i "true"
 }
 
 swarm_network_arguments() {
