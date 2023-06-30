@@ -21,13 +21,15 @@ jobs:
         run: sudo apt-get install -y bash shellcheck
       - name: Analyse with shellcheck
         run: |
+          set -e
           shellcheck -V
           pushd src
-          shellcheck *
+          shellcheck *.sh
           popd
           pushd tests
-          shellcheck *
+          shellcheck *.sh
           popd
+          set +e
       - name: Install buildx
         uses: docker/setup-buildx-action@v2.7.0
       - name: Login to docker hub

@@ -1,6 +1,6 @@
 ## Migration from shepherd
 
-*Gantry* started to fix the following problems I found in [*shepherd*](https://github.com/containrrr/shepherd), then it became refactored and totally rewritten.
+*Gantry* started to fix the following problems I found in [*shepherd*](https://github.com/containrrr/shepherd), then it became refactored and totally rewritten, with abundant tests.
 
 * `docker manifest` CLI failed to get the image meta data for some registries.
 * High usage of docker hub rate. Getting manifest and then pulling the image double the usage.

@@ -1,6 +1,6 @@
 # Gantry
 
-*Gantry* is a tool to update docker swarm services, inspired by [Shepherd](https://github.com/containrrr/shepherd)
+*Gantry* is a tool to update docker swarm services, enhanced [Shepherd](https://github.com/containrrr/shepherd).
 
 ## Usage
 
@@ -108,6 +108,40 @@ You need to tell *Gantry* to use a named config rather than the default one when
 [FAQ](docs/faq.md)
 
 [Migrate from *Shepherd*](docs/migration.md)
+
+## Development
+
+*Gantry* is written to work with `busybox ash` (v1.35+), thus it could run easily in an alpine-based container without additional packages installed. One exception is that the notification feature requires `curl`. *Gantry* is also tested in `bash`.
+
+[shellcheck](https://github.com/koalaman/shellcheck) will run on push to enforce the best practices of writing shell scripts. Some checks are disabled thanks to `busybox ash` supports more features than POSIX `sh`. You can find the list of disabled checks in [.shellcheckrc](.shellcheckrc).
+
+To run `shellcheck` locally:
+```
+pushd src
+shellcheck *.sh
+popd
+pushd tests
+shellcheck *.sh
+popd
+```
+
+Majority of the configuration options are covered by end-to-end tests. It would be a good enhancement to generate coverage metrics.
+
+You can also run the tests locally. Before starting a test, you need to prepare a container repository for the test images. And login to the registry via `docekr login` thus the tests can push images to the repository.
+
+To run all the tests locally:
+```
+./tests/run_all_tests.sh <repository-name> [registry]
+```
+
+To run an individual test locally:
+```
+pushd tests
+source ./lib-gantry-test.sh
+source ./test_entrypoint.sh
+<test-name> [registry/]<repository-name>
+popd
+```
 
 ## Contacts
 
