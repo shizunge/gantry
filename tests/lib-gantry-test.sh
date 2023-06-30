@@ -56,6 +56,8 @@ finalize_test() {
 }
 
 handle_failure() {
+  local MESSAGE="${1}"
+  echo "${MESSAGE}" >&2
   exit 1
 }
 
@@ -63,8 +65,7 @@ expect_message() {
   TEXT=${1}
   MESSAGE=${2}
   if ! ACTUAL_MSG=$(echo "${TEXT}" | grep -P "${MESSAGE}"); then
-    echo "ERROR failed to find expected message \"${MESSAGE}\"."
-    handle_failure
+    handle_failure "ERROR failed to find expected message \"${MESSAGE}\"."
     return 1
   fi
   echo "EXPECTED found message: ${ACTUAL_MSG}"
@@ -74,8 +75,7 @@ expect_no_message() {
   TEXT=${1}
   MESSAGE=${2}
   if ACTUAL_MSG=$(echo "${TEXT}" | grep -P "${MESSAGE}"); then
-    echo "ERROR Message \"${ACTUAL_MSG}\" should not present."
-    handle_failure
+    handle_failure "ERROR Message \"${ACTUAL_MSG}\" should not present."
     return 1
   fi
   echo "EXPECTED found no message matches: ${MESSAGE}"
@@ -107,18 +107,26 @@ prune_local_test_image() {
 
 wait_zero_running_tasks() {
   local SERVICE_NAME="${1}"
+  local TIMEOUT_SECONDS="${2}"
   local NUM_RUNS=1
   local REPLICAS=
+  local SECONDS=0
   echo "Wait until ${SERVICE_NAME} has zero running tasks."
   while [ "${NUM_RUNS}" -ne 0 ]; do
+    if [ -n "${TIMEOUT_SECONDS}" ] && [ "${SECONDS}" -ge "${TIMEOUT_SECONDS}" ]; then
+      handle_failure "Services ${SERVICE_NAME} does not stop after ${TIMEOUT_SECONDS} seconds."
+      return 1
+    fi
     if ! REPLICAS=$(docker service ls --filter "name=${SERVICE_NAME}" --format '{{.Replicas}}' 2>&1); then
-      echo "Failed to obtain task states of service ${SERVICE_NAME}: ${REPLICAS}" >&2
-      exit 1
+      handle_failure "Failed to obtain task states of service ${SERVICE_NAME}: ${REPLICAS}"
+      return 1
     fi
     # https://docs.docker.com/engine/reference/commandline/service_ls/#examples
     # The REPLICAS is like "5/5" or "1/1 (3/5 completed)"
     # Get the number before the first "/".
     NUM_RUNS=$(echo "${REPLICAS}" | cut -d '/' -f 1)
+    sleep 1
+    SECONDS=$((SECONDS+1))
   done
 }
 

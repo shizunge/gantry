@@ -26,6 +26,7 @@ ROLLED_BACK="Rolled back"
 NO_SERVICES_UPDATED="No services updated"
 NO_IMAGES_TO_REMOVE="No images to remove"
 NUM_SERVICES_UPDATED="[1-9] service\(s\) updated"
+NUM_SERVICES_UPDATE_FAILED="[1-9] service\(s\) update failed"
 REMOVING_NUM_IMAGES="Removing [1-9] image\(s\)"
 SKIP_REMOVING_IMAGES="Skip removing images"
 REMOVED_IMAGE="Removed image"
@@ -52,6 +53,7 @@ test_no_new_image() {
   expect_no_message "${STDOUT}" "${ROLLED_BACK}.*${SERVICE_NAME}"
   expect_message    "${STDOUT}" "${NO_SERVICES_UPDATED}"
   expect_no_message "${STDOUT}" "${NUM_SERVICES_UPDATED}"
+  expect_no_message "${STDOUT}" "${NUM_SERVICES_UPDATE_FAILED}"
   expect_message    "${STDOUT}" "${NO_IMAGES_TO_REMOVE}"
   expect_no_message "${STDOUT}" "${REMOVING_NUM_IMAGES}"
   expect_no_message "${STDOUT}" "${SKIP_REMOVING_IMAGES}"
@@ -86,6 +88,7 @@ test_new_image() {
   expect_no_message "${STDOUT}" "${ROLLED_BACK}.*${SERVICE_NAME}"
   expect_no_message "${STDOUT}" "${NO_SERVICES_UPDATED}"
   expect_message    "${STDOUT}" "${NUM_SERVICES_UPDATED}"
+  expect_no_message "${STDOUT}" "${NUM_SERVICES_UPDATE_FAILED}"
   expect_no_message "${STDOUT}" "${NO_IMAGES_TO_REMOVE}"
   expect_message    "${STDOUT}" "${REMOVING_NUM_IMAGES}"
   expect_no_message "${STDOUT}" "${SKIP_REMOVING_IMAGES}"
@@ -122,6 +125,7 @@ test_new_image_LOG_LEVEL_none() {
   expect_no_message "${STDOUT}" "${ROLLED_BACK}.*${SERVICE_NAME}"
   expect_no_message "${STDOUT}" "${NO_SERVICES_UPDATED}"
   expect_no_message "${STDOUT}" "${NUM_SERVICES_UPDATED}"
+  expect_no_message "${STDOUT}" "${NUM_SERVICES_UPDATE_FAILED}"
   expect_no_message "${STDOUT}" "${NO_IMAGES_TO_REMOVE}"
   expect_no_message "${STDOUT}" "${REMOVING_NUM_IMAGES}"
   expect_no_message "${STDOUT}" "${SKIP_REMOVING_IMAGES}"
@@ -183,6 +187,7 @@ test_login_config() {
   expect_no_message "${STDOUT}" "${ROLLED_BACK}.*${SERVICE_NAME}"
   expect_no_message "${STDOUT}" "${NO_SERVICES_UPDATED}"
   expect_message    "${STDOUT}" "${NUM_SERVICES_UPDATED}"
+  expect_no_message "${STDOUT}" "${NUM_SERVICES_UPDATE_FAILED}"
   expect_no_message "${STDOUT}" "${NO_IMAGES_TO_REMOVE}"
   expect_message    "${STDOUT}" "${REMOVING_NUM_IMAGES}"
   expect_no_message "${STDOUT}" "${SKIP_REMOVING_IMAGES}"
@@ -218,6 +223,7 @@ test_SERVICES_EXCLUDED() {
   expect_no_message "${STDOUT}" "${ROLLED_BACK}.*${SERVICE_NAME}"
   expect_message    "${STDOUT}" "${NO_SERVICES_UPDATED}"
   expect_no_message "${STDOUT}" "${NUM_SERVICES_UPDATED}"
+  expect_no_message "${STDOUT}" "${NUM_SERVICES_UPDATE_FAILED}"
   expect_message    "${STDOUT}" "${NO_IMAGES_TO_REMOVE}"
   expect_no_message "${STDOUT}" "${REMOVING_NUM_IMAGES}"
   expect_no_message "${STDOUT}" "${SKIP_REMOVING_IMAGES}"
@@ -253,6 +259,7 @@ test_SERVICES_EXCLUDED_FILTERS() {
   expect_no_message "${STDOUT}" "${ROLLED_BACK}.*${SERVICE_NAME}"
   expect_message    "${STDOUT}" "${NO_SERVICES_UPDATED}"
   expect_no_message "${STDOUT}" "${NUM_SERVICES_UPDATED}"
+  expect_no_message "${STDOUT}" "${NUM_SERVICES_UPDATE_FAILED}"
   expect_message    "${STDOUT}" "${NO_IMAGES_TO_REMOVE}"
   expect_no_message "${STDOUT}" "${REMOVING_NUM_IMAGES}"
   expect_no_message "${STDOUT}" "${SKIP_REMOVING_IMAGES}"
@@ -265,7 +272,7 @@ test_SERVICES_EXCLUDED_FILTERS() {
   return 0
 }
 
-test_SERVICES_EXCLUDED_combined() {
+test_updating_multiple_services() {
   local IMAGE_WITH_TAG="${1}"
   local BASE_NAME STDOUT
   BASE_NAME="gantry-test-$(date +%s)"
@@ -307,6 +314,7 @@ test_SERVICES_EXCLUDED_combined() {
   expect_no_message "${STDOUT}" "${SERVICE_NAME4}.*${UPDATED}"
   expect_no_message "${STDOUT}" "${NO_SERVICES_UPDATED}"
   expect_message    "${STDOUT}" "${NUM_SERVICES_UPDATED}"
+  expect_no_message "${STDOUT}" "${NUM_SERVICES_UPDATE_FAILED}"
   expect_no_message "${STDOUT}" "${NO_IMAGES_TO_REMOVE}"
   expect_message    "${STDOUT}" "${REMOVING_NUM_IMAGES}"
   expect_no_message "${STDOUT}" "${SKIP_REMOVING_IMAGES}"
@@ -345,6 +353,7 @@ test_jobs_skipping() {
   expect_no_message "${STDOUT}" "${ROLLED_BACK}.*${SERVICE_NAME}"
   expect_message    "${STDOUT}" "${NO_SERVICES_UPDATED}"
   expect_no_message "${STDOUT}" "${NUM_SERVICES_UPDATED}"
+  expect_no_message "${STDOUT}" "${NUM_SERVICES_UPDATE_FAILED}"
   expect_message    "${STDOUT}" "${NO_IMAGES_TO_REMOVE}"
   expect_no_message "${STDOUT}" "${REMOVING_NUM_IMAGES}"
   expect_no_message "${STDOUT}" "${SKIP_REMOVING_IMAGES}"
@@ -357,7 +366,7 @@ test_jobs_skipping() {
   return 0
 }
 
-test_jobs_UPDATE_JOBS_on() {
+test_jobs_UPDATE_JOBS_true() {
   local IMAGE_WITH_TAG="${1}"
   local SERVICE_NAME STDOUT
   SERVICE_NAME="gantry-test-$(date +%s)"
@@ -382,6 +391,7 @@ test_jobs_UPDATE_JOBS_on() {
   expect_no_message "${STDOUT}" "${ROLLED_BACK}.*${SERVICE_NAME}"
   expect_no_message "${STDOUT}" "${NO_SERVICES_UPDATED}"
   expect_message    "${STDOUT}" "${NUM_SERVICES_UPDATED}"
+  expect_no_message "${STDOUT}" "${NUM_SERVICES_UPDATE_FAILED}"
   expect_no_message "${STDOUT}" "${NO_IMAGES_TO_REMOVE}"
   expect_message    "${STDOUT}" "${REMOVING_NUM_IMAGES}"
   expect_no_message "${STDOUT}" "${SKIP_REMOVING_IMAGES}"
@@ -395,7 +405,7 @@ test_jobs_UPDATE_JOBS_on() {
   return 0
 }
 
-test_jobs_UPDATE_JOBS_on_no_running_tasks() {
+test_jobs_UPDATE_JOBS_true_no_running_tasks() {
   local IMAGE_WITH_TAG="${1}"
   local SERVICE_NAME SLEEP_SECONDS STDOUT
   SERVICE_NAME="gantry-test-$(date +%s)"
@@ -423,6 +433,7 @@ test_jobs_UPDATE_JOBS_on_no_running_tasks() {
   expect_no_message "${STDOUT}" "${ROLLED_BACK}.*${SERVICE_NAME}"
   expect_no_message "${STDOUT}" "${NO_SERVICES_UPDATED}"
   expect_message    "${STDOUT}" "${NUM_SERVICES_UPDATED}"
+  expect_no_message "${STDOUT}" "${NUM_SERVICES_UPDATE_FAILED}"
   expect_no_message "${STDOUT}" "${NO_IMAGES_TO_REMOVE}"
   expect_message    "${STDOUT}" "${REMOVING_NUM_IMAGES}"
   expect_no_message "${STDOUT}" "${SKIP_REMOVING_IMAGES}"
@@ -435,7 +446,7 @@ test_jobs_UPDATE_JOBS_on_no_running_tasks() {
   return 0
 }
 
-test_MANIFEST_INSPECT_off() {
+test_MANIFEST_INSPECT_false() {
   local IMAGE_WITH_TAG="${1}"
   local SERVICE_NAME STDOUT
   SERVICE_NAME="gantry-test-$(date +%s)"
@@ -461,10 +472,92 @@ test_MANIFEST_INSPECT_off() {
   expect_no_message "${STDOUT}" "${ROLLED_BACK}.*${SERVICE_NAME}"
   expect_message    "${STDOUT}" "${NO_SERVICES_UPDATED}"
   expect_no_message "${STDOUT}" "${NUM_SERVICES_UPDATED}"
+  expect_no_message "${STDOUT}" "${NUM_SERVICES_UPDATE_FAILED}"
   expect_message    "${STDOUT}" "${NO_IMAGES_TO_REMOVE}"
   expect_no_message "${STDOUT}" "${REMOVING_NUM_IMAGES}"
   expect_no_message "${STDOUT}" "${SKIP_REMOVING_IMAGES}"
   expect_no_message "${STDOUT}" "${REMOVED_IMAGE}.*${IMAGE_WITH_TAG}"
+  expect_no_message "${STDOUT}" "${FAILED_TO_REMOVE_IMAGE}.*${IMAGE_WITH_TAG}"
+
+  stop_service "${SERVICE_NAME}"
+  prune_local_test_image "${IMAGE_WITH_TAG}"
+  finalize_test "${FUNCNAME[0]}"
+  return 0
+}
+
+test_MANIFEST_USE_MANIFEST_CMD_true() {
+  local IMAGE_WITH_TAG="${1}"
+  local SERVICE_NAME STDOUT
+  SERVICE_NAME="gantry-test-$(date +%s)"
+
+  initialize_test "${FUNCNAME[0]}"
+  build_and_push_test_image "${IMAGE_WITH_TAG}"
+  start_replicated_service "${SERVICE_NAME}" "${IMAGE_WITH_TAG}"
+  build_and_push_test_image "${IMAGE_WITH_TAG}"
+
+  export GANTRY_SERVICES_FILTERS="name=${SERVICE_NAME}"
+  export GANTRY_MANIFEST_OPTIONS="--insecure"
+  export GANTRY_MANIFEST_USE_MANIFEST_CMD="true"
+  STDOUT=$(run_gantry "${FUNCNAME[0]}" 2>&1 | tee /dev/tty)
+
+  expect_no_message "${STDOUT}" "${SKIP_UPDATING_SERVICE}.*${SERVICE_NAME}"
+  expect_no_message "${STDOUT}" "${SERVICE_NAME}.*${NO_NEW_IMAGE}"
+  expect_message    "${STDOUT}" "${SERVICE_NAME}.*${UPDATED}"
+  expect_no_message "${STDOUT}" "${SERVICE_NAME}.*${NO_UPDATES}"
+  expect_no_message "${STDOUT}" "${ROLLING_BACK}.*${SERVICE_NAME}"
+  expect_no_message "${STDOUT}" "${FAILED_TO_ROLLBACK}.*${SERVICE_NAME}"
+  expect_no_message "${STDOUT}" "${ROLLED_BACK}.*${SERVICE_NAME}"
+  expect_no_message "${STDOUT}" "${NO_SERVICES_UPDATED}"
+  expect_message    "${STDOUT}" "${NUM_SERVICES_UPDATED}"
+  expect_no_message "${STDOUT}" "${NUM_SERVICES_UPDATE_FAILED}"
+  expect_no_message "${STDOUT}" "${NO_IMAGES_TO_REMOVE}"
+  expect_message    "${STDOUT}" "${REMOVING_NUM_IMAGES}"
+  expect_no_message "${STDOUT}" "${SKIP_REMOVING_IMAGES}"
+  expect_message    "${STDOUT}" "${REMOVED_IMAGE}.*${IMAGE_WITH_TAG}"
+  expect_no_message "${STDOUT}" "${FAILED_TO_REMOVE_IMAGE}.*${IMAGE_WITH_TAG}"
+
+  stop_service "${SERVICE_NAME}"
+  prune_local_test_image "${IMAGE_WITH_TAG}"
+  finalize_test "${FUNCNAME[0]}"
+  return 0
+}
+
+test_UPDATE_OPTIONS() {
+  # Check an observable difference before and after applying UPDATE_OPTIONS.
+  local IMAGE_WITH_TAG="${1}"
+  local SERVICE_NAME STDOUT
+  SERVICE_NAME="gantry-test-$(date +%s)"
+  local LABEL="gantry.test"
+  local LABEL_VALUE=
+
+  initialize_test "${FUNCNAME[0]}"
+  build_and_push_test_image "${IMAGE_WITH_TAG}"
+  start_replicated_service "${SERVICE_NAME}" "${IMAGE_WITH_TAG}"
+  build_and_push_test_image "${IMAGE_WITH_TAG}"
+
+  LABEL_VALUE=$(docker service inspect -f "{{index .Spec.Labels \"${LABEL}\"}}" "${SERVICE_NAME}")
+  expect_no_message "${LABEL_VALUE}" "${SERVICE_NAME}"
+
+  export GANTRY_SERVICES_FILTERS="name=${SERVICE_NAME}"
+  export GANTRY_UPDATE_OPTIONS="--label-add=${LABEL}=${SERVICE_NAME}"
+  STDOUT=$(run_gantry "${FUNCNAME[0]}" 2>&1 | tee /dev/tty)
+
+  LABEL_VALUE=$(docker service inspect -f "{{index .Spec.Labels \"${LABEL}\"}}" "${SERVICE_NAME}")
+  expect_message    "${LABEL_VALUE}" "${SERVICE_NAME}"
+  expect_no_message "${STDOUT}" "${SKIP_UPDATING_SERVICE}.*${SERVICE_NAME}"
+  expect_no_message "${STDOUT}" "${SERVICE_NAME}.*${NO_NEW_IMAGE}"
+  expect_message    "${STDOUT}" "${SERVICE_NAME}.*${UPDATED}"
+  expect_no_message "${STDOUT}" "${SERVICE_NAME}.*${NO_UPDATES}"
+  expect_no_message "${STDOUT}" "${ROLLING_BACK}.*${SERVICE_NAME}"
+  expect_no_message "${STDOUT}" "${FAILED_TO_ROLLBACK}.*${SERVICE_NAME}"
+  expect_no_message "${STDOUT}" "${ROLLED_BACK}.*${SERVICE_NAME}"
+  expect_no_message "${STDOUT}" "${NO_SERVICES_UPDATED}"
+  expect_message    "${STDOUT}" "${NUM_SERVICES_UPDATED}"
+  expect_no_message "${STDOUT}" "${NUM_SERVICES_UPDATE_FAILED}"
+  expect_no_message "${STDOUT}" "${NO_IMAGES_TO_REMOVE}"
+  expect_message    "${STDOUT}" "${REMOVING_NUM_IMAGES}"
+  expect_no_message "${STDOUT}" "${SKIP_REMOVING_IMAGES}"
+  expect_message    "${STDOUT}" "${REMOVED_IMAGE}.*${IMAGE_WITH_TAG}"
   expect_no_message "${STDOUT}" "${FAILED_TO_REMOVE_IMAGE}.*${IMAGE_WITH_TAG}"
 
   stop_service "${SERVICE_NAME}"
@@ -501,6 +594,7 @@ test_replicated_no_running_tasks() {
   expect_no_message "${STDOUT}" "${ROLLED_BACK}.*${SERVICE_NAME}"
   expect_no_message "${STDOUT}" "${NO_SERVICES_UPDATED}"
   expect_message    "${STDOUT}" "${NUM_SERVICES_UPDATED}"
+  expect_no_message "${STDOUT}" "${NUM_SERVICES_UPDATE_FAILED}"
   expect_no_message "${STDOUT}" "${NO_IMAGES_TO_REMOVE}"
   expect_message    "${STDOUT}" "${REMOVING_NUM_IMAGES}"
   expect_no_message "${STDOUT}" "${SKIP_REMOVING_IMAGES}"
@@ -543,6 +637,7 @@ test_global_no_running_tasks() {
   expect_no_message "${STDOUT}" "${ROLLED_BACK}.*${SERVICE_NAME}"
   expect_no_message "${STDOUT}" "${NO_SERVICES_UPDATED}"
   expect_message    "${STDOUT}" "${NUM_SERVICES_UPDATED}"
+  expect_no_message "${STDOUT}" "${NUM_SERVICES_UPDATE_FAILED}"
   expect_no_message "${STDOUT}" "${NO_IMAGES_TO_REMOVE}"
   expect_message    "${STDOUT}" "${REMOVING_NUM_IMAGES}"
   expect_no_message "${STDOUT}" "${SKIP_REMOVING_IMAGES}"
@@ -579,6 +674,7 @@ test_timeout_rollback() {
   expect_message    "${STDOUT}" "${ROLLED_BACK}.*${SERVICE_NAME}"
   expect_message    "${STDOUT}" "${NO_SERVICES_UPDATED}"
   expect_no_message "${STDOUT}" "${NUM_SERVICES_UPDATED}"
+  expect_message    "${STDOUT}" "${NUM_SERVICES_UPDATE_FAILED}"
   expect_message    "${STDOUT}" "${NO_IMAGES_TO_REMOVE}"
   expect_no_message "${STDOUT}" "${REMOVING_NUM_IMAGES}"
   expect_no_message "${STDOUT}" "${SKIP_REMOVING_IMAGES}"
@@ -616,6 +712,7 @@ test_timeout_rollback_failed() {
   expect_no_message "${STDOUT}" "${ROLLED_BACK}.*${SERVICE_NAME}"
   expect_message    "${STDOUT}" "${NO_SERVICES_UPDATED}"
   expect_no_message "${STDOUT}" "${NUM_SERVICES_UPDATED}"
+  expect_message    "${STDOUT}" "${NUM_SERVICES_UPDATE_FAILED}"
   expect_message    "${STDOUT}" "${NO_IMAGES_TO_REMOVE}"
   expect_no_message "${STDOUT}" "${REMOVING_NUM_IMAGES}"
   expect_no_message "${STDOUT}" "${SKIP_REMOVING_IMAGES}"
@@ -628,7 +725,7 @@ test_timeout_rollback_failed() {
   return 0
 }
 
-test_timeout_ROLLBACK_ON_FAILURE_off() {
+test_timeout_ROLLBACK_ON_FAILURE_false() {
   local IMAGE_WITH_TAG="${1}"
   local SERVICE_NAME STDOUT
   SERVICE_NAME="gantry-test-$(date +%s)"
@@ -653,6 +750,7 @@ test_timeout_ROLLBACK_ON_FAILURE_off() {
   expect_no_message "${STDOUT}" "${ROLLED_BACK}.*${SERVICE_NAME}"
   expect_message    "${STDOUT}" "${NO_SERVICES_UPDATED}"
   expect_no_message "${STDOUT}" "${NUM_SERVICES_UPDATED}"
+  expect_message    "${STDOUT}" "${NUM_SERVICES_UPDATE_FAILED}"
   expect_message    "${STDOUT}" "${NO_IMAGES_TO_REMOVE}"
   expect_no_message "${STDOUT}" "${REMOVING_NUM_IMAGES}"
   expect_no_message "${STDOUT}" "${SKIP_REMOVING_IMAGES}"
@@ -665,7 +763,7 @@ test_timeout_ROLLBACK_ON_FAILURE_off() {
   return 0
 }
 
-test_CLEANUP_IMAGES_off() {
+test_CLEANUP_IMAGES_false() {
   local IMAGE_WITH_TAG="${1}"
   local SERVICE_NAME STDOUT
   SERVICE_NAME="gantry-test-$(date +%s)"
@@ -688,6 +786,7 @@ test_CLEANUP_IMAGES_off() {
   expect_no_message "${STDOUT}" "${ROLLED_BACK}.*${SERVICE_NAME}"
   expect_no_message "${STDOUT}" "${NO_SERVICES_UPDATED}"
   expect_message    "${STDOUT}" "${NUM_SERVICES_UPDATED}"
+  expect_no_message "${STDOUT}" "${NUM_SERVICES_UPDATE_FAILED}"
   expect_no_message "${STDOUT}" "${NO_IMAGES_TO_REMOVE}"
   expect_no_message "${STDOUT}" "${REMOVING_NUM_IMAGES}"
   expect_message    "${STDOUT}" "${SKIP_REMOVING_IMAGES}"
