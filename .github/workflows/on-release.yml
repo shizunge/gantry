@@ -39,7 +39,6 @@ jobs:
       - name: Run tests
         run: |
           echo "Start running tests"
-          export GANTRY_TEST_CONTAINER_REPO_TAG="${{ github.repository }}:${{ steps.git.outputs.image_tag }}"
           ./tests/run_all_tests.sh "${{ github.repository }}" "ghcr.io" "${{ github.repository_owner }}" "${{ github.token }}"
           echo "Done running tests"
       - name: Extract tag string
