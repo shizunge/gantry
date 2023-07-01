@@ -2,9 +2,12 @@ name: On push
 
 on:
   push:
+    branches-ignore:
+      - release
     paths:
       - 'src/*'
       - 'tests/*'
+      - 'Dockerfile'
   workflow_dispatch:
 
 env:
@@ -68,32 +71,34 @@ jobs:
       #     export GANTRY_TEST_ENABLE_TESTS="new_image"
       #     ./tests/run_all_tests.sh "${{ github.repository }}" "ghcr.io" "${{ github.repository_owner }}" "${{ github.token }}"
       #     echo "Done running tests"
-      - name: Delete untagged images
+      - name: Delete old test images
         uses: snok/container-retention-policy@v2
         with:
           image-names: gantry
-          cut-off: 1 minute ago UTC
-          account-type: personal
-          token: ${{ secrets.TOKEN_DELETE_GHCR_IMAGES }}
-          keep-at-least: 0
-          untagged-only: True
-          skip-tags: latest, development
-          dry-run: False
-  clean-ghcr:
-    name: Delete old ghcr container images
-    runs-on: ubuntu-latest
-    steps:
-      - name: Delete test images
-        uses: snok/container-retention-policy@v2
-        with:
-          image-names: gantry
-          cut-off: One hour ago UTC
+          # leave some margins in case multiple actions run in parallel
+          cut-off: 10 minuets ago UTC
           account-type: personal
           token: ${{ secrets.TOKEN_DELETE_GHCR_IMAGES }}
           keep-at-least: 1
           skip-tags: latest, development
           filter-tags: "for-test-*"
           dry-run: False
+      - name: Delete untagged images
+        uses: snok/container-retention-policy@v2
+        with:
+          image-names: gantry
+          cut-off: 1 second ago UTC
+          account-type: personal
+          token: ${{ secrets.TOKEN_DELETE_GHCR_IMAGES }}
+          keep-at-least: 0
+          untagged-only: True
+          skip-tags: latest, development
+          dry-run: False
+
+  clean-ghcr:
+    name: Delete old ghcr container images
+    runs-on: ubuntu-latest
+    steps:
       - name: Delete dev images
         uses: snok/container-retention-policy@v2
         with:
@@ -104,15 +109,4 @@ jobs:
           keep-at-least: 5
           skip-tags: latest, development
           filter-tags: "dev-*"
-          dry-run: False
-      - name: Delete untagged images
-        uses: snok/container-retention-policy@v2
-        with:
-          image-names: gantry
-          cut-off: 10 minutes ago UTC
-          account-type: personal
-          token: ${{ secrets.TOKEN_DELETE_GHCR_IMAGES }}
-          keep-at-least: 0
-          untagged-only: True
-          skip-tags: latest, development
           dry-run: False

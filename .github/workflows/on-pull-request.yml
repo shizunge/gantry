@@ -42,27 +42,12 @@ jobs:
           echo "Start running tests"
           ./tests/run_all_tests.sh "${{ github.repository }}" "ghcr.io" "${{ github.repository_owner }}" "${{ github.token }}"
           echo "Done running tests"
-      - name: Delete untagged images
+      - name: Delete old test images
         uses: snok/container-retention-policy@v2
         with:
           image-names: gantry
-          cut-off: 1 minute ago UTC
-          account-type: personal
-          token: ${{ secrets.TOKEN_DELETE_GHCR_IMAGES }}
-          keep-at-least: 0
-          untagged-only: True
-          skip-tags: latest, development
-          dry-run: False
-
-  clean-ghcr:
-    name: Delete old ghcr container images
-    runs-on: ubuntu-latest
-    steps:
-      - name: Delete test images
-        uses: snok/container-retention-policy@v2
-        with:
-          image-names: gantry
-          cut-off: One hours ago UTC
+          # leave some margins in case multiple actions run in parallel
+          cut-off: 10 minutes ago UTC
           account-type: personal
           token: ${{ secrets.TOKEN_DELETE_GHCR_IMAGES }}
           keep-at-least: 1
@@ -73,7 +58,7 @@ jobs:
         uses: snok/container-retention-policy@v2
         with:
           image-names: gantry
-          cut-off: 10 minutes ago UTC
+          cut-off: 1 second ago UTC
           account-type: personal
           token: ${{ secrets.TOKEN_DELETE_GHCR_IMAGES }}
           keep-at-least: 0
