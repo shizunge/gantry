@@ -119,7 +119,7 @@ build_and_push_test_image() {
   echo "FROM alpinelinux/docker-cli:latest" > "${FILE}"
   echo "ENTRYPOINT [\"sh\", \"-c\", \"echo $(date -Iseconds); ${SLEEP_CMD};\"]" >> "${FILE}"
   echo -n "Building ${IMAGE_WITH_TAG} "
-  docker build --quiet --tag "${IMAGE_WITH_TAG}" --file "${FILE}" .
+  timeout 300 docker build --quiet --tag "${IMAGE_WITH_TAG}" --file "${FILE}" .
   echo -n "Pushing ${IMAGE_WITH_TAG} "
   docker push --quiet "${IMAGE_WITH_TAG}"
   rm "${FILE}"
@@ -189,7 +189,7 @@ start_replicated_service() {
   echo -n "Creating service ${SERVICE_NAME} in replicated mode "
   # SC2046 (warning): Quote this to prevent word splitting.
   # shellcheck disable=SC2046
-  docker service create --quiet \
+  timeout 300 docker service create --quiet \
     --name "${SERVICE_NAME}" \
     --restart-condition "on-failure" \
     --restart-max-attempts 5 \
@@ -204,7 +204,7 @@ start_global_service() {
   echo -n "Creating service ${SERVICE_NAME} in global mode "
   # SC2046 (warning): Quote this to prevent word splitting.
   # shellcheck disable=SC2046
-  docker service create --quiet \
+  timeout 300 docker service create --quiet \
     --name "${SERVICE_NAME}" \
     --restart-condition "on-failure" \
     --restart-max-attempts 5 \
@@ -219,7 +219,7 @@ start_replicated_job() {
   echo -n "Creating service ${SERVICE_NAME} in replicated job mode "
   # SC2046 (warning): Quote this to prevent word splitting.
   # shellcheck disable=SC2046
-  docker service create --quiet \
+  timeout 300 docker service create --quiet \
     --name "${SERVICE_NAME}" \
     --restart-condition "on-failure" \
     --restart-max-attempts 5 \

@@ -59,7 +59,7 @@ test_enabled() {
   local TEST="${1}"
   [ -z "${TEST_LIST}" ] && return 0
   for I in ${TEST_LIST}; do
-    if echo "${TEST}" | grep -q -i "${I}"; then
+    if echo "${TEST}" | grep -q -i -P "${I}"; then
       return 0
     fi
   done

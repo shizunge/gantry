@@ -42,7 +42,7 @@ test_no_new_image() {
   start_replicated_service "${SERVICE_NAME}" "${IMAGE_WITH_TAG}"
 
   export GANTRY_SERVICES_FILTERS="name=${SERVICE_NAME}"
-  STDOUT=$(run_gantry "${FUNCNAME[0]}" 2>&1 | tee /dev/tty)
+  STDOUT=$(run_gantry "${FUNCNAME[0]}" 2>&1 | tee >(cat 1>&2))
 
   expect_no_message "${STDOUT}" "${SKIP_UPDATING_SERVICE}.*${SERVICE_NAME}"
   expect_message    "${STDOUT}" "${SERVICE_NAME}.*${NO_NEW_IMAGE}"
@@ -76,7 +76,7 @@ test_new_image() {
   build_and_push_test_image "${IMAGE_WITH_TAG}"
 
   export GANTRY_SERVICES_FILTERS="name=${SERVICE_NAME}"
-  STDOUT=$(run_gantry "${FUNCNAME[0]}" 2>&1 | tee /dev/tty)
+  STDOUT=$(run_gantry "${FUNCNAME[0]}" 2>&1 | tee >(cat 1>&2))
 
   expect_no_message "${STDOUT}" "${SKIP_UPDATING_SERVICE}.*${SERVICE_NAME}"
   expect_no_message "${STDOUT}" "${SERVICE_NAME}.*${NO_NEW_IMAGE}"
@@ -113,7 +113,7 @@ test_new_image_LOG_LEVEL_none() {
   export GANTRY_SERVICES_FILTERS="name=${SERVICE_NAME}"
   export GANTRY_LOG_LEVEL=NONE
   echo "Start running Gantry."
-  STDOUT=$(run_gantry "${FUNCNAME[0]}" 2>&1 | tee /dev/tty)
+  STDOUT=$(run_gantry "${FUNCNAME[0]}" 2>&1 | tee >(cat 1>&2))
 
   expect_no_message "${STDOUT}" ".+"
 
@@ -157,7 +157,7 @@ test_login_config() {
   export GANTRY_REGISTRY_HOST="${REGISTRY}"
   export GANTRY_REGISTRY_PASSWORD_FILE="${PASS_FILE}"
   export GANTRY_REGISTRY_USER_FILE="${USER_FILE}"
-  STDOUT=$(run_gantry "${FUNCNAME[0]}" 2>&1 | tee /dev/tty)
+  STDOUT=$(run_gantry "${FUNCNAME[0]}" 2>&1 | tee >(cat 1>&2))
   rm "${USER_FILE}"
   rm "${PASS_FILE}"
 
@@ -213,7 +213,7 @@ test_login_REGISTRY_CONFIGS_FILE() {
 
   export GANTRY_SERVICES_FILTERS="name=${SERVICE_NAME}"
   export GANTRY_REGISTRY_CONFIGS_FILE="${CONFIGS_FILE}"
-  STDOUT=$(run_gantry "${FUNCNAME[0]}" 2>&1 | tee /dev/tty)
+  STDOUT=$(run_gantry "${FUNCNAME[0]}" 2>&1 | tee >(cat 1>&2))
   rm "${CONFIGS_FILE}"
   rm -r "${CONFIG}"
 
@@ -251,7 +251,7 @@ test_SERVICES_EXCLUDED() {
 
   export GANTRY_SERVICES_FILTERS="name=${SERVICE_NAME}"
   export GANTRY_SERVICES_EXCLUDED="${SERVICE_NAME}"
-  STDOUT=$(run_gantry "${FUNCNAME[0]}" 2>&1 | tee /dev/tty)
+  STDOUT=$(run_gantry "${FUNCNAME[0]}" 2>&1 | tee >(cat 1>&2))
 
   expect_no_message "${STDOUT}" "${SKIP_UPDATING_SERVICE}.*${SERVICE_NAME}"
   expect_no_message "${STDOUT}" "${SERVICE_NAME}.*${NO_NEW_IMAGE}"
@@ -286,7 +286,7 @@ test_SERVICES_EXCLUDED_FILTERS() {
 
   export GANTRY_SERVICES_FILTERS="name=${SERVICE_NAME}"
   export GANTRY_SERVICES_EXCLUDED_FILTERS="name=${SERVICE_NAME}"
-  STDOUT=$(run_gantry "${FUNCNAME[0]}" 2>&1 | tee /dev/tty)
+  STDOUT=$(run_gantry "${FUNCNAME[0]}" 2>&1 | tee >(cat 1>&2))
 
   expect_no_message "${STDOUT}" "${SKIP_UPDATING_SERVICE}.*${SERVICE_NAME}"
   expect_no_message "${STDOUT}" "${SERVICE_NAME}.*${NO_NEW_IMAGE}"
@@ -332,7 +332,7 @@ test_updating_multiple_services() {
   # test both the list of names and the filters
   export GANTRY_SERVICES_EXCLUDED="${SERVICE_NAME1}"
   export GANTRY_SERVICES_EXCLUDED_FILTERS="name=${SERVICE_NAME2}"
-  STDOUT=$(run_gantry "${FUNCNAME[0]}" 2>&1 | tee /dev/tty)
+  STDOUT=$(run_gantry "${FUNCNAME[0]}" 2>&1 | tee >(cat 1>&2))
 
   # Service 0 and 3 should get updated.
   # Service 1 and 2 should be excluded.
@@ -378,7 +378,7 @@ test_jobs_skipping() {
   build_and_push_test_image "${IMAGE_WITH_TAG}"
 
   export GANTRY_SERVICES_FILTERS="name=${SERVICE_NAME}"
-  STDOUT=$(run_gantry "${FUNCNAME[0]}" 2>&1 | tee /dev/tty)
+  STDOUT=$(run_gantry "${FUNCNAME[0]}" 2>&1 | tee >(cat 1>&2))
 
   expect_message    "${STDOUT}" "${SKIP_UPDATING_SERVICE}.*${SERVICE_NAME}"
   expect_no_message "${STDOUT}" "${SERVICE_NAME}.*${NO_NEW_IMAGE}"
@@ -415,7 +415,7 @@ test_jobs_UPDATE_JOBS_true() {
   export GANTRY_UPDATE_JOBS="true"
   # The job may not reach the desired "Complete" state and blocking update CLI. So add "--detach=true"
   export GANTRY_UPDATE_OPTIONS="--detach=true"
-  STDOUT=$(run_gantry "${FUNCNAME[0]}" 2>&1 | tee /dev/tty)
+  STDOUT=$(run_gantry "${FUNCNAME[0]}" 2>&1 | tee >(cat 1>&2))
 
   expect_no_message "${STDOUT}" "${SKIP_UPDATING_SERVICE}.*${SERVICE_NAME}"
   expect_no_message "${STDOUT}" "${SERVICE_NAME}.*${NO_NEW_IMAGE}"
@@ -453,7 +453,7 @@ test_jobs_UPDATE_JOBS_true_no_running_tasks() {
 
   export GANTRY_SERVICES_FILTERS="name=${SERVICE_NAME}"
   export GANTRY_UPDATE_JOBS="true"
-  STDOUT=$(run_gantry "${FUNCNAME[0]}" 2>&1 | tee /dev/tty)
+  STDOUT=$(run_gantry "${FUNCNAME[0]}" 2>&1 | tee >(cat 1>&2))
 
   expect_message    "${STDOUT}" "${ADD_OPTION}.*--detach=true"
   # Cannot add "--replicas" to replicated job
@@ -492,7 +492,7 @@ test_MANIFEST_CMD_none() {
   export GANTRY_SERVICES_FILTERS="name=${SERVICE_NAME}"
   export GANTRY_MANIFEST_CMD="none"
   export GANTRY_UPDATE_OPTIONS="--force"
-  STDOUT=$(run_gantry "${FUNCNAME[0]}" 2>&1 | tee /dev/tty)
+  STDOUT=$(run_gantry "${FUNCNAME[0]}" 2>&1 | tee >(cat 1>&2))
 
   # Gantry is still trying to update the service.
   # But it will see no new images.
@@ -531,7 +531,7 @@ test_MANIFEST_CMD_none_SERVICES_SELF() {
   export GANTRY_SERVICES_FILTERS="name=${SERVICE_NAME}"
   export GANTRY_SERVICES_SELF="${SERVICE_NAME}"
   export GANTRY_MANIFEST_CMD="none"
-  STDOUT=$(run_gantry "${FUNCNAME[0]}" 2>&1 | tee /dev/tty)
+  STDOUT=$(run_gantry "${FUNCNAME[0]}" 2>&1 | tee >(cat 1>&2))
 
   expect_no_message "${STDOUT}" "${SKIP_UPDATING_SERVICE}.*${SERVICE_NAME}"
   expect_message    "${STDOUT}" "${SERVICE_NAME}.*${NO_NEW_IMAGE}"
@@ -567,7 +567,7 @@ test_MANIFEST_CMD_manifest() {
   export GANTRY_SERVICES_FILTERS="name=${SERVICE_NAME}"
   export GANTRY_MANIFEST_OPTIONS="--insecure"
   export GANTRY_MANIFEST_CMD="manifest"
-  STDOUT=$(run_gantry "${FUNCNAME[0]}" 2>&1 | tee /dev/tty)
+  STDOUT=$(run_gantry "${FUNCNAME[0]}" 2>&1 | tee >(cat 1>&2))
 
   expect_no_message "${STDOUT}" "${SKIP_UPDATING_SERVICE}.*${SERVICE_NAME}"
   expect_no_message "${STDOUT}" "${SERVICE_NAME}.*${NO_NEW_IMAGE}"
@@ -608,7 +608,7 @@ test_UPDATE_OPTIONS() {
 
   export GANTRY_SERVICES_FILTERS="name=${SERVICE_NAME}"
   export GANTRY_UPDATE_OPTIONS="--label-add=${LABEL}=${SERVICE_NAME}"
-  STDOUT=$(run_gantry "${FUNCNAME[0]}" 2>&1 | tee /dev/tty)
+  STDOUT=$(run_gantry "${FUNCNAME[0]}" 2>&1 | tee >(cat 1>&2))
 
   LABEL_VALUE=$(read_service_label "${SERVICE_NAME}" "${LABEL}")
   expect_message    "${LABEL_VALUE}" "${SERVICE_NAME}"
@@ -648,7 +648,7 @@ test_replicated_no_running_tasks() {
   build_and_push_test_image "${IMAGE_WITH_TAG}"
 
   export GANTRY_SERVICES_FILTERS="name=${SERVICE_NAME}"
-  STDOUT=$(run_gantry "${FUNCNAME[0]}" 2>&1 | tee /dev/tty)
+  STDOUT=$(run_gantry "${FUNCNAME[0]}" 2>&1 | tee >(cat 1>&2))
 
   expect_message    "${STDOUT}" "${ADD_OPTION}.*--detach=true"
   expect_message    "${STDOUT}" "${ADD_OPTION}.*--replicas=0"
@@ -689,7 +689,7 @@ test_global_no_running_tasks() {
   build_and_push_test_image "${IMAGE_WITH_TAG}"
 
   export GANTRY_SERVICES_FILTERS="name=${SERVICE_NAME}"
-  STDOUT=$(run_gantry "${FUNCNAME[0]}" 2>&1 | tee /dev/tty)
+  STDOUT=$(run_gantry "${FUNCNAME[0]}" 2>&1 | tee >(cat 1>&2))
 
   expect_message    "${STDOUT}" "${ADD_OPTION}.*--detach=true"
   # Cannot add "--replicas" to global
@@ -728,7 +728,7 @@ test_timeout_rollback() {
   export GANTRY_SERVICES_FILTERS="name=${SERVICE_NAME}"
   # Assume service update won't be done within 1 second.
   export GANTRY_UPDATE_TIMEOUT_SECONDS=1
-  STDOUT=$(run_gantry "${FUNCNAME[0]}" 2>&1 | tee /dev/tty)
+  STDOUT=$(run_gantry "${FUNCNAME[0]}" 2>&1 | tee >(cat 1>&2))
 
   expect_no_message "${STDOUT}" "${SKIP_UPDATING_SERVICE}.*${SERVICE_NAME}"
   expect_no_message "${STDOUT}" "${SERVICE_NAME}.*${NO_NEW_IMAGE}"
@@ -765,7 +765,7 @@ test_timeout_rollback_failed() {
   # Assume service update won't be done within 1 second.
   export GANTRY_UPDATE_TIMEOUT_SECONDS=1
   export GANTRY_ROLLBACK_OPTIONS="--incorrect_option"
-  STDOUT=$(run_gantry "${FUNCNAME[0]}" 2>&1 | tee /dev/tty)
+  STDOUT=$(run_gantry "${FUNCNAME[0]}" 2>&1 | tee >(cat 1>&2))
 
   expect_no_message "${STDOUT}" "${SKIP_UPDATING_SERVICE}.*${SERVICE_NAME}"
   expect_no_message "${STDOUT}" "${SERVICE_NAME}.*${NO_NEW_IMAGE}"
@@ -802,7 +802,7 @@ test_timeout_ROLLBACK_ON_FAILURE_false() {
   # Assume service update won't be done within 1 second.
   export GANTRY_UPDATE_TIMEOUT_SECONDS=1
   export GANTRY_ROLLBACK_ON_FAILURE="false"
-  STDOUT=$(run_gantry "${FUNCNAME[0]}" 2>&1 | tee /dev/tty)
+  STDOUT=$(run_gantry "${FUNCNAME[0]}" 2>&1 | tee >(cat 1>&2))
 
   expect_no_message "${STDOUT}" "${SKIP_UPDATING_SERVICE}.*${SERVICE_NAME}"
   expect_no_message "${STDOUT}" "${SERVICE_NAME}.*${NO_NEW_IMAGE}"
@@ -837,7 +837,7 @@ test_CLEANUP_IMAGES_false() {
 
   export GANTRY_SERVICES_FILTERS="name=${SERVICE_NAME}"
   export GANTRY_CLEANUP_IMAGES="false"
-  STDOUT=$(run_gantry "${FUNCNAME[0]}" 2>&1 | tee /dev/tty)
+  STDOUT=$(run_gantry "${FUNCNAME[0]}" 2>&1 | tee >(cat 1>&2))
 
   expect_no_message "${STDOUT}" "${SKIP_UPDATING_SERVICE}.*${SERVICE_NAME}"
   expect_no_message "${STDOUT}" "${SERVICE_NAME}.*${NO_NEW_IMAGE}"

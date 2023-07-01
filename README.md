@@ -142,14 +142,11 @@ export GANTRY_TEST_CONTAINER_REPO_TAG=<gantry image>:<tag>
 > NOTE: `GANTRY_TEST_CONTAINER_REPO_TAG` specifies the container image of *Gantry* under test.
 > On the other hand, what is passed to the `run_all_tests.sh` as CLI arguments is the repository that holds temporary images generated during the tests.
 
-To run an individual test locally:
+You can select tests by populating test names to environment variable `GANTRY_TEST_ENABLE_TESTS`. The item in that list is either the full test name or a regexp that `grep` accepts.
 ```
 # Optionally set GANTRY_TEST_CONTAINER_REPO_TAG
-pushd tests
-source ./lib-gantry-test.sh
-source ./test_entrypoint.sh
+export GANTRY_TEST_ENABLE_TESTS="test_new_image$"
 <test-name> [registry/]<repository-name>
-popd
 ```
 
 ## Contacts
