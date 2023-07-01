@@ -68,6 +68,17 @@ jobs:
       #     export GANTRY_TEST_ENABLE_TESTS="new_image"
       #     ./tests/run_all_tests.sh "${{ github.repository }}" "ghcr.io" "${{ github.repository_owner }}" "${{ github.token }}"
       #     echo "Done running tests"
+      - name: Delete untagged images
+        uses: snok/container-retention-policy@v2
+        with:
+          image-names: gantry
+          cut-off: 1 minute ago UTC
+          account-type: personal
+          token: ${{ secrets.TOKEN_DELETE_GHCR_IMAGES }}
+          keep-at-least: 0
+          untagged-only: True
+          skip-tags: latest, development
+          dry-run: False
   clean-ghcr:
     name: Delete old ghcr container images
     runs-on: ubuntu-latest
