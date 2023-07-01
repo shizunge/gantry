@@ -517,6 +517,43 @@ test_MANIFEST_CMD_none() {
   finalize_test "${FUNCNAME[0]}"
 }
 
+test_MANIFEST_CMD_none_SERVICES_SELF() {
+  # If the service is self, it will always run manifest checking.
+  local IMAGE_WITH_TAG="${1}"
+  local SERVICE_NAME STDOUT
+  SERVICE_NAME="gantry-test-$(date +%s)"
+
+  initialize_test "${FUNCNAME[0]}"
+  build_and_push_test_image "${IMAGE_WITH_TAG}"
+  start_replicated_service "${SERVICE_NAME}" "${IMAGE_WITH_TAG}"
+  # No image updates after service started.
+
+  export GANTRY_SERVICES_FILTERS="name=${SERVICE_NAME}"
+  export GANTRY_SERVICES_SELF="${SERVICE_NAME}"
+  export GANTRY_MANIFEST_CMD="none"
+  STDOUT=$(run_gantry "${FUNCNAME[0]}" 2>&1 | tee /dev/tty)
+
+  expect_no_message "${STDOUT}" "${SKIP_UPDATING_SERVICE}.*${SERVICE_NAME}"
+  expect_message    "${STDOUT}" "${SERVICE_NAME}.*${NO_NEW_IMAGE}"
+  expect_no_message "${STDOUT}" "${SERVICE_NAME}.*${UPDATED}"
+  expect_no_message "${STDOUT}" "${SERVICE_NAME}.*${NO_UPDATES}"
+  expect_no_message "${STDOUT}" "${ROLLING_BACK}.*${SERVICE_NAME}"
+  expect_no_message "${STDOUT}" "${FAILED_TO_ROLLBACK}.*${SERVICE_NAME}"
+  expect_no_message "${STDOUT}" "${ROLLED_BACK}.*${SERVICE_NAME}"
+  expect_message    "${STDOUT}" "${NO_SERVICES_UPDATED}"
+  expect_no_message "${STDOUT}" "${NUM_SERVICES_UPDATED}"
+  expect_no_message "${STDOUT}" "${NUM_SERVICES_UPDATE_FAILED}"
+  expect_message    "${STDOUT}" "${NO_IMAGES_TO_REMOVE}"
+  expect_no_message "${STDOUT}" "${REMOVING_NUM_IMAGES}"
+  expect_no_message "${STDOUT}" "${SKIP_REMOVING_IMAGES}"
+  expect_no_message "${STDOUT}" "${REMOVED_IMAGE}.*${IMAGE_WITH_TAG}"
+  expect_no_message "${STDOUT}" "${FAILED_TO_REMOVE_IMAGE}.*${IMAGE_WITH_TAG}"
+
+  stop_service "${SERVICE_NAME}"
+  prune_local_test_image "${IMAGE_WITH_TAG}"
+  finalize_test "${FUNCNAME[0]}"
+}
+
 test_MANIFEST_CMD_manifest() {
   local IMAGE_WITH_TAG="${1}"
   local SERVICE_NAME STDOUT
