@@ -54,6 +54,19 @@ get_script_dir() {
   echo "${SCRIPT_DIR}"
 }
 
+test_enabled() {
+  local TEST_LIST="${GANTRY_TEST_ENABLE_TESTS:-""}"
+  local TEST="${1}"
+  [ -z "${TEST_LIST}" ] && return 0
+  for I in ${TEST_LIST}; do
+    if echo "${TEST}" | grep -q -i "${I}"; then
+      return 0
+    fi
+  done
+  echo "Skip test ${TEST}."
+  return 1
+}
+
 main() {
   local IMAGE="${1}"
   # Optional arguments. They may be used by some tests. Missing them will disable the corresponding tests.
@@ -78,27 +91,38 @@ main() {
 
   init_swarm
 
-  test_no_new_image "${IMAGE_WITH_TAG}"
-  test_new_image "${IMAGE_WITH_TAG}"
-  test_new_image_LOG_LEVEL_none "${IMAGE_WITH_TAG}"
-  test_login_config "${IMAGE_WITH_TAG}" "${REGISTRY}" "${USER}" "${PASS}"
-  test_login_REGISTRY_CONFIGS_FILE "${IMAGE_WITH_TAG}" "${REGISTRY}" "${USER}" "${PASS}"
-  test_SERVICES_EXCLUDED "${IMAGE_WITH_TAG}"
-  test_SERVICES_EXCLUDED_FILTERS "${IMAGE_WITH_TAG}"
-  test_updating_multiple_services "${IMAGE_WITH_TAG}"
-  test_jobs_skipping "${IMAGE_WITH_TAG}"
-  test_jobs_UPDATE_JOBS_true "${IMAGE_WITH_TAG}"
-  test_jobs_UPDATE_JOBS_true_no_running_tasks "${IMAGE_WITH_TAG}"
-  test_MANIFEST_CMD_none "${IMAGE_WITH_TAG}"
-  test_MANIFEST_CMD_none_SERVICES_SELF "${IMAGE_WITH_TAG}"
-  test_MANIFEST_CMD_manifest "${IMAGE_WITH_TAG}"
-  test_UPDATE_OPTIONS "${IMAGE_WITH_TAG}"
-  test_replicated_no_running_tasks "${IMAGE_WITH_TAG}"
-  test_global_no_running_tasks "${IMAGE_WITH_TAG}"
-  test_timeout_rollback "${IMAGE_WITH_TAG}"
-  test_rollback_failed  "${IMAGE_WITH_TAG}"
-  test_ROLLBACK_ON_FAILURE_false "${IMAGE_WITH_TAG}"
-  test_CLEANUP_IMAGES_false "${IMAGE_WITH_TAG}"
+  local NORMAL_TESTS="\
+    test_no_new_image \
+    test_new_image \
+    test_new_image_LOG_LEVEL_none \
+    test_SERVICES_EXCLUDED \
+    test_SERVICES_EXCLUDED_FILTERS \
+    test_updating_multiple_services \
+    test_jobs_skipping \
+    test_jobs_UPDATE_JOBS_true \
+    test_jobs_UPDATE_JOBS_true_no_running_tasks \
+    test_MANIFEST_CMD_none \
+    test_MANIFEST_CMD_none_SERVICES_SELF \
+    test_MANIFEST_CMD_manifest \
+    test_UPDATE_OPTIONS \
+    test_replicated_no_running_tasks \
+    test_global_no_running_tasks \
+    test_timeout_rollback \
+    test_rollback_failed  \
+    test_ROLLBACK_ON_FAILURE_false \
+    test_CLEANUP_IMAGES_false \
+  "
+  local LOGIN_TESTS="\
+    test_login_config \
+    test_login_REGISTRY_CONFIGS_FILE \
+  "
+
+  for TEST in ${NORMAL_TESTS}; do
+    test_enabled "${TEST}" && ${TEST} "${IMAGE_WITH_TAG}"
+  done
+  for TEST in ${LOGIN_TESTS}; do
+    test_enabled "${TEST}" && ${TEST} "${IMAGE_WITH_TAG}" "${REGISTRY}" "${USER}" "${PASS}"
+  done
 
   # finish_all_tests should return non zero when there are errors.
   finish_all_tests

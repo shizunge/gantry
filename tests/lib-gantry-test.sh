@@ -186,7 +186,7 @@ wait_service_state() {
 start_replicated_service() {
   local SERVICE_NAME="${1}"
   local IMAGE_WITH_TAG="${2}"
-  echo -n "Creating ${SERVICE_NAME} in replicated mode "
+  echo -n "Creating service ${SERVICE_NAME} in replicated mode "
   # SC2046 (warning): Quote this to prevent word splitting.
   # shellcheck disable=SC2046
   docker service create --quiet \
@@ -201,7 +201,7 @@ start_replicated_service() {
 start_global_service() {
   local SERVICE_NAME="${1}"
   local IMAGE_WITH_TAG="${2}"
-  echo -n "Creating ${SERVICE_NAME} in global mode "
+  echo -n "Creating service ${SERVICE_NAME} in global mode "
   # SC2046 (warning): Quote this to prevent word splitting.
   # shellcheck disable=SC2046
   docker service create --quiet \
@@ -216,7 +216,7 @@ start_global_service() {
 start_replicated_job() {
   local SERVICE_NAME="${1}"
   local IMAGE_WITH_TAG="${2}"
-  echo -n "Creating ${SERVICE_NAME} in replicated job mode "
+  echo -n "Creating service ${SERVICE_NAME} in replicated job mode "
   # SC2046 (warning): Quote this to prevent word splitting.
   # shellcheck disable=SC2046
   docker service create --quiet \
