@@ -68,3 +68,25 @@ jobs:
       #     export GANTRY_TEST_ENABLE_TESTS="new_image"
       #     ./tests/run_all_tests.sh "${{ github.repository }}" "ghcr.io" "${{ github.repository_owner }}" "${{ github.token }}"
       #     echo "Done running tests"
+      - name: Delete old test images
+        uses: snok/container-retention-policy@v2
+        with:
+          image-names: gantry
+          cut-off: One hour ago UTC
+          account-type: personal
+          token: ${{ secrets.TOKEN_DELETE_GHCR_IMAGES }}
+          keep-at-least: 1
+          skip-tags: latest, development
+          filter-tags: "for-test-*"
+          dry-run: False
+      - name: Delete old dev images
+        uses: snok/container-retention-policy@v2
+        with:
+          image-names: gantry
+          cut-off: One day ago UTC
+          account-type: personal
+          token: ${{ secrets.TOKEN_DELETE_GHCR_IMAGES }}
+          keep-at-least: 5
+          skip-tags: latest, development
+          filter-tags: "dev-*"
+          dry-run: False

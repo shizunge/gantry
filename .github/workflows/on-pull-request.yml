@@ -11,8 +11,6 @@ env:
   
 jobs:
   shellcheck:
-    strategy:
-      max-parallel: 1
     runs-on: ubuntu-latest
     steps:
       - name: Checkout Code
@@ -27,8 +25,6 @@ jobs:
           set +e
 
   run_tests:
-    strategy:
-      max-parallel: 1
     runs-on: ubuntu-latest
     steps:
       - name: Checkout Code
@@ -44,3 +40,15 @@ jobs:
           echo "Start running tests"
           ./tests/run_all_tests.sh "${{ github.repository }}" "ghcr.io" "${{ github.repository_owner }}" "${{ github.token }}"
           echo "Done running tests"
+      - name: Delete old test images
+        uses: snok/container-retention-policy@v2
+        with:
+          image-names: gantry
+          cut-off: One hours ago UTC
+          account-type: personal
+          token: ${{ secrets.TOKEN_DELETE_GHCR_IMAGES }}
+          keep-at-least: 1
+          skip-tags: latest, development
+          filter-tags: "for-test-*"
+          dry-run: False
+

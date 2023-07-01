@@ -74,3 +74,15 @@ jobs:
           password: ${{ secrets.DOCKERHUB_PASSWORD }}
           repository: ${{ github.repository }}
           short-description: ${{ github.event.repository.description }}
+      - name: Delete old test images
+        uses: snok/container-retention-policy@v2
+        with:
+          image-names: gantry
+          cut-off: One hours ago UTC
+          account-type: personal
+          token: ${{ secrets.TOKEN_DELETE_GHCR_IMAGES }}
+          keep-at-least: 1
+          skip-tags: latest, development
+          filter-tags: "for-test-*"
+          dry-run: False
+
