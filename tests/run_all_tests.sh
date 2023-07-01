@@ -54,19 +54,6 @@ get_script_dir() {
   echo "${SCRIPT_DIR}"
 }
 
-test_enabled() {
-  local TEST_LIST="${GANTRY_TEST_ENABLE_TESTS:-""}"
-  local TEST="${1}"
-  [ -z "${TEST_LIST}" ] && return 0
-  for I in ${TEST_LIST}; do
-    if echo "${TEST}" | grep -q -i -P "${I}"; then
-      return 0
-    fi
-  done
-  echo "Skip test ${TEST}."
-  return 1
-}
-
 main() {
   local IMAGE="${1}"
   # Optional arguments. They may be used by some tests. Missing them will disable the corresponding tests.
@@ -116,30 +103,16 @@ main() {
     test_login_config \
     test_login_REGISTRY_CONFIGS_FILE \
   "
-  local MISSING_TESTS=
+
   for TEST in ${NORMAL_TESTS}; do
-    test_enabled "${TEST}" || continue
-    if type "${TEST}" >/dev/null 2>&1; then
-      ${TEST} "${IMAGE_WITH_TAG}"
-    else
-      echo "=============================="
-      echo "ERROR Test ${TEST} is missing."
-      MISSING_TESTS="${MISSING_TESTS} ${TEST}"
-    fi
+    run_test "${TEST}" "${IMAGE_WITH_TAG}"
   done
   for TEST in ${LOGIN_TESTS}; do
-    test_enabled "${TEST}" || continue
-    if type "${TEST}" >/dev/null 2>&1; then
-      ${TEST} "${IMAGE_WITH_TAG}" "${REGISTRY}" "${USER}" "${PASS}"
-    else
-      echo "=============================="
-      echo "ERROR Test ${TEST} is missing."
-      MISSING_TESTS="${MISSING_TESTS} ${TEST}"
-    fi
+    run_test "${TEST}" "${IMAGE_WITH_TAG}" "${REGISTRY}" "${USER}" "${PASS}"
   done
 
   # finish_all_tests should return non zero when there are errors.
-  finish_all_tests "${MISSING_TESTS}"
+  finish_all_tests
 }
 
 main "${@}"

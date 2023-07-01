@@ -65,13 +65,12 @@ finalize_test() {
 # finish_all_tests should return non zero when there are errors.
 finish_all_tests() {
   local NUM_ERRORS="${GLOBAL_ALL_ERRORS:-0}"
-  local MISSING_TESTS="${1}"
+  local MISSING_TESTS="${GLOBAL_MISSING_TESTS:-""}"
   if [ -n "${MISSING_TESTS}" ]; then
     echo "=============================="
     echo "== Missing tests:"
     for TEST in ${MISSING_TESTS}; do
       echo "== - ${TEST}"
-      NUM_ERRORS=$((NUM_ERRORS+1))
     done
   fi
   if [ "${NUM_ERRORS}" -ne 0 ]; then
@@ -83,9 +82,39 @@ finish_all_tests() {
   echo "== All tests pass."
 }
 
+test_enabled() {
+  local TEST_LIST="${GANTRY_TEST_ENABLE_TESTS:-""}"
+  local TEST="${1}"
+  [ -z "${TEST_LIST}" ] && return 0
+  for I in ${TEST_LIST}; do
+    if echo "${TEST}" | grep -q -i -P "${I}"; then
+      return 0
+    fi
+  done
+  return 1
+}
+
+run_test() {
+  local TEST="${1}"
+  shift
+  if ! test_enabled "${TEST}"; then
+    echo "=============================="
+    echo "== ${TEST} skipped"
+    return 0
+  fi
+  if type "${TEST}" >/dev/null 2>&1; then
+    ${TEST} "${@}"
+  else
+    echo "=============================="
+    echo "== ${TEST} is missing."
+    GLOBAL_MISSING_TESTS="${GLOBAL_MISSING_TESTS} ${TEST}"
+    handle_failure "${TEST} is missing."
+  fi
+}
+
 handle_failure() {
   local MESSAGE="${1}"
-  echo "${MESSAGE}" >&2
+  echo "ERROR ${MESSAGE}" >&2
   GLOBAL_THIS_TEST_ERRORS=$((GLOBAL_THIS_TEST_ERRORS+1))
   GLOBAL_ALL_ERRORS=$((GLOBAL_ALL_ERRORS+1))
 }
@@ -94,7 +123,7 @@ expect_message() {
   TEXT=${1}
   MESSAGE=${2}
   if ! ACTUAL_MSG=$(echo "${TEXT}" | grep -P "${MESSAGE}"); then
-    handle_failure "ERROR failed to find expected message \"${MESSAGE}\"."
+    handle_failure "Failed to find expected message \"${MESSAGE}\"."
     return 1
   fi
   echo "EXPECTED found message: ${ACTUAL_MSG}"
@@ -104,7 +133,7 @@ expect_no_message() {
   TEXT=${1}
   MESSAGE=${2}
   if ACTUAL_MSG=$(echo "${TEXT}" | grep -P "${MESSAGE}"); then
-    handle_failure "ERROR Message \"${ACTUAL_MSG}\" should not present."
+    handle_failure "Message \"${ACTUAL_MSG}\" should not present."
     return 1
   fi
   echo "EXPECTED found no message matches: ${MESSAGE}"
