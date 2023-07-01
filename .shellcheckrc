@@ -7,6 +7,12 @@ enable=check-unassigned-uppercase
 enable=deprecate-which
 enable=require-variable-braces
 
+# SC1090 (warning): ShellCheck can't follow non-constant source. Use a directive to specify location.
+disable=SC1090
+
+# SC1091 (info): Not following: ./notification.sh was not specified as input (see shellcheck -x).
+disable=SC1091
+
 # SC2039: In POSIX sh, 'local' is undefined.
 disable=SC2039
 

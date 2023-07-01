@@ -116,12 +116,7 @@ You need to tell *Gantry* to use a named config rather than the default one when
 
 To run `shellcheck` locally:
 ```
-pushd src
-shellcheck *.sh
-popd
-pushd tests
-shellcheck *.sh
-popd
+shellcheck src/*.sh tests/*.sh
 ```
 
 Majority of the configuration options are covered by end-to-end tests. It would be a good enhancement to generate coverage metrics that are missing today.

@@ -1,4 +1,0 @@
-# .shellcheckrc
-
-# SC1090 (warning): ShellCheck can't follow non-constant source. Use a directive to specify location.
-disable=SC1090

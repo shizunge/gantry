@@ -23,12 +23,7 @@ jobs:
         run: |
           set -e
           shellcheck -V
-          pushd src
-          shellcheck *.sh
-          popd
-          pushd tests
-          shellcheck *.sh
-          popd
+          shellcheck src/*.sh tests/*.sh
           set +e
       - name: Install buildx
         uses: docker/setup-buildx-action@v2.7.0

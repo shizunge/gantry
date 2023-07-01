@@ -21,12 +21,7 @@ jobs:
         run: |
           set -e
           shellcheck -V
-          pushd ${GITHUB_WORKSPACE}/src
-          shellcheck *.sh
-          popd
-          pushd ${GITHUB_WORKSPACE}/tests
-          shellcheck *.sh
-          popd
+          shellcheck src/*.sh tests/*.sh
           set +e
       - name: Install buildx
         uses: docker/setup-buildx-action@v2.7.0
