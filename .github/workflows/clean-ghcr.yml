@@ -8,14 +8,25 @@ jobs:
     name: Delete old unused container images
     runs-on: ubuntu-latest
     steps:
-      - name: Delete old images
+      - name: Delete old dev images
         uses: snok/container-retention-policy@v2
         with:
           image-names: gantry
           cut-off: One day ago UTC
           account-type: personal
-          token: ${{ github.token }}
-          keep-at-least: 20
+          token: ${{ secrets.TOKEN_DELETE_GHCR_IMAGES }}
+          keep-at-least: 10
           skip-tags: latest, development
-          filter-tags: for-test-*, dev-*
+          filter-tags: "dev-[0-9]+"
+          dry-run: True
+      - name: Delete old test images
+        uses: snok/container-retention-policy@v2
+        with:
+          image-names: gantry
+          cut-off: One day ago UTC
+          account-type: personal
+          token: ${{ secrets.TOKEN_DELETE_GHCR_IMAGES }}
+          keep-at-least: 10
+          skip-tags: latest, development
+          filter-tags: "for-test-[0-9]+"
           dry-run: True
