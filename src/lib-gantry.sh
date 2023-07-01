@@ -300,10 +300,10 @@ get_config_from_service() {
 }
 
 get_image_info() {
-  local MANIFEST_CMD="${GANTRY_MANIFEST_CMD:-"buildx"}"
   local MANIFEST_OPTIONS="${GANTRY_MANIFEST_OPTIONS:-""}"
-  local IMAGE="${1}"
-  local DOCKER_CONFIG="${2}"
+  local MANIFEST_CMD="${1}"
+  local IMAGE="${2}"
+  local DOCKER_CONFIG="${3}"
   if echo "${MANIFEST_CMD}" | grep -q -i "manifest"; then
     # SC2086: Double quote to prevent globbing and word splitting.
     # shellcheck disable=SC2086
@@ -320,7 +320,7 @@ get_image_info() {
 # echo the image if we found a new image.
 # return the number of errors.
 inspect_image() {
-  local MANIFEST_INSPECT="${GANTRY_MANIFEST_INSPECT:-"true"}"
+  local MANIFEST_CMD="${GANTRY_MANIFEST_CMD:-"buildx"}"
   local SERVICE_NAME="${1}"
   local DOCKER_CONFIG="${2}"
   local IMAGE_WITH_DIGEST=
@@ -333,7 +333,7 @@ inspect_image() {
   IMAGE=$(echo "${IMAGE_WITH_DIGEST}" | cut -d@ -f1)
   DIGEST=$(echo "${IMAGE_WITH_DIGEST}" | cut -d@ -f2)
   # Never skip inspecting self
-  if ! is_true "${MANIFEST_INSPECT}" && ! service_is_self "${SERVICE_NAME}"; then
+  if echo "${MANIFEST_CMD}" | grep -q -i "none" && ! service_is_self "${SERVICE_NAME}"; then
     echo "${IMAGE}"
     return 0
   fi
@@ -345,7 +345,7 @@ inspect_image() {
     return 0
   fi
   local IMAGE_INFO=
-  if ! IMAGE_INFO=$(get_image_info "${IMAGE}" "${DOCKER_CONFIG}" 2>&1); then
+  if ! IMAGE_INFO=$(get_image_info "${MANIFEST_CMD}" "${IMAGE}" "${DOCKER_CONFIG}" 2>&1); then
     log ERROR "Image ${IMAGE} does not exist or it is not available. ${IMAGE_INFO}"
     return 1
   fi

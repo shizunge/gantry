@@ -89,7 +89,7 @@ main() {
   test_jobs_skipping "${IMAGE_WITH_TAG}"
   test_jobs_UPDATE_JOBS_true "${IMAGE_WITH_TAG}"
   test_jobs_UPDATE_JOBS_true_no_running_tasks "${IMAGE_WITH_TAG}"
-  test_MANIFEST_INSPECT_false "${IMAGE_WITH_TAG}"
+  test_MANIFEST_CMD_none "${IMAGE_WITH_TAG}"
   test_MANIFEST_CMD_manifest "${IMAGE_WITH_TAG}"
   test_UPDATE_OPTIONS "${IMAGE_WITH_TAG}"
   test_replicated_no_running_tasks "${IMAGE_WITH_TAG}"

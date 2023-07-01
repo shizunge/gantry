@@ -479,7 +479,7 @@ test_jobs_UPDATE_JOBS_true_no_running_tasks() {
   finalize_test "${FUNCNAME[0]}"
 }
 
-test_MANIFEST_INSPECT_false() {
+test_MANIFEST_CMD_none() {
   local IMAGE_WITH_TAG="${1}"
   local SERVICE_NAME STDOUT
   SERVICE_NAME="gantry-test-$(date +%s)"
@@ -490,7 +490,7 @@ test_MANIFEST_INSPECT_false() {
   # No image updates after service started.
 
   export GANTRY_SERVICES_FILTERS="name=${SERVICE_NAME}"
-  export GANTRY_MANIFEST_INSPECT="false"
+  export GANTRY_MANIFEST_CMD="none"
   export GANTRY_UPDATE_OPTIONS="--force"
   STDOUT=$(run_gantry "${FUNCNAME[0]}" 2>&1 | tee /dev/tty)
 

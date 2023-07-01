@@ -49,9 +49,8 @@ The label on the services to select config to enable authentication is renamed t
 |---------------|
 | GANTRY_CLEANUP_IMAGES            |
 | GANTRY_LOG_LEVEL                 |
-| GANTRY_MANIFEST_INSPECT          |
-| GANTRY_MANIFEST_OPTIONS          |
 | GANTRY_MANIFEST_CMD              |
+| GANTRY_MANIFEST_OPTIONS          |
 | GANTRY_NOTIFICATION_TITLE        |
 | GANTRY_REGISTRY_CONFIG           |
 | GANTRY_REGISTRY_CONFIG_FILE      |
