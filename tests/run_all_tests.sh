@@ -73,8 +73,8 @@ main() {
   source "${SCRIPT_DIR}/lib-gantry-test.sh"
   source "${SCRIPT_DIR}/test_entrypoint.sh"
 
-  GLOBAL_ENTRYPOINT_SH=$(get_entrypoint_sh) || return 1
-  echo "GLOBAL_ENTRYPOINT_SH=${GLOBAL_ENTRYPOINT_SH}"
+  GLOBAL_ENTRYPOINT=$(get_entrypoint) || return 1
+  echo "GLOBAL_ENTRYPOINT=${GLOBAL_ENTRYPOINT}"
 
   init_swarm
 

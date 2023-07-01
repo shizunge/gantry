@@ -124,17 +124,27 @@ shellcheck *.sh
 popd
 ```
 
-Majority of the configuration options are covered by end-to-end tests. It would be a good enhancement to generate coverage metrics.
+Majority of the configuration options are covered by end-to-end tests. It would be a good enhancement to generate coverage metrics that are missing today.
 
-You can also run the tests locally. Before starting a test, you need to prepare a container repository for the test images. And login to the registry via `docekr login` thus the tests can push images to the repository.
+You can also run the tests locally. During testing, the tests will generate some temporary images, create services and run *Gantry* to update the services. The tests need to push those temporary images to a registry. Therefore you need to prepare a container repository before starting a test, and login to the registry via `docekr login`.
 
-To run all the tests locally:
+To test *Gantry* scripts, and run all the tests locally:
 ```
 ./tests/run_all_tests.sh <repository-name> [registry]
 ```
 
+If you want to test a container image of *Gantry*, you need to specify the image of *Gantry* via the environment variable `GANTRY_TEST_CONTAINER_REPO_TAG`.
+```
+export GANTRY_TEST_CONTAINER_REPO_TAG=<gantry image>:<tag>
+./tests/run_all_tests.sh <repository-name> [registry]
+```
+
+> NOTE: `GANTRY_TEST_CONTAINER_REPO_TAG` specifies the container image of *Gantry* under test.
+> On the other hand, what is passed to the `run_all_tests.sh` as CLI arguments is the repository that holds temporary images generated during the tests.
+
 To run an individual test locally:
 ```
+# Optionally set GANTRY_TEST_CONTAINER_REPO_TAG
 pushd tests
 source ./lib-gantry-test.sh
 source ./test_entrypoint.sh

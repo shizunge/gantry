@@ -247,20 +247,72 @@ get_script_dir() {
   echo "${SCRIPT_DIR}"
 }
 
-get_entrypoint_sh() {
-  if [ -n "${GLOBAL_ENTRYPOINT_SH}" ]; then
-    echo "${GLOBAL_ENTRYPOINT_SH}"
+get_entrypoint() {
+  if [ -n "${GLOBAL_ENTRYPOINT}" ]; then
+    echo "${GLOBAL_ENTRYPOINT}"
     return 0
   fi
   local SCRIPT_DIR=
   SCRIPT_DIR="$(get_script_dir)" || return 1
-  GLOBAL_ENTRYPOINT_SH="${SCRIPT_DIR}/../src/entrypoint.sh"
-  echo "${GLOBAL_ENTRYPOINT_SH}"
+  GLOBAL_ENTRYPOINT="${SCRIPT_DIR}/../src/entrypoint.sh"
+  echo "source ${GLOBAL_ENTRYPOINT}"
+}
+
+run_gantry_container() {
+  local CONTAINER_REPO_TAG="${GANTRY_TEST_CONTAINER_REPO_TAG:-""}"
+  if [ -z "${CONTAINER_REPO_TAG}" ]; then
+    return 1
+  fi
+  local STACK="${1}"
+  local SERVICE_NAME="gantry-test"
+  local CMD_OUTPUT=
+  docker service rm "${SERVICE_NAME}" >/dev/null 2>&1;
+  if ! CMD_OUTPUT=$(docker service create --quiet --name "${SERVICE_NAME}" \
+    --mode replicated-job \
+    --constraint "node.role==manager" \
+    --mount type=bind,source=/var/run/docker.sock,target=/var/run/docker.sock \
+    --env "GANTRY_LOG_LEVEL=${GANTRY_LOG_LEVEL}" \
+    --env "GANTRY_NODE_NAME=${GANTRY_NODE_NAME}" \
+    --env "GANTRY_SLEEP_SECONDS=${GANTRY_SLEEP_SECONDS}" \
+    --env "GANTRY_REGISTRY_CONFIG=${GANTRY_REGISTRY_CONFIG}" \
+    --env "GANTRY_REGISTRY_CONFIG_FILE=${GANTRY_REGISTRY_CONFIG_FILE}" \
+    --env "GANTRY_REGISTRY_CONFIGS_FILE=${GANTRY_REGISTRY_CONFIGS_FILE}" \
+    --env "GANTRY_REGISTRY_HOST=${GANTRY_REGISTRY_HOST}" \
+    --env "GANTRY_REGISTRY_HOST_FILE=${GANTRY_REGISTRY_HOST_FILE}" \
+    --env "GANTRY_REGISTRY_PASSWORD=${GANTRY_REGISTRY_PASSWORD}" \
+    --env "GANTRY_REGISTRY_PASSWORD_FILE=${GANTRY_REGISTRY_PASSWORD_FILE}" \
+    --env "GANTRY_REGISTRY_USER=${GANTRY_REGISTRY_USER}" \
+    --env "GANTRY_REGISTRY_USER_FILE=${GANTRY_REGISTRY_USER_FILE}" \
+    --env "GANTRY_SERVICES_EXCLUDED=${GANTRY_SERVICES_EXCLUDED}" \
+    --env "GANTRY_SERVICES_EXCLUDED_FILTERS=${GANTRY_SERVICES_EXCLUDED_FILTERS}" \
+    --env "GANTRY_SERVICES_FILTERS=${GANTRY_SERVICES_FILTERS}" \
+    --env "GANTRY_SERVICES_SELF=${GANTRY_SERVICES_SELF}" \
+    --env "GANTRY_MANIFEST_CMD=${GANTRY_MANIFEST_CMD}" \
+    --env "GANTRY_MANIFEST_OPTIONS=${GANTRY_MANIFEST_OPTIONS}" \
+    --env "GANTRY_ROLLBACK_ON_FAILURE=${GANTRY_ROLLBACK_ON_FAILURE}" \
+    --env "GANTRY_ROLLBACK_OPTIONS=${GANTRY_ROLLBACK_OPTIONS}" \
+    --env "GANTRY_UPDATE_JOBS=${GANTRY_UPDATE_JOBS}" \
+    --env "GANTRY_UPDATE_OPTIONS=${GANTRY_UPDATE_OPTIONS}" \
+    --env "GANTRY_UPDATE_TIMEOUT_SECONDS=${GANTRY_UPDATE_TIMEOUT_SECONDS}" \
+    --env "GANTRY_CLEANUP_IMAGES=${GANTRY_CLEANUP_IMAGES}" \
+    --env "GANTRY_NOTIFICATION_APPRISE_URL=${GANTRY_NOTIFICATION_APPRISE_URL}" \
+    --env "GANTRY_NOTIFICATION_TITLE=${GANTRY_NOTIFICATION_TITLE}" \
+    "${CONTAINER_REPO_TAG}" \
+    "${STACK}" 2>&1); then
+    echo "Failed to create service ${SERVICE_NAME}: ${CMD_OUTPUT}" >&2
+  fi
+  docker service logs --raw "${SERVICE_NAME}"
+  if ! CMD_OUTPUT=$(docker service rm "${SERVICE_NAME}" 2>&1); then
+    echo "Failed to remove service ${SERVICE_NAME}: ${CMD_OUTPUT}" >&2
+  fi
 }
 
 run_gantry() {
   local STACK="${1}"
-  local ENTRYPOINT_SH=
-  ENTRYPOINT_SH=$(get_entrypoint_sh) || return 1
-  source "${ENTRYPOINT_SH}" "${STACK}"
+  if run_gantry_container "${STACK}"; then
+    return 0
+  fi
+  local ENTRYPOINT=
+  ENTRYPOINT=$(get_entrypoint) || return 1
+  ${ENTRYPOINT} "${STACK}"
 }
