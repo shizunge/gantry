@@ -17,7 +17,7 @@ jobs:
           token: ${{ secrets.TOKEN_DELETE_GHCR_IMAGES }}
           keep-at-least: 10
           skip-tags: latest, development
-          filter-tags: "dev-[0-9]+"
+          filter-tags: "dev-*"
           dry-run: True
       - name: Delete old test images
         uses: snok/container-retention-policy@v2
@@ -28,5 +28,5 @@ jobs:
           token: ${{ secrets.TOKEN_DELETE_GHCR_IMAGES }}
           keep-at-least: 10
           skip-tags: latest, development
-          filter-tags: "for-test-[0-9]+"
+          filter-tags: "for-test-*"
           dry-run: True
