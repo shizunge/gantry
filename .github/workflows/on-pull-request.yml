@@ -40,6 +40,11 @@ jobs:
           echo "Start running tests"
           ./tests/run_all_tests.sh "${{ github.repository }}" "ghcr.io" "${{ github.repository_owner }}" "${{ github.token }}"
           echo "Done running tests"
+
+  clean-ghcr:
+    name: Delete old ghcr container images
+    runs-on: ubuntu-latest
+    steps:
       - name: Delete old test images
         uses: snok/container-retention-policy@v2
         with:
@@ -51,4 +56,3 @@ jobs:
           skip-tags: latest, development
           filter-tags: "for-test-*"
           dry-run: False
-
