@@ -137,11 +137,11 @@ export GANTRY_TEST_CONTAINER_REPO_TAG=<gantry image>:<tag>
 > NOTE: `GANTRY_TEST_CONTAINER_REPO_TAG` specifies the container image of *Gantry* under test.
 > On the other hand, what is passed to the `run_all_tests.sh` as CLI arguments is the repository that holds temporary images generated during the tests.
 
-You can select tests by populating test names to environment variable `GANTRY_TEST_ENABLE_TESTS`. The item in that list is either the full test name or a regexp that `grep` accepts.
+You can select tests by populating test names to environment variable `GANTRY_TEST_ENABLE_TESTS`. The item in that space separated list could be a regexp that `grep -P` accepts. For example:
 ```
 # Optionally set GANTRY_TEST_CONTAINER_REPO_TAG
 export GANTRY_TEST_ENABLE_TESTS="test_new_image$"
-<test-name> [registry/]<repository-name>
+./tests/run_all_tests.sh <repository-name> [registry]
 ```
 
 ## Contacts
