@@ -309,7 +309,7 @@ test_SERVICES_EXCLUDED_FILTERS() {
   finalize_test "${FUNCNAME[0]}"
 }
 
-test_updating_multiple_services() {
+test_new_image_multiple_services() {
   local IMAGE_WITH_TAG="${1}"
   local BASE_NAME STDOUT
   BASE_NAME="gantry-test-$(date +%s)"

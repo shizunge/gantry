@@ -97,7 +97,7 @@ main() {
     test_new_image_LOG_LEVEL_none \
     test_SERVICES_EXCLUDED \
     test_SERVICES_EXCLUDED_FILTERS \
-    test_updating_multiple_services \
+    test_new_image_multiple_services \
     test_jobs_skipping \
     test_jobs_UPDATE_JOBS_true \
     test_jobs_UPDATE_JOBS_true_no_running_tasks \
