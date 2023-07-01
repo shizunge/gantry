@@ -98,7 +98,7 @@ jobs:
         uses: snok/container-retention-policy@v2
         with:
           image-names: gantry
-          cut-off: One hour ago UTC
+          cut-off: 10 minutes ago UTC
           account-type: personal
           token: ${{ secrets.TOKEN_DELETE_GHCR_IMAGES }}
           keep-at-least: 0
