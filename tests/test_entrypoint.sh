@@ -633,7 +633,7 @@ test_UPDATE_OPTIONS() {
   finalize_test "${FUNCNAME[0]}"
 }
 
-test_replicated_no_running_tasks() {
+test_no_running_tasks_replicated() {
   # Add "--detach=true" when there is no running tasks.
   # https://github.com/docker/cli/issues/627
   local IMAGE_WITH_TAG="${1}"
@@ -673,7 +673,7 @@ test_replicated_no_running_tasks() {
   finalize_test "${FUNCNAME[0]}"
 }
 
-test_global_no_running_tasks() {
+test_no_running_tasks_global() {
   # Add "--detach=true" when there is no running tasks.
   # https://github.com/docker/cli/issues/627
   local IMAGE_WITH_TAG="${1}"
@@ -715,7 +715,7 @@ test_global_no_running_tasks() {
   finalize_test "${FUNCNAME[0]}"
 }
 
-test_timeout_rollback() {
+test_rollback_due_to_timeout() {
   local IMAGE_WITH_TAG="${1}"
   local SERVICE_NAME STDOUT
   SERVICE_NAME="gantry-test-$(date +%s)"
@@ -751,7 +751,7 @@ test_timeout_rollback() {
   finalize_test "${FUNCNAME[0]}"
 }
 
-test_timeout_rollback_failed() {
+test_rollback_failed() {
   local IMAGE_WITH_TAG="${1}"
   local SERVICE_NAME STDOUT
   SERVICE_NAME="gantry-test-$(date +%s)"
@@ -788,7 +788,7 @@ test_timeout_rollback_failed() {
   finalize_test "${FUNCNAME[0]}"
 }
 
-test_timeout_ROLLBACK_ON_FAILURE_false() {
+test_rollback_ROLLBACK_ON_FAILURE_false() {
   local IMAGE_WITH_TAG="${1}"
   local SERVICE_NAME STDOUT
   SERVICE_NAME="gantry-test-$(date +%s)"

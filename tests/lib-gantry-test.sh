@@ -65,6 +65,15 @@ finalize_test() {
 # finish_all_tests should return non zero when there are errors.
 finish_all_tests() {
   local NUM_ERRORS="${GLOBAL_ALL_ERRORS:-0}"
+  local MISSING_TESTS="${1}"
+  if [ -n "${MISSING_TESTS}" ]; then
+    echo "=============================="
+    echo "== Missing tests:"
+    for TEST in ${MISSING_TESTS}; do
+      echo "== - ${TEST}"
+      NUM_ERRORS=$((NUM_ERRORS+1))
+    done
+  fi
   if [ "${NUM_ERRORS}" -ne 0 ]; then
     echo "=============================="
     echo "== There are total ${NUM_ERRORS} error(s)."

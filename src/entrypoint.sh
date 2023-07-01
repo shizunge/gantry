@@ -109,7 +109,9 @@ main() {
   local STACK="${1:-gantry}"
   local RETURN_VALUE=0
   while true; do
-    LOG_SCOPE=${STACK}
+    # SC2034 (warning): LOG_SCOPE appears unused. Verify use (or export if used externally).
+    # shellcheck disable=SC2034
+    LOG_SCOPE="${STACK}"
     gantry "${@}"
     RETURN_VALUE=$?
     [ "${SLEEP_SECONDS}" -le 0 ] && break;

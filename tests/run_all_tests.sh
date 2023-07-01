@@ -105,27 +105,41 @@ main() {
     test_MANIFEST_CMD_none_SERVICES_SELF \
     test_MANIFEST_CMD_manifest \
     test_UPDATE_OPTIONS \
-    test_replicated_no_running_tasks \
-    test_global_no_running_tasks \
-    test_timeout_rollback \
+    test_no_running_tasks_replicated \
+    test_no_running_tasks_global \
+    test_rollback_due_to_timeout \
     test_rollback_failed  \
-    test_ROLLBACK_ON_FAILURE_false \
+    test_rollback_ROLLBACK_ON_FAILURE_false \
     test_CLEANUP_IMAGES_false \
   "
   local LOGIN_TESTS="\
     test_login_config \
     test_login_REGISTRY_CONFIGS_FILE \
   "
-
+  local MISSING_TESTS=
   for TEST in ${NORMAL_TESTS}; do
-    test_enabled "${TEST}" && ${TEST} "${IMAGE_WITH_TAG}"
+    test_enabled "${TEST}" || continue
+    if type "${TEST}" >/dev/null 2>&1; then
+      ${TEST} "${IMAGE_WITH_TAG}"
+    else
+      echo "=============================="
+      echo "ERROR Test ${TEST} is missing."
+      MISSING_TESTS="${MISSING_TESTS} ${TEST}"
+    fi
   done
   for TEST in ${LOGIN_TESTS}; do
-    test_enabled "${TEST}" && ${TEST} "${IMAGE_WITH_TAG}" "${REGISTRY}" "${USER}" "${PASS}"
+    test_enabled "${TEST}" || continue
+    if type "${TEST}" >/dev/null 2>&1; then
+      ${TEST} "${IMAGE_WITH_TAG}" "${REGISTRY}" "${USER}" "${PASS}"
+    else
+      echo "=============================="
+      echo "ERROR Test ${TEST} is missing."
+      MISSING_TESTS="${MISSING_TESTS} ${TEST}"
+    fi
   done
 
   # finish_all_tests should return non zero when there are errors.
-  finish_all_tests
+  finish_all_tests "${MISSING_TESTS}"
 }
 
 main "${@}"
