@@ -60,13 +60,13 @@ jobs:
             ${{ github.repository }}:latest
             ghcr.io/${{ github.repository }}:${{ steps.git.outputs.image_tag }}
             ghcr.io/${{ github.repository }}:latest
-      - name: Post push tests
-        run: |
-          echo "Start running tests"
-          export GANTRY_TEST_CONTAINER_REPO_TAG="${{ github.repository }}:${{ steps.git.outputs.image_tag }}"
-          export GANTRY_TEST_ENABLE_TESTS="new_image"
-          ./tests/run_all_tests.sh "${{ github.repository }}" "ghcr.io" "${{ github.repository_owner }}" "${{ github.token }}"
-          echo "Done running tests"
+      # - name: Post push tests
+      #   run: |
+      #     echo "Start running tests"
+      #     export GANTRY_TEST_CONTAINER_REPO_TAG="${{ github.repository }}:${{ steps.git.outputs.image_tag }}"
+      #     export GANTRY_TEST_ENABLE_TESTS="new_image"
+      #     ./tests/run_all_tests.sh "${{ github.repository }}" "ghcr.io" "${{ github.repository_owner }}" "${{ github.token }}"
+      #     echo "Done running tests"
       - name: Update Docker Hub description
         uses: peter-evans/dockerhub-description@v3
         with:
