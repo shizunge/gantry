@@ -11,6 +11,7 @@ env:
   
 jobs:
   shellcheck:
+    name: shellcheck
     runs-on: ubuntu-latest
     steps:
       - name: Checkout Code
@@ -25,6 +26,7 @@ jobs:
           set +e
 
   run_tests:
+    name: Run tests
     runs-on: ubuntu-latest
     steps:
       - name: Checkout Code
@@ -56,7 +58,7 @@ jobs:
     name: Delete old ghcr container images
     runs-on: ubuntu-latest
     steps:
-      - name: Delete old test images
+      - name: Delete test images
         uses: snok/container-retention-policy@v2
         with:
           image-names: gantry

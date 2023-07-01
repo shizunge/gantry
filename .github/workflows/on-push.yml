@@ -12,7 +12,7 @@ env:
   
 jobs:
   build_and_push:
-    name: Build and push Docker image
+    name: Test, build and push Docker image
     runs-on: ubuntu-latest
     steps:
       - name: Checkout Code
@@ -83,7 +83,7 @@ jobs:
     name: Delete old ghcr container images
     runs-on: ubuntu-latest
     steps:
-      - name: Delete old test images
+      - name: Delete test images
         uses: snok/container-retention-policy@v2
         with:
           image-names: gantry
@@ -94,7 +94,7 @@ jobs:
           skip-tags: latest, development
           filter-tags: "for-test-*"
           dry-run: False
-      - name: Delete old dev images
+      - name: Delete dev images
         uses: snok/container-retention-policy@v2
         with:
           image-names: gantry
