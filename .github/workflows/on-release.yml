@@ -79,22 +79,22 @@ jobs:
           registry: ghcr.io
           username: ${{ github.repository_owner }}
           password: ${{ github.token }}
-      - name: Extract tag string
-        id: git
-        shell: bash
-        run: |
-          RELEASE_VERSION=${GITHUB_REF#refs/*/}
-          echo "image_tag=${RELEASE_VERSION}" >> ${GITHUB_OUTPUT}
+      - name: Docker meta
+        id: meta
+        uses: docker/metadata-action@v4
+        with:
+          images: |
+            ${{ github.repository }}
+            ghcr.io/${{ github.repository }}
+          tags: |
+            type=ref,event=branch
+            type=ref,event=tag
       - name: Build and push
         uses: docker/build-push-action@v4.1.1
         with:
           platforms: ${{ env.PLATFORMS }}
           push: true
-          tags: |
-            ${{ github.repository }}:${{ steps.git.outputs.image_tag }}
-            ${{ github.repository }}:latest
-            ghcr.io/${{ github.repository }}:${{ steps.git.outputs.image_tag }}
-            ghcr.io/${{ github.repository }}:latest
+          tags: ${{ steps.meta.outputs.tags }}
       # - name: Post push tests
       #   run: |
       #     echo "Start running tests"
