@@ -38,8 +38,7 @@ get_image_with_tag() {
     IMAGE_WITH_TAG="${REGISTRY}/${IMAGE_WITH_TAG}"
   fi
   if ! echo "${IMAGE_WITH_TAG}" | grep -q ":"; then
-    local PID="$$"
-    IMAGE_WITH_TAG="${IMAGE_WITH_TAG}:for-test-$(date +%s)-${PID}"
+    IMAGE_WITH_TAG="${IMAGE_WITH_TAG}:for-test-$(unique_id)"
   fi
   echo "${IMAGE_WITH_TAG}"
 }
@@ -64,15 +63,15 @@ main() {
   
   echo "Starting tests"
 
-  local IMAGE_WITH_TAG=
-  IMAGE_WITH_TAG="$(get_image_with_tag "${IMAGE}" "${REGISTRY}")" || return 1
-  echo "IMAGE_WITH_TAG=${IMAGE_WITH_TAG}"
-
   local SCRIPT_DIR=
   SCRIPT_DIR="$(get_script_dir)" || return 1
   echo "SCRIPT_DIR=${SCRIPT_DIR}"
   source "${SCRIPT_DIR}/lib-gantry-test.sh"
   source "${SCRIPT_DIR}/test_entrypoint.sh"
+
+  local IMAGE_WITH_TAG=
+  IMAGE_WITH_TAG="$(get_image_with_tag "${IMAGE}" "${REGISTRY}")" || return 1
+  echo "IMAGE_WITH_TAG=${IMAGE_WITH_TAG}"
 
   GLOBAL_ENTRYPOINT=$(get_entrypoint) || return 1
   echo "GLOBAL_ENTRYPOINT=${GLOBAL_ENTRYPOINT}"

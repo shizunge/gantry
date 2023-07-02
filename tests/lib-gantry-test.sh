@@ -139,6 +139,13 @@ expect_no_message() {
   echo "EXPECTED found no message matches: ${MESSAGE}"
 }
 
+unique_id() {
+  # Try to generate a unique id.
+  # To reduce the possibility that tests run in parallel on the same machine affect each other.
+  local PID="$$"
+  echo "$(date +%s)-${PID}"
+}
+
 read_service_label() {
   local SERVICE_NAME="${1}"
   local LABEL="${2}"

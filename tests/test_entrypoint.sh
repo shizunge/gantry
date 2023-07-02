@@ -35,7 +35,7 @@ FAILED_TO_REMOVE_IMAGE="Failed to remove image"
 test_new_image_no() {
   local IMAGE_WITH_TAG="${1}"
   local SERVICE_NAME STDOUT
-  SERVICE_NAME="gantry-test-$(date +%s)"
+  SERVICE_NAME="gantry-test-$(unique_id)"
 
   initialize_test "${FUNCNAME[0]}"
   build_and_push_test_image "${IMAGE_WITH_TAG}"
@@ -68,7 +68,7 @@ test_new_image_no() {
 test_new_image_yes() {
   local IMAGE_WITH_TAG="${1}"
   local SERVICE_NAME STDOUT
-  SERVICE_NAME="gantry-test-$(date +%s)"
+  SERVICE_NAME="gantry-test-$(unique_id)"
 
   initialize_test "${FUNCNAME[0]}"
   build_and_push_test_image "${IMAGE_WITH_TAG}"
@@ -102,7 +102,7 @@ test_new_image_yes() {
 test_new_image_multiple_services() {
   local IMAGE_WITH_TAG="${1}"
   local BASE_NAME STDOUT
-  BASE_NAME="gantry-test-$(date +%s)"
+  BASE_NAME="gantry-test-$(unique_id)"
   local SERVICE_NAME0="${BASE_NAME}-0"
   local SERVICE_NAME1="${BASE_NAME}-1"
   local SERVICE_NAME2="${BASE_NAME}-2"
@@ -166,10 +166,10 @@ test_login_config() {
   local USER="${3}"
   local PASS="${4}"
   local SERVICE_NAME STDOUT
-  SERVICE_NAME="gantry-test-$(date +%s)"
+  SERVICE_NAME="gantry-test-$(unique_id)"
   local LABEL="gantry.auth.config"
   local CONFIG=
-  CONFIG="C$(date +%s)"
+  CONFIG="C$(unique_id)"
   if [ -z "${USER}" ] || [ -z "${PASS}" ]; then
     echo "Skip ${FUNCNAME[0]}. No user or pass provided."
     return 0
@@ -227,10 +227,10 @@ test_login_REGISTRY_CONFIGS_FILE() {
   local USER="${3}"
   local PASS="${4}"
   local SERVICE_NAME STDOUT
-  SERVICE_NAME="gantry-test-$(date +%s)"
+  SERVICE_NAME="gantry-test-$(unique_id)"
   local LABEL="gantry.auth.config"
   local CONFIG=
-  CONFIG="C$(date +%s)"
+  CONFIG="C$(unique_id)"
   if [ -z "${REGISTRY}" ] || [ -z "${USER}" ] || [ -z "${PASS}" ]; then
     echo "Skip ${FUNCNAME[0]}. No registry, user or pass provided."
     return 0
@@ -277,7 +277,7 @@ test_login_REGISTRY_CONFIGS_FILE() {
 test_SERVICES_EXCLUDED() {
   local IMAGE_WITH_TAG="${1}"
   local SERVICE_NAME STDOUT
-  SERVICE_NAME="gantry-test-$(date +%s)"
+  SERVICE_NAME="gantry-test-$(unique_id)"
 
   initialize_test "${FUNCNAME[0]}"
   build_and_push_test_image "${IMAGE_WITH_TAG}"
@@ -312,7 +312,7 @@ test_SERVICES_EXCLUDED() {
 test_SERVICES_EXCLUDED_FILTERS() {
   local IMAGE_WITH_TAG="${1}"
   local SERVICE_NAME STDOUT
-  SERVICE_NAME="gantry-test-$(date +%s)"
+  SERVICE_NAME="gantry-test-$(unique_id)"
 
   initialize_test "${FUNCNAME[0]}"
   build_and_push_test_image "${IMAGE_WITH_TAG}"
@@ -347,7 +347,7 @@ test_SERVICES_EXCLUDED_FILTERS() {
 test_jobs_skipping() {
   local IMAGE_WITH_TAG="${1}"
   local SERVICE_NAME STDOUT
-  SERVICE_NAME="gantry-test-$(date +%s)"
+  SERVICE_NAME="gantry-test-$(unique_id)"
 
   initialize_test "${FUNCNAME[0]}"
   build_and_push_test_image "${IMAGE_WITH_TAG}"
@@ -381,7 +381,7 @@ test_jobs_skipping() {
 test_jobs_UPDATE_JOBS_true() {
   local IMAGE_WITH_TAG="${1}"
   local SERVICE_NAME STDOUT
-  SERVICE_NAME="gantry-test-$(date +%s)"
+  SERVICE_NAME="gantry-test-$(unique_id)"
 
   initialize_test "${FUNCNAME[0]}"
   build_and_push_test_image "${IMAGE_WITH_TAG}"
@@ -419,7 +419,7 @@ test_jobs_UPDATE_JOBS_true() {
 test_jobs_UPDATE_JOBS_true_no_running_tasks() {
   local IMAGE_WITH_TAG="${1}"
   local SERVICE_NAME SLEEP_SECONDS STDOUT
-  SERVICE_NAME="gantry-test-$(date +%s)"
+  SERVICE_NAME="gantry-test-$(unique_id)"
   SLEEP_SECONDS=15
 
   initialize_test "${FUNCNAME[0]}"
@@ -459,7 +459,7 @@ test_jobs_UPDATE_JOBS_true_no_running_tasks() {
 test_MANIFEST_CMD_none() {
   local IMAGE_WITH_TAG="${1}"
   local SERVICE_NAME STDOUT
-  SERVICE_NAME="gantry-test-$(date +%s)"
+  SERVICE_NAME="gantry-test-$(unique_id)"
 
   initialize_test "${FUNCNAME[0]}"
   build_and_push_test_image "${IMAGE_WITH_TAG}"
@@ -498,7 +498,7 @@ test_MANIFEST_CMD_none_SERVICES_SELF() {
   # If the service is self, it will always run manifest checking.
   local IMAGE_WITH_TAG="${1}"
   local SERVICE_NAME STDOUT
-  SERVICE_NAME="gantry-test-$(date +%s)"
+  SERVICE_NAME="gantry-test-$(unique_id)"
 
   initialize_test "${FUNCNAME[0]}"
   build_and_push_test_image "${IMAGE_WITH_TAG}"
@@ -534,7 +534,7 @@ test_MANIFEST_CMD_none_SERVICES_SELF() {
 test_MANIFEST_CMD_manifest() {
   local IMAGE_WITH_TAG="${1}"
   local SERVICE_NAME STDOUT
-  SERVICE_NAME="gantry-test-$(date +%s)"
+  SERVICE_NAME="gantry-test-$(unique_id)"
 
   initialize_test "${FUNCNAME[0]}"
   build_and_push_test_image "${IMAGE_WITH_TAG}"
@@ -572,7 +572,7 @@ test_no_running_tasks_replicated() {
   # https://github.com/docker/cli/issues/627
   local IMAGE_WITH_TAG="${1}"
   local SERVICE_NAME STDOUT
-  SERVICE_NAME="gantry-test-$(date +%s)"
+  SERVICE_NAME="gantry-test-$(unique_id)"
 
   initialize_test "${FUNCNAME[0]}"
   build_and_push_test_image "${IMAGE_WITH_TAG}"
@@ -612,7 +612,7 @@ test_no_running_tasks_global() {
   # https://github.com/docker/cli/issues/627
   local IMAGE_WITH_TAG="${1}"
   local SERVICE_NAME SLEEP_SECONDS STDOUT
-  SERVICE_NAME="gantry-test-$(date +%s)"
+  SERVICE_NAME="gantry-test-$(unique_id)"
   SLEEP_SECONDS=15
 
   initialize_test "${FUNCNAME[0]}"
@@ -652,7 +652,7 @@ test_no_running_tasks_global() {
 test_rollback_due_to_timeout() {
   local IMAGE_WITH_TAG="${1}"
   local SERVICE_NAME STDOUT
-  SERVICE_NAME="gantry-test-$(date +%s)"
+  SERVICE_NAME="gantry-test-$(unique_id)"
 
   initialize_test "${FUNCNAME[0]}"
   build_and_push_test_image "${IMAGE_WITH_TAG}"
@@ -688,7 +688,7 @@ test_rollback_due_to_timeout() {
 test_rollback_failed() {
   local IMAGE_WITH_TAG="${1}"
   local SERVICE_NAME STDOUT
-  SERVICE_NAME="gantry-test-$(date +%s)"
+  SERVICE_NAME="gantry-test-$(unique_id)"
 
   initialize_test "${FUNCNAME[0]}"
   build_and_push_test_image "${IMAGE_WITH_TAG}"
@@ -725,7 +725,7 @@ test_rollback_failed() {
 test_rollback_ROLLBACK_ON_FAILURE_false() {
   local IMAGE_WITH_TAG="${1}"
   local SERVICE_NAME STDOUT
-  SERVICE_NAME="gantry-test-$(date +%s)"
+  SERVICE_NAME="gantry-test-$(unique_id)"
 
   initialize_test "${FUNCNAME[0]}"
   build_and_push_test_image "${IMAGE_WITH_TAG}"
@@ -763,7 +763,7 @@ test_options_LOG_LEVEL_none() {
   # Same as test_new_image_yes, except set LOG_LEVEL to NONE
   local IMAGE_WITH_TAG="${1}"
   local SERVICE_NAME STDOUT
-  SERVICE_NAME="gantry-test-$(date +%s)"
+  SERVICE_NAME="gantry-test-$(unique_id)"
 
   initialize_test "${FUNCNAME[0]}"
   build_and_push_test_image "${IMAGE_WITH_TAG}"
@@ -786,7 +786,7 @@ test_options_UPDATE_OPTIONS() {
   # Check an observable difference before and after applying UPDATE_OPTIONS.
   local IMAGE_WITH_TAG="${1}"
   local SERVICE_NAME STDOUT
-  SERVICE_NAME="gantry-test-$(date +%s)"
+  SERVICE_NAME="gantry-test-$(unique_id)"
   local LABEL="gantry.test"
   local LABEL_VALUE=
 
@@ -828,7 +828,7 @@ test_options_UPDATE_OPTIONS() {
 test_options_CLEANUP_IMAGES_false() {
   local IMAGE_WITH_TAG="${1}"
   local SERVICE_NAME STDOUT
-  SERVICE_NAME="gantry-test-$(date +%s)"
+  SERVICE_NAME="gantry-test-$(unique_id)"
 
   initialize_test "${FUNCNAME[0]}"
   build_and_push_test_image "${IMAGE_WITH_TAG}"
