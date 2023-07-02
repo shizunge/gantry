@@ -82,9 +82,7 @@ main() {
   local NORMAL_TESTS="\
     test_new_image_no \
     test_new_image_yes \
-    test_new_image_LOG_LEVEL_none \
     test_new_image_multiple_services \
-    test_new_image_UPDATE_OPTIONS \
     test_SERVICES_EXCLUDED \
     test_SERVICES_EXCLUDED_FILTERS \
     test_jobs_skipping \
@@ -98,7 +96,9 @@ main() {
     test_rollback_due_to_timeout \
     test_rollback_failed  \
     test_rollback_ROLLBACK_ON_FAILURE_false \
-    test_CLEANUP_IMAGES_false \
+    test_options_LOG_LEVEL_none \
+    test_options_UPDATE_OPTIONS \
+    test_options_CLEANUP_IMAGES_false \
   "
   local LOGIN_TESTS="\
     test_login_config \

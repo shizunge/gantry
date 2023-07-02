@@ -42,7 +42,7 @@ jobs:
           - test_MANIFEST_
           - test_no_running_tasks_
           - test_rollback_
-          - test_CLEANUP_IMAGES_
+          - test_options_
           - test_login_
     steps:
       - name: Checkout Code
