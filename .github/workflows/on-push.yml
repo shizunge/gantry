@@ -92,10 +92,10 @@ jobs:
             ${{ github.repository }}
             ghcr.io/${{ github.repository }}
           tags: |
-            type=schedule,pattern=dev-{{date X}}
+            type=raw,value=dev-{{date 'X'}}
             type=raw,value=development
             type=ref,event=branch
-            type=edge,branch=$repo.default_branch
+            type=edge,branch=main
       - name: Build and push
         uses: docker/build-push-action@v4
         with:
