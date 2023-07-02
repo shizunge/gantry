@@ -38,7 +38,8 @@ get_image_with_tag() {
     IMAGE_WITH_TAG="${REGISTRY}/${IMAGE_WITH_TAG}"
   fi
   if ! echo "${IMAGE_WITH_TAG}" | grep -q ":"; then
-    IMAGE_WITH_TAG="${IMAGE_WITH_TAG}:for-test-$(date +%s)"
+    local PID="$$"
+    IMAGE_WITH_TAG="${IMAGE_WITH_TAG}:for-test-$(date +%s)-${PID}"
   fi
   echo "${IMAGE_WITH_TAG}"
 }
@@ -79,19 +80,19 @@ main() {
   init_swarm
 
   local NORMAL_TESTS="\
-    test_no_new_image \
-    test_new_image \
+    test_new_image_no \
+    test_new_image_yes \
     test_new_image_LOG_LEVEL_none \
+    test_new_image_multiple_services \
+    test_new_image_UPDATE_OPTIONS \
     test_SERVICES_EXCLUDED \
     test_SERVICES_EXCLUDED_FILTERS \
-    test_new_image_multiple_services \
     test_jobs_skipping \
     test_jobs_UPDATE_JOBS_true \
     test_jobs_UPDATE_JOBS_true_no_running_tasks \
     test_MANIFEST_CMD_none \
     test_MANIFEST_CMD_none_SERVICES_SELF \
     test_MANIFEST_CMD_manifest \
-    test_UPDATE_OPTIONS \
     test_no_running_tasks_replicated \
     test_no_running_tasks_global \
     test_rollback_due_to_timeout \

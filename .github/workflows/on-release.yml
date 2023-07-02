@@ -27,6 +27,18 @@ jobs:
   tests:
     name: Run tests
     runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        test_suit:
+          - test_new_image_
+          - test_SERVICES_
+          - test_jobs_
+          - test_MANIFEST_
+          - test_no_running_tasks_
+          - test_rollback_
+          - test_CLEANUP_IMAGES_
+          - test_login_
     steps:
       - name: Checkout Code
         uses: actions/checkout@v3
@@ -40,6 +52,7 @@ jobs:
           password: ${{ github.token }}
       - name: Run tests
         run: |
+          export GANTRY_TEST_ENABLE_TESTS="${{ matrix.test_suit }}"
           ./tests/run_all_tests.sh "${{ github.repository }}" "ghcr.io" "${{ github.repository_owner }}" "${{ github.token }}"
 
   build_and_push:
