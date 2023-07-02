@@ -5,10 +5,7 @@ on:
     branches:
       - 'main'
   workflow_dispatch:
-
-env:
-  PLATFORMS: "linux/amd64,linux/arm64,linux/arm/v7"
-  
+ 
 jobs:
   shellcheck:
     name: shellcheck
