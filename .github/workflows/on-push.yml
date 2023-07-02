@@ -14,8 +14,8 @@ env:
   PLATFORMS: "linux/386,linux/amd64,linux/arm/v6,linux/arm/v7,linux/arm64/v8,linux/ppc64le,linux/riscv64,linux/s390x"
   
 jobs:
-  build_and_push:
-    name: Test, build and push Docker image
+  shellcheck:
+    name: shellcheck
     runs-on: ubuntu-latest
     steps:
       - name: Checkout Code
@@ -28,13 +28,15 @@ jobs:
           shellcheck -V
           shellcheck src/*.sh tests/*.sh
           set +e
+
+  tests:
+    name: Run tests
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v3
       - name: Install buildx
         uses: docker/setup-buildx-action@v2.7.0
-      - name: Login to docker hub
-        uses: docker/login-action@v2.2.0
-        with:
-          username: ${{ secrets.DOCKERHUB_USERNAME }}
-          password: ${{ secrets.DOCKERHUB_PASSWORD }}
       - name: Login to GitHub Container Registry
         uses: docker/login-action@v2.2.0
         with:
@@ -43,19 +45,40 @@ jobs:
           password: ${{ github.token }}
       - name: Run tests
         run: |
-          echo "Start running tests"
           ./tests/run_all_tests.sh "${{ github.repository }}" "ghcr.io" "${{ github.repository_owner }}" "${{ github.token }}"
-          echo "Done running tests"
+
+  build_and_push:
+    name: Build and push Docker image
+    runs-on: ubuntu-latest
+    needs:
+      - shellcheck
+      - tests
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v3
+      - name: Set up QEMU
+        uses: docker/setup-qemu-action@v2
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v2
+      - name: Login to Docker Hub
+        uses: docker/login-action@v2.2.0
+        with:
+          username: ${{ secrets.DOCKERHUB_USERNAME }}
+          password: ${{ secrets.DOCKERHUB_PASSWORD }}
+      - name: Login to GitHub Container Registry
+        uses: docker/login-action@v2
+        with:
+          registry: ghcr.io
+          username: ${{ github.repository_owner }}
+          password: ${{ github.token }}
       - name: Extract tag string
         id: git
         shell: bash
         run: |
           RELEASE_VERSION="dev-$(date +%s)"
           echo "image_tag=${RELEASE_VERSION}" >> ${GITHUB_OUTPUT}
-      - name: Set up QEMU
-        uses: docker/setup-qemu-action@v2
-      - name: Build and push ${{ github.repository }}:${{ steps.git.outputs.image_tag }}
-        uses: docker/build-push-action@v4.1.1
+      - name: Build and push
+        uses: docker/build-push-action@v4
         with:
           platforms: ${{ env.PLATFORMS }}
           push: true
@@ -71,7 +94,32 @@ jobs:
       #     export GANTRY_TEST_ENABLE_TESTS="new_image"
       #     ./tests/run_all_tests.sh "${{ github.repository }}" "ghcr.io" "${{ github.repository_owner }}" "${{ github.token }}"
       #     echo "Done running tests"
-      - name: Delete old test images
+
+  clean-ghcr-dev:
+    name: Delete dev container images
+    runs-on: ubuntu-latest
+    needs:
+      - build_and_push
+    steps:
+      - name: Delete dev images
+        uses: snok/container-retention-policy@v2
+        with:
+          image-names: gantry
+          cut-off: One day ago UTC
+          account-type: personal
+          token: ${{ secrets.TOKEN_DELETE_GHCR_IMAGES }}
+          keep-at-least: 5
+          skip-tags: latest, development
+          filter-tags: "dev-*"
+          dry-run: False
+
+  clean-ghcr-tests:
+    name: Delete tests container images
+    runs-on: ubuntu-latest
+    needs:
+      - tests
+    steps:
+      - name: Delete test images
         uses: snok/container-retention-policy@v2
         with:
           image-names: gantry
@@ -79,7 +127,7 @@ jobs:
           cut-off: 10 minutes ago UTC
           account-type: personal
           token: ${{ secrets.TOKEN_DELETE_GHCR_IMAGES }}
-          keep-at-least: 1
+          keep-at-least: 0
           skip-tags: latest, development
           filter-tags: "for-test-*"
           dry-run: False
@@ -93,20 +141,4 @@ jobs:
           keep-at-least: 0
           untagged-only: True
           skip-tags: latest, development
-          dry-run: False
-
-  clean-ghcr:
-    name: Delete old ghcr container images
-    runs-on: ubuntu-latest
-    steps:
-      - name: Delete dev images
-        uses: snok/container-retention-policy@v2
-        with:
-          image-names: gantry
-          cut-off: One day ago UTC
-          account-type: personal
-          token: ${{ secrets.TOKEN_DELETE_GHCR_IMAGES }}
-          keep-at-least: 5
-          skip-tags: latest, development
-          filter-tags: "dev-*"
           dry-run: False
