@@ -47,7 +47,7 @@ jobs:
     steps:
       - name: Checkout Code
         uses: actions/checkout@v3
-      - name: Install buildx
+      - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@v2.7.0
       - name: Login to GitHub Container Registry
         uses: docker/login-action@v2.2.0
@@ -109,7 +109,7 @@ jobs:
       #     echo "Done running tests"
 
   clean-ghcr-dev:
-    name: Delete dev container images
+    name: Delete old dev container images
     runs-on: ubuntu-latest
     needs:
       - build_and_push
@@ -127,17 +127,17 @@ jobs:
           dry-run: False
 
   clean-ghcr-tests:
-    name: Delete tests container images
+    name: Delete old tests container images
     runs-on: ubuntu-latest
     needs:
       - tests
     steps:
-      - name: Delete test images
+      - name: Delete old test images
         uses: snok/container-retention-policy@v2
         with:
           image-names: gantry
           # leave some margins in case multiple actions run in parallel
-          cut-off: 10 minutes ago UTC
+          cut-off: 5 minutes ago UTC
           account-type: personal
           token: ${{ secrets.TOKEN_DELETE_GHCR_IMAGES }}
           keep-at-least: 0
