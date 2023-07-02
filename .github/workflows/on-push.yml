@@ -76,7 +76,7 @@ jobs:
         with:
           image-names: gantry
           # leave some margins in case multiple actions run in parallel
-          cut-off: 10 minuets ago UTC
+          cut-off: 10 minutes ago UTC
           account-type: personal
           token: ${{ secrets.TOKEN_DELETE_GHCR_IMAGES }}
           keep-at-least: 1
