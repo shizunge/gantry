@@ -85,7 +85,7 @@ jobs:
         run: |
           RELEASE_VERSION=${GITHUB_REF#refs/*/}
           echo "image_tag=${RELEASE_VERSION}" >> ${GITHUB_OUTPUT}
-      - name: Build and push ${{ github.repository }}:${{ steps.git.outputs.image_tag }}
+      - name: Build and push
         uses: docker/build-push-action@v4.1.1
         with:
           platforms: ${{ env.PLATFORMS }}
