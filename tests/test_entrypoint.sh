@@ -825,7 +825,7 @@ test_options_UPDATE_OPTIONS() {
   finalize_test "${FUNCNAME[0]}"
 }
 
-test_CLEANUP_IMAGES_false() {
+test_options_CLEANUP_IMAGES_false() {
   local IMAGE_WITH_TAG="${1}"
   local SERVICE_NAME STDOUT
   SERVICE_NAME="gantry-test-$(date +%s)"
