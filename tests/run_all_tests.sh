@@ -79,6 +79,10 @@ main() {
 
   init_swarm
 
+  # Once we add new tests here, we want to ensure they are included in
+  # on-push and on-release workflows. In thoes workflows, we build a
+  # jobs.<id>.strategy.matrix to run tests in parallel. Check whether
+  # the new test names are included by the configurations.
   local NORMAL_TESTS="\
     test_new_image_no \
     test_new_image_yes \
