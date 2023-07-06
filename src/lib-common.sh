@@ -293,7 +293,7 @@ wait_service_state() {
     fi
   done
   echo "${STATES}" | while read -r LINE; do
-    log INFO "Service ${SERVICE_NAME}: ${LINE})."
+    log INFO "Service ${SERVICE_NAME}: ${LINE}."
   done
   return "${RETURN_VALUE}"
 }
