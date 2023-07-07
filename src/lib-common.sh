@@ -209,7 +209,7 @@ docker_service_logs () {
   local SERVICE_NAME="${1}"
   local LOGS=
   if ! LOGS=$(docker service logs --timestamps --no-task-ids "${SERVICE_NAME}" 2>&1); then
-    log ERROR "Failed to obtain logs of service ${SERVICE_NAME}. ${LOGS})"
+    log ERROR "Failed to obtain logs of service ${SERVICE_NAME}. ${LOGS}"
     return 1
   fi
   echo "${LOGS}" |
@@ -288,7 +288,7 @@ wait_service_state() {
     fi
     sleep "${SLEEP_SECONDS}"
     if ! STATES=$(docker_service_task_states "${SERVICE_NAME}" 2>&1); then
-      log ERROR "Failed to obtain task states of service ${SERVICE_NAME}: ${STATES})"
+      log ERROR "Failed to obtain task states of service ${SERVICE_NAME}: ${STATES}"
       return 1
     fi
   done
