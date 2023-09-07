@@ -19,7 +19,7 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout Code
-        uses: actions/checkout@v3
+        uses: actions/checkout@v4
       - name: Install shellcheck
         run: sudo apt-get install -y bash shellcheck
       - name: Analyse with shellcheck
@@ -46,7 +46,7 @@ jobs:
           - test_login_
     steps:
       - name: Checkout Code
-        uses: actions/checkout@v3
+        uses: actions/checkout@v4
       - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@v2.10.0
       - name: Login to GitHub Container Registry
@@ -68,7 +68,7 @@ jobs:
       - tests
     steps:
       - name: Checkout Code
-        uses: actions/checkout@v3
+        uses: actions/checkout@v4
       - name: Set up QEMU
         uses: docker/setup-qemu-action@v2
       - name: Set up Docker Buildx
