@@ -19,10 +19,10 @@ docker_hub_rate_token() {
   local IMAGE="${1:-ratelimitpreview/test}"
   local TOKEN_URL="https://auth.docker.io/token?service=registry.docker.io&scope=repository:${IMAGE}:pull"
   if curl --version 1>/dev/null 2>&1; then
-    curl -s ${TOKEN_URL}
+    curl -s "${TOKEN_URL}"
     return $?
   fi
-  wget -qO-  ${TOKEN_URL}
+  wget -qO- "${TOKEN_URL}"
 }
 
 docker_hub_rate_read_rate() {
