@@ -30,7 +30,7 @@ gantry_finalize;
 
 ### How to run *Gantry* on a cron schedule?
 
-You can start *Gantry* as a docker swarm service and use [`swarm-cronjob`](https://github.com/crazy-max/swarm-cronjob) to run it at a given time. When use `swarm-cronjob`, you need to set `GANTRY_SLEEP_SECONDS` to 0. See the [example](examples/docker-compose.yml).
+You can start *Gantry* as a docker swarm service and use [`swarm-cronjob`](https://github.com/crazy-max/swarm-cronjob) to run it at a given time. When use `swarm-cronjob`, you need to set `GANTRY_SLEEP_SECONDS` to 0. See the [example](../examples/docker-compose.yml).
 
 ### How to update services with no running tasks?
 
