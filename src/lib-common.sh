@@ -44,11 +44,7 @@ log_formatter() {
   SCOPE_STR=$(if [ -n "${SCOPE}" ]; then echo "${SCOPE}: "; else echo ""; fi);
   MESSAGE_STR=$(echo "${*}" | tr '\n' ' ')
   local MESSAGE="[${TIME}]${LOCATION_STR}[${LEVEL}] ${SCOPE_STR}${MESSAGE_STR}";
-  if [ "${LEVEL}" = "ERROR" ]; then
-    echo "${MESSAGE}" >&2;
-  else
-    echo "${MESSAGE}";
-  fi;
+  echo "${MESSAGE}" >&2;
 }
 
 # We want to print an empty line for log without an argument. Thus we do not run the following check.
