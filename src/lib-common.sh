@@ -1,5 +1,5 @@
 #!/bin/sh
-# Copyright (C) 2023 Shizun Ge
+# Copyright (C) 2023-2024 Shizun Ge
 #
 # This program is free software: you can redistribute it and/or modify
 # it under the terms of the GNU General Public License as published by
@@ -75,6 +75,7 @@ log_docker_time() {
   busybox date -d "@${EPOCH}" -Iseconds 2>&1
 }
 
+# Convert logs from `docker service logs` to `log` format.
 # docker service logs --timestamps --no-task-ids <service>
 # 2023-06-22T01:20:54.535860111Z <task>@<node>    | <msg>
 log_docker_line() {
@@ -188,6 +189,10 @@ swarm_network_arguments() {
   echo "${NETWORK_ARG} --dns=${NETWORK_DNS_IP}"
 }
 
+timezone_arguments() {
+  echo "--env \"TZ=${TZ}\" --mount type=bind,source=/etc/localtime,destination=/etc/localtime,ro"
+}
+
 get_docker_command_name_arg() {
   # get <NAME> from "--name <NAME>" or "--name=<NAME>"
   echo "${@}" | tr '\n' ' ' | sed -E 's/.*--name[ =]([^ ]*).*/\1/'
@@ -244,12 +249,17 @@ docker_service_task_states() {
   done
 }
 
+# Usage: wait_service_state <SERVICE_NAME> [--running] [--complete]
+# Wait for the service, usually a global job or a replicated job, to reach either running or complete state.
+# The function returns immediately when any of the tasks of the service fails.
+# In case of task failing, the function returns a non-zero value.
 wait_service_state() {
-  local SERVICE_NAME="${1}"
-  local WAIT_RUNNING="${2:-"false"}"
-  local WAIT_COMPLETE="${3:-"false"}"
-  local RETURN_VALUE="${4:-0}"
-  local SLEEP_SECONDS="${5:-1}"
+  local SERVICE_NAME="${1}"; shift;
+  local WAIT_RUNNING WAIT_COMPLETE;
+  WAIT_RUNNING=$(echo "${@}" | grep -q -- "--running" && echo "true" || echo "false")
+  WAIT_COMPLETE=$(echo "${@}" | grep -q -- "--complete" && echo "true" || echo "false")
+  local RETURN_VALUE=0
+  local SLEEP_SECONDS=1
   local STATES=
   STATES=$(docker_service_task_states "${SERVICE_NAME}" 2>&1)
   while is_true "${WAIT_RUNNING}" || is_true "${WAIT_COMPLETE}" ; do
@@ -326,16 +336,16 @@ docker_replicated_job() {
   IS_DETACH=$(get_docker_command_detach "${@}")
   # Add "--detach" to work around https://github.com/docker/cli/issues/2979
   # The Docker CLI does not exit on failures.
-  local WAIT_RUNNING="false"
-  local WAIT_COMPLETE=
-  WAIT_COMPLETE=$(if ${IS_DETACH}; then echo "false"; else echo "true"; fi)
   log INFO "Starting service ${SERVICE_NAME}."
   docker service create \
     --mode replicated-job --detach \
     "${@}" >/dev/null
   local RETURN_VALUE=$?
-  # return the code from wait_service_state
-  wait_service_state "${SERVICE_NAME}" "${WAIT_RUNNING}" "${WAIT_COMPLETE}" "${RETURN_VALUE}"
+  # If the command line does not contain '--detach', the function returns til the replicated job is complete.
+  if ! "${IS_DETACH}"; then
+    wait_service_state "${SERVICE_NAME}" --complete || return $?
+  fi
+  return ${RETURN_VALUE}
 }
 
 container_status() {

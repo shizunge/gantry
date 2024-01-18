@@ -161,7 +161,7 @@ remove_images() {
       done;
       log INFO \"Done.\";
       "
-  wait_service_state "${SERVICE_NAME}" "false" "true";
+  wait_service_state "${SERVICE_NAME}" --complete;
   docker_service_logs "${SERVICE_NAME}"
   docker_service_remove "${SERVICE_NAME}"
 }
