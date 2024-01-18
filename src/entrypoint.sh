@@ -128,6 +128,7 @@ gantry() {
 main() {
   LOG_LEVEL="${GANTRY_LOG_LEVEL:-${LOG_LEVEL}}"
   NODE_NAME="${GANTRY_NODE_NAME:-${NODE_NAME}}"
+  export LOG_LEVEL NODE_NAME
   local SLEEP_SECONDS="${GANTRY_SLEEP_SECONDS:-0}"
   if ! is_number "${SLEEP_SECONDS}"; then 
     log ERROR "GANTRY_SLEEP_SECONDS must be a number. Got \"${GANTRY_SLEEP_SECONDS}\"."
