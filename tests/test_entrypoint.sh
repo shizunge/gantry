@@ -866,7 +866,7 @@ test_options_CLEANUP_IMAGES_false() {
   finalize_test "${FUNCNAME[0]}"
 }
 
-test_options_PRE_POST_UPDATE_CMD() {
+test_options_PRE_POST_RUN_CMD() {
   local IMAGE_WITH_TAG="${1}"
   local SERVICE_NAME STDOUT
   SERVICE_NAME="gantry-test-$(unique_id)"
@@ -876,8 +876,8 @@ test_options_PRE_POST_UPDATE_CMD() {
   start_replicated_service "${SERVICE_NAME}" "${IMAGE_WITH_TAG}"
 
   export GANTRY_SERVICES_FILTERS="name=${SERVICE_NAME}"
-  export GANTRY_PRE_UPDATE_CMD="echo \"Pre update\""
-  export GANTRY_POST_UPDATE_CMD="echo \"Post update\""
+  export GANTRY_PRE_RUN_CMD="echo \"Pre update\""
+  export GANTRY_POST_RUN_CMD="echo \"Post update\""
   STDOUT=$(run_gantry "${FUNCNAME[0]}" 2>&1 | tee >(cat 1>&2))
 
   expect_message    "${STDOUT}" "Pre update"

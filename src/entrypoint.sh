@@ -50,24 +50,26 @@ skip_current_node() {
   return 1
 }
 
-run_pre_update_cmd() {
-  local CMD RT
-  CMD=${GANTRY_PRE_UPDATE_CMD:-""}
+exec_pre_run_cmd() {
+  local CMD RT LOG
+  CMD=${GANTRY_PRE_RUN_CMD:-""}
   [ -z "${CMD}" ] && return 0
-  log INFO "Run pre update command: ${CMD}"
-  eval "${CMD}"
+  log INFO "Run pre-run command: ${CMD}"
+  LOG=$(eval "${CMD}")
   RT=$?
-  log INFO "Finish pre update command. Return value ${RT}."
+  log INFO "${LOG}"
+  log INFO "Finish pre-run command. Return value ${RT}."
 }
 
-run_post_update_cmd() {
-  local CMD RT
-  CMD=${GANTRY_POST_UPDATE_CMD:-""}
+exec_post_run_cmd() {
+  local CMD RT LOG
+  CMD=${GANTRY_POST_RUN_CMD:-""}
   [ -z "${CMD}" ] && return 0
-  log INFO "Run post update command: ${CMD}"
-  eval "${CMD}"
+  log INFO "Run post-run command: ${CMD}"
+  LOG=$(eval "${CMD}")
   RT=$?
-  log INFO "Finish post update command. Return value ${RT}."
+  log INFO "${LOG}"
+  log INFO "Finish post-run command. Return value ${RT}."
 }
 
 gantry() {
@@ -84,7 +86,7 @@ gantry() {
   local DOCKER_HUB_RATE_USED=
   local TIME_ELAPSED=
 
-  run_pre_update_cmd
+  exec_pre_run_cmd
 
   log INFO "Starting."
   gantry_initialize "${STACK}"
@@ -118,7 +120,7 @@ gantry() {
     log INFO "${MESSAGE}"
   fi
 
-  run_post_update_cmd
+  exec_post_run_cmd
 
   return ${ACCUMULATED_ERRORS}
 }
