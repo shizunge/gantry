@@ -50,6 +50,26 @@ skip_current_node() {
   return 1
 }
 
+run_pre_update_cmd() {
+  local CMD RT
+  CMD=${GANTRY_PRE_UPDATE_CMD:-""}
+  [ -z "${CMD}" ] && return 0
+  log INFO "Run pre update command: ${CMD}"
+  eval "${CMD}"
+  RT=$?
+  log INFO "Finish pre update command. Return value ${RT}."
+}
+
+run_post_update_cmd() {
+  local CMD RT
+  CMD=${GANTRY_POST_UPDATE_CMD:-""}
+  [ -z "${CMD}" ] && return 0
+  log INFO "Run post update command: ${CMD}"
+  eval "${CMD}"
+  RT=$?
+  log INFO "Finish post update command. Return value ${RT}."
+}
+
 gantry() {
   local STACK="${1:-gantry}"
   local START_TIME=
@@ -63,6 +83,8 @@ gantry() {
   local DOCKER_HUB_RATE_AFTER=
   local DOCKER_HUB_RATE_USED=
   local TIME_ELAPSED=
+
+  run_pre_update_cmd
 
   log INFO "Starting."
   gantry_initialize "${STACK}"
@@ -95,6 +117,9 @@ gantry() {
   else
     log INFO "${MESSAGE}"
   fi
+
+  run_post_update_cmd
+
   return ${ACCUMULATED_ERRORS}
 }
 
