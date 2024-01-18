@@ -1,6 +1,6 @@
 # Gantry
 
-[*Gantry*](https://github.com/shizunge/gantry) is a tool to update docker swarm services, enhanced [Shepherd](https://github.com/containrrr/shepherd).
+[*Gantry*](https://github.com/shizunge/gantry) is a tool to update docker swarm services, [enhanced Shepherd](docs/migration.md).
 
 ## Usage
 
@@ -54,7 +54,7 @@ You can configure the most behaviors of *Gantry* via environment variables.
 | GANTRY_SERVICES_EXCLUDED         | | A space separated list of services names that are excluded from updating. |
 | GANTRY_SERVICES_EXCLUDED_FILTERS | | A space separated list of [filters](https://docs.docker.com/engine/reference/commandline/service_ls/#filter). Exclude services which match the given filters from updating. |
 | GANTRY_SERVICES_FILTERS          | | A space separated list of [filters](https://docs.docker.com/engine/reference/commandline/service_ls/#filter) that are accepted by `docker service ls --filter` to select services to update. |
-| GANTRY_SERVICES_SELF             | | A service name to indicate whether a service is *Gantry* itself. *Gantry* will be the first service being updated. The manifest inspection will be always performed on the *Gantry* service to avoid an infinity loop of updating itself. |
+| GANTRY_SERVICES_SELF             | | This is optional. *Gantry* will try to find the service name of itself automatically, and update itself firstly. The manifest inspection will be always performed on the *Gantry* service to avoid an infinity loop of updating itself. User can use this to ask *Gantry* to update another service firstly or in case *Gantry* fails to find the service name of itself. |
 
 ### To check if new images are available
 
