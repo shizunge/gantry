@@ -471,6 +471,10 @@ test_MANIFEST_CMD_none() {
   export GANTRY_UPDATE_OPTIONS="--force"
   STDOUT=$(run_gantry "${FUNCNAME[0]}" 2>&1 | tee >(cat 1>&2))
 
+  # Do not set GANTRY_SERVICES_SELF, it should be set autoamtically
+  # If we are not testing gantry inside a container, it should failed to find the service name.
+  # To test gantry container, we need to use run_gantry_container.
+  expect_no_message "${STDOUT}" ".*GRANTRY_SERVICES_SELF.*"
   # Gantry is still trying to update the service.
   # But it will see no new images.
   expect_no_message "${STDOUT}" "${SKIP_UPDATING_SERVICE}.*${SERVICE_NAME}"
@@ -495,7 +499,7 @@ test_MANIFEST_CMD_none() {
 }
 
 test_MANIFEST_CMD_none_SERVICES_SELF() {
-  # If the service is self, it will always run manifest checking.
+  # If the service is self, it will always run manifest checking. Even if the CMD is set to none
   local IMAGE_WITH_TAG="${1}"
   local SERVICE_NAME STDOUT
   SERVICE_NAME="gantry-test-$(unique_id)"
@@ -505,11 +509,13 @@ test_MANIFEST_CMD_none_SERVICES_SELF() {
   start_replicated_service "${SERVICE_NAME}" "${IMAGE_WITH_TAG}"
   # No image updates after service started.
 
+  # Explicitly set GANTRY_SERVICES_SELF
   export GANTRY_SERVICES_FILTERS="name=${SERVICE_NAME}"
   export GANTRY_SERVICES_SELF="${SERVICE_NAME}"
   export GANTRY_MANIFEST_CMD="none"
   STDOUT=$(run_gantry "${FUNCNAME[0]}" 2>&1 | tee >(cat 1>&2))
 
+  expect_no_message "${STDOUT}" ".*GRANTRY_SERVICES_SELF.*"
   expect_no_message "${STDOUT}" "${SKIP_UPDATING_SERVICE}.*${SERVICE_NAME}"
   expect_message    "${STDOUT}" "${SERVICE_NAME}.*${NO_NEW_IMAGE}"
   expect_no_message "${STDOUT}" "${SERVICE_NAME}.*${UPDATED}"
