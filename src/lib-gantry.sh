@@ -586,6 +586,6 @@ gantry_update_services_list() {
 
 gantry_finalize() {
   local STACK="${1:-gantry}"
-  report_services;
   remove_images "${STACK}_image-remover"
+  report_services;
 }
