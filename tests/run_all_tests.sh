@@ -102,6 +102,7 @@ main() {
     test_options_LOG_LEVEL_none \
     test_options_UPDATE_OPTIONS \
     test_options_CLEANUP_IMAGES_false \
+    test_options_PRE_POST_UPDATE_CMD \
   "
   local LOGIN_TESTS="\
     test_login_config \
