@@ -129,22 +129,26 @@ main() {
   LOG_LEVEL="${GANTRY_LOG_LEVEL:-${LOG_LEVEL}}"
   NODE_NAME="${GANTRY_NODE_NAME:-${NODE_NAME}}"
   export LOG_LEVEL NODE_NAME
-  local SLEEP_SECONDS="${GANTRY_SLEEP_SECONDS:-0}"
-  if ! is_number "${SLEEP_SECONDS}"; then 
+  local INTERVAL_SECONDS="${GANTRY_SLEEP_SECONDS:-0}"
+  if ! is_number "${INTERVAL_SECONDS}"; then 
     log ERROR "GANTRY_SLEEP_SECONDS must be a number. Got \"${GANTRY_SLEEP_SECONDS}\"."
     return 1;
   fi
   local STACK="${1:-gantry}"
   local RETURN_VALUE=0
+  local START_TIME PASSED_SECONDS SLEEP_SECONDS
   while true; do
-    # SC2034 (warning): LOG_SCOPE appears unused. Verify use (or export if used externally).
-    # shellcheck disable=SC2034
-    LOG_SCOPE="${STACK}"
+    export LOG_SCOPE="${STACK}"
+    START_TIME=$(date +%s)
     gantry "${@}"
     RETURN_VALUE=$?
-    [ "${SLEEP_SECONDS}" -le 0 ] && break;
-    log INFO "Sleeping ${SLEEP_SECONDS} seconds before next update."
-    sleep "${SLEEP_SECONDS}"
+    [ "${INTERVAL_SECONDS}" -le 0 ] && break;
+    PASSED_SECONDS=$(difference_between "${START_TIME}" "$(date +%s)")
+    SLEEP_SECONDS=$((INTERVAL_SECONDS - PASSED_SECONDS))
+    if [ "${SLEEP_SECONDS}" -gt 0 ]; then
+      log INFO "Sleeping ${SLEEP_SECONDS} seconds before next update."
+      sleep "${SLEEP_SECONDS}"
+    fi
   done
   return ${RETURN_VALUE}
 }

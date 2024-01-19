@@ -32,7 +32,7 @@ You can configure the most behaviors of *Gantry* via environment variables.
 | GANTRY_NODE_NAME      |      | Add node name to logs. |
 | GANTRY_POST_RUN_CMD   |      | Command(s) to eval after each updating iteration. |
 | GANTRY_PRE_RUN_CMD    |      | Command(s) to eval before each updating iteration. |
-| GANTRY_SLEEP_SECONDS  | 0    | Sleep time between two updates. Set it to 0 to run *Gantry* once and then exit. |
+| GANTRY_SLEEP_SECONDS  | 0    | Interval between two updates. Set it to 0 to run *Gantry* once and then exit. Sleep time will exclude the time spent on updating services. |
 | TZ                    |      | Set timezone for time in logs. |
 
 ### To login to registries
