@@ -22,7 +22,10 @@ initialize_test() {
   echo "=============================="
   export GANTRY_LOG_LEVEL="DEBUG"
   export GANTRY_NODE_NAME=
+  export GANTRY_POST_RUN_CMD=
+  export GANTRY_PRE_RUN_CMD=
   export GANTRY_SLEEP_SECONDS=
+  export GANTRY_ROLLBACK_ON_FAILURE=
   export GANTRY_REGISTRY_CONFIG=
   export GANTRY_REGISTRY_CONFIG_FILE=
   export GANTRY_REGISTRY_CONFIGS_FILE=
@@ -38,7 +41,6 @@ initialize_test() {
   export GANTRY_SERVICES_SELF=
   export GANTRY_MANIFEST_CMD=
   export GANTRY_MANIFEST_OPTIONS=
-  export GANTRY_ROLLBACK_ON_FAILURE=
   export GANTRY_ROLLBACK_OPTIONS=
   export GANTRY_UPDATE_JOBS=
   export GANTRY_UPDATE_OPTIONS=
@@ -318,6 +320,8 @@ run_gantry_container() {
     --mount type=bind,source=/var/run/docker.sock,target=/var/run/docker.sock \
     --env "GANTRY_LOG_LEVEL=${GANTRY_LOG_LEVEL}" \
     --env "GANTRY_NODE_NAME=${GANTRY_NODE_NAME}" \
+    --env "GANTRY_POST_RUN_CMD=${GANTRY_POST_RUN_CMD}" \
+    --env "GANTRY_PRE_RUN_CMD=${GANTRY_PRE_RUN_CMD}" \
     --env "GANTRY_SLEEP_SECONDS=${GANTRY_SLEEP_SECONDS}" \
     --env "GANTRY_REGISTRY_CONFIG=${GANTRY_REGISTRY_CONFIG}" \
     --env "GANTRY_REGISTRY_CONFIG_FILE=${GANTRY_REGISTRY_CONFIG_FILE}" \

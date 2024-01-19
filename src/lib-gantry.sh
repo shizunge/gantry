@@ -1,5 +1,5 @@
 #!/bin/sh
-# Copyright (C) 2023 Shizun Ge
+# Copyright (C) 2023-2024 Shizun Ge
 #
 # This program is free software: you can redistribute it and/or modify
 # it under the terms of the GNU General Public License as published by
@@ -161,7 +161,7 @@ remove_images() {
       done;
       log INFO \"Done.\";
       "
-  wait_service_state "${SERVICE_NAME}" "false" "true";
+  wait_service_state "${SERVICE_NAME}" --complete;
   docker_service_logs "${SERVICE_NAME}"
   docker_service_remove "${SERVICE_NAME}"
 }
@@ -246,8 +246,47 @@ in_list() {
   return 1
 }
 
+current_container_name() {
+  local ALL_NETWORKS GWBRIDGE_NETWORK IPS;
+  ALL_NETWORKS=$(docker network ls --format '{{.ID}}') || return 1;
+  [ -z "${ALL_NETWORKS}" ] && return 0;
+  GWBRIDGE_NETWORK=$(docker network ls --format '{{.ID}}' --filter 'name=docker_gwbridge') || return 1;
+  IPS=$(ip route | grep src | sed -n "s/.* src \(\S*\).*$/\1/p");
+  [ -z "${IPS}" ] && return 0;
+  local NID;
+  for NID in ${ALL_NETWORKS}; do
+    [ "${NID}" = "${GWBRIDGE_NETWORK}" ] && continue;
+    local ALL_LOCAL_NAME_AND_IP;
+    ALL_LOCAL_NAME_AND_IP=$(docker network inspect "${NID}" --format "{{range .Containers}}{{.Name}}={{println .IPv4Address}}{{end}}") || return 1;
+    for NAME_AND_IP in ${ALL_LOCAL_NAME_AND_IP}; do
+      [ -z "${NAME_AND_IP}" ] && continue;
+      for IP in ${IPS}; do
+        echo "${NAME_AND_IP}" | grep -q "${IP}" || continue;
+        local NAME;
+        NAME=$(echo "${NAME_AND_IP}" | sed "s/\(.*\)=${IP}.*$/\1/");
+        echo "${NAME}";
+        return 0;
+      done;
+    done;
+  done;
+  return 0;
+}
+
+current_service_name() {
+  local CNAME
+  CNAME=$(current_container_name) || return 1
+  [ -z "${CNAME}" ] && return 0
+  SNAME=$(docker container inspect "${CNAME}" --format '{{range $key,$value := .Config.Labels}}{{$key}}={{println $value}}{{end}}' | grep "com.docker.swarm.service.name" | sed "s/com.docker.swarm.service.name=\(.*\)$/\1/") || return 1
+  echo "${SNAME}"
+}
+
 service_is_self() {
-  local SELF="${GANTRY_SERVICES_SELF:-""}"
+  if [ -z "${GANTRY_SERVICES_SELF}" ]; then
+    GANTRY_SERVICES_SELF=$(current_service_name)
+    export GANTRY_SERVICES_SELF
+    [ -n "${GANTRY_SERVICES_SELF}" ] && log INFO "Set GANTRY_SERVICES_SELF to ${GANTRY_SERVICES_SELF}."
+  fi
+  local SELF="${GANTRY_SERVICES_SELF}"
   local SERVICE_NAME="${1}"
   [ "${SERVICE_NAME}" = "${SELF}" ]
 }
@@ -547,6 +586,6 @@ gantry_update_services_list() {
 
 gantry_finalize() {
   local STACK="${1:-gantry}"
-  report_services;
   remove_images "${STACK}_image-remover"
+  report_services;
 }
