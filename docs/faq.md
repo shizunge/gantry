@@ -10,7 +10,7 @@ At the end of updating, *Gantry* optionally removes the old images.
 
 ### How to update standalone docker containers?
 
-*Gantry* only works for docker swarm services. If you need to update standalone docker containers, you can try [watchtower](https://github.com/containrrr/watchtower).
+*Gantry* only works for docker swarm services. If you need to update standalone docker containers, you can try [*watchtower*](https://github.com/containrrr/watchtower). *Gantry* can launch *watchtower* via `GANTRY_PRE_RUN_CMD` or `GANTRY_POST_RUN_CMD`. See the [example](../examples/prune-and-watchtower).
 
 ### How to filters multiple services by name?
 
@@ -30,7 +30,7 @@ gantry_finalize;
 
 ### How to run *Gantry* on a cron schedule?
 
-You can start *Gantry* as a docker swarm service and use [`swarm-cronjob`](https://github.com/crazy-max/swarm-cronjob) to run it at a given time. When use `swarm-cronjob`, you need to set `GANTRY_SLEEP_SECONDS` to 0. See the [example](../examples/docker-compose.yml).
+You can start *Gantry* as a docker swarm service and use [`swarm-cronjob`](https://github.com/crazy-max/swarm-cronjob) to run it at a given time. When use `swarm-cronjob`, you need to set `GANTRY_SLEEP_SECONDS` to 0. See the [example](../examples/cronjob).
 
 ### How to update services with no running tasks?
 
