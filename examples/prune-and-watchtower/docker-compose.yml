@@ -1,0 +1,53 @@
+version: "3.8"
+
+services:
+  gantry:
+    image: shizunge/gantry
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock
+    environment:
+      - "GANTRY_NODE_NAME={{.Node.Hostname}}"
+      - "GANTRY_PRE_RUN_CMD=SERVICE_NAME=gantry-prune;
+                            docker service remove $${SERVICE_NAME} 2>/dev/null;
+                            docker service create --mode global-job --name $${SERVICE_NAME}
+                              --mount type=bind,source=/var/run/docker.sock,destination=/var/run/docker.sock
+                              --entrypoint docker
+                              alpinelinux/docker-cli
+                              system prune -f;
+                            docker service logs $${SERVICE_NAME};
+                            docker service remove $${SERVICE_NAME};
+                            SERVICE_NAME=gantry-container;
+                            docker service remove $${SERVICE_NAME} 2>/dev/null;
+                            docker service create --mode global-job --name $${SERVICE_NAME}
+                              --mount type=bind,source=/var/run/docker.sock,destination=/var/run/docker.sock
+                              ghcr.io/containrrr/watchtower
+                              --cleanup=true
+                              --label-enable
+                              --run-once=true
+                              --stop-timeout=60s
+                              --tlsverify=true;
+                            docker service logs $${SERVICE_NAME};
+                            docker service remove $${SERVICE_NAME};
+        "
+      - "GANTRY_POST_RUN_CMD=echo \"This is a post run command.\";"
+      - "GANTRY_SLEEP_SECONDS=0"
+    deploy:
+      replicas: 0
+      placement:
+        constraints:
+          - node.role==manager
+      restart_policy:
+        condition: none
+      labels:
+        - swarm.cronjob.enable=true
+        - swarm.cronjob.schedule=45 23 0 * * *
+        - swarm.cronjob.skip-running=true
+
+  cronjob:
+    image: crazymax/swarm-cronjob:latest
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock
+    deploy:
+      placement:
+        constraints:
+          - node.role==manager
