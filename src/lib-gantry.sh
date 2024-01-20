@@ -101,6 +101,27 @@ add_image_to_remove() {
   STATIC_VAR_IMAGES_TO_REMOVE=$(add_uniq_to_list "${STATIC_VAR_IMAGES_TO_REMOVE}" "${IMAGE}")
 }
 
+remove_container() {
+  local IMAGE="${1}";
+  local STATUS="${2}";
+  local CIDS
+  if ! CIDS=$(docker container ls --all --filter "ancestor=${IMAGE}" --filter "status=${STATUS}" --format '{{.ID}}' 2>&1); then
+    log ERROR "Failed to list ${STATUS} containers with image ${IMAGE}.";
+    echo "${CIDS}" | log_lines ERROR
+    return 1;
+  fi;
+  local CID CNAME CRM_MSG
+  for CID in ${CIDS}; do
+    CNAME=$(docker container inspect --format '{{.Name}}' "${CID}");
+    if ! CRM_MSG=$(docker container rm "${CID}" 2>&1); then
+      log ERROR "Failed to remove ${STATUS} container ${CNAME}, which is using image ${IMAGE}.";
+      echo "${CRM_MSG}" | log_lines ERROR
+      continue;
+    fi
+    log INFO "Removed ${STATUS} container ${CNAME}. It was using image ${IMAGE}.";
+  done;
+};
+
 remove_images() {
   local CLEANUP_IMAGES="${GANTRY_CLEANUP_IMAGES:-"true"}"
   if ! is_true "${CLEANUP_IMAGES}"; then
@@ -119,48 +140,15 @@ remove_images() {
   for I in $(echo "${STATIC_VAR_IMAGES_TO_REMOVE}" | tr '\n' ' '); do
     log INFO "- ${I}"
   done
+  local IMAGE_OF_THIS_CONTAINER=
+  IMAGE_OF_THIS_CONTAINER=$(get_service_image "$(current_service_name)")
+  [ -z "${IMAGE_OF_THIS_CONTAINER}" ] && IMAGE_OF_THIS_CONTAINER="shizunge/gantry:image-remover"
   docker_global_job --name "${SERVICE_NAME}" \
     --restart-condition on-failure \
     --restart-max-attempts 1 \
     --mount type=bind,source=/var/run/docker.sock,destination=/var/run/docker.sock \
-    --env "IMAGES_TO_REMOVE=$(echo "${STATIC_VAR_IMAGES_TO_REMOVE}" | tr '\n' ' ')" \
-    --entrypoint sh \
-    alpinelinux/docker-cli \
-    -c "
-      log() {
-        echo \"\${@}\";
-      };
-      remove_container() {
-        local IMAGE=\${1};
-        local STATUS=\${2};
-        if ! CIDS=\$(docker container ls --all --filter \"ancestor=\${IMAGE}\" --filter \"status=\${STATUS}\" --format '{{.ID}}' 2>&1); then
-          log ERROR \"Failed to list \${STATUS} containers with image \${IMAGE}. \$(echo \${CIDS})\";
-          return 1;
-        fi;
-        for CID in \${CIDS}; do
-          CNAME=\$(docker container inspect --format '{{.Name}}' \"\${CID}\");
-          if ! CRM_MSG=\$(docker container rm \${CID} 2>&1); then
-            log ERROR \"Failed to remove \${STATUS} container \${CNAME}, which is using image \${IMAGE}. \$(echo \${CRM_MSG})\";
-            continue;
-          fi
-          log INFO \"Removed \${STATUS} container \${CNAME}. It was using image \${IMAGE}.\";
-        done;
-      };
-      for IMAGE in \${IMAGES_TO_REMOVE}; do
-        if ! docker image inspect \${IMAGE} 1>/dev/null 2>&1 ; then
-          log DEBUG \"There is no image \${IMAGE} on the node.\";
-          continue;
-        fi;
-        remove_container \${IMAGE} exited;
-        remove_container \${IMAGE} dead;
-        if ! RMI_MSG=\$(docker rmi \${IMAGE} 2>&1); then
-          log ERROR \"Failed to remove image \${IMAGE}. \$(echo \${RMI_MSG})\";
-          continue;
-        fi;
-        log INFO \"Removed image \${IMAGE}.\";
-      done;
-      log INFO \"Done.\";
-      "
+    --env "GANTRY_IMAGES_TO_REMOVE=$(echo "${STATIC_VAR_IMAGES_TO_REMOVE}" | tr '\n' ' ')" \
+    "${IMAGE_OF_THIS_CONTAINER}"
   wait_service_state "${SERVICE_NAME}" --complete;
   docker_service_logs "${SERVICE_NAME}"
   docker_service_remove "${SERVICE_NAME}"
@@ -247,6 +235,7 @@ in_list() {
 }
 
 current_container_name() {
+  [ -n "${STATIC_VAR_CURRENT_CONTAINER_NAME}" ] && echo "${STATIC_VAR_CURRENT_CONTAINER_NAME}" && return 0
   local ALL_NETWORKS GWBRIDGE_NETWORK IPS;
   ALL_NETWORKS=$(docker network ls --format '{{.ID}}') || return 1;
   [ -z "${ALL_NETWORKS}" ] && return 0;
@@ -264,6 +253,7 @@ current_container_name() {
         echo "${NAME_AND_IP}" | grep -q "${IP}" || continue;
         local NAME;
         NAME=$(echo "${NAME_AND_IP}" | sed "s/\(.*\)=${IP}.*$/\1/");
+        STATIC_VAR_CURRENT_CONTAINER_NAME=${NAME}
         echo "${NAME}";
         return 0;
       done;
@@ -273,10 +263,13 @@ current_container_name() {
 }
 
 current_service_name() {
-  local CNAME
+  [ -n "${STATIC_VAR_CURRENT_SERVICE_NAME}" ] && echo "${STATIC_VAR_CURRENT_SERVICE_NAME}" && return 0
+  local CNAME=
   CNAME=$(current_container_name) || return 1
   [ -z "${CNAME}" ] && return 0
+  local SNAME=
   SNAME=$(docker container inspect "${CNAME}" --format '{{range $key,$value := .Config.Labels}}{{$key}}={{println $value}}{{end}}' | grep "com.docker.swarm.service.name" | sed "s/com.docker.swarm.service.name=\(.*\)$/\1/") || return 1
+  STATIC_VAR_CURRENT_SERVICE_NAME=${SNAME}
   echo "${SNAME}"
 }
 
@@ -289,6 +282,18 @@ service_is_self() {
   local SELF="${GANTRY_SERVICES_SELF}"
   local SERVICE_NAME="${1}"
   [ "${SERVICE_NAME}" = "${SELF}" ]
+}
+
+get_service_image() {
+  local SERVICE_NAME="${1}"
+  [ -z "${SERVICE_NAME}" ] && return 1
+  docker service inspect -f '{{.Spec.TaskTemplate.ContainerSpec.Image}}' "${SERVICE_NAME}"
+}
+
+get_service_previous_image() {
+  local SERVICE_NAME="${1}"
+  [ -z "${SERVICE_NAME}" ] && return 1
+  docker service inspect -f '{{.PreviousSpec.TaskTemplate.ContainerSpec.Image}}' "${SERVICE_NAME}"
 }
 
 get_service_mode() {
@@ -363,7 +368,7 @@ inspect_image() {
   local SERVICE_NAME="${1}"
   local DOCKER_CONFIG="${2}"
   local IMAGE_WITH_DIGEST=
-  if ! IMAGE_WITH_DIGEST=$(docker service inspect -f '{{.Spec.TaskTemplate.ContainerSpec.Image}}' "${SERVICE_NAME}" 2>&1); then
+  if ! IMAGE_WITH_DIGEST=$(get_service_image "${SERVICE_NAME}" 2>&1); then
     log ERROR "Failed to obtain image from service ${SERVICE_NAME}. ${IMAGE_WITH_DIGEST}"
     return 1
   fi
@@ -497,8 +502,8 @@ update_single_service() {
   fi
   local PREVIOUS_IMAGE=
   local CURRENT_IMAGE=
-  PREVIOUS_IMAGE=$(docker service inspect -f '{{.PreviousSpec.TaskTemplate.ContainerSpec.Image}}' "${SERVICE_NAME}")
-  CURRENT_IMAGE=$(docker service inspect -f '{{.Spec.TaskTemplate.ContainerSpec.Image}}' "${SERVICE_NAME}")
+  PREVIOUS_IMAGE=$(get_service_previous_image "${SERVICE_NAME}")
+  CURRENT_IMAGE=$(get_service_image "${SERVICE_NAME}")
   if [ "${PREVIOUS_IMAGE}" = "${CURRENT_IMAGE}" ]; then
     log INFO "No updates."
     return 0

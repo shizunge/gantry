@@ -57,7 +57,7 @@ exec_pre_run_cmd() {
   log INFO "Run pre-run command: ${CMD}"
   LOG=$(eval "${CMD}")
   RT=$?
-  log INFO "${LOG}"
+  echo "${LOG}" | log_lines INFO
   log INFO "Finish pre-run command. Return value ${RT}."
 }
 
@@ -68,8 +68,28 @@ exec_post_run_cmd() {
   log INFO "Run post-run command: ${CMD}"
   LOG=$(eval "${CMD}")
   RT=$?
-  log INFO "${LOG}"
+  echo "${LOG}" | log_lines INFO
   log INFO "Finish post-run command. Return value ${RT}."
+}
+
+exec_remove_images() {
+  local IMAGES_TO_REMOVE="${1}"
+  local IMAGE RMI_MSG
+  for IMAGE in ${IMAGES_TO_REMOVE}; do
+    if ! docker image inspect "${IMAGE}" 1>/dev/null 2>&1 ; then
+      log DEBUG "There is no image ${IMAGE} on the node.";
+      continue;
+    fi;
+    remove_container "${IMAGE}" exited;
+    remove_container "${IMAGE}" dead;
+    if ! RMI_MSG=$(docker rmi "${IMAGE}" 2>&1); then
+      log ERROR "Failed to remove image ${IMAGE}.";
+      echo "${RMI_MSG}" | log_lines ERROR
+      continue;
+    fi;
+    log INFO "Removed image ${IMAGE}.";
+  done;
+  log INFO "Done.";
 }
 
 gantry() {
@@ -129,6 +149,13 @@ main() {
   LOG_LEVEL="${GANTRY_LOG_LEVEL:-${LOG_LEVEL}}"
   NODE_NAME="${GANTRY_NODE_NAME:-${NODE_NAME}}"
   export LOG_LEVEL NODE_NAME
+  if [ -n "${GANTRY_IMAGES_TO_REMOVE:-""}" ]; then
+    # Image remover runs as a global job. The log will be collected via docker commands then formatted.
+    # Redefine the log function for the formater.
+    log() { echo "${@}"; }
+    exec_remove_images "${GANTRY_IMAGES_TO_REMOVE}"
+    return $?
+  fi
   local INTERVAL_SECONDS="${GANTRY_SLEEP_SECONDS:-0}"
   if ! is_number "${INTERVAL_SECONDS}"; then 
     log ERROR "GANTRY_SLEEP_SECONDS must be a number. Got \"${GANTRY_SLEEP_SECONDS}\"."
