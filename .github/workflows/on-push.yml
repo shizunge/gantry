@@ -58,7 +58,7 @@ jobs:
       - name: Run tests
         run: |
           export GANTRY_TEST_ENABLE_TESTS="${{ matrix.test_suit }}"
-          ./tests/run_all_tests.sh "${{ github.repository }}" "ghcr.io" "${{ github.repository_owner }}" "${{ github.token }}"
+          ./tests/run_all_tests.sh "${{ github.repository }}-for-test" "ghcr.io" "${{ github.repository_owner }}" "${{ github.token }}"
 
   build_and_push:
     name: Build and push Docker image
@@ -109,7 +109,7 @@ jobs:
       #     echo "Start running tests"
       #     export GANTRY_TEST_CONTAINER_REPO_TAG="${{ github.repository }}:${{ steps.git.outputs.image_tag }}"
       #     export GANTRY_TEST_ENABLE_TESTS="new_image"
-      #     ./tests/run_all_tests.sh "${{ github.repository }}" "ghcr.io" "${{ github.repository_owner }}" "${{ github.token }}"
+      #     ./tests/run_all_tests.sh "${{ github.repository }}-for-test" "ghcr.io" "${{ github.repository_owner }}" "${{ github.token }}"
       #     echo "Done running tests"
 
   clean-ghcr-dev:
@@ -122,12 +122,23 @@ jobs:
         uses: snok/container-retention-policy@v2
         with:
           image-names: gantry
-          cut-off: One day ago UTC
+          cut-off: One month ago UTC
           account-type: personal
           token: ${{ secrets.TOKEN_DELETE_GHCR_IMAGES }}
           keep-at-least: 5
           skip-tags: latest, development
           filter-tags: "dev-*"
+          dry-run: False
+      - name: Delete untagged images
+        uses: snok/container-retention-policy@v2
+        with:
+          image-names: gantry
+          cut-off: 1 second ago UTC
+          account-type: personal
+          token: ${{ secrets.TOKEN_DELETE_GHCR_IMAGES }}
+          keep-at-least: 0
+          untagged-only: True
+          skip-tags: latest, development
           dry-run: False
 
   clean-ghcr-tests:
@@ -139,7 +150,7 @@ jobs:
       - name: Delete old test images
         uses: snok/container-retention-policy@v2
         with:
-          image-names: gantry
+          image-names: gantry-for-test
           # leave some margins in case multiple actions run in parallel
           cut-off: 5 minutes ago UTC
           account-type: personal
@@ -151,7 +162,7 @@ jobs:
       - name: Delete untagged images
         uses: snok/container-retention-policy@v2
         with:
-          image-names: gantry
+          image-names: gantry-for-test
           cut-off: 1 second ago UTC
           account-type: personal
           token: ${{ secrets.TOKEN_DELETE_GHCR_IMAGES }}
