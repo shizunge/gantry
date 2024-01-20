@@ -48,15 +48,15 @@ initialize_test() {
   export GANTRY_CLEANUP_IMAGES=
   export GANTRY_NOTIFICATION_APPRISE_URL=
   export GANTRY_NOTIFICATION_TITLE=
-  GLOBAL_THIS_TEST_ERRORS=0
+  STATIC_VAR_THIS_TEST_ERRORS=0
 }
 
 finalize_test() {
   local TEST_NAME=${1}
   local TSET_STATUS="OK"
   local RETURN_VALUE=0
-  if [ "${GLOBAL_THIS_TEST_ERRORS}" -ne 0 ]; then
-    TSET_STATUS="${GLOBAL_THIS_TEST_ERRORS} ERRORS"
+  if [ "${STATIC_VAR_THIS_TEST_ERRORS}" -ne 0 ]; then
+    TSET_STATUS="${STATIC_VAR_THIS_TEST_ERRORS} ERRORS"
     RETURN_VALUE=1
   fi
   echo "=============================="
@@ -66,8 +66,8 @@ finalize_test() {
 
 # finish_all_tests should return non zero when there are errors.
 finish_all_tests() {
-  local NUM_ERRORS="${GLOBAL_ALL_ERRORS:-0}"
-  local MISSING_TESTS="${GLOBAL_MISSING_TESTS:-""}"
+  local NUM_ERRORS="${STATIC_VAR_ALL_ERRORS:-0}"
+  local MISSING_TESTS="${STATIC_VAR_MISSING_TESTS:-""}"
   if [ -n "${MISSING_TESTS}" ]; then
     echo "=============================="
     echo "== Missing tests:"
@@ -109,7 +109,7 @@ run_test() {
   else
     echo "=============================="
     echo "== ${TEST} is missing."
-    GLOBAL_MISSING_TESTS="${GLOBAL_MISSING_TESTS} ${TEST}"
+    STATIC_VAR_MISSING_TESTS="${STATIC_VAR_MISSING_TESTS} ${TEST}"
     handle_failure "${TEST} is missing."
   fi
 }
@@ -117,8 +117,8 @@ run_test() {
 handle_failure() {
   local MESSAGE="${1}"
   echo "ERROR ${MESSAGE}" >&2
-  GLOBAL_THIS_TEST_ERRORS=$((GLOBAL_THIS_TEST_ERRORS+1))
-  GLOBAL_ALL_ERRORS=$((GLOBAL_ALL_ERRORS+1))
+  STATIC_VAR_THIS_TEST_ERRORS=$((STATIC_VAR_THIS_TEST_ERRORS+1))
+  STATIC_VAR_ALL_ERRORS=$((STATIC_VAR_ALL_ERRORS+1))
 }
 
 expect_message() {
@@ -204,14 +204,14 @@ wait_zero_running_tasks() {
 }
 
 hostname() {
-  if [ -z "${GLOBAL_HOSTNAME}" ]; then
+  if [ -z "${STATIC_VAR_HOSTNAME}" ]; then
     local SELF_ID=
     SELF_ID=$(docker node inspect self --format "{{.Description.Hostname}}" 2>/dev/null);
     if [ -n "${SELF_ID}" ]; then
-      GLOBAL_HOSTNAME="${SELF_ID}"
+      STATIC_VAR_HOSTNAME="${SELF_ID}"
     fi
   fi
-  echo "${GLOBAL_HOSTNAME}"
+  echo "${STATIC_VAR_HOSTNAME}"
 }
 
 location_constraints() {
@@ -295,14 +295,14 @@ get_script_dir() {
 }
 
 get_entrypoint() {
-  if [ -n "${GLOBAL_ENTRYPOINT}" ]; then
-    echo "${GLOBAL_ENTRYPOINT}"
+  if [ -n "${STATIC_VAR_ENTRYPOINT}" ]; then
+    echo "${STATIC_VAR_ENTRYPOINT}"
     return 0
   fi
   local SCRIPT_DIR=
   SCRIPT_DIR="$(get_script_dir)" || return 1
-  GLOBAL_ENTRYPOINT="${SCRIPT_DIR}/../src/entrypoint.sh"
-  echo "source ${GLOBAL_ENTRYPOINT}"
+  STATIC_VAR_ENTRYPOINT="${SCRIPT_DIR}/../src/entrypoint.sh"
+  echo "source ${STATIC_VAR_ENTRYPOINT}"
 }
 
 run_gantry_container() {

@@ -94,11 +94,11 @@ send_notification() {
 
 add_image_to_remove() {
   local IMAGE="${1}"
-  if [ -z "${GLOBAL_IMAGES_TO_REMOVE}" ]; then
-    GLOBAL_IMAGES_TO_REMOVE=${IMAGE}
+  if [ -z "${STATIC_VAR_IMAGES_TO_REMOVE}" ]; then
+    STATIC_VAR_IMAGES_TO_REMOVE=${IMAGE}
     return 0
   fi
-  GLOBAL_IMAGES_TO_REMOVE=$(add_uniq_to_list "${GLOBAL_IMAGES_TO_REMOVE}" "${IMAGE}")
+  STATIC_VAR_IMAGES_TO_REMOVE=$(add_uniq_to_list "${STATIC_VAR_IMAGES_TO_REMOVE}" "${IMAGE}")
 }
 
 remove_images() {
@@ -109,21 +109,21 @@ remove_images() {
   fi
   local SERVICE_NAME="${1:-"docker-image-remover"}"
   docker_service_remove "${SERVICE_NAME}"
-  if [ -z "${GLOBAL_IMAGES_TO_REMOVE}" ]; then
+  if [ -z "${STATIC_VAR_IMAGES_TO_REMOVE}" ]; then
     log INFO "No images to remove."
     return 0
   fi
   local IMAGE_NUM=
-  IMAGE_NUM=$(get_number_of_elements "${GLOBAL_IMAGES_TO_REMOVE}")
+  IMAGE_NUM=$(get_number_of_elements "${STATIC_VAR_IMAGES_TO_REMOVE}")
   log INFO "Removing ${IMAGE_NUM} image(s):"
-  for I in $(echo "${GLOBAL_IMAGES_TO_REMOVE}" | tr '\n' ' '); do
+  for I in $(echo "${STATIC_VAR_IMAGES_TO_REMOVE}" | tr '\n' ' '); do
     log INFO "- ${I}"
   done
   docker_global_job --name "${SERVICE_NAME}" \
     --restart-condition on-failure \
     --restart-max-attempts 1 \
     --mount type=bind,source=/var/run/docker.sock,destination=/var/run/docker.sock \
-    --env "IMAGES_TO_REMOVE=$(echo "${GLOBAL_IMAGES_TO_REMOVE}" | tr '\n' ' ')" \
+    --env "IMAGES_TO_REMOVE=$(echo "${STATIC_VAR_IMAGES_TO_REMOVE}" | tr '\n' ' ')" \
     --entrypoint sh \
     alpinelinux/docker-cli \
     -c "
@@ -168,43 +168,43 @@ remove_images() {
 
 add_service_updated() {
   local SERVICE_NAME="${1}"
-  if [ -z "${GLOBAL_SERVICES_UPDATED}" ]; then
-    GLOBAL_SERVICES_UPDATED=${SERVICE_NAME}
+  if [ -z "${STATIC_VAR_SERVICES_UPDATED}" ]; then
+    STATIC_VAR_SERVICES_UPDATED=${SERVICE_NAME}
     return 0
   fi
-  GLOBAL_SERVICES_UPDATED=$(add_uniq_to_list "${GLOBAL_SERVICES_UPDATED}" "${SERVICE_NAME}")
+  STATIC_VAR_SERVICES_UPDATED=$(add_uniq_to_list "${STATIC_VAR_SERVICES_UPDATED}" "${SERVICE_NAME}")
 }
 
 report_services_updated() {
-  if [ -z "${GLOBAL_SERVICES_UPDATED}" ]; then
+  if [ -z "${STATIC_VAR_SERVICES_UPDATED}" ]; then
     echo "No services updated."
     return 0
   fi
   local UPDATED_NUM=
-  UPDATED_NUM=$(get_number_of_elements "${GLOBAL_SERVICES_UPDATED}")
+  UPDATED_NUM=$(get_number_of_elements "${STATIC_VAR_SERVICES_UPDATED}")
   echo "${UPDATED_NUM} service(s) updated:"
-  for S in ${GLOBAL_SERVICES_UPDATED}; do
+  for S in ${STATIC_VAR_SERVICES_UPDATED}; do
     echo "- ${S}"
   done
 }
 
 add_service_update_failed() {
   local SERVICE_NAME="${1}"
-  if [ -z "${GLOBAL_SERVICES_UPDATE_FAILED}" ]; then
-    GLOBAL_SERVICES_UPDATE_FAILED=${SERVICE_NAME}
+  if [ -z "${STATIC_VAR_SERVICES_UPDATE_FAILED}" ]; then
+    STATIC_VAR_SERVICES_UPDATE_FAILED=${SERVICE_NAME}
     return 0
   fi
-  GLOBAL_SERVICES_UPDATE_FAILED=$(add_uniq_to_list "${GLOBAL_SERVICES_UPDATE_FAILED}" "${SERVICE_NAME}")
+  STATIC_VAR_SERVICES_UPDATE_FAILED=$(add_uniq_to_list "${STATIC_VAR_SERVICES_UPDATE_FAILED}" "${SERVICE_NAME}")
 }
 
 report_services_update_failed() {
-  if [ -z "${GLOBAL_SERVICES_UPDATE_FAILED}" ]; then
+  if [ -z "${STATIC_VAR_SERVICES_UPDATE_FAILED}" ]; then
     return 0
   fi
   local FAILED_NUM=
-  FAILED_NUM=$(get_number_of_elements "${GLOBAL_SERVICES_UPDATE_FAILED}")
+  FAILED_NUM=$(get_number_of_elements "${STATIC_VAR_SERVICES_UPDATE_FAILED}")
   echo "${FAILED_NUM} service(s) update failed:"
-  for S in ${GLOBAL_SERVICES_UPDATE_FAILED}; do
+  for S in ${STATIC_VAR_SERVICES_UPDATE_FAILED}; do
     echo "- ${S}"
   done
 }
@@ -228,8 +228,8 @@ report_services() {
   echo "${FAILED_MSG}" | log_lines INFO
   # Send notification
   local UPDATED_NUM FAILED_NUM TITLE BODY
-  UPDATED_NUM=$(get_number_of_elements "${GLOBAL_SERVICES_UPDATED}")
-  FAILED_NUM=$(get_number_of_elements "${GLOBAL_SERVICES_UPDATE_FAILED}")
+  UPDATED_NUM=$(get_number_of_elements "${STATIC_VAR_SERVICES_UPDATED}")
+  FAILED_NUM=$(get_number_of_elements "${STATIC_VAR_SERVICES_UPDATE_FAILED}")
   TITLE="[gantry] ${UPDATED_NUM} services updated ${FAILED_NUM} failed"
   BODY=$(echo -e "${UPDATED_MSG}\n${FAILED_MSG}")
   send_notification "${TITLE}" "${BODY}"
@@ -376,10 +376,10 @@ inspect_image() {
     echo "${IMAGE}"
     return 0
   fi
-  if in_list "${GLOBAL_NO_NEW_IMAGES}" "${DIGEST}"; then
+  if in_list "${STATIC_VAR_NO_NEW_IMAGES}" "${DIGEST}"; then
     return 0
   fi
-  if in_list "${GLOBAL_NEW_IMAGES}" "${DIGEST}"; then
+  if in_list "${STATIC_VAR_NEW_IMAGES}" "${DIGEST}"; then
     echo "${IMAGE}"
     return 0
   fi
@@ -389,10 +389,10 @@ inspect_image() {
     return 1
   fi
   if [ -n "${DIGEST}" ] && echo "${IMAGE_INFO}" | grep -q "${DIGEST}"; then
-    GLOBAL_NO_NEW_IMAGES=$(add_uniq_to_list "${GLOBAL_NO_NEW_IMAGES}" "${DIGEST}")
+    STATIC_VAR_NO_NEW_IMAGES=$(add_uniq_to_list "${STATIC_VAR_NO_NEW_IMAGES}" "${DIGEST}")
     return 0
   fi
-  GLOBAL_NEW_IMAGES=$(add_uniq_to_list "${GLOBAL_NEW_IMAGES}" "${DIGEST}")
+  STATIC_VAR_NEW_IMAGES=$(add_uniq_to_list "${STATIC_VAR_NEW_IMAGES}" "${DIGEST}")
   echo "${IMAGE}"
   return 0
 }
@@ -528,11 +528,11 @@ get_services_filted() {
 
 gantry_initialize() {
   local STACK="${1:-gantry}"
-  GLOBAL_IMAGES_TO_REMOVE=
-  GLOBAL_SERVICES_UPDATED=
-  GLOBAL_SERVICES_UPDATE_FAILED=
-  GLOBAL_NO_NEW_IMAGES=
-  GLOBAL_NEW_IMAGES=
+  STATIC_VAR_IMAGES_TO_REMOVE=
+  STATIC_VAR_SERVICES_UPDATED=
+  STATIC_VAR_SERVICES_UPDATE_FAILED=
+  STATIC_VAR_NO_NEW_IMAGES=
+  STATIC_VAR_NEW_IMAGES=
   authenticate_to_registries
 }
 

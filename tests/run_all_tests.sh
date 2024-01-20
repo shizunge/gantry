@@ -73,8 +73,8 @@ main() {
   IMAGE_WITH_TAG="$(get_image_with_tag "${IMAGE}" "${REGISTRY}")" || return 1
   echo "IMAGE_WITH_TAG=${IMAGE_WITH_TAG}"
 
-  GLOBAL_ENTRYPOINT=$(get_entrypoint) || return 1
-  echo "GLOBAL_ENTRYPOINT=${GLOBAL_ENTRYPOINT}"
+  STATIC_VAR_ENTRYPOINT=$(get_entrypoint) || return 1
+  echo "STATIC_VAR_ENTRYPOINT=${STATIC_VAR_ENTRYPOINT}"
 
   init_swarm
 
