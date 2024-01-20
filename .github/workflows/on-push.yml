@@ -122,24 +122,25 @@ jobs:
         uses: snok/container-retention-policy@v2
         with:
           image-names: gantry
-          cut-off: One month ago UTC
+          cut-off: One week ago UTC
           account-type: personal
           token: ${{ secrets.TOKEN_DELETE_GHCR_IMAGES }}
           keep-at-least: 5
           skip-tags: latest, development
           filter-tags: "dev-*"
           dry-run: False
-      - name: Delete untagged images
-        uses: snok/container-retention-policy@v2
-        with:
-          image-names: gantry
-          cut-off: 1 second ago UTC
-          account-type: personal
-          token: ${{ secrets.TOKEN_DELETE_GHCR_IMAGES }}
-          keep-at-least: 0
-          untagged-only: True
-          skip-tags: latest, development
-          dry-run: False
+      # # Untagged images could be the images for different OS/Arch. Do not delete them.
+      # - name: Delete untagged images
+      #   uses: snok/container-retention-policy@v2
+      #   with:
+      #     image-names: gantry
+      #     cut-off: 1 second ago UTC
+      #     account-type: personal
+      #     token: ${{ secrets.TOKEN_DELETE_GHCR_IMAGES }}
+      #     keep-at-least: 0
+      #     untagged-only: True
+      #     skip-tags: latest, development
+      #     dry-run: False
 
   clean-ghcr-tests:
     name: Delete old tests container images
