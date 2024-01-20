@@ -136,15 +136,14 @@ main() {
   fi
   local STACK="${1:-gantry}"
   local RETURN_VALUE=0
-  local START_TIME PASSED_SECONDS SLEEP_SECONDS
+  local NEXT_RUN_TARGET_TIME SLEEP_SECONDS
   while true; do
     export LOG_SCOPE="${STACK}"
-    START_TIME=$(date +%s)
+    NEXT_RUN_TARGET_TIME=$(($(date +%s) + INTERVAL_SECONDS))
     gantry "${@}"
     RETURN_VALUE=$?
     [ "${INTERVAL_SECONDS}" -le 0 ] && break;
-    PASSED_SECONDS=$(difference_between "${START_TIME}" "$(date +%s)")
-    SLEEP_SECONDS=$((INTERVAL_SECONDS - PASSED_SECONDS))
+    SLEEP_SECONDS=$((NEXT_RUN_TARGET_TIME - $(date +%s)))
     if [ "${SLEEP_SECONDS}" -gt 0 ]; then
       log INFO "Sleeping ${SLEEP_SECONDS} seconds before next update."
       sleep "${SLEEP_SECONDS}"
