@@ -50,37 +50,16 @@ skip_current_node() {
   return 1
 }
 
-exec_cmd() {
-  local TAG="${1}"; shift;
-  local CMD="${*}"
-  local OLD_LOG_SCOPE="${LOG_SCOPE}"
-  export LOG_SCOPE="${OLD_LOG_SCOPE} ${TAG}"
-  [ -z "${CMD}" ] && return 0
-  local LOG=
-  local RT=0
-  log INFO "Run ${TAG} command: ${CMD}"
-  if LOG=$(eval "${CMD}"); then
-    echo "${LOG}" | log_lines INFO
-  else
-    RT=$?
-    echo "${LOG}" | log_lines WARN
-    log WARN "${TAG} command returned a non-zero value ${RT}."
-  fi
-  log INFO "Finish ${TAG} command."
-  export LOG_SCOPE="${OLD_LOG_SCOPE}"
-  return "${RT}"
-}
-
 exec_pre_run_cmd() {
   local CMD="${GANTRY_PRE_RUN_CMD:-""}"
   [ -z "${CMD}" ] && return 0
-  exec_cmd "pre-run" "${CMD}"
+  eval_cmd "pre-run" "${CMD}"
 }
 
 exec_post_run_cmd() {
   local CMD="${GANTRY_POST_RUN_CMD:-""}"
   [ -z "${CMD}" ] && return 0
-  exec_cmd "post-run" "${CMD}"
+  eval_cmd "post-run" "${CMD}"
 }
 
 exec_remove_images() {

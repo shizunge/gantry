@@ -30,6 +30,28 @@ log_level() {
   return 1;
 }
 
+level_color() {
+  local LEVEL="${1}"
+  local NO_COLOR='\033[0m'
+  local RED='\033[0;31m'
+  local ORANGE='\033[0;33m'
+  local GREEN='\033[0;32m'
+  local BLUE='\033[0;34m'
+  [ "${LEVEL}" = "DEBUG" ] && echo "${BLUE}" && return 0
+  [ "${LEVEL}" = "INFO"  ] && echo "${GREEN}" && return 0;
+  [ "${LEVEL}" = "WARN"  ] && echo "${ORANGE}" && return 0;
+  [ "${LEVEL}" = "ERROR" ] && echo "${RED}" && return 0;
+  echo "${NO_COLOR}"
+}
+
+color_iso_time() {
+  # Highlight time within the day in ISO-8601
+  # \\033[1;30m : Dark Gray
+  # \\033[0;37m : Ligth Gray
+  # \\033[0m    : No color
+  echo "${*}" | sed -E 's/(.*[0-9]+-[0-9]+-[0-9]+)T([0-9]+:[0-9]+:[0-9]+)(.*)/\\033[1;30m\1T\\033[0;37m\2\\033[1;30m\3\\033[0m/'
+}
+
 log_formatter() {
   local LOG_LEVEL="${LOG_LEVEL}"
   local LEVEL="${1}"; shift;
@@ -37,14 +59,19 @@ log_formatter() {
   local TIME="${1}"; shift;
   local LOCATION="${1}"; shift;
   local SCOPE="${1}"; shift;
-  local LOCATION_STR=
-  local SCOPE_STR=
-  local MESSAGE_STR=
-  LOCATION_STR=$(if [ -n "${LOCATION}" ]; then echo "[${LOCATION}]"; else echo ""; fi);
-  SCOPE_STR=$(if [ -n "${SCOPE}" ]; then echo "${SCOPE}: "; else echo ""; fi);
-  MESSAGE_STR=$(echo "${*}" | tr '\n' ' ')
-  local MESSAGE="[${TIME}]${LOCATION_STR}[${LEVEL}] ${SCOPE_STR}${MESSAGE_STR}";
-  echo "${MESSAGE}" >&2;
+  local NO_COLOR='\033[0m'
+  local DGRAY='\033[1;30m'
+  local MSG=
+  MSG="${DGRAY}[$(color_iso_time "${TIME}")${DGRAY}]${NO_COLOR}"
+  if [ -n "${LOCATION}" ]; then
+    MSG="${MSG}${DGRAY}[${LOCATION}]${NO_COLOR}"
+  fi
+  MSG="${MSG}$(level_color "${LEVEL}")[${LEVEL}]${NO_COLOR} "
+  if [ -n "${SCOPE}" ]; then
+    MSG="${MSG}${DGRAY}${SCOPE}:${NO_COLOR} "
+  fi
+  MSG="${MSG}$(echo "${*}" | tr '\n' ' ')"
+  echo -e "${MSG}" >&2
 }
 
 # We want to print an empty line for log without an argument. Thus we do not run the following check.
@@ -160,7 +187,7 @@ read_config() {
   [ -z "${CONFIG_NAME}" ] && return 1
   local CONFIG_FILE_NAME="${CONFIG_NAME}_FILE"
   eval "local CONFIG_FILE=\${${CONFIG_FILE_NAME}}"
-  if [ -r "${CONFIG_FILE}" ]; then
+  if [ -r "${CONFIG_FILE:-""}" ]; then
     cat "${CONFIG_FILE}"
     return $?
   elif [ -n "${CONFIG_FILE}" ]; then
@@ -169,6 +196,42 @@ read_config() {
   fi
   eval "local CONFIG=\${${CONFIG_NAME}}"
   echo "${CONFIG}"
+}
+
+# If env is unset, return the default value, otherwise return the value of env
+# This differentiates empty string and unset env.
+read_env() {
+  local VNAME="${1}"; shift
+  [ -z "${VNAME}" ] && return 1
+  if env | grep -q "${VNAME}="; then
+    eval "echo \"\${${VNAME}}\""
+  else
+    echo "${@}"
+  fi
+  return 0
+}
+
+eval_cmd() {
+  local TAG="${1}"; shift;
+  local CMD="${*}"
+  [ -z "${CMD}" ] && return 0
+  local OLD_LOG_SCOPE="${LOG_SCOPE}"
+  local SEP=" "
+  [ -z "${OLD_LOG_SCOPE}" ] && SEP=""
+  export LOG_SCOPE="${OLD_LOG_SCOPE}${SEP}${TAG}"
+  local LOG=
+  local RT=0
+  log INFO "Run ${TAG} command: ${CMD}"
+  if LOG=$(eval "${CMD}"); then
+    echo "${LOG}" | log_lines INFO
+  else
+    RT=$?
+    echo "${LOG}" | log_lines WARN
+    log WARN "${TAG} command returned a non-zero value ${RT}."
+  fi
+  log INFO "Finish ${TAG} command."
+  export LOG_SCOPE="${OLD_LOG_SCOPE}"
+  return "${RT}"
 }
 
 swarm_network_arguments() {
@@ -182,7 +245,7 @@ swarm_network_arguments() {
     return 0
   fi
   local NETWORK_ARG="--network=${NETWORK_NAME}"
-  if [ -z "${NETWORK_DNS_IP}" ]; then
+  if [ -z "${NETWORK_DNS_IP:-""}" ]; then
     echo "${NETWORK_ARG}"
     return 0
   fi
