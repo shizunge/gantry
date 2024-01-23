@@ -659,15 +659,21 @@ test_rollback_due_to_timeout() {
   local IMAGE_WITH_TAG="${1}"
   local SERVICE_NAME STDOUT
   SERVICE_NAME="gantry-test-$(unique_id)"
+  local LABEL="gantry.test"
 
   initialize_test "${FUNCNAME[0]}"
   build_and_push_test_image "${IMAGE_WITH_TAG}"
   start_replicated_service "${SERVICE_NAME}" "${IMAGE_WITH_TAG}"
   build_and_push_test_image "${IMAGE_WITH_TAG}"
+  # Prune the local copy to force re-download the image.
+  prune_local_test_image "${IMAGE_WITH_TAG}"
+  docker system prune -f;
 
   export GANTRY_SERVICES_FILTERS="name=${SERVICE_NAME}"
   # Assume service update won't be done within 1 second.
   export GANTRY_UPDATE_TIMEOUT_SECONDS=1
+  # Add a label to increase the updating time.
+  export GANTRY_UPDATE_OPTIONS="--label-add=${LABEL}=${SERVICE_NAME}"
   STDOUT=$(run_gantry "${FUNCNAME[0]}" 2>&1 | tee >(cat 1>&2))
 
   expect_no_message "${STDOUT}" "${SKIP_UPDATING_SERVICE}.*${SERVICE_NAME}"
@@ -695,15 +701,21 @@ test_rollback_failed() {
   local IMAGE_WITH_TAG="${1}"
   local SERVICE_NAME STDOUT
   SERVICE_NAME="gantry-test-$(unique_id)"
+  local LABEL="gantry.test"
 
   initialize_test "${FUNCNAME[0]}"
   build_and_push_test_image "${IMAGE_WITH_TAG}"
   start_replicated_service "${SERVICE_NAME}" "${IMAGE_WITH_TAG}"
   build_and_push_test_image "${IMAGE_WITH_TAG}"
+  # Prune the local copy to force re-download the image.
+  prune_local_test_image "${IMAGE_WITH_TAG}"
+  docker system prune -f;
 
   export GANTRY_SERVICES_FILTERS="name=${SERVICE_NAME}"
   # Assume service update won't be done within 1 second.
   export GANTRY_UPDATE_TIMEOUT_SECONDS=1
+  export GANTRY_UPDATE_OPTIONS="--label-add=${LABEL}=${SERVICE_NAME}"
+  # Rollback would fail due to the incorrect option.
   export GANTRY_ROLLBACK_OPTIONS="--incorrect_option"
   STDOUT=$(run_gantry "${FUNCNAME[0]}" 2>&1 | tee >(cat 1>&2))
 
@@ -732,15 +744,20 @@ test_rollback_ROLLBACK_ON_FAILURE_false() {
   local IMAGE_WITH_TAG="${1}"
   local SERVICE_NAME STDOUT
   SERVICE_NAME="gantry-test-$(unique_id)"
+  local LABEL="gantry.test"
 
   initialize_test "${FUNCNAME[0]}"
   build_and_push_test_image "${IMAGE_WITH_TAG}"
   start_replicated_service "${SERVICE_NAME}" "${IMAGE_WITH_TAG}"
   build_and_push_test_image "${IMAGE_WITH_TAG}"
+  # Prune the local copy to force re-download the image.
+  prune_local_test_image "${IMAGE_WITH_TAG}"
+  docker system prune -f;
 
   export GANTRY_SERVICES_FILTERS="name=${SERVICE_NAME}"
   # Assume service update won't be done within 1 second.
   export GANTRY_UPDATE_TIMEOUT_SECONDS=1
+  export GANTRY_UPDATE_OPTIONS="--label-add=${LABEL}=${SERVICE_NAME}"
   export GANTRY_ROLLBACK_ON_FAILURE="false"
   STDOUT=$(run_gantry "${FUNCNAME[0]}" 2>&1 | tee >(cat 1>&2))
 

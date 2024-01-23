@@ -53,14 +53,17 @@ initialize_test() {
 
 finalize_test() {
   local TEST_NAME=${1}
-  local TSET_STATUS="OK"
+  local RED='\033[0;31m'
+  local GREEN='\033[0;32m'
+  local NO_COLOR='\033[0m'
+  local TSET_STATUS="${GREEN}OK${NO_COLOR}"
   local RETURN_VALUE=0
   if [ "${STATIC_VAR_THIS_TEST_ERRORS}" -ne 0 ]; then
-    TSET_STATUS="${STATIC_VAR_THIS_TEST_ERRORS} ERRORS"
+    TSET_STATUS="${RED}${STATIC_VAR_THIS_TEST_ERRORS} ERRORS${NO_COLOR}"
     RETURN_VALUE=1
   fi
   echo "=============================="
-  echo "== ${TEST_NAME} ${TSET_STATUS}"
+  echo -e "== ${TEST_NAME} ${TSET_STATUS}"
   return "${RETURN_VALUE}"
 }
 
@@ -107,8 +110,10 @@ run_test() {
   if type "${TEST}" >/dev/null 2>&1; then
     ${TEST} "${@}"
   else
+    local RED='\033[0;31m'
+    local NO_COLOR='\033[0m'
     echo "=============================="
-    echo "== ${TEST} is missing."
+    echo -e "== ${TEST} is ${RED}missing${NO_COLOR}."
     STATIC_VAR_MISSING_TESTS="${STATIC_VAR_MISSING_TESTS} ${TEST}"
     handle_failure "${TEST} is missing."
   fi
@@ -116,7 +121,9 @@ run_test() {
 
 handle_failure() {
   local MESSAGE="${1}"
-  echo "ERROR ${MESSAGE}" >&2
+  local RED='\033[0;31m'
+  local NO_COLOR='\033[0m'
+  echo -e "${RED}ERROR${NO_COLOR} ${MESSAGE}" >&2
   STATIC_VAR_THIS_TEST_ERRORS=$((STATIC_VAR_THIS_TEST_ERRORS+1))
   STATIC_VAR_ALL_ERRORS=$((STATIC_VAR_ALL_ERRORS+1))
 }
@@ -124,21 +131,25 @@ handle_failure() {
 expect_message() {
   TEXT=${1}
   MESSAGE=${2}
+  local GREEN='\033[0;32m'
+  local NO_COLOR='\033[0m'
   if ! ACTUAL_MSG=$(echo "${TEXT}" | grep -P "${MESSAGE}"); then
     handle_failure "Failed to find expected message \"${MESSAGE}\"."
     return 1
   fi
-  echo "EXPECTED found message: ${ACTUAL_MSG}"
+  echo -e "${GREEN}EXPECTED${NO_COLOR} found message: ${ACTUAL_MSG}"
 }
 
 expect_no_message() {
   TEXT=${1}
   MESSAGE=${2}
+  local GREEN='\033[0;32m'
+  local NO_COLOR='\033[0m'
   if ACTUAL_MSG=$(echo "${TEXT}" | grep -P "${MESSAGE}"); then
     handle_failure "Message \"${ACTUAL_MSG}\" should not present."
     return 1
   fi
-  echo "EXPECTED found no message matches: ${MESSAGE}"
+  echo -e "${GREEN}EXPECTED${NO_COLOR} found no message matches: ${MESSAGE}"
 }
 
 unique_id() {
