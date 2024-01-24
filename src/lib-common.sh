@@ -18,19 +18,19 @@
 # echo the number of the log level.
 # return 0 if LEVEL is supported.
 # return 1 if LEVLE is unsupported.
-log_level() {
+_log_level() {
   local LEVEL="${1}";
-  [ -z "${LEVEL}" ] && log_level "INFO" && return 1;
+  [ -z "${LEVEL}" ] && _log_level "INFO" && return 1;
   [ "${LEVEL}" = "DEBUG" ] && echo 0 && return 0;
   [ "${LEVEL}" = "INFO"  ] && echo 1 && return 0;
   [ "${LEVEL}" = "WARN"  ] && echo 2 && return 0;
   [ "${LEVEL}" = "ERROR" ] && echo 3 && return 0;
   [ "${LEVEL}" = "NONE"  ] && echo 4 && return 0;
-  log_level "NONE";
+  _log_level "NONE";
   return 1;
 }
 
-level_color() {
+_level_color() {
   local LEVEL="${1}"
   local NO_COLOR='\033[0m'
   local RED='\033[0;31m'
@@ -44,7 +44,7 @@ level_color() {
   echo "${NO_COLOR}"
 }
 
-color_iso_time() {
+_color_iso_time() {
   # Highlight time within the day in ISO-8601
   # \\033[1;30m : Dark Gray
   # \\033[0;37m : Ligth Gray
@@ -52,21 +52,21 @@ color_iso_time() {
   echo "${*}" | sed -E 's/(.*[0-9]+-[0-9]+-[0-9]+)T([0-9]+:[0-9]+:[0-9]+)(.*)/\\033[1;30m\1T\\033[0;37m\2\\033[1;30m\3\\033[0m/'
 }
 
-log_formatter() {
+_log_formatter() {
   local LOG_LEVEL="${LOG_LEVEL}"
   local LEVEL="${1}"; shift;
-  [ "$(log_level "${LEVEL}")" -lt "$(log_level "${LOG_LEVEL}")" ] && return 0;
+  [ "$(_log_level "${LEVEL}")" -lt "$(_log_level "${LOG_LEVEL}")" ] && return 0;
   local TIME="${1}"; shift;
   local LOCATION="${1}"; shift;
   local SCOPE="${1}"; shift;
   local NO_COLOR='\033[0m'
   local DGRAY='\033[1;30m'
   local MSG=
-  MSG="${DGRAY}[$(color_iso_time "${TIME}")${DGRAY}]${NO_COLOR}"
+  MSG="${DGRAY}[$(_color_iso_time "${TIME}")${DGRAY}]${NO_COLOR}"
   if [ -n "${LOCATION}" ]; then
     MSG="${MSG}${DGRAY}[${LOCATION}]${NO_COLOR}"
   fi
-  MSG="${MSG}$(level_color "${LEVEL}")[${LEVEL}]${NO_COLOR} "
+  MSG="${MSG}$(_level_color "${LEVEL}")[${LEVEL}]${NO_COLOR} "
   if [ -n "${SCOPE}" ]; then
     MSG="${MSG}${DGRAY}${SCOPE}:${NO_COLOR} "
   fi
@@ -80,14 +80,14 @@ log() {
   local NODE_NAME="${NODE_NAME}"
   local LOG_SCOPE="${LOG_SCOPE}"
   local LEVEL="INFO";
-  if log_level "${1}" >/dev/null; then
+  if _log_level "${1}" >/dev/null; then
     LEVEL="${1}";
     shift;
   fi;
-  log_formatter "${LEVEL}" "$(date -Iseconds)" "${NODE_NAME}" "${LOG_SCOPE}" "${@}";
+  _log_formatter "${LEVEL}" "$(date -Iseconds)" "${NODE_NAME}" "${LOG_SCOPE}" "${@}";
 }
 
-log_docker_time() {
+_log_docker_time() {
   # Convert timestamps from `docker service logs` to ISO-8601. The timestamps is in UTC.
   # docker service logs --timestamps --no-task-ids <service>
   # 2023-06-22T01:20:54.535860111Z <task>@<node>    | <msg>
@@ -105,11 +105,11 @@ log_docker_time() {
 # Convert logs from `docker service logs` to `log` format.
 # docker service logs --timestamps --no-task-ids <service>
 # 2023-06-22T01:20:54.535860111Z <task>@<node>    | <msg>
-log_docker_line() {
+_log_docker_line() {
   local LEVEL="INFO";
   local TIME_DOCKER TIME SCOPE NODE MESSAGE SPACE FIRST_WORD
   TIME_DOCKER=$(echo "${@}" | cut -d ' ' -f 1);
-  TIME=$(log_docker_time "${TIME_DOCKER}")
+  TIME=$(_log_docker_time "${TIME_DOCKER}")
   SCOPE=$(echo "${@}" | cut -d ' ' -f 2 | cut -d '@' -f 1);
   NODE=$(echo "${@}" | cut -d ' ' -f 2 | cut -d '@' -f 2);
   MESSAGE=$(echo "${@}" | cut -d '|' -f 2-);
@@ -117,11 +117,11 @@ log_docker_line() {
   SPACE=$(echo "${MESSAGE}" | cut -d ' ' -f 1)
   [ -z "${SPACE}" ] && MESSAGE=$(echo "${MESSAGE}" | cut -d ' ' -f 2-)
   FIRST_WORD=$(echo "${MESSAGE}" | cut -d ' ' -f 1);
-  if log_level "${FIRST_WORD}" >/dev/null; then
+  if _log_level "${FIRST_WORD}" >/dev/null; then
     LEVEL=${FIRST_WORD};
     MESSAGE=$(echo "${MESSAGE}" | cut -d ' ' -f 2-);
   fi
-  log_formatter "${LEVEL}" "${TIME}" "${NODE}" "${SCOPE}" "${MESSAGE}";
+  _log_formatter "${LEVEL}" "${TIME}" "${NODE}" "${SCOPE}" "${MESSAGE}";
 }
 
 # Usage: echo "${LOGS}" | log_lines INFO
@@ -158,7 +158,7 @@ difference_between() {
   return 1
 }
 
-time_elapsed_between() {
+_time_elapsed_between() {
   local TIME0="${1}"
   local TIME1="${2}"
   local SECONDS_ELAPSED=
@@ -171,7 +171,7 @@ time_elapsed_between() {
 
 time_elapsed_since() {
   local START_TIME="${1}"
-  time_elapsed_between "$(date +%s)" "${START_TIME}"
+  _time_elapsed_between "$(date +%s)" "${START_TIME}"
 }
 
 add_uniq_to_list() {
@@ -256,12 +256,12 @@ timezone_arguments() {
   echo "--env \"TZ=${TZ}\" --mount type=bind,source=/etc/localtime,destination=/etc/localtime,ro"
 }
 
-get_docker_command_name_arg() {
+_get_docker_command_name_arg() {
   # get <NAME> from "--name <NAME>" or "--name=<NAME>"
   echo "${@}" | tr '\n' ' ' | sed -E 's/.*--name[ =]([^ ]*).*/\1/'
 }
 
-get_docker_command_detach() {
+_get_docker_command_detach() {
   if echo "${@}" | grep -q -- "--detach"; then
     echo "true"
     return 0
@@ -278,7 +278,7 @@ docker_service_logs () {
   fi
   echo "${LOGS}" |
   while read -r LINE; do
-    log_docker_line "${LINE}"
+    _log_docker_line "${LINE}"
   done
 }
 
@@ -286,11 +286,11 @@ docker_service_logs_follow() {
   local SERVICE_NAME="${1}"
   docker service logs --timestamps --no-task-ids --follow "${SERVICE_NAME}" 2>&1 |
   while read -r LINE; do
-    log_docker_line "${LINE}"
+    _log_docker_line "${LINE}"
   done
 }
 
-docker_service_task_states() {
+_docker_service_task_states() {
   local SERVICE_NAME="${1}"
   # We won't get the return value of the command via $? if we use "local STATES=$(command)".
   local STATES=
@@ -324,7 +324,7 @@ wait_service_state() {
   local RETURN_VALUE=0
   local SLEEP_SECONDS=1
   local STATES=
-  STATES=$(docker_service_task_states "${SERVICE_NAME}" 2>&1)
+  STATES=$(_docker_service_task_states "${SERVICE_NAME}" 2>&1)
   while is_true "${WAIT_RUNNING}" || is_true "${WAIT_COMPLETE}" ; do
     local NUM_LINES=0
     local NUM_RUNS=0
@@ -356,7 +356,7 @@ wait_service_state() {
       fi
     fi
     sleep "${SLEEP_SECONDS}"
-    if ! STATES=$(docker_service_task_states "${SERVICE_NAME}" 2>&1); then
+    if ! STATES=$(_docker_service_task_states "${SERVICE_NAME}" 2>&1); then
       log ERROR "Failed to obtain task states of service ${SERVICE_NAME}: ${STATES}"
       return 1
     fi
@@ -384,7 +384,7 @@ docker_service_remove() {
 # We do not check the converge of the service. It must be used togther with wait_service_state.
 docker_global_job() {
   local SERVICE_NAME=
-  SERVICE_NAME=$(get_docker_command_name_arg "${@}")
+  SERVICE_NAME=$(_get_docker_command_name_arg "${@}")
   log INFO "Starting service ${SERVICE_NAME}."
   docker service create \
     --mode global-job \
@@ -395,8 +395,8 @@ docker_global_job() {
 docker_replicated_job() {
   local SERVICE_NAME=
   local IS_DETACH=
-  SERVICE_NAME=$(get_docker_command_name_arg "${@}")
-  IS_DETACH=$(get_docker_command_detach "${@}")
+  SERVICE_NAME=$(_get_docker_command_name_arg "${@}")
+  IS_DETACH=$(_get_docker_command_detach "${@}")
   # Add "--detach" to work around https://github.com/docker/cli/issues/2979
   # The Docker CLI does not exit on failures.
   log INFO "Starting service ${SERVICE_NAME}."
@@ -411,7 +411,7 @@ docker_replicated_job() {
   return ${RETURN_VALUE}
 }
 
-container_status() {
+_container_status() {
   local CNAME="${1}"
   docker container inspect --format '{{.State.Status}}' "${CNAME}" 2>/dev/null
 }
@@ -419,7 +419,7 @@ container_status() {
 docker_remove() {
   local CNAME="${1}"
   local STATUS=
-  STATUS=$(container_status "${CNAME}")
+  STATUS=$(_container_status "${CNAME}")
   if [ -z "${STATUS}" ]; then
     return 0
   fi

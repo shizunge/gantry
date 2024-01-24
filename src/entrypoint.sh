@@ -39,7 +39,7 @@ load_libraries() {
   . ${LIB_DIR}/lib-gantry.sh
 }
 
-skip_current_node() {
+_skip_current_node() {
   local SELF_ID=
   SELF_ID=$(docker node inspect self --format "{{.Description.Hostname}}" 2>/dev/null);
   if [ -z "${SELF_ID}" ]; then
@@ -50,44 +50,12 @@ skip_current_node() {
   return 1
 }
 
-exec_pre_run_cmd() {
-  local CMD="${GANTRY_PRE_RUN_CMD:-""}"
-  [ -z "${CMD}" ] && return 0
-  eval_cmd "pre-run" "${CMD}"
-}
-
-exec_post_run_cmd() {
-  local CMD="${GANTRY_POST_RUN_CMD:-""}"
-  [ -z "${CMD}" ] && return 0
-  eval_cmd "post-run" "${CMD}"
-}
-
-exec_remove_images() {
-  local IMAGES_TO_REMOVE="${1}"
-  local IMAGE RMI_MSG
-  for IMAGE in ${IMAGES_TO_REMOVE}; do
-    if ! docker image inspect "${IMAGE}" 1>/dev/null 2>&1 ; then
-      log DEBUG "There is no image ${IMAGE} on the node.";
-      continue;
-    fi;
-    remove_container "${IMAGE}" exited;
-    remove_container "${IMAGE}" dead;
-    if ! RMI_MSG=$(docker rmi "${IMAGE}" 2>&1); then
-      log ERROR "Failed to remove image ${IMAGE}.";
-      echo "${RMI_MSG}" | log_lines ERROR
-      continue;
-    fi;
-    log INFO "Removed image ${IMAGE}.";
-  done;
-  log INFO "Done.";
-}
-
 gantry() {
   local STACK="${1:-gantry}"
   local START_TIME=
   START_TIME=$(date +%s)
 
-  if skip_current_node ; then
+  if _skip_current_node ; then
     return 0
   fi
   local ACCUMULATED_ERRORS=0
@@ -96,7 +64,7 @@ gantry() {
   local DOCKER_HUB_RATE_USED=
   local TIME_ELAPSED=
 
-  exec_pre_run_cmd
+  eval_cmd "pre-run" "${GANTRY_PRE_RUN_CMD:-""}"
 
   log INFO "Starting."
   gantry_initialize "${STACK}"
@@ -130,7 +98,7 @@ gantry() {
     log INFO "${MESSAGE}"
   fi
 
-  exec_post_run_cmd
+  eval_cmd "post-run" "${GANTRY_POST_RUN_CMD:-""}"
 
   return ${ACCUMULATED_ERRORS}
 }
@@ -143,7 +111,7 @@ main() {
     # Image remover runs as a global job. The log will be collected via docker commands then formatted.
     # Redefine the log function for the formater.
     log() { echo "${@}"; }
-    exec_remove_images "${GANTRY_IMAGES_TO_REMOVE}"
+    gantry_remove_images "${GANTRY_IMAGES_TO_REMOVE}"
     return $?
   fi
   local INTERVAL_SECONDS="${GANTRY_SLEEP_SECONDS:-0}"

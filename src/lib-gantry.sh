@@ -15,7 +15,7 @@
 # along with this program.  If not, see <https://www.gnu.org/licenses/>.
 #
 
-login_registry() {
+_login_registry() {
   local USER="${1}"
   local PASSWORD="${2}"
   local HOST="${3}"
@@ -42,7 +42,7 @@ login_registry() {
   fi
 }
 
-authenticate_to_registries() {
+_authenticate_to_registries() {
   local CONFIGS_FILE="${GANTRY_REGISTRY_CONFIGS_FILE:-""}"
   local CONFIG HOST PASSWORD USER
   if ! CONFIG=$(read_config GANTRY_REGISTRY_CONFIG 2>&1); then
@@ -58,7 +58,7 @@ authenticate_to_registries() {
     log ERROR "Failed to set USER: ${USER}" && return 1;
   fi
   if [ -n "${USER}" ]; then
-    login_registry "${USER}" "${PASSWORD}" "${HOST}" "${CONFIG}"
+    _login_registry "${USER}" "${PASSWORD}" "${HOST}" "${CONFIG}"
   fi
   [ -z "${CONFIGS_FILE}" ] && return 0
   [ ! -r "${CONFIGS_FILE}" ] && log ERROR "Failed to read ${CONFIGS_FILE}." && return 1
@@ -79,11 +79,11 @@ authenticate_to_registries() {
       log ERROR "${CONFIGS_FILE} format error. A line should contains only \"<CONFIG> <HOST> <USER> <PASSWORD>\". Got \"${LINE}\"."
       continue
     fi
-    login_registry "${USER}" "${PASSWORD}" "${HOST}" "${CONFIG}"
+    _login_registry "${USER}" "${PASSWORD}" "${HOST}" "${CONFIG}"
   done <"${CONFIGS_FILE}"
 }
 
-send_notification() {
+_send_notification() {
   local TYPE="${1}"
   local TITLE="${2}"
   local BODY="${3}"
@@ -93,7 +93,7 @@ send_notification() {
   notify_summary "${TYPE}" "${TITLE}" "${BODY}"
 }
 
-add_image_to_remove() {
+_add_image_to_remove() {
   local IMAGE="${1}"
   if [ -z "${STATIC_VAR_IMAGES_TO_REMOVE}" ]; then
     STATIC_VAR_IMAGES_TO_REMOVE=${IMAGE}
@@ -102,7 +102,7 @@ add_image_to_remove() {
   STATIC_VAR_IMAGES_TO_REMOVE=$(add_uniq_to_list "${STATIC_VAR_IMAGES_TO_REMOVE}" "${IMAGE}")
 }
 
-remove_container() {
+_remove_container() {
   local IMAGE="${1}";
   local STATUS="${2}";
   local CIDS=
@@ -123,7 +123,27 @@ remove_container() {
   done;
 };
 
-remove_images() {
+gantry_remove_images() {
+  local IMAGES_TO_REMOVE="${1}"
+  local IMAGE RMI_MSG
+  for IMAGE in ${IMAGES_TO_REMOVE}; do
+    if ! docker image inspect "${IMAGE}" 1>/dev/null 2>&1 ; then
+      log DEBUG "There is no image ${IMAGE} on the node.";
+      continue;
+    fi;
+    _remove_container "${IMAGE}" exited;
+    _remove_container "${IMAGE}" dead;
+    if ! RMI_MSG=$(docker rmi "${IMAGE}" 2>&1); then
+      log ERROR "Failed to remove image ${IMAGE}.";
+      echo "${RMI_MSG}" | log_lines ERROR
+      continue;
+    fi;
+    log INFO "Removed image ${IMAGE}.";
+  done;
+  log INFO "Done.";
+}
+
+_remove_images() {
   local CLEANUP_IMAGES="${GANTRY_CLEANUP_IMAGES:-"true"}"
   local CLEANUP_IMAGES_OPTIONS="${GANTRY_CLEANUP_IMAGES_OPTIONS:-""}"
   if ! is_true "${CLEANUP_IMAGES}"; then
@@ -165,7 +185,7 @@ remove_images() {
   docker_service_remove "${SERVICE_NAME}"
 }
 
-add_service_updated() {
+_add_service_updated() {
   local SERVICE_NAME="${1}"
   if [ -z "${STATIC_VAR_SERVICES_UPDATED}" ]; then
     STATIC_VAR_SERVICES_UPDATED=${SERVICE_NAME}
@@ -174,7 +194,7 @@ add_service_updated() {
   STATIC_VAR_SERVICES_UPDATED=$(add_uniq_to_list "${STATIC_VAR_SERVICES_UPDATED}" "${SERVICE_NAME}")
 }
 
-report_services_updated() {
+_report_services_updated() {
   if [ -z "${STATIC_VAR_SERVICES_UPDATED}" ]; then
     echo "No services updated."
     return 0
@@ -187,7 +207,7 @@ report_services_updated() {
   done
 }
 
-add_service_update_failed() {
+_add_service_update_failed() {
   local SERVICE_NAME="${1}"
   if [ -z "${STATIC_VAR_SERVICES_UPDATE_FAILED}" ]; then
     STATIC_VAR_SERVICES_UPDATE_FAILED=${SERVICE_NAME}
@@ -221,7 +241,7 @@ get_number_of_elements() {
 report_services() {
   local UPDATED_MSG=
   local FAILED_MSG=
-  UPDATED_MSG=$(report_services_updated)
+  UPDATED_MSG=$(_report_services_updated)
   echo "${UPDATED_MSG}" | log_lines INFO
   FAILED_MSG=$(report_services_update_failed)
   echo "${FAILED_MSG}" | log_lines INFO
@@ -233,7 +253,7 @@ report_services() {
   [ "${FAILED_NUM}" -ne "0" ] && TYPE="failure"
   TITLE="[gantry] ${UPDATED_NUM} services updated ${FAILED_NUM} failed"
   BODY=$(echo -e "${UPDATED_MSG}\n${FAILED_MSG}")
-  send_notification "${TYPE}" "${TITLE}" "${BODY}"
+  _send_notification "${TYPE}" "${TITLE}" "${BODY}"
 }
 
 in_list() {
@@ -514,7 +534,7 @@ update_single_service() {
     # Today no options are added based on services label/status. This is just a placeholder now.
     local ROLLBACK_ADDITIONAL_OPTIONS=
     rollback_service "${SERVICE_NAME}" "${DOCKER_CONFIG}" "${ROLLBACK_ADDITIONAL_OPTIONS}"
-    add_service_update_failed "${SERVICE_NAME}"
+    _add_service_update_failed "${SERVICE_NAME}"
     return 1
   fi
   local PREVIOUS_IMAGE=
@@ -525,8 +545,8 @@ update_single_service() {
     log INFO "No updates."
     return 0
   fi
-  add_service_updated "${SERVICE_NAME}"
-  add_image_to_remove "${PREVIOUS_IMAGE}"
+  _add_service_updated "${SERVICE_NAME}"
+  _add_image_to_remove "${PREVIOUS_IMAGE}"
   log INFO "UPDATED."
   return 0
 }
@@ -555,7 +575,7 @@ gantry_initialize() {
   STATIC_VAR_SERVICES_UPDATE_FAILED=
   STATIC_VAR_NO_NEW_IMAGES=
   STATIC_VAR_NEW_IMAGES=
-  authenticate_to_registries
+  _authenticate_to_registries
 }
 
 gantry_get_services_list() {
@@ -608,6 +628,6 @@ gantry_update_services_list() {
 
 gantry_finalize() {
   local STACK="${1:-gantry}"
-  remove_images "${STACK}_image-remover"
+  _remove_images "${STACK}_image-remover"
   report_services;
 }
