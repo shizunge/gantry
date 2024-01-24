@@ -169,15 +169,22 @@ read_service_label() {
 
 build_and_push_test_image() {
   local IMAGE_WITH_TAG="${1}"
-  local SLEEP_SECONDS="${2}"
-  local SLEEP_CMD="sleep ${SLEEP_SECONDS}"
-  if [ -z "${SLEEP_SECONDS}" ]; then
-    SLEEP_CMD="tail -f /dev/null"
+  local TASK_SECONDS="${2}"
+  local EXIT_SECONDS="${3}"
+  # Run the container forever
+  local TASK_CMD="tail -f /dev/null;"
+  if [ -n "${TASK_SECONDS}" ] && [ "${TASK_SECONDS}" -ge "0" ]; then
+    # Finsih the job in the given time.
+    TASK_CMD="sleep ${TASK_SECONDS};"
+  fi
+  local EXIT_CMD="sleep 0;"
+  if [ -n "${EXIT_SECONDS}" ] && [ "${EXIT_SECONDS}" -gt "0" ]; then
+    EXIT_CMD="sleep ${EXIT_SECONDS};"
   fi
   local FILE=
   FILE=$(mktemp)
   echo "FROM alpinelinux/docker-cli:latest" > "${FILE}"
-  echo "ENTRYPOINT [\"sh\", \"-c\", \"echo $(unique_id); trap \\\"sleep 2s;\\\" HUP INT TERM; ${SLEEP_CMD};\"]" >> "${FILE}"
+  echo "ENTRYPOINT [\"sh\", \"-c\", \"echo $(unique_id); trap \\\"${EXIT_CMD}\\\" HUP INT TERM; ${TASK_CMD}\"]" >> "${FILE}"
   echo -n "Building ${IMAGE_WITH_TAG} "
   timeout 300 docker build --quiet --tag "${IMAGE_WITH_TAG}" --file "${FILE}" .
   echo -n "Pushing ${IMAGE_WITH_TAG} "

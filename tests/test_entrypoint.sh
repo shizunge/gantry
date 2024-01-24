@@ -419,13 +419,15 @@ test_jobs_UPDATE_JOBS_true() {
 
 test_jobs_UPDATE_JOBS_true_no_running_tasks() {
   local IMAGE_WITH_TAG="${1}"
-  local SERVICE_NAME SLEEP_SECONDS STDOUT
+  local SERVICE_NAME STDOUT
   SERVICE_NAME="gantry-test-$(unique_id)"
-  SLEEP_SECONDS=15
+  local TASK_SECONDS=15
 
   initialize_test "${FUNCNAME[0]}"
-  build_and_push_test_image "${IMAGE_WITH_TAG}" "${SLEEP_SECONDS}"
+  # The task will finish in ${TASK_SECONDS} seconds
+  build_and_push_test_image "${IMAGE_WITH_TAG}" "${TASK_SECONDS}"
   start_replicated_job "${SERVICE_NAME}" "${IMAGE_WITH_TAG}"
+  # The tasks should exit after TASK_SECONDS seconds sleep. Then it will have 0 running tasks.
   wait_zero_running_tasks "${SERVICE_NAME}"
   build_and_push_test_image "${IMAGE_WITH_TAG}"
 
@@ -619,14 +621,15 @@ test_no_running_tasks_global() {
   # Add "--detach=true" when there is no running tasks.
   # https://github.com/docker/cli/issues/627
   local IMAGE_WITH_TAG="${1}"
-  local SERVICE_NAME SLEEP_SECONDS STDOUT
+  local SERVICE_NAME STDOUT
   SERVICE_NAME="gantry-test-$(unique_id)"
-  SLEEP_SECONDS=15
+  local TASK_SECONDS=15
 
   initialize_test "${FUNCNAME[0]}"
-  build_and_push_test_image "${IMAGE_WITH_TAG}" "${SLEEP_SECONDS}"
+  # The task will finish in ${TASK_SECONDS} seconds
+  build_and_push_test_image "${IMAGE_WITH_TAG}" "${TASK_SECONDS}"
   start_global_service "${SERVICE_NAME}" "${IMAGE_WITH_TAG}"
-  # The tasks should exit after SLEEP_SECONDS seconds sleep. Then it will have 0 running tasks.
+  # The tasks should exit after TASK_SECONDS seconds sleep. Then it will have 0 running tasks.
   wait_zero_running_tasks "${SERVICE_NAME}"
   build_and_push_test_image "${IMAGE_WITH_TAG}"
 
@@ -661,26 +664,23 @@ test_rollback_due_to_timeout() {
   local IMAGE_WITH_TAG="${1}"
   local SERVICE_NAME STDOUT
   SERVICE_NAME="gantry-test-$(unique_id)"
-  local LABEL="gantry.test"
+  local TIMEOUT=3
+  local DOUBLE_TIMEOUT=$((TIMEOUT+TIMEOUT))
 
   initialize_test "${FUNCNAME[0]}"
-  build_and_push_test_image "${IMAGE_WITH_TAG}"
+  # -1 thus the task runs forever.
+  # exit will take double of the timeout.
+  build_and_push_test_image "${IMAGE_WITH_TAG}" "-1" "${DOUBLE_TIMEOUT}"
   start_replicated_service "${SERVICE_NAME}" "${IMAGE_WITH_TAG}"
   build_and_push_test_image "${IMAGE_WITH_TAG}"
-  # Prune the local copy to force re-download the image.
-  prune_local_test_image "${IMAGE_WITH_TAG}"
-  docker system prune -f;
 
   export GANTRY_SERVICES_FILTERS="name=${SERVICE_NAME}"
   # Assume service update won't be done within 1 second.
-  export GANTRY_UPDATE_TIMEOUT_SECONDS=1
-  # Add a label to increase the updating time.
-  export GANTRY_UPDATE_OPTIONS="--label-add=${LABEL}=${SERVICE_NAME}"
+  export GANTRY_UPDATE_TIMEOUT_SECONDS="${TIMEOUT}"
   STDOUT=$(run_gantry "${FUNCNAME[0]}" 2>&1 | tee >(cat 1>&2))
 
   expect_no_message "${STDOUT}" "${SKIP_UPDATING_SERVICE}.*${SERVICE_NAME}"
   expect_no_message "${STDOUT}" "${SERVICE_NAME}.*${NO_NEW_IMAGE}"
-  expect_message    "${STDOUT}" "${ADD_OPTION}.*${GANTRY_UPDATE_OPTIONS}"
   expect_no_message "${STDOUT}" "${SERVICE_NAME}.*${UPDATED}"
   expect_no_message "${STDOUT}" "${SERVICE_NAME}.*${NO_UPDATES}"
   expect_message    "${STDOUT}" "${ROLLING_BACK}.*${SERVICE_NAME}"
@@ -704,27 +704,25 @@ test_rollback_failed() {
   local IMAGE_WITH_TAG="${1}"
   local SERVICE_NAME STDOUT
   SERVICE_NAME="gantry-test-$(unique_id)"
-  local LABEL="gantry.test"
+  local TIMEOUT=3
+  local DOUBLE_TIMEOUT=$((TIMEOUT+TIMEOUT))
 
   initialize_test "${FUNCNAME[0]}"
-  build_and_push_test_image "${IMAGE_WITH_TAG}"
+  # -1 thus the task runs forever.
+  # exit will take double of the timeout.
+  build_and_push_test_image "${IMAGE_WITH_TAG}" "-1" "${DOUBLE_TIMEOUT}"
   start_replicated_service "${SERVICE_NAME}" "${IMAGE_WITH_TAG}"
   build_and_push_test_image "${IMAGE_WITH_TAG}"
-  # Prune the local copy to force re-download the image.
-  prune_local_test_image "${IMAGE_WITH_TAG}"
-  docker system prune -f;
 
   export GANTRY_SERVICES_FILTERS="name=${SERVICE_NAME}"
   # Assume service update won't be done within 1 second.
-  export GANTRY_UPDATE_TIMEOUT_SECONDS=1
-  export GANTRY_UPDATE_OPTIONS="--label-add=${LABEL}=${SERVICE_NAME}"
+  export GANTRY_UPDATE_TIMEOUT_SECONDS="${TIMEOUT}"
   # Rollback would fail due to the incorrect option.
   export GANTRY_ROLLBACK_OPTIONS="--incorrect-option"
   STDOUT=$(run_gantry "${FUNCNAME[0]}" 2>&1 | tee >(cat 1>&2))
 
   expect_no_message "${STDOUT}" "${SKIP_UPDATING_SERVICE}.*${SERVICE_NAME}"
   expect_no_message "${STDOUT}" "${SERVICE_NAME}.*${NO_NEW_IMAGE}"
-  expect_message    "${STDOUT}" "${ADD_OPTION}.*${GANTRY_UPDATE_OPTIONS}"
   expect_no_message "${STDOUT}" "${SERVICE_NAME}.*${UPDATED}"
   expect_no_message "${STDOUT}" "${SERVICE_NAME}.*${NO_UPDATES}"
   expect_message    "${STDOUT}" "${ADD_OPTION}.*${GANTRY_ROLLBACK_OPTIONS}"
@@ -749,26 +747,24 @@ test_rollback_ROLLBACK_ON_FAILURE_false() {
   local IMAGE_WITH_TAG="${1}"
   local SERVICE_NAME STDOUT
   SERVICE_NAME="gantry-test-$(unique_id)"
-  local LABEL="gantry.test"
+  local TIMEOUT=3
+  local DOUBLE_TIMEOUT=$((TIMEOUT+TIMEOUT))
 
   initialize_test "${FUNCNAME[0]}"
-  build_and_push_test_image "${IMAGE_WITH_TAG}"
+  # -1 thus the task runs forever.
+  # exit will take double of the timeout.
+  build_and_push_test_image "${IMAGE_WITH_TAG}" "-1" "${DOUBLE_TIMEOUT}"
   start_replicated_service "${SERVICE_NAME}" "${IMAGE_WITH_TAG}"
   build_and_push_test_image "${IMAGE_WITH_TAG}"
-  # Prune the local copy to force re-download the image.
-  prune_local_test_image "${IMAGE_WITH_TAG}"
-  docker system prune -f;
 
   export GANTRY_SERVICES_FILTERS="name=${SERVICE_NAME}"
   # Assume service update won't be done within 1 second.
-  export GANTRY_UPDATE_TIMEOUT_SECONDS=1
-  export GANTRY_UPDATE_OPTIONS="--label-add=${LABEL}=${SERVICE_NAME}"
+  export GANTRY_UPDATE_TIMEOUT_SECONDS="${TIMEOUT}"
   export GANTRY_ROLLBACK_ON_FAILURE="false"
   STDOUT=$(run_gantry "${FUNCNAME[0]}" 2>&1 | tee >(cat 1>&2))
 
   expect_no_message "${STDOUT}" "${SKIP_UPDATING_SERVICE}.*${SERVICE_NAME}"
   expect_no_message "${STDOUT}" "${SERVICE_NAME}.*${NO_NEW_IMAGE}"
-  expect_message    "${STDOUT}" "${ADD_OPTION}.*${GANTRY_UPDATE_OPTIONS}"
   expect_no_message "${STDOUT}" "${SERVICE_NAME}.*${UPDATED}"
   expect_no_message "${STDOUT}" "${SERVICE_NAME}.*${NO_UPDATES}"
   expect_no_message "${STDOUT}" "${ROLLING_BACK}.*${SERVICE_NAME}"
