@@ -156,7 +156,9 @@ unique_id() {
   # Try to generate a unique id.
   # To reduce the possibility that tests run in parallel on the same machine affect each other.
   local PID="$$"
-  echo "$(date +%s)-${PID}"
+  local RANDOM_STR=
+  RANDOM_STR=$(head /dev/urandom | LANG=C tr -dc 'A-Za-z0-9' | head -c 8)
+  echo "$(date +%s)-${PID}-${RANDOM_STR}"
 }
 
 read_service_label() {
@@ -175,7 +177,7 @@ build_and_push_test_image() {
   local FILE=
   FILE=$(mktemp)
   echo "FROM alpinelinux/docker-cli:latest" > "${FILE}"
-  echo "ENTRYPOINT [\"sh\", \"-c\", \"echo $(date -Iseconds); ${SLEEP_CMD};\"]" >> "${FILE}"
+  echo "ENTRYPOINT [\"sh\", \"-c\", \"echo $(unique_id); trap \\\"sleep 2s;\\\" HUP INT TERM; ${SLEEP_CMD};\"]" >> "${FILE}"
   echo -n "Building ${IMAGE_WITH_TAG} "
   timeout 300 docker build --quiet --tag "${IMAGE_WITH_TAG}" --file "${FILE}" .
   echo -n "Pushing ${IMAGE_WITH_TAG} "
