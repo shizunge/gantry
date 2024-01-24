@@ -84,12 +84,13 @@ authenticate_to_registries() {
 }
 
 send_notification() {
-  local TITLE="${1}"
-  local BODY="${2}"
+  local TYPE="${1}"
+  local TITLE="${2}"
+  local BODY="${3}"
   if ! type notify_summary >/dev/null 2>&1; then
     return 0
   fi
-  notify_summary "${TITLE}" "${BODY}"
+  notify_summary "${TYPE}" "${TITLE}" "${BODY}"
 }
 
 add_image_to_remove() {
@@ -228,9 +229,11 @@ report_services() {
   local UPDATED_NUM FAILED_NUM TITLE BODY
   UPDATED_NUM=$(get_number_of_elements "${STATIC_VAR_SERVICES_UPDATED}")
   FAILED_NUM=$(get_number_of_elements "${STATIC_VAR_SERVICES_UPDATE_FAILED}")
+  local TYPE="success"
+  [ "${FAILED_NUM}" -ne "0" ] && TYPE="failure"
   TITLE="[gantry] ${UPDATED_NUM} services updated ${FAILED_NUM} failed"
   BODY=$(echo -e "${UPDATED_MSG}\n${FAILED_MSG}")
-  send_notification "${TITLE}" "${BODY}"
+  send_notification "${TYPE}" "${TITLE}" "${BODY}"
 }
 
 in_list() {
