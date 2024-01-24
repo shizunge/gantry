@@ -104,7 +104,7 @@ add_image_to_remove() {
 remove_container() {
   local IMAGE="${1}";
   local STATUS="${2}";
-  local CIDS
+  local CIDS=
   if ! CIDS=$(docker container ls --all --filter "ancestor=${IMAGE}" --filter "status=${STATUS}" --format '{{.ID}}' 2>&1); then
     log ERROR "Failed to list ${STATUS} containers with image ${IMAGE}.";
     echo "${CIDS}" | log_lines ERROR
@@ -124,11 +124,12 @@ remove_container() {
 
 remove_images() {
   local CLEANUP_IMAGES="${GANTRY_CLEANUP_IMAGES:-"true"}"
+  local CLEANUP_IMAGES_OPTIONS="${GANTRY_CLEANUP_IMAGES_OPTIONS:-""}"
   if ! is_true "${CLEANUP_IMAGES}"; then
     log INFO "Skip removing images."
     return 0
   fi
-  local SERVICE_NAME="${1:-"docker-image-remover"}"
+  local SERVICE_NAME="${1:-"gantry-image-remover"}"
   docker_service_remove "${SERVICE_NAME}"
   if [ -z "${STATIC_VAR_IMAGES_TO_REMOVE}" ]; then
     log INFO "No images to remove."
@@ -143,12 +144,21 @@ remove_images() {
   local IMAGE_OF_THIS_CONTAINER=
   IMAGE_OF_THIS_CONTAINER=$(get_service_image "$(current_service_name)")
   [ -z "${IMAGE_OF_THIS_CONTAINER}" ] && IMAGE_OF_THIS_CONTAINER="shizunge/gantry:image-remover"
-  docker_global_job --name "${SERVICE_NAME}" \
+  local IMAGES_TO_REMOVE=
+  IMAGES_TO_REMOVE=$(echo "${STATIC_VAR_IMAGES_TO_REMOVE}" | tr '\n' ' ')
+  [ -n "${CLEANUP_IMAGES_OPTIONS}" ] && log DEBUG "Adding options \"${CLEANUP_IMAGES_OPTIONS}\" to the global job ${SERVICE_NAME}."
+  local RMI_MSG=
+  # SC2086: Double quote to prevent globbing and word splitting.
+  # shellcheck disable=SC2086
+  if ! RMI_MSG=$(docker_global_job --name "${SERVICE_NAME}" \
     --restart-condition on-failure \
     --restart-max-attempts 1 \
     --mount type=bind,source=/var/run/docker.sock,destination=/var/run/docker.sock \
-    --env "GANTRY_IMAGES_TO_REMOVE=$(echo "${STATIC_VAR_IMAGES_TO_REMOVE}" | tr '\n' ' ')" \
-    "${IMAGE_OF_THIS_CONTAINER}"
+    --env "GANTRY_IMAGES_TO_REMOVE=${IMAGES_TO_REMOVE}" \
+    ${CLEANUP_IMAGES_OPTIONS} \
+    "${IMAGE_OF_THIS_CONTAINER}" 2>&1); then
+    log ERROR "Failed to remove images: ${RMI_MSG}"
+  fi
   wait_service_state "${SERVICE_NAME}" --complete;
   docker_service_logs "${SERVICE_NAME}"
   docker_service_remove "${SERVICE_NAME}"
@@ -448,6 +458,8 @@ rollback_service() {
     return 0
   fi
   log INFO "Rolling back ${SERVICE_NAME}."
+  [ -n "${ADDITIONAL_OPTIONS}" ] && log DEBUG "Adding options \"${ADDITIONAL_OPTIONS}\" to the \"docker service update --rollback\" command."
+  [ -n "${ROLLBACK_OPTIONS}" ] && log DEBUG "Adding options \"${ROLLBACK_OPTIONS}\" to the \"docker service update --rollback\" command."
   local ROLLBACK_MSG=
   # Add "-quiet" to suppress progress output.
   # SC2086: Double quote to prevent globbing and word splitting.
@@ -487,7 +499,9 @@ update_single_service() {
   log INFO "Updating with image ${IMAGE}"
   local ADDITIONAL_OPTIONS=
   ADDITIONAL_OPTIONS=$(get_service_update_additional_options "${SERVICE_NAME}")
-  [ -n "${ADDITIONAL_OPTIONS}" ] && log DEBUG "Add option \"${ADDITIONAL_OPTIONS}\" to the docker service update command."
+  [ -n "${ADDITIONAL_OPTIONS}" ] && log DEBUG "Adding options \"${ADDITIONAL_OPTIONS}\" to the \"docker service update\" command."
+  [ -n "${UPDATE_OPTIONS}" ] && log DEBUG "Adding options \"${UPDATE_OPTIONS}\" to the \"docker service update\" command."
+  local UPDATE_MSG=
   # Add "-quiet" to suppress progress output.
   # SC2086: Double quote to prevent globbing and word splitting.
   # shellcheck disable=SC2086

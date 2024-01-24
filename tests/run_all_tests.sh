@@ -101,8 +101,10 @@ main() {
     test_rollback_ROLLBACK_ON_FAILURE_false \
     test_options_LOG_LEVEL_none \
     test_options_UPDATE_OPTIONS \
-    test_options_CLEANUP_IMAGES_false \
     test_options_PRE_POST_RUN_CMD \
+    test_CLEANUP_IMAGES_false \
+    test_CLEANUP_IMAGES_OPTIONS_bad \
+    test_CLEANUP_IMAGES_OPTIONS_good \
   "
   local LOGIN_TESTS="\
     test_login_config \

@@ -17,7 +17,7 @@
 
 SKIP_UPDATING_SERVICE="Skip updating service in .*job mode"
 NO_NEW_IMAGE="No new image"
-ADD_OPTION="Add option"
+ADD_OPTION="Adding options"
 NO_UPDATES="No updates"
 UPDATED="UPDATED"
 ROLLING_BACK="Rolling back"
@@ -396,6 +396,7 @@ test_jobs_UPDATE_JOBS_true() {
 
   expect_no_message "${STDOUT}" "${SKIP_UPDATING_SERVICE}.*${SERVICE_NAME}"
   expect_no_message "${STDOUT}" "${SERVICE_NAME}.*${NO_NEW_IMAGE}"
+  expect_message    "${STDOUT}" "${ADD_OPTION}.*${GANTRY_UPDATE_OPTIONS}"
   expect_message    "${STDOUT}" "${SERVICE_NAME}.*${UPDATED}"
   expect_no_message "${STDOUT}" "${SERVICE_NAME}.*${NO_UPDATES}"
   expect_no_message "${STDOUT}" "${ROLLING_BACK}.*${SERVICE_NAME}"
@@ -479,6 +480,7 @@ test_MANIFEST_CMD_none() {
   # But it will see no new images.
   expect_no_message "${STDOUT}" "${SKIP_UPDATING_SERVICE}.*${SERVICE_NAME}"
   expect_no_message "${STDOUT}" "${SERVICE_NAME}.*${NO_NEW_IMAGE}"
+  expect_message    "${STDOUT}" "${ADD_OPTION}.*${GANTRY_UPDATE_OPTIONS}"
   expect_no_message "${STDOUT}" "${SERVICE_NAME}.*${UPDATED}"
   expect_message    "${STDOUT}" "${SERVICE_NAME}.*${NO_UPDATES}"
   expect_no_message "${STDOUT}" "${ROLLING_BACK}.*${SERVICE_NAME}"
@@ -678,6 +680,7 @@ test_rollback_due_to_timeout() {
 
   expect_no_message "${STDOUT}" "${SKIP_UPDATING_SERVICE}.*${SERVICE_NAME}"
   expect_no_message "${STDOUT}" "${SERVICE_NAME}.*${NO_NEW_IMAGE}"
+  expect_message    "${STDOUT}" "${ADD_OPTION}.*${GANTRY_UPDATE_OPTIONS}"
   expect_no_message "${STDOUT}" "${SERVICE_NAME}.*${UPDATED}"
   expect_no_message "${STDOUT}" "${SERVICE_NAME}.*${NO_UPDATES}"
   expect_message    "${STDOUT}" "${ROLLING_BACK}.*${SERVICE_NAME}"
@@ -716,13 +719,15 @@ test_rollback_failed() {
   export GANTRY_UPDATE_TIMEOUT_SECONDS=1
   export GANTRY_UPDATE_OPTIONS="--label-add=${LABEL}=${SERVICE_NAME}"
   # Rollback would fail due to the incorrect option.
-  export GANTRY_ROLLBACK_OPTIONS="--incorrect_option"
+  export GANTRY_ROLLBACK_OPTIONS="--incorrect-option"
   STDOUT=$(run_gantry "${FUNCNAME[0]}" 2>&1 | tee >(cat 1>&2))
 
   expect_no_message "${STDOUT}" "${SKIP_UPDATING_SERVICE}.*${SERVICE_NAME}"
   expect_no_message "${STDOUT}" "${SERVICE_NAME}.*${NO_NEW_IMAGE}"
+  expect_message    "${STDOUT}" "${ADD_OPTION}.*${GANTRY_UPDATE_OPTIONS}"
   expect_no_message "${STDOUT}" "${SERVICE_NAME}.*${UPDATED}"
   expect_no_message "${STDOUT}" "${SERVICE_NAME}.*${NO_UPDATES}"
+  expect_message    "${STDOUT}" "${ADD_OPTION}.*${GANTRY_ROLLBACK_OPTIONS}"
   expect_message    "${STDOUT}" "${ROLLING_BACK}.*${SERVICE_NAME}"
   expect_message    "${STDOUT}" "${FAILED_TO_ROLLBACK}.*${SERVICE_NAME}"
   expect_no_message "${STDOUT}" "${ROLLED_BACK}.*${SERVICE_NAME}"
@@ -763,6 +768,7 @@ test_rollback_ROLLBACK_ON_FAILURE_false() {
 
   expect_no_message "${STDOUT}" "${SKIP_UPDATING_SERVICE}.*${SERVICE_NAME}"
   expect_no_message "${STDOUT}" "${SERVICE_NAME}.*${NO_NEW_IMAGE}"
+  expect_message    "${STDOUT}" "${ADD_OPTION}.*${GANTRY_UPDATE_OPTIONS}"
   expect_no_message "${STDOUT}" "${SERVICE_NAME}.*${UPDATED}"
   expect_no_message "${STDOUT}" "${SERVICE_NAME}.*${NO_UPDATES}"
   expect_no_message "${STDOUT}" "${ROLLING_BACK}.*${SERVICE_NAME}"
@@ -829,6 +835,7 @@ test_options_UPDATE_OPTIONS() {
   expect_message    "${LABEL_VALUE}" "${SERVICE_NAME}"
   expect_no_message "${STDOUT}" "${SKIP_UPDATING_SERVICE}.*${SERVICE_NAME}"
   expect_no_message "${STDOUT}" "${SERVICE_NAME}.*${NO_NEW_IMAGE}"
+  expect_message    "${STDOUT}" "${ADD_OPTION}.*${GANTRY_UPDATE_OPTIONS}"
   expect_message    "${STDOUT}" "${SERVICE_NAME}.*${UPDATED}"
   expect_no_message "${STDOUT}" "${SERVICE_NAME}.*${NO_UPDATES}"
   expect_no_message "${STDOUT}" "${ROLLING_BACK}.*${SERVICE_NAME}"
@@ -841,41 +848,6 @@ test_options_UPDATE_OPTIONS() {
   expect_message    "${STDOUT}" "${REMOVING_NUM_IMAGES}"
   expect_no_message "${STDOUT}" "${SKIP_REMOVING_IMAGES}"
   expect_message    "${STDOUT}" "${REMOVED_IMAGE}.*${IMAGE_WITH_TAG}"
-  expect_no_message "${STDOUT}" "${FAILED_TO_REMOVE_IMAGE}.*${IMAGE_WITH_TAG}"
-
-  stop_service "${SERVICE_NAME}"
-  prune_local_test_image "${IMAGE_WITH_TAG}"
-  finalize_test "${FUNCNAME[0]}"
-}
-
-test_options_CLEANUP_IMAGES_false() {
-  local IMAGE_WITH_TAG="${1}"
-  local SERVICE_NAME STDOUT
-  SERVICE_NAME="gantry-test-$(unique_id)"
-
-  initialize_test "${FUNCNAME[0]}"
-  build_and_push_test_image "${IMAGE_WITH_TAG}"
-  start_replicated_service "${SERVICE_NAME}" "${IMAGE_WITH_TAG}"
-  build_and_push_test_image "${IMAGE_WITH_TAG}"
-
-  export GANTRY_SERVICES_FILTERS="name=${SERVICE_NAME}"
-  export GANTRY_CLEANUP_IMAGES="false"
-  STDOUT=$(run_gantry "${FUNCNAME[0]}" 2>&1 | tee >(cat 1>&2))
-
-  expect_no_message "${STDOUT}" "${SKIP_UPDATING_SERVICE}.*${SERVICE_NAME}"
-  expect_no_message "${STDOUT}" "${SERVICE_NAME}.*${NO_NEW_IMAGE}"
-  expect_message    "${STDOUT}" "${SERVICE_NAME}.*${UPDATED}"
-  expect_no_message "${STDOUT}" "${SERVICE_NAME}.*${NO_UPDATES}"
-  expect_no_message "${STDOUT}" "${ROLLING_BACK}.*${SERVICE_NAME}"
-  expect_no_message "${STDOUT}" "${FAILED_TO_ROLLBACK}.*${SERVICE_NAME}"
-  expect_no_message "${STDOUT}" "${ROLLED_BACK}.*${SERVICE_NAME}"
-  expect_no_message "${STDOUT}" "${NO_SERVICES_UPDATED}"
-  expect_message    "${STDOUT}" "${NUM_SERVICES_UPDATED}"
-  expect_no_message "${STDOUT}" "${NUM_SERVICES_UPDATE_FAILED}"
-  expect_no_message "${STDOUT}" "${NO_IMAGES_TO_REMOVE}"
-  expect_no_message "${STDOUT}" "${REMOVING_NUM_IMAGES}"
-  expect_message    "${STDOUT}" "${SKIP_REMOVING_IMAGES}"
-  expect_no_message "${STDOUT}" "${REMOVED_IMAGE}.*${IMAGE_WITH_TAG}"
   expect_no_message "${STDOUT}" "${FAILED_TO_REMOVE_IMAGE}.*${IMAGE_WITH_TAG}"
 
   stop_service "${SERVICE_NAME}"
@@ -914,6 +886,118 @@ test_options_PRE_POST_RUN_CMD() {
   expect_no_message "${STDOUT}" "${REMOVED_IMAGE}.*${IMAGE_WITH_TAG}"
   expect_no_message "${STDOUT}" "${FAILED_TO_REMOVE_IMAGE}.*${IMAGE_WITH_TAG}"
   expect_message    "${STDOUT}" "Post update"
+
+  stop_service "${SERVICE_NAME}"
+  prune_local_test_image "${IMAGE_WITH_TAG}"
+  finalize_test "${FUNCNAME[0]}"
+}
+
+test_CLEANUP_IMAGES_false() {
+  local IMAGE_WITH_TAG="${1}"
+  local SERVICE_NAME STDOUT
+  SERVICE_NAME="gantry-test-$(unique_id)"
+
+  initialize_test "${FUNCNAME[0]}"
+  build_and_push_test_image "${IMAGE_WITH_TAG}"
+  start_replicated_service "${SERVICE_NAME}" "${IMAGE_WITH_TAG}"
+  build_and_push_test_image "${IMAGE_WITH_TAG}"
+
+  export GANTRY_SERVICES_FILTERS="name=${SERVICE_NAME}"
+  export GANTRY_CLEANUP_IMAGES="false"
+  STDOUT=$(run_gantry "${FUNCNAME[0]}" 2>&1 | tee >(cat 1>&2))
+
+  expect_no_message "${STDOUT}" "${SKIP_UPDATING_SERVICE}.*${SERVICE_NAME}"
+  expect_no_message "${STDOUT}" "${SERVICE_NAME}.*${NO_NEW_IMAGE}"
+  expect_message    "${STDOUT}" "${SERVICE_NAME}.*${UPDATED}"
+  expect_no_message "${STDOUT}" "${SERVICE_NAME}.*${NO_UPDATES}"
+  expect_no_message "${STDOUT}" "${ROLLING_BACK}.*${SERVICE_NAME}"
+  expect_no_message "${STDOUT}" "${FAILED_TO_ROLLBACK}.*${SERVICE_NAME}"
+  expect_no_message "${STDOUT}" "${ROLLED_BACK}.*${SERVICE_NAME}"
+  expect_no_message "${STDOUT}" "${NO_SERVICES_UPDATED}"
+  expect_message    "${STDOUT}" "${NUM_SERVICES_UPDATED}"
+  expect_no_message "${STDOUT}" "${NUM_SERVICES_UPDATE_FAILED}"
+  expect_no_message "${STDOUT}" "${NO_IMAGES_TO_REMOVE}"
+  expect_no_message "${STDOUT}" "${REMOVING_NUM_IMAGES}"
+  expect_message    "${STDOUT}" "${SKIP_REMOVING_IMAGES}"
+  expect_no_message "${STDOUT}" "${REMOVED_IMAGE}.*${IMAGE_WITH_TAG}"
+  expect_no_message "${STDOUT}" "${FAILED_TO_REMOVE_IMAGE}.*${IMAGE_WITH_TAG}"
+
+  stop_service "${SERVICE_NAME}"
+  prune_local_test_image "${IMAGE_WITH_TAG}"
+  finalize_test "${FUNCNAME[0]}"
+}
+
+test_CLEANUP_IMAGES_OPTIONS_bad() {
+  local IMAGE_WITH_TAG="${1}"
+  local SERVICE_NAME STDOUT
+  SERVICE_NAME="gantry-test-$(unique_id)"
+
+  initialize_test "${FUNCNAME[0]}"
+  build_and_push_test_image "${IMAGE_WITH_TAG}"
+  start_replicated_service "${SERVICE_NAME}" "${IMAGE_WITH_TAG}"
+  build_and_push_test_image "${IMAGE_WITH_TAG}"
+
+  export GANTRY_SERVICES_FILTERS="name=${SERVICE_NAME}"
+  export GANTRY_CLEANUP_IMAGES="true"
+  # Image remover would fail due to the incorrect option.
+  export GANTRY_CLEANUP_IMAGES_OPTIONS="--incorrect-option"
+  STDOUT=$(run_gantry "${FUNCNAME[0]}" 2>&1 | tee >(cat 1>&2))
+
+  expect_no_message "${STDOUT}" "${SKIP_UPDATING_SERVICE}.*${SERVICE_NAME}"
+  expect_no_message "${STDOUT}" "${SERVICE_NAME}.*${NO_NEW_IMAGE}"
+  expect_message    "${STDOUT}" "${SERVICE_NAME}.*${UPDATED}"
+  expect_no_message "${STDOUT}" "${SERVICE_NAME}.*${NO_UPDATES}"
+  expect_no_message "${STDOUT}" "${ROLLING_BACK}.*${SERVICE_NAME}"
+  expect_no_message "${STDOUT}" "${FAILED_TO_ROLLBACK}.*${SERVICE_NAME}"
+  expect_no_message "${STDOUT}" "${ROLLED_BACK}.*${SERVICE_NAME}"
+  expect_no_message "${STDOUT}" "${NO_SERVICES_UPDATED}"
+  expect_message    "${STDOUT}" "${NUM_SERVICES_UPDATED}"
+  expect_no_message "${STDOUT}" "${NUM_SERVICES_UPDATE_FAILED}"
+  expect_no_message "${STDOUT}" "${NO_IMAGES_TO_REMOVE}"
+  expect_message    "${STDOUT}" "${REMOVING_NUM_IMAGES}"
+  expect_no_message "${STDOUT}" "${SKIP_REMOVING_IMAGES}"
+  expect_message    "${STDOUT}" "${ADD_OPTION}.*${GANTRY_CLEANUP_IMAGES_OPTIONS}"
+  expect_message    "${STDOUT}" "${FAILED_TO_REMOVE_IMAGE}.*${GANTRY_CLEANUP_IMAGES_OPTIONS}"
+  expect_no_message "${STDOUT}" "${REMOVED_IMAGE}.*${IMAGE_WITH_TAG}"
+  expect_no_message "${STDOUT}" "${FAILED_TO_REMOVE_IMAGE}.*${IMAGE_WITH_TAG}"
+
+  stop_service "${SERVICE_NAME}"
+  prune_local_test_image "${IMAGE_WITH_TAG}"
+  finalize_test "${FUNCNAME[0]}"
+}
+
+test_CLEANUP_IMAGES_OPTIONS_good() {
+  local IMAGE_WITH_TAG="${1}"
+  local SERVICE_NAME STDOUT
+  SERVICE_NAME="gantry-test-$(unique_id)"
+
+  initialize_test "${FUNCNAME[0]}"
+  build_and_push_test_image "${IMAGE_WITH_TAG}"
+  start_replicated_service "${SERVICE_NAME}" "${IMAGE_WITH_TAG}"
+  build_and_push_test_image "${IMAGE_WITH_TAG}"
+
+  export GANTRY_SERVICES_FILTERS="name=${SERVICE_NAME}"
+  export GANTRY_CLEANUP_IMAGES="true"
+  export GANTRY_CLEANUP_IMAGES_OPTIONS="--container-label=test"
+  STDOUT=$(run_gantry "${FUNCNAME[0]}" 2>&1 | tee >(cat 1>&2))
+
+  expect_no_message "${STDOUT}" "${SKIP_UPDATING_SERVICE}.*${SERVICE_NAME}"
+  expect_no_message "${STDOUT}" "${SERVICE_NAME}.*${NO_NEW_IMAGE}"
+  expect_message    "${STDOUT}" "${SERVICE_NAME}.*${UPDATED}"
+  expect_no_message "${STDOUT}" "${SERVICE_NAME}.*${NO_UPDATES}"
+  expect_no_message "${STDOUT}" "${ROLLING_BACK}.*${SERVICE_NAME}"
+  expect_no_message "${STDOUT}" "${FAILED_TO_ROLLBACK}.*${SERVICE_NAME}"
+  expect_no_message "${STDOUT}" "${ROLLED_BACK}.*${SERVICE_NAME}"
+  expect_no_message "${STDOUT}" "${NO_SERVICES_UPDATED}"
+  expect_message    "${STDOUT}" "${NUM_SERVICES_UPDATED}"
+  expect_no_message "${STDOUT}" "${NUM_SERVICES_UPDATE_FAILED}"
+  expect_no_message "${STDOUT}" "${NO_IMAGES_TO_REMOVE}"
+  expect_message    "${STDOUT}" "${REMOVING_NUM_IMAGES}"
+  expect_no_message "${STDOUT}" "${SKIP_REMOVING_IMAGES}"
+  expect_message    "${STDOUT}" "${ADD_OPTION}.*${GANTRY_CLEANUP_IMAGES_OPTIONS}"
+  expect_no_message "${STDOUT}" "${FAILED_TO_REMOVE_IMAGE}.*${GANTRY_CLEANUP_IMAGES_OPTIONS}"
+  expect_message    "${STDOUT}" "${REMOVED_IMAGE}.*${IMAGE_WITH_TAG}"
+  expect_no_message "${STDOUT}" "${FAILED_TO_REMOVE_IMAGE}.*${IMAGE_WITH_TAG}"
 
   stop_service "${SERVICE_NAME}"
   prune_local_test_image "${IMAGE_WITH_TAG}"
