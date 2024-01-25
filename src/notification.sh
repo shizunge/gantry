@@ -15,20 +15,27 @@
 # along with this program.  If not, see <https://www.gnu.org/licenses/>.
 #
 
-notify_via_apprise() {
+_notify_via_apprise() {
   local URL="${GANTRY_NOTIFICATION_APPRISE_URL:-""}"
-  local TITLE="${1}"
-  local BODY="${2}"
+  local TYPE="${1}"
+  local TITLE="${2}"
+  local BODY="${3}"
   if [ -z "${URL}" ]; then
     return 0
   fi
-  curl -X POST -H "Content-Type: application/json" --data "{\"title\": \"${TITLE}\", \"body\": \"${BODY}\"}" "${URL}"
+  # info, success, warning, failure
+  if [ "${TYPE}" != "info" ] && [ "${TYPE}" != "success" ] && [ "${TYPE}" != "warning" ] && [ "${TYPE}" != "failure" ]; then
+    TYPE="info"
+  fi
+  [ -z "${BODY}" ] && BODY="${TITLE}"
+  curl -X POST -H "Content-Type: application/json" --data "{\"title\": \"${TITLE}\", \"body\": \"${BODY}\", \"type\": \"${TYPE}\"}" "${URL}"
 }
 
 notify_summary() {
   local CUSTOMIZED_TITLE="${GANTRY_NOTIFICATION_TITLE:-""}"
-  local TITLE="${1}"
-  local BODY="${2}"
+  local TYPE="${1}"
+  local TITLE="${2}"
+  local BODY="${3}"
   [ -n "${CUSTOMIZED_TITLE}" ] && TITLE="${TITLE} ${CUSTOMIZED_TITLE}"
-  notify_via_apprise "${TITLE}" "${BODY}"
+  _notify_via_apprise "${TYPE}" "${TITLE}" "${BODY}"
 }

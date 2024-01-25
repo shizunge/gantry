@@ -15,7 +15,7 @@
 # along with this program.  If not, see <https://www.gnu.org/licenses/>.
 #
 
-docker_hub_rate_token() {
+_docker_hub_rate_token() {
   local IMAGE="${1:-ratelimitpreview/test}"
   local TOKEN_URL="https://auth.docker.io/token?service=registry.docker.io&scope=repository:${IMAGE}:pull"
   if curl --version 1>/dev/null 2>&1; then
@@ -25,7 +25,7 @@ docker_hub_rate_token() {
   wget -qO- "${TOKEN_URL}"
 }
 
-docker_hub_rate_read_rate() {
+_docker_hub_rate_read_rate() {
   local IMAGE="${1:-ratelimitpreview/test}"
   local TOKEN="${2}"
   [ -z "${TOKEN}" ] && echo "[GET TOKEN ERROR]" && return 1
@@ -43,13 +43,13 @@ docker_hub_rate_read_rate() {
 docker_hub_rate() {
   local IMAGE="${1:-ratelimitpreview/test}"
   local RESPONSE=
-  if ! RESPONSE=$(docker_hub_rate_token "${IMAGE}"); then
+  if ! RESPONSE=$(_docker_hub_rate_token "${IMAGE}"); then
     echo "[GET TOKEN RESPONSE ERROR]"
     return 1
   fi
   local TOKEN=
   TOKEN=$(echo "${RESPONSE}" | sed 's/.*"token":"\([^"]*\).*/\1/')
-  if ! RESPONSE=$(docker_hub_rate_read_rate "${IMAGE}" "${TOKEN}"); then
+  if ! RESPONSE=$(_docker_hub_rate_read_rate "${IMAGE}" "${TOKEN}"); then
     if echo "${RESPONSE}" | grep -q "Too Many Requests" ; then
       echo "0"
       return 0

@@ -15,7 +15,7 @@
 # along with this program.  If not, see <https://www.gnu.org/licenses/>.
 #
 
-login_registry() {
+_login_registry() {
   local USER="${1}"
   local PASSWORD="${2}"
   local HOST="${3}"
@@ -42,7 +42,7 @@ login_registry() {
   fi
 }
 
-authenticate_to_registries() {
+_authenticate_to_registries() {
   local CONFIGS_FILE="${GANTRY_REGISTRY_CONFIGS_FILE:-""}"
   local CONFIG HOST PASSWORD USER
   if ! CONFIG=$(read_config GANTRY_REGISTRY_CONFIG 2>&1); then
@@ -58,7 +58,7 @@ authenticate_to_registries() {
     log ERROR "Failed to set USER: ${USER}" && return 1;
   fi
   if [ -n "${USER}" ]; then
-    login_registry "${USER}" "${PASSWORD}" "${HOST}" "${CONFIG}"
+    _login_registry "${USER}" "${PASSWORD}" "${HOST}" "${CONFIG}"
   fi
   [ -z "${CONFIGS_FILE}" ] && return 0
   [ ! -r "${CONFIGS_FILE}" ] && log ERROR "Failed to read ${CONFIGS_FILE}." && return 1
@@ -79,20 +79,21 @@ authenticate_to_registries() {
       log ERROR "${CONFIGS_FILE} format error. A line should contains only \"<CONFIG> <HOST> <USER> <PASSWORD>\". Got \"${LINE}\"."
       continue
     fi
-    login_registry "${USER}" "${PASSWORD}" "${HOST}" "${CONFIG}"
+    _login_registry "${USER}" "${PASSWORD}" "${HOST}" "${CONFIG}"
   done <"${CONFIGS_FILE}"
 }
 
-send_notification() {
-  local TITLE="${1}"
-  local BODY="${2}"
+_send_notification() {
+  local TYPE="${1}"
+  local TITLE="${2}"
+  local BODY="${3}"
   if ! type notify_summary >/dev/null 2>&1; then
     return 0
   fi
-  notify_summary "${TITLE}" "${BODY}"
+  notify_summary "${TYPE}" "${TITLE}" "${BODY}"
 }
 
-add_image_to_remove() {
+_add_image_to_remove() {
   local IMAGE="${1}"
   if [ -z "${STATIC_VAR_IMAGES_TO_REMOVE}" ]; then
     STATIC_VAR_IMAGES_TO_REMOVE=${IMAGE}
@@ -101,72 +102,90 @@ add_image_to_remove() {
   STATIC_VAR_IMAGES_TO_REMOVE=$(add_uniq_to_list "${STATIC_VAR_IMAGES_TO_REMOVE}" "${IMAGE}")
 }
 
-remove_images() {
+_remove_container() {
+  local IMAGE="${1}";
+  local STATUS="${2}";
+  local CIDS=
+  if ! CIDS=$(docker container ls --all --filter "ancestor=${IMAGE}" --filter "status=${STATUS}" --format '{{.ID}}' 2>&1); then
+    log ERROR "Failed to list ${STATUS} containers with image ${IMAGE}.";
+    echo "${CIDS}" | log_lines ERROR
+    return 1;
+  fi;
+  local CID CNAME CRM_MSG
+  for CID in ${CIDS}; do
+    CNAME=$(docker container inspect --format '{{.Name}}' "${CID}");
+    if ! CRM_MSG=$(docker container rm "${CID}" 2>&1); then
+      log ERROR "Failed to remove ${STATUS} container ${CNAME}, which is using image ${IMAGE}.";
+      echo "${CRM_MSG}" | log_lines ERROR
+      continue;
+    fi
+    log INFO "Removed ${STATUS} container ${CNAME}. It was using image ${IMAGE}.";
+  done;
+};
+
+gantry_remove_images() {
+  local IMAGES_TO_REMOVE="${1}"
+  local IMAGE RMI_MSG
+  for IMAGE in ${IMAGES_TO_REMOVE}; do
+    if ! docker image inspect "${IMAGE}" 1>/dev/null 2>&1 ; then
+      log DEBUG "There is no image ${IMAGE} on the node.";
+      continue;
+    fi;
+    _remove_container "${IMAGE}" exited;
+    _remove_container "${IMAGE}" dead;
+    if ! RMI_MSG=$(docker rmi "${IMAGE}" 2>&1); then
+      log ERROR "Failed to remove image ${IMAGE}.";
+      echo "${RMI_MSG}" | log_lines ERROR
+      continue;
+    fi;
+    log INFO "Removed image ${IMAGE}.";
+  done;
+  log INFO "Done.";
+}
+
+_remove_images() {
   local CLEANUP_IMAGES="${GANTRY_CLEANUP_IMAGES:-"true"}"
+  local CLEANUP_IMAGES_OPTIONS="${GANTRY_CLEANUP_IMAGES_OPTIONS:-""}"
   if ! is_true "${CLEANUP_IMAGES}"; then
     log INFO "Skip removing images."
     return 0
   fi
-  local SERVICE_NAME="${1:-"docker-image-remover"}"
+  local SERVICE_NAME="${1:-"gantry-image-remover"}"
   docker_service_remove "${SERVICE_NAME}"
   if [ -z "${STATIC_VAR_IMAGES_TO_REMOVE}" ]; then
     log INFO "No images to remove."
     return 0
   fi
   local IMAGE_NUM=
-  IMAGE_NUM=$(get_number_of_elements "${STATIC_VAR_IMAGES_TO_REMOVE}")
+  IMAGE_NUM=$(_get_number_of_elements "${STATIC_VAR_IMAGES_TO_REMOVE}")
   log INFO "Removing ${IMAGE_NUM} image(s):"
   for I in $(echo "${STATIC_VAR_IMAGES_TO_REMOVE}" | tr '\n' ' '); do
     log INFO "- ${I}"
   done
-  docker_global_job --name "${SERVICE_NAME}" \
+  local IMAGE_OF_THIS_CONTAINER=
+  IMAGE_OF_THIS_CONTAINER=$(_get_service_image "$(_current_service_name)")
+  [ -z "${IMAGE_OF_THIS_CONTAINER}" ] && IMAGE_OF_THIS_CONTAINER="shizunge/gantry:image-remover"
+  local IMAGES_TO_REMOVE=
+  IMAGES_TO_REMOVE=$(echo "${STATIC_VAR_IMAGES_TO_REMOVE}" | tr '\n' ' ')
+  [ -n "${CLEANUP_IMAGES_OPTIONS}" ] && log DEBUG "Adding options \"${CLEANUP_IMAGES_OPTIONS}\" to the global job ${SERVICE_NAME}."
+  local RMI_MSG=
+  # SC2086: Double quote to prevent globbing and word splitting.
+  # shellcheck disable=SC2086
+  if ! RMI_MSG=$(docker_global_job --name "${SERVICE_NAME}" \
     --restart-condition on-failure \
     --restart-max-attempts 1 \
     --mount type=bind,source=/var/run/docker.sock,destination=/var/run/docker.sock \
-    --env "IMAGES_TO_REMOVE=$(echo "${STATIC_VAR_IMAGES_TO_REMOVE}" | tr '\n' ' ')" \
-    --entrypoint sh \
-    alpinelinux/docker-cli \
-    -c "
-      log() {
-        echo \"\${@}\";
-      };
-      remove_container() {
-        local IMAGE=\${1};
-        local STATUS=\${2};
-        if ! CIDS=\$(docker container ls --all --filter \"ancestor=\${IMAGE}\" --filter \"status=\${STATUS}\" --format '{{.ID}}' 2>&1); then
-          log ERROR \"Failed to list \${STATUS} containers with image \${IMAGE}. \$(echo \${CIDS})\";
-          return 1;
-        fi;
-        for CID in \${CIDS}; do
-          CNAME=\$(docker container inspect --format '{{.Name}}' \"\${CID}\");
-          if ! CRM_MSG=\$(docker container rm \${CID} 2>&1); then
-            log ERROR \"Failed to remove \${STATUS} container \${CNAME}, which is using image \${IMAGE}. \$(echo \${CRM_MSG})\";
-            continue;
-          fi
-          log INFO \"Removed \${STATUS} container \${CNAME}. It was using image \${IMAGE}.\";
-        done;
-      };
-      for IMAGE in \${IMAGES_TO_REMOVE}; do
-        if ! docker image inspect \${IMAGE} 1>/dev/null 2>&1 ; then
-          log DEBUG \"There is no image \${IMAGE} on the node.\";
-          continue;
-        fi;
-        remove_container \${IMAGE} exited;
-        remove_container \${IMAGE} dead;
-        if ! RMI_MSG=\$(docker rmi \${IMAGE} 2>&1); then
-          log ERROR \"Failed to remove image \${IMAGE}. \$(echo \${RMI_MSG})\";
-          continue;
-        fi;
-        log INFO \"Removed image \${IMAGE}.\";
-      done;
-      log INFO \"Done.\";
-      "
+    --env "GANTRY_IMAGES_TO_REMOVE=${IMAGES_TO_REMOVE}" \
+    ${CLEANUP_IMAGES_OPTIONS} \
+    "${IMAGE_OF_THIS_CONTAINER}" 2>&1); then
+    log ERROR "Failed to remove images: ${RMI_MSG}"
+  fi
   wait_service_state "${SERVICE_NAME}" --complete;
   docker_service_logs "${SERVICE_NAME}"
   docker_service_remove "${SERVICE_NAME}"
 }
 
-add_service_updated() {
+_add_service_updated() {
   local SERVICE_NAME="${1}"
   if [ -z "${STATIC_VAR_SERVICES_UPDATED}" ]; then
     STATIC_VAR_SERVICES_UPDATED=${SERVICE_NAME}
@@ -175,20 +194,20 @@ add_service_updated() {
   STATIC_VAR_SERVICES_UPDATED=$(add_uniq_to_list "${STATIC_VAR_SERVICES_UPDATED}" "${SERVICE_NAME}")
 }
 
-report_services_updated() {
+_report_services_updated() {
   if [ -z "${STATIC_VAR_SERVICES_UPDATED}" ]; then
     echo "No services updated."
     return 0
   fi
   local UPDATED_NUM=
-  UPDATED_NUM=$(get_number_of_elements "${STATIC_VAR_SERVICES_UPDATED}")
+  UPDATED_NUM=$(_get_number_of_elements "${STATIC_VAR_SERVICES_UPDATED}")
   echo "${UPDATED_NUM} service(s) updated:"
   for S in ${STATIC_VAR_SERVICES_UPDATED}; do
     echo "- ${S}"
   done
 }
 
-add_service_update_failed() {
+_add_service_update_failed() {
   local SERVICE_NAME="${1}"
   if [ -z "${STATIC_VAR_SERVICES_UPDATE_FAILED}" ]; then
     STATIC_VAR_SERVICES_UPDATE_FAILED=${SERVICE_NAME}
@@ -197,19 +216,19 @@ add_service_update_failed() {
   STATIC_VAR_SERVICES_UPDATE_FAILED=$(add_uniq_to_list "${STATIC_VAR_SERVICES_UPDATE_FAILED}" "${SERVICE_NAME}")
 }
 
-report_services_update_failed() {
+_report_services_update_failed() {
   if [ -z "${STATIC_VAR_SERVICES_UPDATE_FAILED}" ]; then
     return 0
   fi
   local FAILED_NUM=
-  FAILED_NUM=$(get_number_of_elements "${STATIC_VAR_SERVICES_UPDATE_FAILED}")
+  FAILED_NUM=$(_get_number_of_elements "${STATIC_VAR_SERVICES_UPDATE_FAILED}")
   echo "${FAILED_NUM} service(s) update failed:"
   for S in ${STATIC_VAR_SERVICES_UPDATE_FAILED}; do
     echo "- ${S}"
   done
 }
 
-get_number_of_elements() {
+_get_number_of_elements() {
   local LIST="${*}"
   [ -z "${LIST}" ] && echo 0 && return 0
   # SC2086: Double quote to prevent globbing and word splitting.
@@ -219,23 +238,25 @@ get_number_of_elements() {
   echo "${NUM}"
 }
 
-report_services() {
+_report_services() {
   local UPDATED_MSG=
   local FAILED_MSG=
-  UPDATED_MSG=$(report_services_updated)
+  UPDATED_MSG=$(_report_services_updated)
   echo "${UPDATED_MSG}" | log_lines INFO
-  FAILED_MSG=$(report_services_update_failed)
+  FAILED_MSG=$(_report_services_update_failed)
   echo "${FAILED_MSG}" | log_lines INFO
   # Send notification
   local UPDATED_NUM FAILED_NUM TITLE BODY
-  UPDATED_NUM=$(get_number_of_elements "${STATIC_VAR_SERVICES_UPDATED}")
-  FAILED_NUM=$(get_number_of_elements "${STATIC_VAR_SERVICES_UPDATE_FAILED}")
+  UPDATED_NUM=$(_get_number_of_elements "${STATIC_VAR_SERVICES_UPDATED}")
+  FAILED_NUM=$(_get_number_of_elements "${STATIC_VAR_SERVICES_UPDATE_FAILED}")
+  local TYPE="success"
+  [ "${FAILED_NUM}" -ne "0" ] && TYPE="failure"
   TITLE="[gantry] ${UPDATED_NUM} services updated ${FAILED_NUM} failed"
   BODY=$(echo -e "${UPDATED_MSG}\n${FAILED_MSG}")
-  send_notification "${TITLE}" "${BODY}"
+  _send_notification "${TYPE}" "${TITLE}" "${BODY}"
 }
 
-in_list() {
+_in_list() {
   local LIST="${1}"
   local SEARCHED_ITEM="${2}"
   for ITEM in ${LIST}; do
@@ -246,7 +267,8 @@ in_list() {
   return 1
 }
 
-current_container_name() {
+_current_container_name() {
+  [ -n "${STATIC_VAR_CURRENT_CONTAINER_NAME}" ] && echo "${STATIC_VAR_CURRENT_CONTAINER_NAME}" && return 0
   local ALL_NETWORKS GWBRIDGE_NETWORK IPS;
   ALL_NETWORKS=$(docker network ls --format '{{.ID}}') || return 1;
   [ -z "${ALL_NETWORKS}" ] && return 0;
@@ -264,6 +286,7 @@ current_container_name() {
         echo "${NAME_AND_IP}" | grep -q "${IP}" || continue;
         local NAME;
         NAME=$(echo "${NAME_AND_IP}" | sed "s/\(.*\)=${IP}.*$/\1/");
+        STATIC_VAR_CURRENT_CONTAINER_NAME=${NAME}
         echo "${NAME}";
         return 0;
       done;
@@ -272,17 +295,20 @@ current_container_name() {
   return 0;
 }
 
-current_service_name() {
-  local CNAME
-  CNAME=$(current_container_name) || return 1
+_current_service_name() {
+  [ -n "${STATIC_VAR_CURRENT_SERVICE_NAME}" ] && echo "${STATIC_VAR_CURRENT_SERVICE_NAME}" && return 0
+  local CNAME=
+  CNAME=$(_current_container_name) || return 1
   [ -z "${CNAME}" ] && return 0
+  local SNAME=
   SNAME=$(docker container inspect "${CNAME}" --format '{{range $key,$value := .Config.Labels}}{{$key}}={{println $value}}{{end}}' | grep "com.docker.swarm.service.name" | sed "s/com.docker.swarm.service.name=\(.*\)$/\1/") || return 1
+  STATIC_VAR_CURRENT_SERVICE_NAME=${SNAME}
   echo "${SNAME}"
 }
 
-service_is_self() {
+_service_is_self() {
   if [ -z "${GANTRY_SERVICES_SELF}" ]; then
-    GANTRY_SERVICES_SELF=$(current_service_name)
+    GANTRY_SERVICES_SELF=$(_current_service_name)
     export GANTRY_SERVICES_SELF
     [ -n "${GANTRY_SERVICES_SELF}" ] && log INFO "Set GANTRY_SERVICES_SELF to ${GANTRY_SERVICES_SELF}."
   fi
@@ -291,7 +317,19 @@ service_is_self() {
   [ "${SERVICE_NAME}" = "${SELF}" ]
 }
 
-get_service_mode() {
+_get_service_image() {
+  local SERVICE_NAME="${1}"
+  [ -z "${SERVICE_NAME}" ] && return 1
+  docker service inspect -f '{{.Spec.TaskTemplate.ContainerSpec.Image}}' "${SERVICE_NAME}"
+}
+
+_get_service_previous_image() {
+  local SERVICE_NAME="${1}"
+  [ -z "${SERVICE_NAME}" ] && return 1
+  docker service inspect -f '{{.PreviousSpec.TaskTemplate.ContainerSpec.Image}}' "${SERVICE_NAME}"
+}
+
+_get_service_mode() {
   local SERVICE_NAME="${1}"
   local MODE=
   if ! MODE=$(docker service ls --filter "name=${SERVICE_NAME}" --format '{{.Mode}}' 2>&1); then
@@ -303,20 +341,20 @@ get_service_mode() {
 
 # echo the mode when the service is replicated job or global job
 # return whether a service is replicated job or global job
-service_is_job() {
+_service_is_job() {
   local SERVICE_NAME="${1}"
   local MODE=
-  if ! MODE=$(get_service_mode "${SERVICE_NAME}"); then
+  if ! MODE=$(_get_service_mode "${SERVICE_NAME}"); then
     return 1
   fi
   # Looking for replicated-job or global-job
   echo "${MODE}" | grep "job"
 }
 
-service_is_replicated() {
+_service_is_replicated() {
   local SERVICE_NAME="${1}"
   local MODE=
-  if ! MODE=$(get_service_mode "${SERVICE_NAME}"); then
+  if ! MODE=$(_get_service_mode "${SERVICE_NAME}"); then
     return 1
   fi
   # Looking for replicated, not replicated-job
@@ -326,7 +364,7 @@ service_is_replicated() {
   echo "${MODE}"
 }
 
-get_config_from_service() {
+_get_config_from_service() {
   local SERVICE_NAME="${1}"
   local AUTH_CONFIG_LABEL="gantry.auth.config"
   local AUTH_CONFIG=
@@ -338,7 +376,7 @@ get_config_from_service() {
   echo "--config ${AUTH_CONFIG}"
 }
 
-get_image_info() {
+_get_image_info() {
   local MANIFEST_OPTIONS="${GANTRY_MANIFEST_OPTIONS:-""}"
   local MANIFEST_CMD="${1}"
   local IMAGE="${2}"
@@ -358,12 +396,12 @@ get_image_info() {
 # echo nothing if we found no new images.
 # echo the image if we found a new image.
 # return the number of errors.
-inspect_image() {
+_inspect_image() {
   local MANIFEST_CMD="${GANTRY_MANIFEST_CMD:-"buildx"}"
   local SERVICE_NAME="${1}"
   local DOCKER_CONFIG="${2}"
   local IMAGE_WITH_DIGEST=
-  if ! IMAGE_WITH_DIGEST=$(docker service inspect -f '{{.Spec.TaskTemplate.ContainerSpec.Image}}' "${SERVICE_NAME}" 2>&1); then
+  if ! IMAGE_WITH_DIGEST=$(_get_service_image "${SERVICE_NAME}" 2>&1); then
     log ERROR "Failed to obtain image from service ${SERVICE_NAME}. ${IMAGE_WITH_DIGEST}"
     return 1
   fi
@@ -372,19 +410,19 @@ inspect_image() {
   IMAGE=$(echo "${IMAGE_WITH_DIGEST}" | cut -d@ -f1)
   DIGEST=$(echo "${IMAGE_WITH_DIGEST}" | cut -d@ -f2)
   # Never skip inspecting self
-  if echo "${MANIFEST_CMD}" | grep -q -i "none" && ! service_is_self "${SERVICE_NAME}"; then
+  if echo "${MANIFEST_CMD}" | grep -q -i "none" && ! _service_is_self "${SERVICE_NAME}"; then
     echo "${IMAGE}"
     return 0
   fi
-  if in_list "${STATIC_VAR_NO_NEW_IMAGES}" "${DIGEST}"; then
+  if _in_list "${STATIC_VAR_NO_NEW_IMAGES}" "${DIGEST}"; then
     return 0
   fi
-  if in_list "${STATIC_VAR_NEW_IMAGES}" "${DIGEST}"; then
+  if _in_list "${STATIC_VAR_NEW_IMAGES}" "${DIGEST}"; then
     echo "${IMAGE}"
     return 0
   fi
   local IMAGE_INFO=
-  if ! IMAGE_INFO=$(get_image_info "${MANIFEST_CMD}" "${IMAGE}" "${DOCKER_CONFIG}" 2>&1); then
+  if ! IMAGE_INFO=$(_get_image_info "${MANIFEST_CMD}" "${IMAGE}" "${DOCKER_CONFIG}" 2>&1); then
     log ERROR "Image ${IMAGE} does not exist or it is not available. ${IMAGE_INFO}"
     return 1
   fi
@@ -397,7 +435,7 @@ inspect_image() {
   return 0
 }
 
-get_number_of_running_tasks() {
+_get_number_of_running_tasks() {
   local SERVICE_NAME="${1}"
   local REPLICAS=
   if ! REPLICAS=$(docker service ls --filter "name=${SERVICE_NAME}" --format '{{.Replicas}}' 2>&1); then
@@ -412,10 +450,10 @@ get_number_of_running_tasks() {
   echo "${NUM_RUNS}"
 }
 
-get_service_update_additional_options() {
+_get_service_update_additional_options() {
   local SERVICE_NAME="${1}"
   local NUM_RUNS=
-  NUM_RUNS=$(get_number_of_running_tasks "${SERVICE_NAME}")
+  NUM_RUNS=$(_get_number_of_running_tasks "${SERVICE_NAME}")
   if ! is_number "${NUM_RUNS}"; then
     return 1
   fi
@@ -426,14 +464,14 @@ get_service_update_additional_options() {
     OPTIONS="${OPTIONS} --detach=true"
     local MODE=
     # Do not start a new task. Only works for replicated, not global.
-    if MODE=$(service_is_replicated "${SERVICE_NAME}"); then
+    if MODE=$(_service_is_replicated "${SERVICE_NAME}"); then
       OPTIONS="${OPTIONS} --replicas=0"
     fi
   fi
   echo "${OPTIONS}"
 }
 
-rollback_service() {
+_rollback_service() {
   local ROLLBACK_ON_FAILURE="${GANTRY_ROLLBACK_ON_FAILURE:-"true"}"
   local ROLLBACK_OPTIONS="${GANTRY_ROLLBACK_OPTIONS:-""}"
   local SERVICE_NAME="${1}"
@@ -443,21 +481,20 @@ rollback_service() {
     return 0
   fi
   log INFO "Rolling back ${SERVICE_NAME}."
+  [ -n "${ADDITIONAL_OPTIONS}" ] && log DEBUG "Adding options \"${ADDITIONAL_OPTIONS}\" to the \"docker service update --rollback\" command."
+  [ -n "${ROLLBACK_OPTIONS}" ] && log DEBUG "Adding options \"${ROLLBACK_OPTIONS}\" to the \"docker service update --rollback\" command."
   local ROLLBACK_MSG=
   # Add "-quiet" to suppress progress output.
   # SC2086: Double quote to prevent globbing and word splitting.
   # shellcheck disable=SC2086
-  ROLLBACK_MSG=$(docker ${DOCKER_CONFIG} service update --quiet ${ADDITIONAL_OPTIONS} ${ROLLBACK_OPTIONS} --rollback "${SERVICE_NAME}" 2>&1)
-  local RETURN_VALUE=$?
-  if [ ${RETURN_VALUE} -ne 0 ]; then
+  if ! ROLLBACK_MSG=$(docker ${DOCKER_CONFIG} service update --quiet ${ADDITIONAL_OPTIONS} ${ROLLBACK_OPTIONS} --rollback "${SERVICE_NAME}" 2>&1); then
     log ERROR "Failed to roll back ${SERVICE_NAME}. ${ROLLBACK_MSG}"
-  else
-    log INFO "Rolled back ${SERVICE_NAME}."
+    return 1
   fi
-  return ${RETURN_VALUE}
+  log INFO "Rolled back ${SERVICE_NAME}."
 }
 
-update_single_service() {
+_update_single_service() {
   local UPDATE_JOBS="${GANTRY_UPDATE_JOBS:-"false"}"
   local UPDATE_TIMEOUT_SECONDS="${GANTRY_UPDATE_TIMEOUT_SECONDS:-300}"
   local UPDATE_OPTIONS="${GANTRY_UPDATE_OPTIONS:-""}"
@@ -467,22 +504,25 @@ update_single_service() {
   fi
   local SERVICE_NAME="${1}"
   local MODE=
-  if ! is_true "${UPDATE_JOBS}" && MODE=$(service_is_job "${SERVICE_NAME}"); then
+  if ! is_true "${UPDATE_JOBS}" && MODE=$(_service_is_job "${SERVICE_NAME}"); then
     log DEBUG "Skip updating service in ${MODE} mode: ${SERVICE_NAME}."
     return 0;
   fi
   local DOCKER_CONFIG=
-  DOCKER_CONFIG=$(get_config_from_service "${SERVICE_NAME}")
+  DOCKER_CONFIG=$(_get_config_from_service "${SERVICE_NAME}")
   [ -n "${DOCKER_CONFIG}" ] && log DEBUG "Add option \"${DOCKER_CONFIG}\" to docker commands."
   local IMAGE=
-  IMAGE=$(inspect_image "${SERVICE_NAME}" "${DOCKER_CONFIG}")
-  local RETURN_VALUE=$?
-  [ ${RETURN_VALUE} -ne 0 ] && return ${RETURN_VALUE}
+  if ! IMAGE=$(_inspect_image "${SERVICE_NAME}" "${DOCKER_CONFIG}"); then
+    _add_service_update_failed "${SERVICE_NAME}"
+    return 1
+  fi
   [ -z "${IMAGE}" ] && log INFO "No new images." && return 0
   log INFO "Updating with image ${IMAGE}"
   local ADDITIONAL_OPTIONS=
-  ADDITIONAL_OPTIONS=$(get_service_update_additional_options "${SERVICE_NAME}")
-  [ -n "${ADDITIONAL_OPTIONS}" ] && log DEBUG "Add option \"${ADDITIONAL_OPTIONS}\" to the docker service update command."
+  ADDITIONAL_OPTIONS=$(_get_service_update_additional_options "${SERVICE_NAME}")
+  [ -n "${ADDITIONAL_OPTIONS}" ] && log DEBUG "Adding options \"${ADDITIONAL_OPTIONS}\" to the \"docker service update\" command."
+  [ -n "${UPDATE_OPTIONS}" ] && log DEBUG "Adding options \"${UPDATE_OPTIONS}\" to the \"docker service update\" command."
+  local UPDATE_MSG=
   # Add "-quiet" to suppress progress output.
   # SC2086: Double quote to prevent globbing and word splitting.
   # shellcheck disable=SC2086
@@ -491,25 +531,25 @@ update_single_service() {
     # "service update --rollback" needs to take different options from "service update"
     # Today no options are added based on services label/status. This is just a placeholder now.
     local ROLLBACK_ADDITIONAL_OPTIONS=
-    rollback_service "${SERVICE_NAME}" "${DOCKER_CONFIG}" "${ROLLBACK_ADDITIONAL_OPTIONS}"
-    add_service_update_failed "${SERVICE_NAME}"
+    _rollback_service "${SERVICE_NAME}" "${DOCKER_CONFIG}" "${ROLLBACK_ADDITIONAL_OPTIONS}"
+    _add_service_update_failed "${SERVICE_NAME}"
     return 1
   fi
   local PREVIOUS_IMAGE=
   local CURRENT_IMAGE=
-  PREVIOUS_IMAGE=$(docker service inspect -f '{{.PreviousSpec.TaskTemplate.ContainerSpec.Image}}' "${SERVICE_NAME}")
-  CURRENT_IMAGE=$(docker service inspect -f '{{.Spec.TaskTemplate.ContainerSpec.Image}}' "${SERVICE_NAME}")
+  PREVIOUS_IMAGE=$(_get_service_previous_image "${SERVICE_NAME}")
+  CURRENT_IMAGE=$(_get_service_image "${SERVICE_NAME}")
   if [ "${PREVIOUS_IMAGE}" = "${CURRENT_IMAGE}" ]; then
     log INFO "No updates."
     return 0
   fi
-  add_service_updated "${SERVICE_NAME}"
-  add_image_to_remove "${PREVIOUS_IMAGE}"
+  _add_service_updated "${SERVICE_NAME}"
+  _add_image_to_remove "${PREVIOUS_IMAGE}"
   log INFO "UPDATED."
   return 0
 }
 
-get_services_filted() {
+_get_services_filted() {
   local SERVICES_FILTERS="${1}"
   local SERVICES=
   local FILTERS=
@@ -533,7 +573,7 @@ gantry_initialize() {
   STATIC_VAR_SERVICES_UPDATE_FAILED=
   STATIC_VAR_NO_NEW_IMAGES=
   STATIC_VAR_NEW_IMAGES=
-  authenticate_to_registries
+  _authenticate_to_registries
 }
 
 gantry_get_services_list() {
@@ -541,12 +581,12 @@ gantry_get_services_list() {
   local SERVICES_EXCLUDED_FILTERS="${GANTRY_SERVICES_EXCLUDED_FILTERS:-""}"
   local SERVICES_FILTERS="${GANTRY_SERVICES_FILTERS:-""}"
   local SERVICES=
-  if ! SERVICES=$(get_services_filted "${SERVICES_FILTERS}"); then
+  if ! SERVICES=$(_get_services_filted "${SERVICES_FILTERS}"); then
     return 1
   fi
   if [ -n "${SERVICES_EXCLUDED_FILTERS}" ]; then
     local SERVICES_FROM_EXCLUDED_FILTERS=
-    if ! SERVICES_FROM_EXCLUDED_FILTERS=$(get_services_filted "${SERVICES_EXCLUDED_FILTERS}"); then
+    if ! SERVICES_FROM_EXCLUDED_FILTERS=$(_get_services_filted "${SERVICES_EXCLUDED_FILTERS}"); then
       return 1
     fi
     SERVICES_EXCLUDED="${SERVICES_EXCLUDED} ${SERVICES_FROM_EXCLUDED_FILTERS}"
@@ -554,11 +594,11 @@ gantry_get_services_list() {
   local LIST=
   local HAS_SELF=
   for S in ${SERVICES} ; do
-    if in_list "${SERVICES_EXCLUDED}" "${S}" ; then
+    if _in_list "${SERVICES_EXCLUDED}" "${S}" ; then
       continue
     fi
     # Add self to the first of the list.
-    if service_is_self "${S}"; then
+    if _service_is_self "${S}"; then
       HAS_SELF=${S}
       continue
     fi
@@ -577,7 +617,7 @@ gantry_update_services_list() {
   local LOG_SCOPE_SAVED="${LOG_SCOPE}"
   for SERVICE in ${LIST}; do
     LOG_SCOPE="Updating service ${SERVICE}"
-    update_single_service "${SERVICE}"
+    _update_single_service "${SERVICE}"
     ACCUMULATED_ERRORS=$((ACCUMULATED_ERRORS + $?))
   done
   LOG_SCOPE=${LOG_SCOPE_SAVED}
@@ -586,6 +626,6 @@ gantry_update_services_list() {
 
 gantry_finalize() {
   local STACK="${1:-gantry}"
-  remove_images "${STACK}_image-remover"
-  report_services;
+  _remove_images "${STACK}_image-remover"
+  _report_services;
 }

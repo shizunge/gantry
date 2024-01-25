@@ -53,14 +53,17 @@ initialize_test() {
 
 finalize_test() {
   local TEST_NAME=${1}
-  local TSET_STATUS="OK"
+  local RED='\033[0;31m'
+  local GREEN='\033[0;32m'
+  local NO_COLOR='\033[0m'
+  local TSET_STATUS="${GREEN}OK${NO_COLOR}"
   local RETURN_VALUE=0
   if [ "${STATIC_VAR_THIS_TEST_ERRORS}" -ne 0 ]; then
-    TSET_STATUS="${STATIC_VAR_THIS_TEST_ERRORS} ERRORS"
+    TSET_STATUS="${RED}${STATIC_VAR_THIS_TEST_ERRORS} ERRORS${NO_COLOR}"
     RETURN_VALUE=1
   fi
   echo "=============================="
-  echo "== ${TEST_NAME} ${TSET_STATUS}"
+  echo -e "== ${TEST_NAME} ${TSET_STATUS}"
   return "${RETURN_VALUE}"
 }
 
@@ -107,8 +110,10 @@ run_test() {
   if type "${TEST}" >/dev/null 2>&1; then
     ${TEST} "${@}"
   else
+    local RED='\033[0;31m'
+    local NO_COLOR='\033[0m'
     echo "=============================="
-    echo "== ${TEST} is missing."
+    echo -e "== ${TEST} is ${RED}missing${NO_COLOR}."
     STATIC_VAR_MISSING_TESTS="${STATIC_VAR_MISSING_TESTS} ${TEST}"
     handle_failure "${TEST} is missing."
   fi
@@ -116,7 +121,9 @@ run_test() {
 
 handle_failure() {
   local MESSAGE="${1}"
-  echo "ERROR ${MESSAGE}" >&2
+  local RED='\033[0;31m'
+  local NO_COLOR='\033[0m'
+  echo -e "${RED}ERROR${NO_COLOR} ${MESSAGE}" >&2
   STATIC_VAR_THIS_TEST_ERRORS=$((STATIC_VAR_THIS_TEST_ERRORS+1))
   STATIC_VAR_ALL_ERRORS=$((STATIC_VAR_ALL_ERRORS+1))
 }
@@ -124,28 +131,34 @@ handle_failure() {
 expect_message() {
   TEXT=${1}
   MESSAGE=${2}
+  local GREEN='\033[0;32m'
+  local NO_COLOR='\033[0m'
   if ! ACTUAL_MSG=$(echo "${TEXT}" | grep -P "${MESSAGE}"); then
     handle_failure "Failed to find expected message \"${MESSAGE}\"."
     return 1
   fi
-  echo "EXPECTED found message: ${ACTUAL_MSG}"
+  echo -e "${GREEN}EXPECTED${NO_COLOR} found message: ${ACTUAL_MSG}"
 }
 
 expect_no_message() {
   TEXT=${1}
   MESSAGE=${2}
+  local GREEN='\033[0;32m'
+  local NO_COLOR='\033[0m'
   if ACTUAL_MSG=$(echo "${TEXT}" | grep -P "${MESSAGE}"); then
     handle_failure "Message \"${ACTUAL_MSG}\" should not present."
     return 1
   fi
-  echo "EXPECTED found no message matches: ${MESSAGE}"
+  echo -e "${GREEN}EXPECTED${NO_COLOR} found no message matches: ${MESSAGE}"
 }
 
 unique_id() {
   # Try to generate a unique id.
   # To reduce the possibility that tests run in parallel on the same machine affect each other.
   local PID="$$"
-  echo "$(date +%s)-${PID}"
+  local RANDOM_STR=
+  RANDOM_STR=$(head /dev/urandom | LANG=C tr -dc 'A-Za-z0-9' | head -c 8)
+  echo "$(date +%s)-${PID}-${RANDOM_STR}"
 }
 
 read_service_label() {
@@ -156,15 +169,22 @@ read_service_label() {
 
 build_and_push_test_image() {
   local IMAGE_WITH_TAG="${1}"
-  local SLEEP_SECONDS="${2}"
-  local SLEEP_CMD="sleep ${SLEEP_SECONDS}"
-  if [ -z "${SLEEP_SECONDS}" ]; then
-    SLEEP_CMD="tail -f /dev/null"
+  local TASK_SECONDS="${2}"
+  local EXIT_SECONDS="${3}"
+  # Run the container forever
+  local TASK_CMD="tail -f /dev/null;"
+  if [ -n "${TASK_SECONDS}" ] && [ "${TASK_SECONDS}" -ge "0" ]; then
+    # Finsih the job in the given time.
+    TASK_CMD="sleep ${TASK_SECONDS};"
+  fi
+  local EXIT_CMD="sleep 0;"
+  if [ -n "${EXIT_SECONDS}" ] && [ "${EXIT_SECONDS}" -gt "0" ]; then
+    EXIT_CMD="sleep ${EXIT_SECONDS};"
   fi
   local FILE=
   FILE=$(mktemp)
   echo "FROM alpinelinux/docker-cli:latest" > "${FILE}"
-  echo "ENTRYPOINT [\"sh\", \"-c\", \"echo $(date -Iseconds); ${SLEEP_CMD};\"]" >> "${FILE}"
+  echo "ENTRYPOINT [\"sh\", \"-c\", \"echo $(unique_id); trap \\\"${EXIT_CMD}\\\" HUP INT TERM; ${TASK_CMD}\"]" >> "${FILE}"
   echo -n "Building ${IMAGE_WITH_TAG} "
   timeout 300 docker build --quiet --tag "${IMAGE_WITH_TAG}" --file "${FILE}" .
   echo -n "Pushing ${IMAGE_WITH_TAG} "

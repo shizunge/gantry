@@ -1,4 +1,4 @@
-# Gantry
+# Gantry - Docker service updater
 
 [*Gantry*](https://github.com/shizunge/gantry) is a tool to update docker swarm services, [enhanced Shepherd](docs/migration.md).
 
@@ -80,7 +80,8 @@ You can configure the most behaviors of *Gantry* via environment variables.
 | Environment Variable  | Default | Description |
 |-----------------------|---------|-------------|
 | GANTRY_CLEANUP_IMAGES           | true  | Set to `true` to clean up the updated images. Set to `false` to disable the cleanup. Before cleaning up, *Gantry* will try to remove any *exited* and *dead* containers that are using the images. |
-| GANTRY_NOTIFICATION_APPRISE_URL |       | Enable notifications on service update with [apprise](https://github.com/djmaze/apprise-microservice). This must point to the notification endpoint (e.g. `http://apprise:8000/notify`) |
+| GANTRY_CLEANUP_IMAGES_OPTIONS   |       | [Options](https://docs.docker.com/engine/reference/commandline/service_create/#options) added to the `docker service create` command to create a global job for images removal. You can use this to add a label to the service of the containers. |
+| GANTRY_NOTIFICATION_APPRISE_URL |       | Enable notifications on service update with [apprise](https://github.com/caronc/apprise-api). This must point to the notification endpoint (e.g. `http://apprise:8000/notify`) |
 | GANTRY_NOTIFICATION_TITLE       |       | Add an additional message to the notification title. |
 
 ## Authentication

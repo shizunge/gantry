@@ -39,7 +39,7 @@ load_libraries() {
   . ${LIB_DIR}/lib-gantry.sh
 }
 
-skip_current_node() {
+_skip_current_node() {
   local SELF_ID=
   SELF_ID=$(docker node inspect self --format "{{.Description.Hostname}}" 2>/dev/null);
   if [ -z "${SELF_ID}" ]; then
@@ -50,34 +50,12 @@ skip_current_node() {
   return 1
 }
 
-exec_pre_run_cmd() {
-  local CMD RT LOG
-  CMD=${GANTRY_PRE_RUN_CMD:-""}
-  [ -z "${CMD}" ] && return 0
-  log INFO "Run pre-run command: ${CMD}"
-  LOG=$(eval "${CMD}")
-  RT=$?
-  log INFO "${LOG}"
-  log INFO "Finish pre-run command. Return value ${RT}."
-}
-
-exec_post_run_cmd() {
-  local CMD RT LOG
-  CMD=${GANTRY_POST_RUN_CMD:-""}
-  [ -z "${CMD}" ] && return 0
-  log INFO "Run post-run command: ${CMD}"
-  LOG=$(eval "${CMD}")
-  RT=$?
-  log INFO "${LOG}"
-  log INFO "Finish post-run command. Return value ${RT}."
-}
-
 gantry() {
   local STACK="${1:-gantry}"
   local START_TIME=
   START_TIME=$(date +%s)
 
-  if skip_current_node ; then
+  if _skip_current_node ; then
     return 0
   fi
   local ACCUMULATED_ERRORS=0
@@ -86,7 +64,7 @@ gantry() {
   local DOCKER_HUB_RATE_USED=
   local TIME_ELAPSED=
 
-  exec_pre_run_cmd
+  eval_cmd "pre-run" "${GANTRY_PRE_RUN_CMD:-""}"
 
   log INFO "Starting."
   gantry_initialize "${STACK}"
@@ -120,7 +98,7 @@ gantry() {
     log INFO "${MESSAGE}"
   fi
 
-  exec_post_run_cmd
+  eval_cmd "post-run" "${GANTRY_POST_RUN_CMD:-""}"
 
   return ${ACCUMULATED_ERRORS}
 }
@@ -129,6 +107,13 @@ main() {
   LOG_LEVEL="${GANTRY_LOG_LEVEL:-${LOG_LEVEL}}"
   NODE_NAME="${GANTRY_NODE_NAME:-${NODE_NAME}}"
   export LOG_LEVEL NODE_NAME
+  if [ -n "${GANTRY_IMAGES_TO_REMOVE:-""}" ]; then
+    # Image remover runs as a global job. The log will be collected via docker commands then formatted.
+    # Redefine the log function for the formater.
+    log() { echo "${@}"; }
+    gantry_remove_images "${GANTRY_IMAGES_TO_REMOVE}"
+    return $?
+  fi
   local INTERVAL_SECONDS="${GANTRY_SLEEP_SECONDS:-0}"
   if ! is_number "${INTERVAL_SECONDS}"; then 
     log ERROR "GANTRY_SLEEP_SECONDS must be a number. Got \"${GANTRY_SLEEP_SECONDS}\"."
