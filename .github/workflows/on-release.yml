@@ -54,7 +54,7 @@ jobs:
       - name: Run tests
         run: |
           export GANTRY_TEST_ENABLE_TESTS="${{ matrix.test_suit }}"
-          ./tests/run_all_tests.sh "${{ github.repository }}-for-test" "ghcr.io" "${{ github.repository_owner }}" "${{ github.token }}"
+          ./tests/run_all_tests.sh "${{ github.repository }}-test" "ghcr.io" "${{ github.repository_owner }}" "${{ github.token }}"
 
   build_and_push:
     name: Build and push Docker image
@@ -100,11 +100,13 @@ jobs:
           provenance: false
       # - name: Post push tests
       #   run: |
-      #     echo "Start running tests"
-      #     export GANTRY_TEST_CONTAINER_REPO_TAG="${{ github.repository }}:${{ steps.git.outputs.image_tag }}"
-      #     export GANTRY_TEST_ENABLE_TESTS="new_image"
-      #     ./tests/run_all_tests.sh "${{ github.repository }}-for-test" "ghcr.io" "${{ github.repository_owner }}" "${{ github.token }}"
-      #     echo "Done running tests"
+      #     echo "Start running tests";
+      #     TAG=$(echo "${{ steps.meta.outputs.tags }}" | grep "ghcr.io" | tr '\n' ' ' | cut -f1 -d ' ')
+      #     echo "Using tag ${TAG}";
+      #     export GANTRY_TEST_CONTAINER_REPO_TAG="${TAG}";
+      #     export GANTRY_TEST_ENABLE_TESTS="test_new_image_";
+      #     ./tests/run_all_tests.sh "${{ github.repository }}-test" "ghcr.io" "${{ github.repository_owner }}" "${{ github.token }}";
+      #     echo "Done running tests";
 
   clean-ghcr-tests:
     name: Delete old tests container images
@@ -115,7 +117,7 @@ jobs:
       - name: Delete old test images
         uses: snok/container-retention-policy@v2
         with:
-          image-names: gantry-for-test
+          image-names: "${{ github.repository }}-test"
           # leave some margins in case multiple actions run in parallel
           cut-off: 5 minutes ago UTC
           account-type: personal
@@ -127,7 +129,7 @@ jobs:
       - name: Delete untagged images
         uses: snok/container-retention-policy@v2
         with:
-          image-names: gantry-for-test
+          image-names: "${{ github.repository }}-test"
           cut-off: 1 second ago UTC
           account-type: personal
           token: ${{ secrets.TOKEN_DELETE_GHCR_IMAGES }}

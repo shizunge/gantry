@@ -52,7 +52,7 @@ jobs:
       - name: Run tests
         run: |
           export GANTRY_TEST_ENABLE_TESTS="${{ matrix.test_suit }}"
-          ./tests/run_all_tests.sh "${{ github.repository }}-for-test" "ghcr.io" "${{ github.repository_owner }}" "${{ github.token }}"
+          ./tests/run_all_tests.sh "${{ github.repository }}-test" "ghcr.io" "${{ github.repository_owner }}" "${{ github.token }}"
 
   clean-ghcr-tests:
     name: Delete old tests container images
@@ -63,7 +63,7 @@ jobs:
       - name: Delete old test images
         uses: snok/container-retention-policy@v2
         with:
-          image-names: gantry-for-test
+          image-names: "${{ github.repository }}-test"
           # leave some margins in case multiple actions run in parallel
           cut-off: 5 minutes ago UTC
           account-type: personal
@@ -75,7 +75,7 @@ jobs:
       - name: Delete untagged images
         uses: snok/container-retention-policy@v2
         with:
-          image-names: gantry-for-test
+          image-names: "${{ github.repository }}-test"
           cut-off: 1 second ago UTC
           account-type: personal
           token: ${{ secrets.TOKEN_DELETE_GHCR_IMAGES }}
