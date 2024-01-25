@@ -140,7 +140,7 @@ gantry_remove_images() {
     fi;
     log INFO "Removed image ${IMAGE}.";
   done;
-  log INFO "Done.";
+  log INFO "Done removing images.";
 }
 
 _remove_images() {
@@ -381,16 +381,34 @@ _get_image_info() {
   local MANIFEST_CMD="${1}"
   local IMAGE="${2}"
   local DOCKER_CONFIG="${3}"
-  if echo "${MANIFEST_CMD}" | grep -q -i "manifest"; then
+  local MSG RETURN_VALUE
+  if echo "${MANIFEST_CMD}" | grep -q -i "buildx"; then
+    # https://github.com/orgs/community/discussions/45779
+    [ -n "${MANIFEST_OPTIONS}" ] && log DEBUG "Adding options \"${MANIFEST_OPTIONS}\" to the command \"docker buildx imagetools inspect\"."
     # SC2086: Double quote to prevent globbing and word splitting.
     # shellcheck disable=SC2086
-    docker ${DOCKER_CONFIG} manifest inspect ${MANIFEST_OPTIONS} "${IMAGE}"
-    return $?
+    MSG=$(docker ${DOCKER_CONFIG} buildx imagetools inspect ${MANIFEST_OPTIONS} "${IMAGE}" 2>&1);
+    RETURN_VALUE=$?
+  elif echo "${MANIFEST_CMD}" | grep -q -i "manifest"; then
+    [ -n "${MANIFEST_OPTIONS}" ] && log DEBUG "Adding options \"${MANIFEST_OPTIONS}\" to the command \"docker manifest inspect\"."
+    # SC2086: Double quote to prevent globbing and word splitting.
+    # shellcheck disable=SC2086
+    MSG=$(docker ${DOCKER_CONFIG} manifest inspect ${MANIFEST_OPTIONS} "${IMAGE}" 2>&1);
+    RETURN_VALUE=$?
+  elif echo "${MANIFEST_CMD}" | grep -q -i "none"; then
+    # We should never reach here, the "none" command is already checked inside the function _inspect_image.
+    log DEBUG "MANIFEST_CMD is \"none\"."
+    return 0
+  else
+    log ERROR "Unknown MANIFEST_CMD \"${MANIFEST_CMD}\"."
+    return 1
   fi
-  # https://github.com/orgs/community/discussions/45779
-  # SC2086: Double quote to prevent globbing and word splitting.
-  # shellcheck disable=SC2086
-  docker ${DOCKER_CONFIG} buildx imagetools inspect ${MANIFEST_OPTIONS} "${IMAGE}"
+  if [ "${RETURN_VALUE}" != "0" ];  then
+    log ERROR "Image ${IMAGE} does not exist or it is not available. ${MSG}"
+    return 1
+  fi
+  echo "${MSG}"
+  return 0
 }
 
 # echo nothing if we found no new images.
@@ -409,28 +427,38 @@ _inspect_image() {
   local DIGEST=
   IMAGE=$(echo "${IMAGE_WITH_DIGEST}" | cut -d@ -f1)
   DIGEST=$(echo "${IMAGE_WITH_DIGEST}" | cut -d@ -f2)
-  # Never skip inspecting self
-  if echo "${MANIFEST_CMD}" | grep -q -i "none" && ! _service_is_self "${SERVICE_NAME}"; then
-    echo "${IMAGE}"
-    return 0
+  if echo "${MANIFEST_CMD}" | grep -q -i "none"; then
+    if _service_is_self "${SERVICE_NAME}"; then
+      # Always inspecting self, never skipping.
+      MANIFEST_CMD="buildx"
+    else
+      log DEBUG "Perform updating ${SERVICE_NAME} because MANIFEST_CMD is \"none\"."
+      echo "${IMAGE}"
+      return 0
+    fi
   fi
   if _in_list "${STATIC_VAR_NO_NEW_IMAGES}" "${DIGEST}"; then
+    log DEBUG "Skip updating ${SERVICE_NAME} because there is no known new version of image ${IMAGE_WITH_DIGEST}."
     return 0
   fi
   if _in_list "${STATIC_VAR_NEW_IMAGES}" "${DIGEST}"; then
+    log DEBUG "Perform updating ${SERVICE_NAME} because there is a known new version of image ${IMAGE_WITH_DIGEST}."
     echo "${IMAGE}"
     return 0
   fi
   local IMAGE_INFO=
-  if ! IMAGE_INFO=$(_get_image_info "${MANIFEST_CMD}" "${IMAGE}" "${DOCKER_CONFIG}" 2>&1); then
-    log ERROR "Image ${IMAGE} does not exist or it is not available. ${IMAGE_INFO}"
+  if ! IMAGE_INFO=$(_get_image_info "${MANIFEST_CMD}" "${IMAGE}" "${DOCKER_CONFIG}"); then
+    log DEBUG "Skip updating ${SERVICE_NAME} because there is a failure to obtain the manifest from the registry of image ${IMAGE}."
     return 1
   fi
+  [ -z "${IMAGE_INFO}" ] && log DEBUG "IMAGE_INFO is empty."
   if [ -n "${DIGEST}" ] && echo "${IMAGE_INFO}" | grep -q "${DIGEST}"; then
     STATIC_VAR_NO_NEW_IMAGES=$(add_uniq_to_list "${STATIC_VAR_NO_NEW_IMAGES}" "${DIGEST}")
+    log DEBUG "Skip updating ${SERVICE_NAME} because the current version is the latest of image ${IMAGE_WITH_DIGEST}."
     return 0
   fi
   STATIC_VAR_NEW_IMAGES=$(add_uniq_to_list "${STATIC_VAR_NEW_IMAGES}" "${DIGEST}")
+  log DEBUG "Perform updating ${SERVICE_NAME} because there is a new version of image ${IMAGE_WITH_DIGEST}."
   echo "${IMAGE}"
   return 0
 }
@@ -481,8 +509,8 @@ _rollback_service() {
     return 0
   fi
   log INFO "Rolling back ${SERVICE_NAME}."
-  [ -n "${ADDITIONAL_OPTIONS}" ] && log DEBUG "Adding options \"${ADDITIONAL_OPTIONS}\" to the \"docker service update --rollback\" command."
-  [ -n "${ROLLBACK_OPTIONS}" ] && log DEBUG "Adding options \"${ROLLBACK_OPTIONS}\" to the \"docker service update --rollback\" command."
+  [ -n "${ADDITIONAL_OPTIONS}" ] && log DEBUG "Adding options \"${ADDITIONAL_OPTIONS}\" to the command \"docker service update --rollback\"."
+  [ -n "${ROLLBACK_OPTIONS}" ] && log DEBUG "Adding options \"${ROLLBACK_OPTIONS}\" to the command \"docker service update --rollback\"."
   local ROLLBACK_MSG=
   # Add "-quiet" to suppress progress output.
   # SC2086: Double quote to prevent globbing and word splitting.
@@ -516,12 +544,12 @@ _update_single_service() {
     _add_service_update_failed "${SERVICE_NAME}"
     return 1
   fi
-  [ -z "${IMAGE}" ] && log INFO "No new images." && return 0
-  log INFO "Updating with image ${IMAGE}"
+  [ -z "${IMAGE}" ] && log INFO "No new images for ${SERVICE_NAME}." && return 0
+  log INFO "Updating ${SERVICE_NAME} with image ${IMAGE}"
   local ADDITIONAL_OPTIONS=
   ADDITIONAL_OPTIONS=$(_get_service_update_additional_options "${SERVICE_NAME}")
-  [ -n "${ADDITIONAL_OPTIONS}" ] && log DEBUG "Adding options \"${ADDITIONAL_OPTIONS}\" to the \"docker service update\" command."
-  [ -n "${UPDATE_OPTIONS}" ] && log DEBUG "Adding options \"${UPDATE_OPTIONS}\" to the \"docker service update\" command."
+  [ -n "${ADDITIONAL_OPTIONS}" ] && log DEBUG "Adding options \"${ADDITIONAL_OPTIONS}\" to the command \"docker service update\"."
+  [ -n "${UPDATE_OPTIONS}" ] && log DEBUG "Adding options \"${UPDATE_OPTIONS}\" to the command \"docker service update\"."
   local UPDATE_MSG=
   # Add "-quiet" to suppress progress output.
   # SC2086: Double quote to prevent globbing and word splitting.
@@ -540,12 +568,12 @@ _update_single_service() {
   PREVIOUS_IMAGE=$(_get_service_previous_image "${SERVICE_NAME}")
   CURRENT_IMAGE=$(_get_service_image "${SERVICE_NAME}")
   if [ "${PREVIOUS_IMAGE}" = "${CURRENT_IMAGE}" ]; then
-    log INFO "No updates."
+    log INFO "No updates for ${SERVICE_NAME}."
     return 0
   fi
   _add_service_updated "${SERVICE_NAME}"
   _add_image_to_remove "${PREVIOUS_IMAGE}"
-  log INFO "UPDATED."
+  log INFO "UPDATED ${SERVICE_NAME}."
   return 0
 }
 

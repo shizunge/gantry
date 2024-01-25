@@ -94,6 +94,7 @@ main() {
     test_MANIFEST_CMD_none \
     test_MANIFEST_CMD_none_SERVICES_SELF \
     test_MANIFEST_CMD_manifest \
+    test_MANIFEST_CMD_unsupported_cmd \
     test_no_running_tasks_replicated \
     test_no_running_tasks_global \
     test_rollback_due_to_timeout \
