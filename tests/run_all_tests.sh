@@ -85,13 +85,13 @@ main() {
   local NORMAL_TESTS="\
     test_new_image_no \
     test_new_image_yes \
-    test_inspect_image_failure \
     test_multiple_services_excluded_filters \
     test_SERVICES_EXCLUDED \
     test_SERVICES_EXCLUDED_FILTERS \
     test_jobs_skipping \
     test_jobs_UPDATE_JOBS_true \
     test_jobs_UPDATE_JOBS_true_no_running_tasks \
+    test_MANIFEST_CMD_failure \
     test_MANIFEST_CMD_none \
     test_MANIFEST_CMD_none_SERVICES_SELF \
     test_MANIFEST_CMD_manifest \

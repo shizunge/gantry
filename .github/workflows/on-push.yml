@@ -38,7 +38,6 @@ jobs:
         test_suit:
           - test_new_image_
           - test_multiple_services_
-          - test_inspect_image_
           - test_SERVICES_
           - test_jobs_
           - test_MANIFEST_
