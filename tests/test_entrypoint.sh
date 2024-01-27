@@ -16,6 +16,7 @@
 #
 
 SKIP_UPDATING_JOB="Skip updating service in .*job mode"
+IMAGE_NOT_EXIST="does not exist or it is not available"
 NO_NEW_IMAGE="No new image"
 ADDING_OPTIONS="Adding options"
 NO_UPDATES="No updates"
@@ -99,7 +100,7 @@ test_new_image_yes() {
   finalize_test "${FUNCNAME[0]}"
 }
 
-test_new_image_multiple_services() {
+test_multiple_services_excluded_filters() {
   local IMAGE_WITH_TAG="${1}"
   local BASE_NAME STDOUT
   BASE_NAME="gantry-test-$(unique_id)"
@@ -153,6 +154,41 @@ test_new_image_multiple_services() {
   stop_service "${SERVICE_NAME2}"
   stop_service "${SERVICE_NAME1}"
   stop_service "${SERVICE_NAME0}"
+  prune_local_test_image "${IMAGE_WITH_TAG}"
+  finalize_test "${FUNCNAME[0]}"
+}
+
+test_inspect_image_failure() {
+  local IMAGE_WITH_TAG="${1}"
+  local SERVICE_NAME STDOUT
+  SERVICE_NAME="gantry-test-$(unique_id)"
+
+  initialize_test "${FUNCNAME[0]}"
+  # No push image to the registry. Checking new image would fail.
+  build_test_image "${IMAGE_WITH_TAG}"
+  start_replicated_service "${SERVICE_NAME}" "${IMAGE_WITH_TAG}"
+
+  export GANTRY_SERVICES_FILTERS="name=${SERVICE_NAME}"
+  STDOUT=$(run_gantry "${FUNCNAME[0]}" 2>&1 | tee >(cat 1>&2))
+
+  expect_no_message "${STDOUT}" "${SKIP_UPDATING_JOB}.*${SERVICE_NAME}"
+  expect_message    "${STDOUT}" "Image.*${IMAGE_WITH_TAG}.*${IMAGE_NOT_EXIST}"
+  expect_no_message "${STDOUT}" "${SERVICE_NAME}.*${NO_NEW_IMAGE}"
+  expect_no_message "${STDOUT}" "${SERVICE_NAME}.*${UPDATED}"
+  expect_no_message "${STDOUT}" "${SERVICE_NAME}.*${NO_UPDATES}"
+  expect_no_message "${STDOUT}" "${ROLLING_BACK}.*${SERVICE_NAME}"
+  expect_no_message "${STDOUT}" "${FAILED_TO_ROLLBACK}.*${SERVICE_NAME}"
+  expect_no_message "${STDOUT}" "${ROLLED_BACK}.*${SERVICE_NAME}"
+  expect_message    "${STDOUT}" "${NO_SERVICES_UPDATED}"
+  expect_no_message "${STDOUT}" "${NUM_SERVICES_UPDATED}"
+  expect_message    "${STDOUT}" "${NUM_SERVICES_UPDATE_FAILED}"
+  expect_message    "${STDOUT}" "${NO_IMAGES_TO_REMOVE}"
+  expect_no_message "${STDOUT}" "${REMOVING_NUM_IMAGES}"
+  expect_no_message "${STDOUT}" "${SKIP_REMOVING_IMAGES}"
+  expect_no_message "${STDOUT}" "${REMOVED_IMAGE}.*${IMAGE_WITH_TAG}"
+  expect_no_message "${STDOUT}" "${FAILED_TO_REMOVE_IMAGE}.*${IMAGE_WITH_TAG}"
+
+  stop_service "${SERVICE_NAME}"
   prune_local_test_image "${IMAGE_WITH_TAG}"
   finalize_test "${FUNCNAME[0]}"
 }

@@ -85,7 +85,8 @@ main() {
   local NORMAL_TESTS="\
     test_new_image_no \
     test_new_image_yes \
-    test_new_image_multiple_services \
+    test_inspect_image_failure \
+    test_multiple_services_excluded_filters \
     test_SERVICES_EXCLUDED \
     test_SERVICES_EXCLUDED_FILTERS \
     test_jobs_skipping \

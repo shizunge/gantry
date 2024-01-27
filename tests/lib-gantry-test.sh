@@ -167,7 +167,7 @@ read_service_label() {
   docker service inspect -f "{{index .Spec.Labels \"${LABEL}\"}}" "${SERVICE_NAME}"
 }
 
-build_and_push_test_image() {
+build_test_image() {
   local IMAGE_WITH_TAG="${1}"
   local TASK_SECONDS="${2}"
   local EXIT_SECONDS="${3}"
@@ -186,10 +186,19 @@ build_and_push_test_image() {
   echo "FROM alpinelinux/docker-cli:latest" > "${FILE}"
   echo "ENTRYPOINT [\"sh\", \"-c\", \"echo $(unique_id); trap \\\"${EXIT_CMD}\\\" HUP INT TERM; ${TASK_CMD}\"]" >> "${FILE}"
   echo -n "Building ${IMAGE_WITH_TAG} "
+  echo "Building ${IMAGE_WITH_TAG}" >&2
   timeout 300 docker build --quiet --tag "${IMAGE_WITH_TAG}" --file "${FILE}" .
+  echo "Building ${IMAGE_WITH_TAG} done." >&2
+  rm "${FILE}"
+}
+
+build_and_push_test_image() {
+  local IMAGE_WITH_TAG="${1}"
+  local TASK_SECONDS="${2}"
+  local EXIT_SECONDS="${3}"
+  build_test_image "${IMAGE_WITH_TAG}" "${TASK_SECONDS}" "${EXIT_SECONDS}"
   echo -n "Pushing ${IMAGE_WITH_TAG} "
   docker push --quiet "${IMAGE_WITH_TAG}"
-  rm "${FILE}"
 }
 
 prune_local_test_image() {
