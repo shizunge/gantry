@@ -50,6 +50,31 @@ _skip_current_node() {
   return 1
 }
 
+_read_docker_hub_rate() {
+  local HOST PASSWORD USER
+  if ! PASSWORD=$(gantry_read_registry_password 2>&1); then
+    log ERROR "Failed to read registry PASSWORD: ${PASSWORD}";
+    PASSWORD=
+  fi
+  if ! USER=$(gantry_read_registry_username 2>&1); then
+    log ERROR "Failed to read registry USER: ${USER}";
+    USER=
+  fi
+  if ! HOST=$(gantry_read_registry_host 2>&1); then
+    log ERROR "Failed to read HOST: ${HOST}";
+    HOST=
+  fi
+  local USER_AND_PASS=
+  if [ -n "${USER}" ] && [ -n "${PASSWORD}" ]; then
+    if [ -z "${HOST}" ] || [ "${HOST}" = "docker.io" ]; then
+      USER_AND_PASS="${USER}:${PASSWORD}"
+    fi
+  fi
+  # Set IMAGE to empyt to use the default image.
+  local IMAGE=
+  docker_hub_rate "${IMAGE}" "${USER_AND_PASS}"
+}
+
 gantry() {
   local STACK="${1:-gantry}"
   local START_TIME=
@@ -72,7 +97,7 @@ gantry() {
 
   # SC2119: Use docker_hub_rate "$@" if function's $1 should mean script's $1.
   # shellcheck disable=SC2119
-  DOCKER_HUB_RATE_BEFORE=$(docker_hub_rate)
+  DOCKER_HUB_RATE_BEFORE=$(_read_docker_hub_rate)
   ACCUMULATED_ERRORS=$((ACCUMULATED_ERRORS + $?))
   log INFO "Before updating, Docker Hub rate remains ${DOCKER_HUB_RATE_BEFORE}."
 
@@ -82,7 +107,7 @@ gantry() {
 
   # SC2119: Use docker_hub_rate "$@" if function's $1 should mean script's $1.
   # shellcheck disable=SC2119
-  DOCKER_HUB_RATE_AFTER=$(docker_hub_rate)
+  DOCKER_HUB_RATE_AFTER=$(_read_docker_hub_rate)
   ACCUMULATED_ERRORS=$((ACCUMULATED_ERRORS + $?))
   DOCKER_HUB_RATE_USED=$(difference_between "${DOCKER_HUB_RATE_BEFORE}" "${DOCKER_HUB_RATE_AFTER}")
   log INFO "After updating, Docker Hub rate remains ${DOCKER_HUB_RATE_AFTER}. Used rate ${DOCKER_HUB_RATE_USED}."

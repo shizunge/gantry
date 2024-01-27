@@ -42,19 +42,31 @@ _login_registry() {
   fi
 }
 
+gantry_read_registry_username() {
+  read_config GANTRY_REGISTRY_USER
+}
+
+gantry_read_registry_password() {
+  read_config GANTRY_REGISTRY_PASSWORD
+}
+
+gantry_read_registry_host() {
+  read_config GANTRY_REGISTRY_HOST
+}
+
 _authenticate_to_registries() {
   local CONFIGS_FILE="${GANTRY_REGISTRY_CONFIGS_FILE:-""}"
   local CONFIG HOST PASSWORD USER
   if ! CONFIG=$(read_config GANTRY_REGISTRY_CONFIG 2>&1); then
     log ERROR "Failed to set CONFIG: ${CONFIG}" && return 1;
   fi
-  if ! HOST=$(read_config GANTRY_REGISTRY_HOST 2>&1); then
+  if ! HOST=$(gantry_read_registry_host 2>&1); then
     log ERROR "Failed to set HOST: ${HOST}" && return 1;
   fi
-  if ! PASSWORD=$(read_config GANTRY_REGISTRY_PASSWORD 2>&1); then
+  if ! PASSWORD=$(gantry_read_registry_password 2>&1); then
     log ERROR "Failed to set PASSWORD: ${PASSWORD}" && return 1;
   fi
-  if ! USER=$(read_config GANTRY_REGISTRY_USER 2>&1); then
+  if ! USER=$(gantry_read_registry_username 2>&1); then
     log ERROR "Failed to set USER: ${USER}" && return 1;
   fi
   if [ -n "${USER}" ]; then

@@ -35,6 +35,8 @@ You can configure the most behaviors of *Gantry* via environment variables.
 | GANTRY_SLEEP_SECONDS  | 0    | Interval between two updates. Set it to 0 to run *Gantry* once and then exit. Sleep time will exclude the time spent on updating services. |
 | TZ                    |      | Set timezone for time in logs. |
 
+*Gantry* bases on Docker command line, [environment variables](https://docs.docker.com/engine/reference/commandline/cli/#environment-variables) for Docker command line also works for *Gantry*.
+
 ### To login to registries
 
 | Environment Variable  | Default | Description |
@@ -80,13 +82,13 @@ You can configure the most behaviors of *Gantry* via environment variables.
 | Environment Variable  | Default | Description |
 |-----------------------|---------|-------------|
 | GANTRY_CLEANUP_IMAGES           | true  | Set to `true` to clean up the updated images. Set to `false` to disable the cleanup. Before cleaning up, *Gantry* will try to remove any *exited* and *dead* containers that are using the images. |
-| GANTRY_CLEANUP_IMAGES_OPTIONS   |       | [Options](https://docs.docker.com/engine/reference/commandline/service_create/#options) added to the `docker service create` command to create a global job for images removal. You can use this to add a label to the service of the containers. |
+| GANTRY_CLEANUP_IMAGES_OPTIONS   |       | [Options](https://docs.docker.com/engine/reference/commandline/service_create/#options) added to the `docker service create` command to create a global job for images removal. You can use this to add a label to the service or the containers. |
 | GANTRY_NOTIFICATION_APPRISE_URL |       | Enable notifications on service update with [apprise](https://github.com/caronc/apprise-api). This must point to the notification endpoint (e.g. `http://apprise:8000/notify`) |
 | GANTRY_NOTIFICATION_TITLE       |       | Add an additional message to the notification title. |
 
 ## Authentication
 
-If you only need to login to a single registry, you can use the environment variables  `GANTRY_REGISTRY_USER`, `GANTRY_REGISTRY_PASSWORD`, `GANTRY_REGISTRY_HOST` and `GANTRY_REGISTRY_CONFIG` to provide the authentication information. You may also use the `*_FILE` variants to pass the information through files. The files can be added to the service via [docker secret](https://docs.docker.com/engine/swarm/secrets/). `GANTRY_REGISTRY_HOST` and `GANTRY_REGISTRY_CONFIG` are optional. Use `GANTRY_REGISTRY_HOST` when you are not using Docker Hub. Use `GANTRY_REGISTRY_CONFIG` when you only want to enable authentication for selected services.
+If you only need to login to a single registry, you can use the environment variables  `GANTRY_REGISTRY_USER`, `GANTRY_REGISTRY_PASSWORD`, `GANTRY_REGISTRY_HOST` and `GANTRY_REGISTRY_CONFIG` to provide the authentication information. You may also use the `*_FILE` variants to pass the information through files. The files can be added to the service via [docker secret](https://docs.docker.com/engine/swarm/secrets/). `GANTRY_REGISTRY_HOST` and `GANTRY_REGISTRY_CONFIG` are optional. Use `GANTRY_REGISTRY_HOST` when you are not using Docker Hub. Use `GANTRY_REGISTRY_CONFIG` when you want to enable authentication for only selected services.
 
 If the images of services are hosted on multiple registries that are required authentication, you should provide a configuration file to the *Gantry* and set `GANTRY_REGISTRY_CONFIGS_FILE` correspondingly. You can use [docker secret](https://docs.docker.com/engine/swarm/secrets/) to provision the configuration file. The configuration file must be in the following format:
 
@@ -94,16 +96,20 @@ If the images of services are hosted on multiple registries that are required au
 ```
 <config name> <host> <user> <password>
 ```
-> * config name: an identifier for the account. This should be an acceptable [Docker config name](https://docs.docker.com/engine/swarm/configs/).
+> * config name: an identifier for the account.
 > * host: the registry to authenticate against, e.g. docker.io.
 > * user: the user name to authenticate as.
 > * password: the password to authenticate with.
 * Lines starting with  `#` are comments.
 * Empty lines, comment lines and invalid lines are ignored.
 
-You need to tell *Gantry* to use a named config rather than the default one when updating a particular service. The named configurations are set via either `GANTRY_REGISTRY_CONFIG`, `GANTRY_REGISTRY_CONFIG_FILE` or `GANTRY_REGISTRY_CONFIGS_FILE`. This can be done by adding the following label to the service `gantry.auth.config=<config-name>`.
+You need to tell *Gantry* to use a named config rather than the default one when updating a particular service. The named configurations are set via either `GANTRY_REGISTRY_CONFIG`, `GANTRY_REGISTRY_CONFIG_FILE` or `GANTRY_REGISTRY_CONFIGS_FILE`. This can be done by adding the following label to the service `gantry.auth.config=<config-name>`. *Gantry* creates [Docker configuration files](https://docs.docker.com/engine/reference/commandline/cli/#configuration-files) and adds `--config <config-name>` to the Docker command line for the corresponding services.
 
 > NOTE: You also want to manually add `--with-registry-auth` to `GANTRY_UPDATE_OPTIONS` and `GANTRY_ROLLBACK_OPTIONS` when you enable authentication.
+
+> NOTE: You can use `GANTRY_REGISTRY_CONFIGS_FILE` together with other authentication environment variables.
+
+> NOTE: *Gantry* uses `GANTRY_REGISTRY_PASSWORD` and `GANTRY_REGISTRY_USER` to obtain Docker Hub rate when `GANTRY_REGISTRY_HOST` is empty or `docker.io`. You can also use their `_FILE` variants. If either password or user is empty, *Gantry* reads the Docker Hub rate for anonymous users.
 
 ## FAQ
 
