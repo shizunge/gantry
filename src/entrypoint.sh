@@ -98,7 +98,6 @@ gantry() {
   # SC2119: Use docker_hub_rate "$@" if function's $1 should mean script's $1.
   # shellcheck disable=SC2119
   DOCKER_HUB_RATE_BEFORE=$(_read_docker_hub_rate)
-  ACCUMULATED_ERRORS=$((ACCUMULATED_ERRORS + $?))
   log INFO "Before updating, Docker Hub rate remains ${DOCKER_HUB_RATE_BEFORE}."
 
   log INFO "Starting updating."
@@ -108,7 +107,6 @@ gantry() {
   # SC2119: Use docker_hub_rate "$@" if function's $1 should mean script's $1.
   # shellcheck disable=SC2119
   DOCKER_HUB_RATE_AFTER=$(_read_docker_hub_rate)
-  ACCUMULATED_ERRORS=$((ACCUMULATED_ERRORS + $?))
   DOCKER_HUB_RATE_USED=$(difference_between "${DOCKER_HUB_RATE_BEFORE}" "${DOCKER_HUB_RATE_AFTER}")
   log INFO "After updating, Docker Hub rate remains ${DOCKER_HUB_RATE_AFTER}. Used rate ${DOCKER_HUB_RATE_USED}."
 

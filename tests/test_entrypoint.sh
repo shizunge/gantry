@@ -42,7 +42,11 @@ REMOVED_IMAGE="Removed image"
 FAILED_TO_REMOVE_IMAGE="Failed to remove image"
 
 test_new_image_no() {
-  local IMAGE_WITH_TAG="${1}"
+  local IMAGE="${1}"
+  local REGISTRY="${2}"
+  local IMAGE_WITH_TAG=
+  IMAGE_WITH_TAG=$(get_image_with_tag "${IMAGE}" "${REGISTRY}")
+  expect_message "${IMAGE_WITH_TAG}" ".+" || return 1
   local SERVICE_NAME STDOUT
   SERVICE_NAME="gantry-test-$(unique_id)"
 
@@ -76,7 +80,11 @@ test_new_image_no() {
 }
 
 test_new_image_yes() {
-  local IMAGE_WITH_TAG="${1}"
+  local IMAGE="${1}"
+  local REGISTRY="${2}"
+  local IMAGE_WITH_TAG=
+  IMAGE_WITH_TAG=$(get_image_with_tag "${IMAGE}" "${REGISTRY}")
+  expect_message "${IMAGE_WITH_TAG}" ".+" || return 1
   local SERVICE_NAME STDOUT
   SERVICE_NAME="gantry-test-$(unique_id)"
 
@@ -111,7 +119,11 @@ test_new_image_yes() {
 }
 
 test_multiple_services_excluded_filters() {
-  local IMAGE_WITH_TAG="${1}"
+  local IMAGE="${1}"
+  local REGISTRY="${2}"
+  local IMAGE_WITH_TAG=
+  IMAGE_WITH_TAG=$(get_image_with_tag "${IMAGE}" "${REGISTRY}")
+  expect_message "${IMAGE_WITH_TAG}" ".+" || return 1
   local BASE_NAME STDOUT
   BASE_NAME="gantry-test-$(unique_id)"
   local SERVICE_NAME0="${BASE_NAME}-0"
@@ -182,9 +194,12 @@ test_multiple_services_excluded_filters() {
 test_login_config() {
   # It would be difficult to test updating failure due to authorization errors.
   # We may need to setup a private registry to test that.
-  # Here are just a simple login test.
-  local IMAGE_WITH_TAG="${1}"
+  # Here are just simple login tests.
+  local IMAGE="${1}"
   local REGISTRY="${2}"
+  local IMAGE_WITH_TAG=
+  IMAGE_WITH_TAG=$(get_image_with_tag "${IMAGE}" "${REGISTRY}")
+  expect_message "${IMAGE_WITH_TAG}" ".+" || return 1
   local USER="${3}"
   local PASS="${4}"
   local SERVICE_NAME STDOUT
@@ -220,6 +235,7 @@ test_login_config() {
 
   expect_message    "${STDOUT}" "Logged into registry *${REGISTRY} for config ${CONFIG}"
   expect_no_message "${STDOUT}" "${SKIP_UPDATING_JOB}.*${SERVICE_NAME}"
+  expect_message    "${STDOUT}" "${ADDING_OPTIONS}.*--config ${CONFIG}"
   expect_no_message "${STDOUT}" "${SERVICE_NAME}.*${NO_NEW_IMAGE}"
   expect_message    "${STDOUT}" "${SERVICE_NAME}.*${UPDATED}"
   expect_no_message "${STDOUT}" "${SERVICE_NAME}.*${NO_UPDATES}"
@@ -243,9 +259,12 @@ test_login_config() {
 test_login_REGISTRY_CONFIGS_FILE() {
   # It would be difficult to test updating failure due to authorization errors.
   # We may need to setup a private registry to test that.
-  # Here are just a simple login test.
-  local IMAGE_WITH_TAG="${1}"
+  # Here are just simple login tests.
+  local IMAGE="${1}"
   local REGISTRY="${2}"
+  local IMAGE_WITH_TAG=
+  IMAGE_WITH_TAG=$(get_image_with_tag "${IMAGE}" "${REGISTRY}")
+  expect_message "${IMAGE_WITH_TAG}" ".+" || return 1
   local USER="${3}"
   local PASS="${4}"
   local SERVICE_NAME STDOUT
@@ -276,6 +295,7 @@ test_login_REGISTRY_CONFIGS_FILE() {
 
   expect_message    "${STDOUT}" "Logged into registry *${REGISTRY} for config ${CONFIG}"
   expect_no_message "${STDOUT}" "${SKIP_UPDATING_JOB}.*${SERVICE_NAME}"
+  expect_message    "${STDOUT}" "${ADDING_OPTIONS}.*--config ${CONFIG}"
   expect_no_message "${STDOUT}" "${SERVICE_NAME}.*${NO_NEW_IMAGE}"
   expect_message    "${STDOUT}" "${SERVICE_NAME}.*${UPDATED}"
   expect_no_message "${STDOUT}" "${SERVICE_NAME}.*${NO_UPDATES}"
@@ -297,7 +317,11 @@ test_login_REGISTRY_CONFIGS_FILE() {
 }
 
 test_SERVICES_EXCLUDED() {
-  local IMAGE_WITH_TAG="${1}"
+  local IMAGE="${1}"
+  local REGISTRY="${2}"
+  local IMAGE_WITH_TAG=
+  IMAGE_WITH_TAG=$(get_image_with_tag "${IMAGE}" "${REGISTRY}")
+  expect_message "${IMAGE_WITH_TAG}" ".+" || return 1
   local SERVICE_NAME STDOUT
   SERVICE_NAME="gantry-test-$(unique_id)"
 
@@ -334,7 +358,11 @@ test_SERVICES_EXCLUDED() {
 }
 
 test_SERVICES_EXCLUDED_FILTERS() {
-  local IMAGE_WITH_TAG="${1}"
+  local IMAGE="${1}"
+  local REGISTRY="${2}"
+  local IMAGE_WITH_TAG=
+  IMAGE_WITH_TAG=$(get_image_with_tag "${IMAGE}" "${REGISTRY}")
+  expect_message "${IMAGE_WITH_TAG}" ".+" || return 1
   local SERVICE_NAME STDOUT
   SERVICE_NAME="gantry-test-$(unique_id)"
 
@@ -371,7 +399,11 @@ test_SERVICES_EXCLUDED_FILTERS() {
 }
 
 test_jobs_skipping() {
-  local IMAGE_WITH_TAG="${1}"
+  local IMAGE="${1}"
+  local REGISTRY="${2}"
+  local IMAGE_WITH_TAG=
+  IMAGE_WITH_TAG=$(get_image_with_tag "${IMAGE}" "${REGISTRY}")
+  expect_message "${IMAGE_WITH_TAG}" ".+" || return 1
   local SERVICE_NAME STDOUT
   SERVICE_NAME="gantry-test-$(unique_id)"
 
@@ -385,7 +417,7 @@ test_jobs_skipping() {
 
   # Check whether it is a job before checking whether there is a new image.
   expect_message    "${STDOUT}" "${SKIP_UPDATING_JOB}.*${SERVICE_NAME}"
-  expect_no+message "${STDOUT}" "${PERFORM_UPDATING}.*${SERVICE_NAME}.*${REASON_HAS_NEWER_IMAGE}"
+  expect_no_message "${STDOUT}" "${PERFORM_UPDATING}.*${SERVICE_NAME}.*${REASON_HAS_NEWER_IMAGE}"
   expect_no_message "${STDOUT}" "${SERVICE_NAME}.*${NO_NEW_IMAGE}"
   expect_no_message "${STDOUT}" "${SERVICE_NAME}.*${UPDATED}"
   expect_no_message "${STDOUT}" "${SERVICE_NAME}.*${NO_UPDATES}"
@@ -407,7 +439,11 @@ test_jobs_skipping() {
 }
 
 test_jobs_UPDATE_JOBS_true() {
-  local IMAGE_WITH_TAG="${1}"
+  local IMAGE="${1}"
+  local REGISTRY="${2}"
+  local IMAGE_WITH_TAG=
+  IMAGE_WITH_TAG=$(get_image_with_tag "${IMAGE}" "${REGISTRY}")
+  expect_message "${IMAGE_WITH_TAG}" ".+" || return 1
   local SERVICE_NAME STDOUT
   SERVICE_NAME="gantry-test-$(unique_id)"
 
@@ -447,7 +483,11 @@ test_jobs_UPDATE_JOBS_true() {
 }
 
 test_jobs_UPDATE_JOBS_true_no_running_tasks() {
-  local IMAGE_WITH_TAG="${1}"
+  local IMAGE="${1}"
+  local REGISTRY="${2}"
+  local IMAGE_WITH_TAG=
+  IMAGE_WITH_TAG=$(get_image_with_tag "${IMAGE}" "${REGISTRY}")
+  expect_message "${IMAGE_WITH_TAG}" ".+" || return 1
   local SERVICE_NAME STDOUT
   SERVICE_NAME="gantry-test-$(unique_id)"
   local TASK_SECONDS=15
@@ -489,47 +529,12 @@ test_jobs_UPDATE_JOBS_true_no_running_tasks() {
   finalize_test "${FUNCNAME[0]}"
 }
 
-test_MANIFEST_CMD_failure() {
-  # This test must be the first in the suite or in its own suite.
-  # Because this test assume on there is no image on the registry.
-  # Tests within the same suite share the same IMAGE_WITH_TAG.
-  local IMAGE_WITH_TAG="${1}"
-  local SERVICE_NAME STDOUT
-  SERVICE_NAME="gantry-test-$(unique_id)"
-
-  initialize_test "${FUNCNAME[0]}"
-  # No push image to the registry. Checking new image would fail.
-  build_test_image "${IMAGE_WITH_TAG}"
-  start_replicated_service "${SERVICE_NAME}" "${IMAGE_WITH_TAG}"
-
-  export GANTRY_SERVICES_FILTERS="name=${SERVICE_NAME}"
-  STDOUT=$(run_gantry "${FUNCNAME[0]}" 2>&1 | tee >(cat 1>&2))
-
-  expect_no_message "${STDOUT}" "${SKIP_UPDATING_JOB}.*${SERVICE_NAME}"
-  expect_message    "${STDOUT}" "Image.*${IMAGE_WITH_TAG}.*${IMAGE_NOT_EXIST}"
-  expect_message    "${STDOUT}" "${SKIP_UPDATING}.*${SERVICE_NAME}.*${REASON_MANIFEST_FAILURE}"
-  expect_no_message "${STDOUT}" "${SERVICE_NAME}.*${NO_NEW_IMAGE}"
-  expect_no_message "${STDOUT}" "${SERVICE_NAME}.*${UPDATED}"
-  expect_no_message "${STDOUT}" "${SERVICE_NAME}.*${NO_UPDATES}"
-  expect_no_message "${STDOUT}" "${ROLLING_BACK}.*${SERVICE_NAME}"
-  expect_no_message "${STDOUT}" "${FAILED_TO_ROLLBACK}.*${SERVICE_NAME}"
-  expect_no_message "${STDOUT}" "${ROLLED_BACK}.*${SERVICE_NAME}"
-  expect_message    "${STDOUT}" "${NO_SERVICES_UPDATED}"
-  expect_no_message "${STDOUT}" "${NUM_SERVICES_UPDATED}"
-  expect_message    "${STDOUT}" "${NUM_SERVICES_UPDATE_FAILED}"
-  expect_message    "${STDOUT}" "${NO_IMAGES_TO_REMOVE}"
-  expect_no_message "${STDOUT}" "${REMOVING_NUM_IMAGES}"
-  expect_no_message "${STDOUT}" "${SKIP_REMOVING_IMAGES}"
-  expect_no_message "${STDOUT}" "${REMOVED_IMAGE}.*${IMAGE_WITH_TAG}"
-  expect_no_message "${STDOUT}" "${FAILED_TO_REMOVE_IMAGE}.*${IMAGE_WITH_TAG}"
-
-  stop_service "${SERVICE_NAME}"
-  prune_local_test_image "${IMAGE_WITH_TAG}"
-  finalize_test "${FUNCNAME[0]}"
-}
-
 test_MANIFEST_CMD_none() {
-  local IMAGE_WITH_TAG="${1}"
+  local IMAGE="${1}"
+  local REGISTRY="${2}"
+  local IMAGE_WITH_TAG=
+  IMAGE_WITH_TAG=$(get_image_with_tag "${IMAGE}" "${REGISTRY}")
+  expect_message "${IMAGE_WITH_TAG}" ".+" || return 1
   local SERVICE_NAME STDOUT
   SERVICE_NAME="gantry-test-$(unique_id)"
 
@@ -574,7 +579,11 @@ test_MANIFEST_CMD_none() {
 
 test_MANIFEST_CMD_none_SERVICES_SELF() {
   # If the service is self, it will always run manifest checking. Even if the CMD is set to none
-  local IMAGE_WITH_TAG="${1}"
+  local IMAGE="${1}"
+  local REGISTRY="${2}"
+  local IMAGE_WITH_TAG=
+  IMAGE_WITH_TAG=$(get_image_with_tag "${IMAGE}" "${REGISTRY}")
+  expect_message "${IMAGE_WITH_TAG}" ".+" || return 1
   local SERVICE_NAME STDOUT
   SERVICE_NAME="gantry-test-$(unique_id)"
 
@@ -614,7 +623,11 @@ test_MANIFEST_CMD_none_SERVICES_SELF() {
 }
 
 test_MANIFEST_CMD_manifest() {
-  local IMAGE_WITH_TAG="${1}"
+  local IMAGE="${1}"
+  local REGISTRY="${2}"
+  local IMAGE_WITH_TAG=
+  IMAGE_WITH_TAG=$(get_image_with_tag "${IMAGE}" "${REGISTRY}")
+  expect_message "${IMAGE_WITH_TAG}" ".+" || return 1
   local SERVICE_NAME STDOUT
   SERVICE_NAME="gantry-test-$(unique_id)"
 
@@ -652,7 +665,11 @@ test_MANIFEST_CMD_manifest() {
 }
 
 test_MANIFEST_CMD_unsupported_cmd() {
-  local IMAGE_WITH_TAG="${1}"
+  local IMAGE="${1}"
+  local REGISTRY="${2}"
+  local IMAGE_WITH_TAG=
+  IMAGE_WITH_TAG=$(get_image_with_tag "${IMAGE}" "${REGISTRY}")
+  expect_message "${IMAGE_WITH_TAG}" ".+" || return 1
   local SERVICE_NAME STDOUT
   SERVICE_NAME="gantry-test-$(unique_id)"
 
@@ -691,10 +708,56 @@ test_MANIFEST_CMD_unsupported_cmd() {
   finalize_test "${FUNCNAME[0]}"
 }
 
+test_MANIFEST_CMD_failure() {
+  local IMAGE="${1}"
+  local REGISTRY="${2}"
+  local IMAGE_WITH_TAG=
+  # This test assumes that the IMAGE_WITH_TAG does not exist on the registry.
+  # get_image_with_tag should return an image with a unique tag.
+  IMAGE_WITH_TAG=$(get_image_with_tag "${IMAGE}" "${REGISTRY}")
+  expect_message "${IMAGE_WITH_TAG}" ".+" || return 1
+  local SERVICE_NAME STDOUT
+  SERVICE_NAME="gantry-test-$(unique_id)"
+
+  initialize_test "${FUNCNAME[0]}"
+  # No push image to the registry. Checking new image would fail.
+  build_test_image "${IMAGE_WITH_TAG}"
+  start_replicated_service "${SERVICE_NAME}" "${IMAGE_WITH_TAG}"
+
+  export GANTRY_SERVICES_FILTERS="name=${SERVICE_NAME}"
+  STDOUT=$(run_gantry "${FUNCNAME[0]}" 2>&1 | tee >(cat 1>&2))
+
+  expect_no_message "${STDOUT}" "${SKIP_UPDATING_JOB}.*${SERVICE_NAME}"
+  expect_message    "${STDOUT}" "Image.*${IMAGE_WITH_TAG}.*${IMAGE_NOT_EXIST}"
+  expect_message    "${STDOUT}" "${SKIP_UPDATING}.*${SERVICE_NAME}.*${REASON_MANIFEST_FAILURE}"
+  expect_no_message "${STDOUT}" "${SERVICE_NAME}.*${NO_NEW_IMAGE}"
+  expect_no_message "${STDOUT}" "${SERVICE_NAME}.*${UPDATED}"
+  expect_no_message "${STDOUT}" "${SERVICE_NAME}.*${NO_UPDATES}"
+  expect_no_message "${STDOUT}" "${ROLLING_BACK}.*${SERVICE_NAME}"
+  expect_no_message "${STDOUT}" "${FAILED_TO_ROLLBACK}.*${SERVICE_NAME}"
+  expect_no_message "${STDOUT}" "${ROLLED_BACK}.*${SERVICE_NAME}"
+  expect_message    "${STDOUT}" "${NO_SERVICES_UPDATED}"
+  expect_no_message "${STDOUT}" "${NUM_SERVICES_UPDATED}"
+  expect_message    "${STDOUT}" "${NUM_SERVICES_UPDATE_FAILED}"
+  expect_message    "${STDOUT}" "${NO_IMAGES_TO_REMOVE}"
+  expect_no_message "${STDOUT}" "${REMOVING_NUM_IMAGES}"
+  expect_no_message "${STDOUT}" "${SKIP_REMOVING_IMAGES}"
+  expect_no_message "${STDOUT}" "${REMOVED_IMAGE}.*${IMAGE_WITH_TAG}"
+  expect_no_message "${STDOUT}" "${FAILED_TO_REMOVE_IMAGE}.*${IMAGE_WITH_TAG}"
+
+  stop_service "${SERVICE_NAME}"
+  prune_local_test_image "${IMAGE_WITH_TAG}"
+  finalize_test "${FUNCNAME[0]}"
+}
+
 test_no_running_tasks_replicated() {
   # Add "--detach=true" when there is no running tasks.
   # https://github.com/docker/cli/issues/627
-  local IMAGE_WITH_TAG="${1}"
+  local IMAGE="${1}"
+  local REGISTRY="${2}"
+  local IMAGE_WITH_TAG=
+  IMAGE_WITH_TAG=$(get_image_with_tag "${IMAGE}" "${REGISTRY}")
+  expect_message "${IMAGE_WITH_TAG}" ".+" || return 1
   local SERVICE_NAME STDOUT
   SERVICE_NAME="gantry-test-$(unique_id)"
 
@@ -734,7 +797,11 @@ test_no_running_tasks_replicated() {
 test_no_running_tasks_global() {
   # Add "--detach=true" when there is no running tasks.
   # https://github.com/docker/cli/issues/627
-  local IMAGE_WITH_TAG="${1}"
+  local IMAGE="${1}"
+  local REGISTRY="${2}"
+  local IMAGE_WITH_TAG=
+  IMAGE_WITH_TAG=$(get_image_with_tag "${IMAGE}" "${REGISTRY}")
+  expect_message "${IMAGE_WITH_TAG}" ".+" || return 1
   local SERVICE_NAME STDOUT
   SERVICE_NAME="gantry-test-$(unique_id)"
   local TASK_SECONDS=15
@@ -775,7 +842,11 @@ test_no_running_tasks_global() {
 }
 
 test_rollback_due_to_timeout() {
-  local IMAGE_WITH_TAG="${1}"
+  local IMAGE="${1}"
+  local REGISTRY="${2}"
+  local IMAGE_WITH_TAG=
+  IMAGE_WITH_TAG=$(get_image_with_tag "${IMAGE}" "${REGISTRY}")
+  expect_message "${IMAGE_WITH_TAG}" ".+" || return 1
   local SERVICE_NAME STDOUT
   SERVICE_NAME="gantry-test-$(unique_id)"
   local TIMEOUT=3
@@ -815,7 +886,11 @@ test_rollback_due_to_timeout() {
 }
 
 test_rollback_failed() {
-  local IMAGE_WITH_TAG="${1}"
+  local IMAGE="${1}"
+  local REGISTRY="${2}"
+  local IMAGE_WITH_TAG=
+  IMAGE_WITH_TAG=$(get_image_with_tag "${IMAGE}" "${REGISTRY}")
+  expect_message "${IMAGE_WITH_TAG}" ".+" || return 1
   local SERVICE_NAME STDOUT
   SERVICE_NAME="gantry-test-$(unique_id)"
   local TIMEOUT=3
@@ -858,7 +933,11 @@ test_rollback_failed() {
 }
 
 test_rollback_ROLLBACK_ON_FAILURE_false() {
-  local IMAGE_WITH_TAG="${1}"
+  local IMAGE="${1}"
+  local REGISTRY="${2}"
+  local IMAGE_WITH_TAG=
+  IMAGE_WITH_TAG=$(get_image_with_tag "${IMAGE}" "${REGISTRY}")
+  expect_message "${IMAGE_WITH_TAG}" ".+" || return 1
   local SERVICE_NAME STDOUT
   SERVICE_NAME="gantry-test-$(unique_id)"
   local TIMEOUT=3
@@ -900,7 +979,11 @@ test_rollback_ROLLBACK_ON_FAILURE_false() {
 
 test_options_LOG_LEVEL_none() {
   # Same as test_new_image_yes, except set LOG_LEVEL to NONE
-  local IMAGE_WITH_TAG="${1}"
+  local IMAGE="${1}"
+  local REGISTRY="${2}"
+  local IMAGE_WITH_TAG=
+  IMAGE_WITH_TAG=$(get_image_with_tag "${IMAGE}" "${REGISTRY}")
+  expect_message "${IMAGE_WITH_TAG}" ".+" || return 1
   local SERVICE_NAME STDOUT
   SERVICE_NAME="gantry-test-$(unique_id)"
 
@@ -923,7 +1006,11 @@ test_options_LOG_LEVEL_none() {
 
 test_options_UPDATE_OPTIONS() {
   # Check an observable difference before and after applying UPDATE_OPTIONS.
-  local IMAGE_WITH_TAG="${1}"
+  local IMAGE="${1}"
+  local REGISTRY="${2}"
+  local IMAGE_WITH_TAG=
+  IMAGE_WITH_TAG=$(get_image_with_tag "${IMAGE}" "${REGISTRY}")
+  expect_message "${IMAGE_WITH_TAG}" ".+" || return 1
   local SERVICE_NAME STDOUT
   SERVICE_NAME="gantry-test-$(unique_id)"
   local LABEL="gantry.test"
@@ -966,7 +1053,11 @@ test_options_UPDATE_OPTIONS() {
 }
 
 test_options_PRE_POST_RUN_CMD() {
-  local IMAGE_WITH_TAG="${1}"
+  local IMAGE="${1}"
+  local REGISTRY="${2}"
+  local IMAGE_WITH_TAG=
+  IMAGE_WITH_TAG=$(get_image_with_tag "${IMAGE}" "${REGISTRY}")
+  expect_message "${IMAGE_WITH_TAG}" ".+" || return 1
   local SERVICE_NAME STDOUT
   SERVICE_NAME="gantry-test-$(unique_id)"
 
@@ -1003,7 +1094,11 @@ test_options_PRE_POST_RUN_CMD() {
 }
 
 test_CLEANUP_IMAGES_false() {
-  local IMAGE_WITH_TAG="${1}"
+  local IMAGE="${1}"
+  local REGISTRY="${2}"
+  local IMAGE_WITH_TAG=
+  IMAGE_WITH_TAG=$(get_image_with_tag "${IMAGE}" "${REGISTRY}")
+  expect_message "${IMAGE_WITH_TAG}" ".+" || return 1
   local SERVICE_NAME STDOUT
   SERVICE_NAME="gantry-test-$(unique_id)"
 
@@ -1038,7 +1133,11 @@ test_CLEANUP_IMAGES_false() {
 }
 
 test_CLEANUP_IMAGES_OPTIONS_bad() {
-  local IMAGE_WITH_TAG="${1}"
+  local IMAGE="${1}"
+  local REGISTRY="${2}"
+  local IMAGE_WITH_TAG=
+  IMAGE_WITH_TAG=$(get_image_with_tag "${IMAGE}" "${REGISTRY}")
+  expect_message "${IMAGE_WITH_TAG}" ".+" || return 1
   local SERVICE_NAME STDOUT
   SERVICE_NAME="gantry-test-$(unique_id)"
 
@@ -1077,7 +1176,11 @@ test_CLEANUP_IMAGES_OPTIONS_bad() {
 }
 
 test_CLEANUP_IMAGES_OPTIONS_good() {
-  local IMAGE_WITH_TAG="${1}"
+  local IMAGE="${1}"
+  local REGISTRY="${2}"
+  local IMAGE_WITH_TAG=
+  IMAGE_WITH_TAG=$(get_image_with_tag "${IMAGE}" "${REGISTRY}")
+  expect_message "${IMAGE_WITH_TAG}" ".+" || return 1
   local SERVICE_NAME STDOUT
   SERVICE_NAME="gantry-test-$(unique_id)"
 

@@ -15,6 +15,17 @@
 # along with this program.  If not, see <https://www.gnu.org/licenses/>.
 #
 
+init_swarm() {
+  local SELF_ID=
+  SELF_ID=$(docker node inspect self --format "{{.Description.Hostname}}" 2>/dev/null);
+  if [ -n "${SELF_ID}" ]; then
+    echo "Host ${SELF_ID} is already a swarm manager."
+    return 0
+  fi
+  echo "Run docker swarm init"
+  docker swarm init
+}
+
 initialize_test() {
   local TEST_NAME=${1}
   echo "=============================="
@@ -99,6 +110,24 @@ test_enabled() {
   return 1
 }
 
+get_image_with_tag() {
+  local IMAGE="${1}"
+  local REGISTRY="${2}"
+  if [ -z "${IMAGE}" ]; then
+    echo "IMAGE is empty." >&2
+    return 1
+  fi
+  [ "${REGISTRY}" = "docker.io" ] && REGISTRY=""
+  local IMAGE_WITH_TAG="${IMAGE}"
+  if [ -n "${REGISTRY}" ]; then
+    IMAGE_WITH_TAG="${REGISTRY}/${IMAGE_WITH_TAG}"
+  fi
+  if ! echo "${IMAGE_WITH_TAG}" | grep -q ":"; then
+    IMAGE_WITH_TAG="${IMAGE_WITH_TAG}:for-test-$(unique_id)"
+  fi
+  echo "${IMAGE_WITH_TAG}"
+}
+
 run_test() {
   local TEST="${1}"
   shift
@@ -123,7 +152,7 @@ handle_failure() {
   local MESSAGE="${1}"
   local RED='\033[0;31m'
   local NO_COLOR='\033[0m'
-  echo -e "${RED}ERROR${NO_COLOR} ${MESSAGE}" >&2
+  echo -e "${RED}ERROR${NO_COLOR} ${MESSAGE}"
   STATIC_VAR_THIS_TEST_ERRORS=$((STATIC_VAR_THIS_TEST_ERRORS+1))
   STATIC_VAR_ALL_ERRORS=$((STATIC_VAR_ALL_ERRORS+1))
 }
@@ -133,7 +162,7 @@ expect_message() {
   MESSAGE=${2}
   local GREEN='\033[0;32m'
   local NO_COLOR='\033[0m'
-  if ! ACTUAL_MSG=$(echo "${TEXT}" | grep -P "${MESSAGE}"); then
+  if ! ACTUAL_MSG=$(echo "${TEXT}" | grep -Po "${MESSAGE}"); then
     handle_failure "Failed to find expected message \"${MESSAGE}\"."
     return 1
   fi
@@ -145,8 +174,8 @@ expect_no_message() {
   MESSAGE=${2}
   local GREEN='\033[0;32m'
   local NO_COLOR='\033[0m'
-  if ACTUAL_MSG=$(echo "${TEXT}" | grep -P "${MESSAGE}"); then
-    handle_failure "Message \"${ACTUAL_MSG}\" should not present."
+  if ACTUAL_MSG=$(echo "${TEXT}" | grep -Po "${MESSAGE}"); then
+    handle_failure "The following message should not present: \"${ACTUAL_MSG}\""
     return 1
   fi
   echo -e "${GREEN}EXPECTED${NO_COLOR} found no message matches: ${MESSAGE}"
@@ -186,9 +215,7 @@ build_test_image() {
   echo "FROM alpinelinux/docker-cli:latest" > "${FILE}"
   echo "ENTRYPOINT [\"sh\", \"-c\", \"echo $(unique_id); trap \\\"${EXIT_CMD}\\\" HUP INT TERM; ${TASK_CMD}\"]" >> "${FILE}"
   echo -n "Building ${IMAGE_WITH_TAG} "
-  echo "Building ${IMAGE_WITH_TAG}" >&2
   timeout 300 docker build --quiet --tag "${IMAGE_WITH_TAG}" --file "${FILE}" .
-  echo "Building ${IMAGE_WITH_TAG} done." >&2
   rm "${FILE}"
 }
 
@@ -197,14 +224,14 @@ build_and_push_test_image() {
   local TASK_SECONDS="${2}"
   local EXIT_SECONDS="${3}"
   build_test_image "${IMAGE_WITH_TAG}" "${TASK_SECONDS}" "${EXIT_SECONDS}"
-  echo -n "Pushing ${IMAGE_WITH_TAG} "
+  echo -n "Pushing image "
   docker push --quiet "${IMAGE_WITH_TAG}"
 }
 
 prune_local_test_image() {
   local IMAGE_WITH_TAG="${1}"
   echo "Removing image ${IMAGE_WITH_TAG} "
-  docker image rm "${IMAGE_WITH_TAG}"
+  docker image rm "${IMAGE_WITH_TAG}" --force
 }
 
 wait_zero_running_tasks() {
@@ -308,12 +335,14 @@ start_replicated_job() {
 
 stop_service() {
   local SERVICE_NAME="${1}"
-  echo -n "Removing ${SERVICE_NAME} "
+  echo -n "Removing service "
   docker service rm "${SERVICE_NAME}"
 }
 
 get_script_dir() {
-  if [ -z "${BASH_SOURCE[0]}" ]; then
+  # SC2128: Expanding an array without an index only gives the first element.
+  # shellcheck disable=SC2128
+  if [ -z "${BASH_SOURCE}" ] || [ -z "${BASH_SOURCE[0]}" ]; then
     echo "BASH_SOURCE is empty." >&2
     echo "."
     return 1

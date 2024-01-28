@@ -575,7 +575,7 @@ _update_single_service() {
   fi
   local DOCKER_CONFIG=
   DOCKER_CONFIG=$(_get_config_from_service "${SERVICE_NAME}")
-  [ -n "${DOCKER_CONFIG}" ] && log DEBUG "Add option \"${DOCKER_CONFIG}\" to docker commands."
+  [ -n "${DOCKER_CONFIG}" ] && log DEBUG "Adding options \"${DOCKER_CONFIG}\" to docker commands."
   local IMAGE=
   if ! IMAGE=$(_inspect_image "${SERVICE_NAME}" "${DOCKER_CONFIG}"); then
     _add_service_update_failed "${SERVICE_NAME}"
