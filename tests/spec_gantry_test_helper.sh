@@ -1,5 +1,5 @@
-#!/bin/bash
-# Copyright (C) 2023-2024 Shizun Ge
+# shellcheck shell=sh
+# Copyright (C) 2024 Shizun Ge
 #
 # This program is free software: you can redistribute it and/or modify
 # it under the terms of the GNU General Public License as published by
@@ -15,7 +15,109 @@
 # along with this program.  If not, see <https://www.gnu.org/licenses/>.
 #
 
-init_swarm() {
+# Constant strings for checks.
+export SKIP_UPDATING_ALL="Skip updating all services due to previous errors"
+export SKIP_UPDATING_JOB="Skip updating service in .*job mode"
+export PERFORM_UPDATING="Perform updating"
+export SKIP_UPDATING="Skip updating"
+export REASON_MANIFEST_CMD_IS_NONE="because MANIFEST_CMD is \"none\""
+export REASON_NO_KNOWN_NEWER_IMAGE="because there is no known newer version of image"
+export REASON_KNOWN_NEWER_IMAGE="because there is a known newer version of image"
+export REASON_MANIFEST_FAILURE="because there is a failure to obtain the manifest from the registry"
+export REASON_CURRENT_IS_LATEST="because the current version is the latest"
+export REASON_HAS_NEWER_IMAGE="because there is a newer version"
+export IMAGE_NOT_EXIST="does not exist or it is not available"
+export NO_NEW_IMAGE="No new image"
+export ADDING_OPTIONS="Adding options"
+export NO_UPDATES="No updates"
+export UPDATED="UPDATED"
+export ROLLING_BACK="Rolling back"
+export FAILED_TO_ROLLBACK="Failed to roll back"
+export ROLLED_BACK="Rolled back"
+export NO_SERVICES_UPDATED="No services updated"
+export NO_IMAGES_TO_REMOVE="No images to remove"
+export NUM_SERVICES_UPDATED="[1-9] service\(s\) updated"
+export NUM_SERVICES_UPDATE_FAILED="[1-9] service\(s\) update failed"
+export REMOVING_NUM_IMAGES="Removing [1-9] image\(s\)"
+export SKIP_REMOVING_IMAGES="Skip removing images"
+export REMOVED_IMAGE="Removed image"
+export FAILED_TO_REMOVE_IMAGE="Failed to remove image"
+export SLEEP_SECONDS_BEFORE_NEXT_UPDATE="Sleep [0-9]+ seconds before next update"
+
+display_output() {
+  echo "${display_output:-""}"
+}
+
+common_setup_new_image() {
+  local TEST_NAME="${1}"
+  local IMAGE_WITH_TAG="${2}"
+  local SERVICE_NAME="${3}"
+  initialize_test "${TEST_NAME}"
+  build_and_push_test_image "${IMAGE_WITH_TAG}"
+  start_replicated_service "${SERVICE_NAME}" "${IMAGE_WITH_TAG}"
+  build_and_push_test_image "${IMAGE_WITH_TAG}"
+  export GANTRY_SERVICES_FILTERS="name=${SERVICE_NAME}"
+}
+
+common_setup_no_new_image() {
+  local TEST_NAME="${1}"
+  local IMAGE_WITH_TAG="${2}"
+  local SERVICE_NAME="${3}"
+  initialize_test "${TEST_NAME}"
+  build_and_push_test_image "${IMAGE_WITH_TAG}"
+  start_replicated_service "${SERVICE_NAME}" "${IMAGE_WITH_TAG}"
+  # No image updates after service started.
+  export GANTRY_SERVICES_FILTERS="name=${SERVICE_NAME}"
+}
+
+common_setup_job() {
+  local TEST_NAME="${1}"
+  local IMAGE_WITH_TAG="${2}"
+  local SERVICE_NAME="${3}"
+  local TASK_SECONDS="${4}"
+  initialize_test "${TEST_NAME}"
+  # The task will finish in ${TASK_SECONDS} seconds, when ${TASK_SECONDS} is not empty
+  build_and_push_test_image "${IMAGE_WITH_TAG}" "${TASK_SECONDS}"
+  _start_replicated_job "${SERVICE_NAME}" "${IMAGE_WITH_TAG}"
+  build_and_push_test_image "${IMAGE_WITH_TAG}"
+  export GANTRY_SERVICES_FILTERS="name=${SERVICE_NAME}"
+}
+
+common_setup_timeout() {
+  local TEST_NAME="${1}"
+  local IMAGE_WITH_TAG="${2}"
+  local SERVICE_NAME="${3}"
+  local TIMEOUT=3
+  local DOUBLE_TIMEOUT=$((TIMEOUT+TIMEOUT))
+  initialize_test "${TEST_NAME}"
+  # -1 thus the task runs forever.
+  # exit will take double of the timeout.
+  build_and_push_test_image "${IMAGE_WITH_TAG}" "-1" "${DOUBLE_TIMEOUT}"
+  start_replicated_service "${SERVICE_NAME}" "${IMAGE_WITH_TAG}"
+  build_and_push_test_image "${IMAGE_WITH_TAG}"
+  export GANTRY_SERVICES_FILTERS="name=${SERVICE_NAME}"
+  # Assume service update won't be done within TIMEOUT second.
+  export GANTRY_UPDATE_TIMEOUT_SECONDS="${TIMEOUT}"
+}
+
+common_cleanup() {
+  local TEST_NAME="${1}"
+  local IMAGE_WITH_TAG="${2}"
+  local SERVICE_NAME="${3}"
+  stop_service "${SERVICE_NAME}"
+  prune_local_test_image "${IMAGE_WITH_TAG}"
+  finalize_test "${TEST_NAME}"
+}
+
+spec_expect_message() {
+  _expect_message "${spec_expect_message:-""}" "${1}"
+}
+
+spec_expect_no_message() {
+  _expect_no_message "${spec_expect_no_message:-""}" "${1}"
+}
+
+_init_swarm() {
   local SELF_ID=
   SELF_ID=$(docker node inspect self --format "{{.Description.Hostname}}" 2>/dev/null);
   if [ -n "${SELF_ID}" ]; then
@@ -26,10 +128,72 @@ init_swarm() {
   docker swarm init
 }
 
-initialize_test() {
-  local TEST_NAME=${1}
+_start_registry() {
+  local SUITE_NAME="${1:?}"
+  SUITE_NAME=$(echo "${SUITE_NAME}" | tr ' ' '-')
+  export TEST_IMAGE="gantry/test"
+  local TEST_REGISTRY_PORT=5000
+  export TEST_REGISTRY="127.0.0.1:${TEST_REGISTRY_PORT}"
+  export TEST_USERNAME="gantry"
+  export TEST_PASSWORD="gantry"
+  export REGISTRY_SERVICE_NAME="gantry-test-registry-${SUITE_NAME}"
+  local REGISTRY_IMAGE="docker.io/registry"
+  local TRIES=0
+  local MAX_RETRIES=50
+  echo -n "Starting registry ${TEST_REGISTRY} "
+  # SC2046 (warning): Quote this to prevent word splitting.
+  # shellcheck disable=SC2046
+  while ! docker service create --quiet \
+    --name "${REGISTRY_SERVICE_NAME}" \
+    --restart-condition "on-failure" \
+    --restart-max-attempts 5 \
+    $(_location_constraints) \
+    --mode=replicated \
+    -p "${TEST_REGISTRY_PORT}:5000" \
+    "${REGISTRY_IMAGE}" 2>/dev/null; do
+    TEST_REGISTRY_PORT=$((TEST_REGISTRY_PORT+1))
+    export TEST_REGISTRY="127.0.0.1:${TEST_REGISTRY_PORT}"
+    echo -n "Starting registry ${TEST_REGISTRY} again "
+    if [ "${TRIES}" -ge "${MAX_RETRIES}" ]; then
+      return 1
+    fi
+    TRIES=$((TRIES+1))
+    sleep 1
+  done
+}
+
+_stop_registry() {
+  local SUITE_NAME="${1:?}"
+  SUITE_NAME=$(echo "${SUITE_NAME}" | tr ' ' '-')
+  echo -n "Removing registry ${TEST_REGISTRY:?} "
+  stop_service "${REGISTRY_SERVICE_NAME:?}"
+  return 0
+}
+
+initialize_all_tests() {
+  local SUITE_NAME="${1:-"gantry"}"
+  SUITE_NAME=$(echo "${SUITE_NAME}" | tr ' ' '-')
   echo "=============================="
-  echo "== ${TEST_NAME} started"
+  echo "== Starting tests in ${SUITE_NAME}"
+  echo "=============================="
+  _init_swarm
+  _start_registry "${SUITE_NAME}"
+}
+
+# finish_all_tests should return non zero when there are errors.
+finish_all_tests() {
+  local SUITE_NAME="${1:-"gantry"}"
+  SUITE_NAME=$(echo "${SUITE_NAME}" | tr ' ' '-')
+  _stop_registry "${SUITE_NAME}"
+  echo "=============================="
+  echo "== Finished all tests in ${SUITE_NAME}"
+  echo "=============================="
+}
+
+initialize_test() {
+  local TEST_NAME="${1:-"gantry"}"
+  echo "=============================="
+  echo "== Starting ${TEST_NAME}"
   echo "=============================="
   export GANTRY_LOG_LEVEL="DEBUG"
   export GANTRY_NODE_NAME=
@@ -59,60 +223,24 @@ initialize_test() {
   export GANTRY_CLEANUP_IMAGES=
   export GANTRY_NOTIFICATION_APPRISE_URL=
   export GANTRY_NOTIFICATION_TITLE=
-  STATIC_VAR_THIS_TEST_ERRORS=0
 }
 
 finalize_test() {
-  local TEST_NAME=${1}
+  local TEST_NAME="${1}"
   local RED='\033[0;31m'
   local GREEN='\033[0;32m'
   local NO_COLOR='\033[0m'
-  local TSET_STATUS="${GREEN}OK${NO_COLOR}"
+  local TSET_STATUS="DONE"
   local RETURN_VALUE=0
-  if [ "${STATIC_VAR_THIS_TEST_ERRORS}" -ne 0 ]; then
-    TSET_STATUS="${RED}${STATIC_VAR_THIS_TEST_ERRORS} ERRORS${NO_COLOR}"
-    RETURN_VALUE=1
-  fi
   echo "=============================="
-  echo -e "== ${TEST_NAME} ${TSET_STATUS}"
+  echo -e "== ${TSET_STATUS} ${TEST_NAME}"
+  echo "=============================="
   return "${RETURN_VALUE}"
 }
 
-# finish_all_tests should return non zero when there are errors.
-finish_all_tests() {
-  local NUM_ERRORS="${STATIC_VAR_ALL_ERRORS:-0}"
-  local MISSING_TESTS="${STATIC_VAR_MISSING_TESTS:-""}"
-  if [ -n "${MISSING_TESTS}" ]; then
-    echo "=============================="
-    echo "== Missing tests:"
-    for TEST in ${MISSING_TESTS}; do
-      echo "== - ${TEST}"
-    done
-  fi
-  if [ "${NUM_ERRORS}" -ne 0 ]; then
-    echo "=============================="
-    echo "== There are total ${NUM_ERRORS} error(s)."
-    return 1
-  fi
-  echo "=============================="
-  echo "== All tests pass."
-}
-
-test_enabled() {
-  local TEST_LIST="${GANTRY_TEST_ENABLE_TESTS:-""}"
-  local TEST="${1}"
-  [ -z "${TEST_LIST}" ] && return 0
-  for I in ${TEST_LIST}; do
-    if echo "${TEST}" | grep -q -i -P "${I}"; then
-      return 0
-    fi
-  done
-  return 1
-}
-
 get_image_with_tag() {
-  local IMAGE="${1}"
-  local REGISTRY="${2}"
+  local IMAGE="${TEST_IMAGE:?}"
+  local REGISTRY="${TEST_REGISTRY:?}"
   if [ -z "${IMAGE}" ]; then
     echo "IMAGE is empty." >&2
     return 1
@@ -122,60 +250,36 @@ get_image_with_tag() {
   if [ -n "${REGISTRY}" ]; then
     IMAGE_WITH_TAG="${REGISTRY}/${IMAGE_WITH_TAG}"
   fi
-  if ! echo "${IMAGE_WITH_TAG}" | grep -q ":"; then
-    IMAGE_WITH_TAG="${IMAGE_WITH_TAG}:for-test-$(unique_id)"
-  fi
+  IMAGE_WITH_TAG="${IMAGE_WITH_TAG}:for-test-$(unique_id)"
   echo "${IMAGE_WITH_TAG}"
 }
 
-run_test() {
-  local TEST="${1}"
-  shift
-  if ! test_enabled "${TEST}"; then
-    echo "=============================="
-    echo "== ${TEST} skipped"
-    return 0
-  fi
-  if type "${TEST}" >/dev/null 2>&1; then
-    ${TEST} "${@}"
-  else
-    local RED='\033[0;31m'
-    local NO_COLOR='\033[0m'
-    echo "=============================="
-    echo -e "== ${TEST} is ${RED}missing${NO_COLOR}."
-    STATIC_VAR_MISSING_TESTS="${STATIC_VAR_MISSING_TESTS} ${TEST}"
-    handle_failure "${TEST} is missing."
-  fi
-}
-
-handle_failure() {
+_handle_failure() {
   local MESSAGE="${1}"
   local RED='\033[0;31m'
   local NO_COLOR='\033[0m'
   echo -e "${RED}ERROR${NO_COLOR} ${MESSAGE}"
-  STATIC_VAR_THIS_TEST_ERRORS=$((STATIC_VAR_THIS_TEST_ERRORS+1))
-  STATIC_VAR_ALL_ERRORS=$((STATIC_VAR_ALL_ERRORS+1))
 }
 
-expect_message() {
-  TEXT=${1}
-  MESSAGE=${2}
+_expect_message() {
+  TEXT="${1}"
+  MESSAGE="${2}"
   local GREEN='\033[0;32m'
   local NO_COLOR='\033[0m'
   if ! ACTUAL_MSG=$(echo "${TEXT}" | grep -Po "${MESSAGE}"); then
-    handle_failure "Failed to find expected message \"${MESSAGE}\"."
+    _handle_failure "Failed to find expected message \"${MESSAGE}\"."
     return 1
   fi
   echo -e "${GREEN}EXPECTED${NO_COLOR} found message: ${ACTUAL_MSG}"
 }
 
-expect_no_message() {
-  TEXT=${1}
-  MESSAGE=${2}
+_expect_no_message() {
+  TEXT="${1}"
+  MESSAGE="${2}"
   local GREEN='\033[0;32m'
   local NO_COLOR='\033[0m'
   if ACTUAL_MSG=$(echo "${TEXT}" | grep -Po "${MESSAGE}"); then
-    handle_failure "The following message should not present: \"${ACTUAL_MSG}\""
+    _handle_failure "The following message should not present: \"${ACTUAL_MSG}\""
     return 1
   fi
   echo -e "${GREEN}EXPECTED${NO_COLOR} found no message matches: ${MESSAGE}"
@@ -188,12 +292,6 @@ unique_id() {
   local RANDOM_STR=
   RANDOM_STR=$(head /dev/urandom | LANG=C tr -dc 'A-Za-z0-9' | head -c 8)
   echo "$(date +%s)-${PID}-${RANDOM_STR}"
-}
-
-read_service_label() {
-  local SERVICE_NAME="${1}"
-  local LABEL="${2}"
-  docker service inspect -f "{{index .Spec.Labels \"${LABEL}\"}}" "${SERVICE_NAME}"
 }
 
 build_test_image() {
@@ -239,15 +337,15 @@ wait_zero_running_tasks() {
   local TIMEOUT_SECONDS="${2}"
   local NUM_RUNS=1
   local REPLICAS=
-  local SECONDS=0
+  local USED_SECONDS=0
   echo "Wait until ${SERVICE_NAME} has zero running tasks."
   while [ "${NUM_RUNS}" -ne 0 ]; do
-    if [ -n "${TIMEOUT_SECONDS}" ] && [ "${SECONDS}" -ge "${TIMEOUT_SECONDS}" ]; then
-      handle_failure "Services ${SERVICE_NAME} does not stop after ${TIMEOUT_SECONDS} seconds."
+    if [ -n "${TIMEOUT_SECONDS}" ] && [ "${USED_SECONDS}" -ge "${TIMEOUT_SECONDS}" ]; then
+      _handle_failure "Services ${SERVICE_NAME} does not stop after ${TIMEOUT_SECONDS} seconds."
       return 1
     fi
     if ! REPLICAS=$(docker service ls --filter "name=${SERVICE_NAME}" --format '{{.Replicas}}' 2>&1); then
-      handle_failure "Failed to obtain task states of service ${SERVICE_NAME}: ${REPLICAS}"
+      _handle_failure "Failed to obtain task states of service ${SERVICE_NAME}: ${REPLICAS}"
       return 1
     fi
     # https://docs.docker.com/engine/reference/commandline/service_ls/#examples
@@ -255,30 +353,30 @@ wait_zero_running_tasks() {
     # Get the number before the first "/".
     NUM_RUNS=$(echo "${REPLICAS}" | cut -d '/' -f 1)
     sleep 1
-    SECONDS=$((SECONDS+1))
+    USED_SECONDS=$((USED_SECONDS+1))
   done
 }
 
-hostname() {
+_hostname() {
   if [ -z "${STATIC_VAR_HOSTNAME}" ]; then
     local SELF_ID=
     SELF_ID=$(docker node inspect self --format "{{.Description.Hostname}}" 2>/dev/null);
     if [ -n "${SELF_ID}" ]; then
-      STATIC_VAR_HOSTNAME="${SELF_ID}"
+      export STATIC_VAR_HOSTNAME="${SELF_ID}"
     fi
   fi
   echo "${STATIC_VAR_HOSTNAME}"
 }
 
-location_constraints() {
+_location_constraints() {
   local NODE_NAME=
-  NODE_NAME="$(hostname)"
+  NODE_NAME="$(_hostname)"
   [ -z "${NODE_NAME}" ] && echo "" && return 0
   local ARGS="--constraint node.hostname==${NODE_NAME}";
   echo "${ARGS}"
 }
 
-wait_service_state() {
+_wait_service_state() {
   local SERVICE_NAME="${1}"
   local STATE="${2}"
   while ! docker service ps --format "{{.CurrentState}}" "${SERVICE_NAME}" | grep -q "${STATE}"; do
@@ -296,7 +394,7 @@ start_replicated_service() {
     --name "${SERVICE_NAME}" \
     --restart-condition "on-failure" \
     --restart-max-attempts 5 \
-    $(location_constraints) \
+    $(_location_constraints) \
     --mode=replicated \
     "${IMAGE_WITH_TAG}"
 }
@@ -311,12 +409,12 @@ start_global_service() {
     --name "${SERVICE_NAME}" \
     --restart-condition "on-failure" \
     --restart-max-attempts 5 \
-    $(location_constraints) \
+    $(_location_constraints) \
     --mode=global \
     "${IMAGE_WITH_TAG}"
 }
 
-start_replicated_job() {
+_start_replicated_job() {
   local SERVICE_NAME="${1}"
   local IMAGE_WITH_TAG="${2}"
   echo -n "Creating service ${SERVICE_NAME} in replicated job mode "
@@ -326,11 +424,11 @@ start_replicated_job() {
     --name "${SERVICE_NAME}" \
     --restart-condition "on-failure" \
     --restart-max-attempts 5 \
-    $(location_constraints) \
+    $(_location_constraints) \
     --mode=replicated-job --detach=true \
     "${IMAGE_WITH_TAG}"
   # wait until the job is running
-  wait_service_state "${SERVICE_NAME}" "Running"
+  _wait_service_state "${SERVICE_NAME}" "Running"
 }
 
 stop_service() {
@@ -339,31 +437,34 @@ stop_service() {
   docker service rm "${SERVICE_NAME}"
 }
 
-get_script_dir() {
+_get_script_dir() {
   # SC2128: Expanding an array without an index only gives the first element.
-  # shellcheck disable=SC2128
+  # SC3054 (warning): In POSIX sh, array references are undefined.
+  # shellcheck disable=SC2128,SC3054
   if [ -z "${BASH_SOURCE}" ] || [ -z "${BASH_SOURCE[0]}" ]; then
     echo "BASH_SOURCE is empty." >&2
     echo "."
     return 1
   fi
   local SCRIPT_DIR=
+  # SC3054 (warning): In POSIX sh, array references are undefined.
+    # shellcheck disable=SC3054
   SCRIPT_DIR="$( cd "$(dirname "${BASH_SOURCE[0]}")" || return 1; pwd -P )"
   echo "${SCRIPT_DIR}"
 }
 
-get_entrypoint() {
+_get_entrypoint() {
   if [ -n "${STATIC_VAR_ENTRYPOINT}" ]; then
     echo "${STATIC_VAR_ENTRYPOINT}"
     return 0
   fi
   local SCRIPT_DIR=
-  SCRIPT_DIR="$(get_script_dir)" || return 1
-  STATIC_VAR_ENTRYPOINT="${SCRIPT_DIR}/../src/entrypoint.sh"
+  SCRIPT_DIR="$(_get_script_dir)" || return 1
+  export STATIC_VAR_ENTRYPOINT="${SCRIPT_DIR}/../src/entrypoint.sh"
   echo "source ${STATIC_VAR_ENTRYPOINT}"
 }
 
-run_gantry_container() {
+_run_gantry_container() {
   local CONTAINER_REPO_TAG="${GANTRY_TEST_CONTAINER_REPO_TAG:-""}"
   if [ -z "${CONTAINER_REPO_TAG}" ]; then
     return 1
@@ -416,10 +517,10 @@ run_gantry_container() {
 
 run_gantry() {
   local STACK="${1}"
-  if run_gantry_container "${STACK}"; then
+  if _run_gantry_container "${STACK}"; then
     return 0
   fi
   local ENTRYPOINT=
-  ENTRYPOINT=$(get_entrypoint) || return 1
+  ENTRYPOINT=$(_get_entrypoint) || return 1
   ${ENTRYPOINT} "${STACK}"
 }

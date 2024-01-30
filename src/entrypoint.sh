@@ -100,9 +100,17 @@ gantry() {
   DOCKER_HUB_RATE_BEFORE=$(_read_docker_hub_rate)
   log INFO "Before updating, Docker Hub rate remains ${DOCKER_HUB_RATE_BEFORE}."
 
-  log INFO "Starting updating."
-  gantry_update_services_list "$(gantry_get_services_list)"
+  local SERVICES_LIST=
+  SERVICES_LIST=$(gantry_get_services_list)
   ACCUMULATED_ERRORS=$((ACCUMULATED_ERRORS + $?))
+
+  if [ "${ACCUMULATED_ERRORS}" -eq 0 ]; then
+    log INFO "Starting updating."
+    gantry_update_services_list "${SERVICES_LIST}"
+    ACCUMULATED_ERRORS=$((ACCUMULATED_ERRORS + $?))
+  else
+    log WARN "Skip updating all services due to previous errors."
+  fi
 
   # SC2119: Use docker_hub_rate "$@" if function's $1 should mean script's $1.
   # shellcheck disable=SC2119
@@ -116,7 +124,7 @@ gantry() {
   TIME_ELAPSED=$(time_elapsed_since "${START_TIME}")
   local MESSAGE="Done. Use ${TIME_ELAPSED}. ${ACCUMULATED_ERRORS} errors."
   if [ ${ACCUMULATED_ERRORS} -gt 0 ]; then
-    log WARN "${MESSAGE}"
+    log ERROR "${MESSAGE}"
   else
     log INFO "${MESSAGE}"
   fi
@@ -151,9 +159,10 @@ main() {
     gantry "${@}"
     RETURN_VALUE=$?
     [ "${INTERVAL_SECONDS}" -le 0 ] && break;
+    log INFO "Schedule next update at $(busybox date -d "@${NEXT_RUN_TARGET_TIME}" -Iseconds)."
     SLEEP_SECONDS=$((NEXT_RUN_TARGET_TIME - $(date +%s)))
     if [ "${SLEEP_SECONDS}" -gt 0 ]; then
-      log INFO "Sleeping ${SLEEP_SECONDS} seconds before next update."
+      log INFO "Sleep ${SLEEP_SECONDS} seconds before next update."
       sleep "${SLEEP_SECONDS}"
     fi
   done

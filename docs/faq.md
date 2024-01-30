@@ -14,7 +14,7 @@ At the end of updating, *Gantry* optionally removes the old images.
 
 ### How to filters multiple services by name?
 
-You can set multiple filters. However filters are **ANDED**. So multiple filters on different names will not work.
+It will not work by setting multiple filters with different names, because filters are logical **ANDED**.
 
 To filter multiple services, you can set a label on each service then let *Gantry* filter on that label. Or you can run multiple *Gantry* instances.
 
@@ -48,6 +48,6 @@ You can switch back to use [`docker manifest inspect`](https://docs.docker.com/e
 
 ### I logged in my Docker Hub account, but the Docker Hub rate reported seems incorrect.
 
-When checking Docker Hub rate, *Gantry* reads the docker hub credential only from `GANTRY_REGISTRY_PASSWORD` and `GANTRY_REGISTRY_USER`, or their `_FILE` variants. `GANTRY_REGISTRY_HOST` or its `_FILE` variant must be either empty or `docker.io`.
+When checking Docker Hub rate, *Gantry* reads the Docker Hub credential only from `GANTRY_REGISTRY_PASSWORD` and `GANTRY_REGISTRY_USER`, or their `_FILE` variants. `GANTRY_REGISTRY_HOST` or its `_FILE` variant must be either empty or `docker.io`.
 
 If you need to login to multiple registries, you can use `GANTRY_REGISTRY_CONFIGS_FILE` together with `GANTRY_REGISTRY_PASSWORD` and `GANTRY_REGISTRY_USER`. Credentials in `GANTRY_REGISTRY_CONFIGS_FILE` will be used for services updating, but they won't be used for checking Docker Hub rate. See [Authentication](../README.md#authentication) for more information.

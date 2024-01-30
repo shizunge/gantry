@@ -88,8 +88,9 @@ _authenticate_to_registries() {
     OTHERS=$(echo "${LINE}" | cut -d ' ' -f 5-)
     if [ -n "${OTHERS}" ] || [ -z "${CONFIG}" ] || \
        [ -z "${HOST}" ] || [ -z "${USER}" ] || [ -z "${PASSWORD}" ]; then
-      log ERROR "${CONFIGS_FILE} format error. A line should contains only \"<CONFIG> <HOST> <USER> <PASSWORD>\". Got \"${LINE}\"."
-      continue
+      log ERROR "CONFIGS_FILE ${CONFIGS_FILE} format error. A line should contains only \"<CONFIG> <HOST> <USER> <PASSWORD>\"."
+      log DEBUG "CONFIGS_FILE ${CONFIGS_FILE} format error. Got \"${LINE}\"."
+      return 1
     fi
     _login_registry "${USER}" "${PASSWORD}" "${HOST}" "${CONFIG}"
   done <"${CONFIGS_FILE}"
@@ -194,7 +195,7 @@ _remove_images() {
   done
   local IMAGE_OF_THIS_CONTAINER=
   IMAGE_OF_THIS_CONTAINER=$(_get_service_image "$(_current_service_name)")
-  [ -z "${IMAGE_OF_THIS_CONTAINER}" ] && IMAGE_OF_THIS_CONTAINER="shizunge/gantry:image-remover"
+  [ -z "${IMAGE_OF_THIS_CONTAINER}" ] && IMAGE_OF_THIS_CONTAINER="ghcr.io/shizunge/gantry-development"
   local IMAGES_TO_REMOVE_LIST=
   IMAGES_TO_REMOVE_LIST=$(echo "${IMAGES_TO_REMOVE}" | tr '\n' ' ')
   [ -n "${CLEANUP_IMAGES_OPTIONS}" ] && log DEBUG "Adding options \"${CLEANUP_IMAGES_OPTIONS}\" to the global job ${SERVICE_NAME}."
@@ -581,7 +582,10 @@ _update_single_service() {
     _add_service_update_failed "${SERVICE_NAME}"
     return 1
   fi
-  [ -z "${IMAGE}" ] && log INFO "No new images for ${SERVICE_NAME}." && return 0
+  if [ -z "${IMAGE}" ]; then
+    log INFO "No new images for ${SERVICE_NAME}."
+    return 0
+  fi
   log INFO "Updating ${SERVICE_NAME} with image ${IMAGE}"
   local ADDITIONAL_OPTIONS=
   ADDITIONAL_OPTIONS=$(_get_service_update_additional_options "${SERVICE_NAME}")
@@ -685,7 +689,7 @@ gantry_update_services_list() {
   local ACCUMULATED_ERRORS=0
   local LOG_SCOPE_SAVED="${LOG_SCOPE}"
   for SERVICE in ${LIST}; do
-    LOG_SCOPE="Updating service ${SERVICE}"
+    LOG_SCOPE="Updating ${SERVICE}"
     _update_single_service "${SERVICE}"
     ACCUMULATED_ERRORS=$((ACCUMULATED_ERRORS + $?))
   done
@@ -697,5 +701,5 @@ gantry_finalize() {
   local STACK="${1:-gantry}"
   _remove_images "${STACK}_image-remover"
   _report_services;
-  [ -n "${STATIC_VARIABLES_FOLDER}" ] && log DEBUG "Removing ${STATIC_VARIABLES_FOLDER}" && rm -r "${STATIC_VARIABLES_FOLDER}"
+  [ -n "${STATIC_VARIABLES_FOLDER}" ] && log DEBUG "Removing STATIC_VARIABLES_FOLDER ${STATIC_VARIABLES_FOLDER}" && rm -r "${STATIC_VARIABLES_FOLDER}"
 }
