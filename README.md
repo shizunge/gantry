@@ -1,3 +1,9 @@
+[![Release](https://img.shields.io/github/release/shizunge/gantry.svg)](https://github.com/shizunge/gantry/releases/latest)
+[![Docker Pulls](https://img.shields.io/docker/pulls/shizunge/gantry.svg)](https://hub.docker.com/r/shizunge/gantry)
+[![Docker Image Size](https://img.shields.io/docker/image-size/shizunge/gantry/latest.svg)](https://hub.docker.com/r/shizunge/gantry)
+[![Build](https://github.com/shizunge/gantry/actions/workflows/build.yml/badge.svg?branch=main)](https://github.com/shizunge/gantry/actions/workflows/build.yml)
+[![codecov](https://codecov.io/gh/shizunge/gantry/graph/badge.svg?token=47MWUJOH4Q)](https://codecov.io/gh/shizunge/gantry)
+
 # Gantry - Docker service updater
 
 [*Gantry*](https://github.com/shizunge/gantry) updates docker swarm services to newer images.
@@ -130,7 +136,7 @@ To run `shellcheck` locally:
 shellcheck src/*.sh tests/*.sh
 ```
 
-Majority of the configuration options are covered by end-to-end tests. See [tests](./tests/README.md) folder about how to run tests.
+[The tests folder](./tests) contains end-to-end tests, which cover the majority of the configuration options.
 
 ## Contacts
 
