@@ -11,7 +11,7 @@ on:
   workflow_dispatch:
 
 env:
-  PLATFORMS: "linux/386,linux/amd64,linux/arm/v6,linux/arm/v7,linux/arm64/v8,linux/ppc64le,linux/riscv64,linux/s390x"
+  PLATFORMS: "linux/386,linux/amd64,linux/arm/v6,linux/arm/v7,linux/arm64/v8,linux/ppc64le,linux/s390x"
   
 jobs:
   shellcheck:
