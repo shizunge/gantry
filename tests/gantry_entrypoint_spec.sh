@@ -56,7 +56,7 @@ Describe 'Entrypoint'
       The stderr should satisfy spec_expect_no_message "${SLEEP_SECONDS_BEFORE_NEXT_UPDATE}"
     End
   End
-  Describe "test_IMAGES_TO_REMOVE_none_empty" "container_test:false"
+  Describe "test_IMAGES_TO_REMOVE_none_empty" "container_test:true"
     # Test the remove image entrypoint. To improve coverage.
     TEST_NAME="test_IMAGES_TO_REMOVE_none_empty"
     IMAGE_WITH_TAG=$(get_image_with_tag)
