@@ -5,9 +5,9 @@ on:
     branches-ignore:
       - release
     paths:
-      - 'src/*'
-      - 'tests/*'
       - 'Dockerfile'
+      - 'src/*.sh'
+      - 'tests/*.sh'
   workflow_dispatch:
 
 env:
