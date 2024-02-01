@@ -58,9 +58,12 @@ Describe 'Options'
 
       LABEL_VALUE=$(_read_service_label "${SERVICE_NAME}" "${LABEL}")
       echo "Before updating: LABEL_VALUE=${LABEL_VALUE}"
+      local RETURN_VALUE=
       run_gantry "${TEST_NAME}"
+      RETURN_VALUE="${?}"
       LABEL_VALUE=$(_read_service_label "${SERVICE_NAME}" "${LABEL}")
       echo "After updating: LABEL_VALUE=${LABEL_VALUE}"
+      return "${RETURN_VALUE}"
     }
     Before "common_setup_new_image ${TEST_NAME} ${IMAGE_WITH_TAG} ${SERVICE_NAME}"
     After "common_cleanup ${TEST_NAME} ${IMAGE_WITH_TAG} ${SERVICE_NAME}"

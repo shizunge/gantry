@@ -45,11 +45,13 @@ Describe 'Login'
       export GANTRY_REGISTRY_HOST="${REGISTRY}"
       export GANTRY_REGISTRY_PASSWORD_FILE="${PASS_FILE}"
       export GANTRY_REGISTRY_USER_FILE="${USER_FILE}"
+      local RETURN_VALUE=
       run_gantry "${TEST_NAME}"
+      RETURN_VALUE="${?}"
       rm "${USER_FILE}"
       rm "${PASS_FILE}"
       [ -d "${CONFIG}" ] && rm -r "${CONFIG}"
-      return 0
+      return "${RETURN_VALUE}"
     }
     Before "common_setup_new_image ${TEST_NAME} ${IMAGE_WITH_TAG} ${SERVICE_NAME}"
     After "common_cleanup ${TEST_NAME} ${IMAGE_WITH_TAG} ${SERVICE_NAME}"
@@ -98,10 +100,12 @@ Describe 'Login'
       echo "# Test comments: CONFIG REGISTRY USERNAME PASSWORD" >> "${CONFIGS_FILE}"
       echo "${CONFIG} ${REGISTRY} ${USERNAME} ${PASSWORD}" >> "${CONFIGS_FILE}"
       export GANTRY_REGISTRY_CONFIGS_FILE="${CONFIGS_FILE}"
+      local RETURN_VALUE=
       run_gantry "${TEST_NAME}"
+      RETURN_VALUE="${?}"
       rm "${CONFIGS_FILE}"
       [ -d "${CONFIG}" ] && rm -r "${CONFIG}"
-      return 0
+      return "${RETURN_VALUE}"
     }
     Before "common_setup_new_image ${TEST_NAME} ${IMAGE_WITH_TAG} ${SERVICE_NAME}"
     After "common_cleanup ${TEST_NAME} ${IMAGE_WITH_TAG} ${SERVICE_NAME}"
@@ -150,10 +154,12 @@ Describe 'Login'
       # Add an extra item to the line.
       echo "${CONFIG} ${REGISTRY} ${USERNAME} ${PASSWORD} Extra" >> "${CONFIGS_FILE}"
       export GANTRY_REGISTRY_CONFIGS_FILE="${CONFIGS_FILE}"
+      local RETURN_VALUE=
       run_gantry "${TEST_NAME}"
+      RETURN_VALUE="${?}"
       rm "${CONFIGS_FILE}"
       [ -d "${CONFIG}" ] && rm -r "${CONFIG}"
-      return 0
+      return "${RETURN_VALUE}"
     }
     Before "common_setup_new_image ${TEST_NAME} ${IMAGE_WITH_TAG} ${SERVICE_NAME}"
     After "common_cleanup ${TEST_NAME} ${IMAGE_WITH_TAG} ${SERVICE_NAME}"
@@ -204,10 +210,12 @@ Describe 'Login'
       # Missing an item from the line.
       echo "${REGISTRY} ${USERNAME} ${PASSWORD}" >> "${CONFIGS_FILE}"
       export GANTRY_REGISTRY_CONFIGS_FILE="${CONFIGS_FILE}"
+      local RETURN_VALUE=
       run_gantry "${TEST_NAME}"
+      RETURN_VALUE="${?}"
       rm "${CONFIGS_FILE}"
       [ -d "${CONFIG}" ] && rm -r "${CONFIG}"
-      return
+      return "${RETURN_VALUE}"
     }
     Before "common_setup_new_image ${TEST_NAME} ${IMAGE_WITH_TAG} ${SERVICE_NAME}"
     After "common_cleanup ${TEST_NAME} ${IMAGE_WITH_TAG} ${SERVICE_NAME}"

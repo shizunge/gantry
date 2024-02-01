@@ -491,14 +491,14 @@ _run_gantry_container() {
   fi
   local SERVICE_NAME=
   SERVICE_NAME="gantry-test-SUT-$(unique_id)"
+  docker service rm "${SERVICE_NAME}" >/dev/null 2>&1;
   local MOUNT_OPTIONS=
   MOUNT_OPTIONS=$(_add_file_to_mount_options "${MOUNT_OPTIONS}" "${GANTRY_REGISTRY_CONFIG_FILE}")
   MOUNT_OPTIONS=$(_add_file_to_mount_options "${MOUNT_OPTIONS}" "${GANTRY_REGISTRY_CONFIGS_FILE}")
   MOUNT_OPTIONS=$(_add_file_to_mount_options "${MOUNT_OPTIONS}" "${GANTRY_REGISTRY_HOST_FILE}")
   MOUNT_OPTIONS=$(_add_file_to_mount_options "${MOUNT_OPTIONS}" "${GANTRY_REGISTRY_PASSWORD_FILE}")
   MOUNT_OPTIONS=$(_add_file_to_mount_options "${MOUNT_OPTIONS}" "${GANTRY_REGISTRY_USER_FILE}")
-  local CMD_OUTPUT=
-  docker service rm "${SERVICE_NAME}" >/dev/null 2>&1;
+  local RETURN_VALUE=
   echo -n "Starting SUT service ${SERVICE_NAME} "
   # SC2086 (info): Double quote to prevent globbing and word splitting.
   # shellcheck disable=SC2086
@@ -540,10 +540,13 @@ _run_gantry_container() {
     --env "TZ=${TZ}" \
     "${SUT_REPO_TAG}" \
     "${STACK}";
+  RETURN_VALUE="${?}"
   docker service logs --raw "${SERVICE_NAME}"
+  local CMD_OUTPUT=
   if ! CMD_OUTPUT=$(docker service rm "${SERVICE_NAME}" 2>&1); then
     echo "Failed to remove service ${SERVICE_NAME}: ${CMD_OUTPUT}" >&2
   fi
+  return "${RETURN_VALUE}"
 }
 
 run_gantry() {
