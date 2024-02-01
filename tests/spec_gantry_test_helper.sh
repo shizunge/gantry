@@ -473,6 +473,15 @@ _get_entrypoint() {
   echo "source ${STATIC_VAR_ENTRYPOINT}"
 }
 
+_add_file_to_mount_options() {
+  local MOUNT_OPTIONS="${1}"
+  local FILE="${2}"
+  if [ -n "${FILE}" ]; then
+    MOUNT_OPTIONS="${MOUNT_OPTIONS} --mount type=bind,source=${FILE},target=${FILE}"
+  fi
+  echo "${MOUNT_OPTIONS}"
+}
+
 _run_gantry_container() {
   local STACK="${1}"
   local SUT_REPO_TAG=
@@ -482,12 +491,22 @@ _run_gantry_container() {
   fi
   local SERVICE_NAME=
   SERVICE_NAME="gantry-test-SUT-$(unique_id)"
+  local MOUNT_OPTIONS=
+  MOUNT_OPTIONS=$(_add_file_to_mount_options "${MOUNT_OPTIONS}" "${GANTRY_REGISTRY_CONFIG_FILE}")
+  MOUNT_OPTIONS=$(_add_file_to_mount_options "${MOUNT_OPTIONS}" "${GANTRY_REGISTRY_CONFIGS_FILE}")
+  MOUNT_OPTIONS=$(_add_file_to_mount_options "${MOUNT_OPTIONS}" "${GANTRY_REGISTRY_HOST_FILE}")
+  MOUNT_OPTIONS=$(_add_file_to_mount_options "${MOUNT_OPTIONS}" "${GANTRY_REGISTRY_PASSWORD_FILE}")
+  MOUNT_OPTIONS=$(_add_file_to_mount_options "${MOUNT_OPTIONS}" "${GANTRY_REGISTRY_USER_FILE}")
   local CMD_OUTPUT=
   docker service rm "${SERVICE_NAME}" >/dev/null 2>&1;
+  echo -n "Starting SUT service ${SERVICE_NAME} "
+  # SC2086 (info): Double quote to prevent globbing and word splitting.
+  # shellcheck disable=SC2086
   docker service create --quiet --name "${SERVICE_NAME}" \
     --mode replicated-job --restart-condition=none --network host \
     --constraint "node.role==manager" \
     --mount type=bind,source=/var/run/docker.sock,target=/var/run/docker.sock \
+    ${MOUNT_OPTIONS} \
     --env "GANTRY_LOG_LEVEL=${GANTRY_LOG_LEVEL}" \
     --env "GANTRY_NODE_NAME=${GANTRY_NODE_NAME}" \
     --env "GANTRY_POST_RUN_CMD=${GANTRY_POST_RUN_CMD}" \
@@ -520,7 +539,7 @@ _run_gantry_container() {
     --env "GANTRY_NOTIFICATION_TITLE=${GANTRY_NOTIFICATION_TITLE}" \
     --env "TZ=${TZ}" \
     "${SUT_REPO_TAG}" \
-    "${STACK}" >/dev/null 2>&1;
+    "${STACK}";
   docker service logs --raw "${SERVICE_NAME}"
   if ! CMD_OUTPUT=$(docker service rm "${SERVICE_NAME}" 2>&1); then
     echo "Failed to remove service ${SERVICE_NAME}: ${CMD_OUTPUT}" >&2

@@ -20,7 +20,7 @@ Describe 'Login'
   BeforeAll "initialize_all_tests ${SUITE_NAME}"
   AfterAll "finish_all_tests ${SUITE_NAME}"
   # Here are just simple login tests.
-  Describe "test_login_config" "container_test:false"
+  Describe "test_login_config" "container_test:true"
     TEST_NAME="test_login_config"
     IMAGE_WITH_TAG=$(get_image_with_tag)
     SERVICE_NAME="gantry-test-$(unique_id)"
@@ -48,7 +48,8 @@ Describe 'Login'
       run_gantry "${TEST_NAME}"
       rm "${USER_FILE}"
       rm "${PASS_FILE}"
-      rm -r "${CONFIG}"
+      [ -d "${CONFIG}" ] && rm -r "${CONFIG}"
+      return 0
     }
     Before "common_setup_new_image ${TEST_NAME} ${IMAGE_WITH_TAG} ${SERVICE_NAME}"
     After "common_cleanup ${TEST_NAME} ${IMAGE_WITH_TAG} ${SERVICE_NAME}"
@@ -76,7 +77,7 @@ Describe 'Login'
       The stderr should satisfy spec_expect_no_message "${FAILED_TO_REMOVE_IMAGE}.*${IMAGE_WITH_TAG}"
     End
   End
-  Describe "test_login_REGISTRY_CONFIGS_FILE" "container_test:false"
+  Describe "test_login_REGISTRY_CONFIGS_FILE" "container_test:true"
     TEST_NAME="test_login_REGISTRY_CONFIGS_FILE"
     IMAGE_WITH_TAG=$(get_image_with_tag)
     SERVICE_NAME="gantry-test-$(unique_id)"
@@ -99,7 +100,8 @@ Describe 'Login'
       export GANTRY_REGISTRY_CONFIGS_FILE="${CONFIGS_FILE}"
       run_gantry "${TEST_NAME}"
       rm "${CONFIGS_FILE}"
-      rm -r "${CONFIG}"
+      [ -d "${CONFIG}" ] && rm -r "${CONFIG}"
+      return 0
     }
     Before "common_setup_new_image ${TEST_NAME} ${IMAGE_WITH_TAG} ${SERVICE_NAME}"
     After "common_cleanup ${TEST_NAME} ${IMAGE_WITH_TAG} ${SERVICE_NAME}"
@@ -150,7 +152,8 @@ Describe 'Login'
       export GANTRY_REGISTRY_CONFIGS_FILE="${CONFIGS_FILE}"
       run_gantry "${TEST_NAME}"
       rm "${CONFIGS_FILE}"
-      rm -r "${CONFIG}"
+      [ -d "${CONFIG}" ] && rm -r "${CONFIG}"
+      return 0
     }
     Before "common_setup_new_image ${TEST_NAME} ${IMAGE_WITH_TAG} ${SERVICE_NAME}"
     After "common_cleanup ${TEST_NAME} ${IMAGE_WITH_TAG} ${SERVICE_NAME}"
@@ -203,7 +206,8 @@ Describe 'Login'
       export GANTRY_REGISTRY_CONFIGS_FILE="${CONFIGS_FILE}"
       run_gantry "${TEST_NAME}"
       rm "${CONFIGS_FILE}"
-      rm -r "${CONFIG}"
+      [ -d "${CONFIG}" ] && rm -r "${CONFIG}"
+      return
     }
     Before "common_setup_new_image ${TEST_NAME} ${IMAGE_WITH_TAG} ${SERVICE_NAME}"
     After "common_cleanup ${TEST_NAME} ${IMAGE_WITH_TAG} ${SERVICE_NAME}"
