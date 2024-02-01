@@ -33,10 +33,10 @@ load_libraries() {
   if ! echo "${LOCAL_LOG_LEVEL}" | grep -q -i "NONE"; then
     echo "Loading libraries from ${LIB_DIR}"
   fi
-  . ${LIB_DIR}/notification.sh
-  . ${LIB_DIR}/docker_hub_rate.sh
-  . ${LIB_DIR}/lib-common.sh
-  . ${LIB_DIR}/lib-gantry.sh
+  . "${LIB_DIR}/notification.sh"
+  . "${LIB_DIR}/docker_hub_rate.sh"
+  . "${LIB_DIR}/lib-common.sh"
+  . "${LIB_DIR}/lib-gantry.sh"
 }
 
 _skip_current_node() {
