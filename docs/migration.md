@@ -1,10 +1,13 @@
 ## Migration from shepherd
 
-*Gantry* started to fix the following problems I found in [*shepherd*](https://github.com/containrrr/shepherd), then it became refactored and totally rewritten, with abundant tests.
+*Gantry* started to fix the following problems I found in [*shepherd*](https://github.com/containrrr/shepherd), then it became refactored and totally rewritten, with [abundant tests](../tests/README.md).
 
 * `docker manifest` CLI failed to get the image meta data for some registries.
 * High usage of docker hub rate. Getting manifest and then pulling the image double the usage.
-* Removing images related: Failure of removing old images will exit and block subsequent updating. `docker rmi` only works for the current host.
+* Unnecessary `docker service update` commands slow down the overall process.
+* Removing images related
+    * Failure of removing old images will exit and block subsequent updating.
+    * `docker rmi` only works for the current host.
 * `docker service update` CLI hangs when updating services without running tasks.
 * Other UX issues when running it as a script outside the provided container.
 

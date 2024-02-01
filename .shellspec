@@ -1,0 +1,10 @@
+--helperdir tests
+--require spec_helper
+--require spec_gantry_test_helper
+--default-path tests
+
+## kcov (coverage) options
+--kcov-options "--include-path=src --path-strip-level=1"
+--kcov-options "--include-pattern=.sh"
+# --kcov-options "--exclude-pattern=/.shellspec,/spec/,/coverage/,/report/,/tests,/.shellcheckrc"
+

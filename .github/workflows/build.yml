@@ -1,9 +1,14 @@
-name: On release
+name: Build
 
 on:
-  release:
-    types: # This configuration does not affect the page_build event above
-      - created
+  push:
+    branches-ignore:
+      - release
+    paths:
+      - 'src/*'
+      - 'tests/*'
+      - 'Dockerfile'
+  workflow_dispatch:
 
 env:
   PLATFORMS: "linux/386,linux/amd64,linux/arm/v6,linux/arm/v7,linux/arm64/v8,linux/ppc64le,linux/riscv64,linux/s390x"
@@ -87,11 +92,13 @@ jobs:
         uses: docker/metadata-action@v5
         with:
           images: |
-            ${{ github.repository }}
-            ghcr.io/${{ github.repository }}
+            ${{ github.repository }}-development
+            ghcr.io/${{ github.repository }}-development
           tags: |
+            type=raw,value=dev-{{date 'X'}}
+            type=raw,value=latest
             type=ref,event=branch
-            type=ref,event=tag
+            type=edge,branch=main
       - name: Build and push
         uses: docker/build-push-action@v5.1.0
         with:

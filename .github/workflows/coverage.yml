@@ -1,0 +1,47 @@
+name: Coverage
+
+on:
+  push:
+    branches:
+      - main
+    paths:
+      - '.shellspec'
+      - 'src/*'
+      - 'tests/*'
+  workflow_dispatch:
+
+jobs:
+  coverage:
+    name: Run tests coverage
+    runs-on: ubuntu-latest
+    steps:
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3.0.0
+      - name: Install shellspec
+        run: |
+          mkdir -p ~/shellspec
+          cd ~/shellspec
+          git clone https://github.com/shellspec/shellspec.git
+          ln -s ~/shellspec/shellspec/shellspec /usr/local/bin/shellspec
+          echo -n "shellspec version: "
+          shellspec --version
+      - name: Install kcov
+        run: |
+          sudo apt install -y kcov
+          echo -n "kcov version: "
+          kcov --version
+      - name: Checkout Code
+        uses: actions/checkout@v4
+      - name: Generate tests coverage reports
+        run: |
+          bash shellspec --kcov
+      - name: Upload reports
+        uses: actions/upload-artifact@v4
+        with:
+          name: coverage
+          path: coverage
+      - name: Upload coverage reports to Codecov
+        uses: codecov/codecov-action@v3
+        env:
+          CODECOV_TOKEN: ${{ secrets.CODECOV_TOKEN }}
+

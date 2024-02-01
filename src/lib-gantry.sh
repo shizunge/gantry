@@ -42,19 +42,31 @@ _login_registry() {
   fi
 }
 
+gantry_read_registry_username() {
+  read_config GANTRY_REGISTRY_USER
+}
+
+gantry_read_registry_password() {
+  read_config GANTRY_REGISTRY_PASSWORD
+}
+
+gantry_read_registry_host() {
+  read_config GANTRY_REGISTRY_HOST
+}
+
 _authenticate_to_registries() {
   local CONFIGS_FILE="${GANTRY_REGISTRY_CONFIGS_FILE:-""}"
   local CONFIG HOST PASSWORD USER
   if ! CONFIG=$(read_config GANTRY_REGISTRY_CONFIG 2>&1); then
     log ERROR "Failed to set CONFIG: ${CONFIG}" && return 1;
   fi
-  if ! HOST=$(read_config GANTRY_REGISTRY_HOST 2>&1); then
+  if ! HOST=$(gantry_read_registry_host 2>&1); then
     log ERROR "Failed to set HOST: ${HOST}" && return 1;
   fi
-  if ! PASSWORD=$(read_config GANTRY_REGISTRY_PASSWORD 2>&1); then
+  if ! PASSWORD=$(gantry_read_registry_password 2>&1); then
     log ERROR "Failed to set PASSWORD: ${PASSWORD}" && return 1;
   fi
-  if ! USER=$(read_config GANTRY_REGISTRY_USER 2>&1); then
+  if ! USER=$(gantry_read_registry_username 2>&1); then
     log ERROR "Failed to set USER: ${USER}" && return 1;
   fi
   if [ -n "${USER}" ]; then
@@ -76,8 +88,9 @@ _authenticate_to_registries() {
     OTHERS=$(echo "${LINE}" | cut -d ' ' -f 5-)
     if [ -n "${OTHERS}" ] || [ -z "${CONFIG}" ] || \
        [ -z "${HOST}" ] || [ -z "${USER}" ] || [ -z "${PASSWORD}" ]; then
-      log ERROR "${CONFIGS_FILE} format error. A line should contains only \"<CONFIG> <HOST> <USER> <PASSWORD>\". Got \"${LINE}\"."
-      continue
+      log ERROR "CONFIGS_FILE ${CONFIGS_FILE} format error. A line should contains only \"<CONFIG> <HOST> <USER> <PASSWORD>\"."
+      log DEBUG "CONFIGS_FILE ${CONFIGS_FILE} format error. Got \"${LINE}\"."
+      return 1
     fi
     _login_registry "${USER}" "${PASSWORD}" "${HOST}" "${CONFIG}"
   done <"${CONFIGS_FILE}"
@@ -93,13 +106,29 @@ _send_notification() {
   notify_summary "${TYPE}" "${TITLE}" "${BODY}"
 }
 
+_static_variable_read_list() {
+  local LIST_NAME="${1}"
+  [ -z "${LIST_NAME}" ] && log ERROR "LIST_NAME is empty." && return 1
+  local FILE_NAME="${STATIC_VARIABLES_FOLDER}/${LIST_NAME}"
+  [ ! -e "${FILE_NAME}" ] && touch "${FILE_NAME}"
+  cat "${FILE_NAME}"
+}
+
+# Add unique value to a static variable which holds a list.
+_static_variable_add_unique_to_list() {
+  local LIST_NAME="${1}"
+  local VALUE="${2}"
+  [ -z "${LIST_NAME}" ] && log ERROR "LIST_NAME is empty." && return 1
+  local FILE_NAME="${STATIC_VARIABLES_FOLDER}/${LIST_NAME}"
+  local OLD_LIST NEW_LIST
+  OLD_LIST=$(_static_variable_read_list "${LIST_NAME}")
+  NEW_LIST=$(add_unique_to_list "${OLD_LIST}" "${VALUE}")
+  echo "${NEW_LIST}" > "${FILE_NAME}"
+}
+
 _add_image_to_remove() {
   local IMAGE="${1}"
-  if [ -z "${STATIC_VAR_IMAGES_TO_REMOVE}" ]; then
-    STATIC_VAR_IMAGES_TO_REMOVE=${IMAGE}
-    return 0
-  fi
-  STATIC_VAR_IMAGES_TO_REMOVE=$(add_uniq_to_list "${STATIC_VAR_IMAGES_TO_REMOVE}" "${IMAGE}")
+  _static_variable_add_unique_to_list STATIC_VAR_IMAGES_TO_REMOVE "${IMAGE}"
 }
 
 _remove_container() {
@@ -140,7 +169,7 @@ gantry_remove_images() {
     fi;
     log INFO "Removed image ${IMAGE}.";
   done;
-  log INFO "Done.";
+  log INFO "Done removing images.";
 }
 
 _remove_images() {
@@ -152,21 +181,23 @@ _remove_images() {
   fi
   local SERVICE_NAME="${1:-"gantry-image-remover"}"
   docker_service_remove "${SERVICE_NAME}"
-  if [ -z "${STATIC_VAR_IMAGES_TO_REMOVE}" ]; then
+  local IMAGES_TO_REMOVE=
+  IMAGES_TO_REMOVE=$(_static_variable_read_list STATIC_VAR_IMAGES_TO_REMOVE)
+  if [ -z "${IMAGES_TO_REMOVE}" ]; then
     log INFO "No images to remove."
     return 0
   fi
   local IMAGE_NUM=
-  IMAGE_NUM=$(_get_number_of_elements "${STATIC_VAR_IMAGES_TO_REMOVE}")
+  IMAGE_NUM=$(_get_number_of_elements "${IMAGES_TO_REMOVE}")
   log INFO "Removing ${IMAGE_NUM} image(s):"
-  for I in $(echo "${STATIC_VAR_IMAGES_TO_REMOVE}" | tr '\n' ' '); do
+  for I in $(echo "${IMAGES_TO_REMOVE}" | tr '\n' ' '); do
     log INFO "- ${I}"
   done
   local IMAGE_OF_THIS_CONTAINER=
   IMAGE_OF_THIS_CONTAINER=$(_get_service_image "$(_current_service_name)")
-  [ -z "${IMAGE_OF_THIS_CONTAINER}" ] && IMAGE_OF_THIS_CONTAINER="shizunge/gantry:image-remover"
-  local IMAGES_TO_REMOVE=
-  IMAGES_TO_REMOVE=$(echo "${STATIC_VAR_IMAGES_TO_REMOVE}" | tr '\n' ' ')
+  [ -z "${IMAGE_OF_THIS_CONTAINER}" ] && IMAGE_OF_THIS_CONTAINER="ghcr.io/shizunge/gantry-development"
+  local IMAGES_TO_REMOVE_LIST=
+  IMAGES_TO_REMOVE_LIST=$(echo "${IMAGES_TO_REMOVE}" | tr '\n' ' ')
   [ -n "${CLEANUP_IMAGES_OPTIONS}" ] && log DEBUG "Adding options \"${CLEANUP_IMAGES_OPTIONS}\" to the global job ${SERVICE_NAME}."
   local RMI_MSG=
   # SC2086: Double quote to prevent globbing and word splitting.
@@ -175,7 +206,7 @@ _remove_images() {
     --restart-condition on-failure \
     --restart-max-attempts 1 \
     --mount type=bind,source=/var/run/docker.sock,destination=/var/run/docker.sock \
-    --env "GANTRY_IMAGES_TO_REMOVE=${IMAGES_TO_REMOVE}" \
+    --env "GANTRY_IMAGES_TO_REMOVE=${IMAGES_TO_REMOVE_LIST}" \
     ${CLEANUP_IMAGES_OPTIONS} \
     "${IMAGE_OF_THIS_CONTAINER}" 2>&1); then
     log ERROR "Failed to remove images: ${RMI_MSG}"
@@ -187,43 +218,39 @@ _remove_images() {
 
 _add_service_updated() {
   local SERVICE_NAME="${1}"
-  if [ -z "${STATIC_VAR_SERVICES_UPDATED}" ]; then
-    STATIC_VAR_SERVICES_UPDATED=${SERVICE_NAME}
-    return 0
-  fi
-  STATIC_VAR_SERVICES_UPDATED=$(add_uniq_to_list "${STATIC_VAR_SERVICES_UPDATED}" "${SERVICE_NAME}")
+  _static_variable_add_unique_to_list STATIC_VAR_SERVICES_UPDATED "${SERVICE_NAME}"
 }
 
 _report_services_updated() {
-  if [ -z "${STATIC_VAR_SERVICES_UPDATED}" ]; then
+  local SERVICES_UPDATED
+  SERVICES_UPDATED=$(_static_variable_read_list STATIC_VAR_SERVICES_UPDATED)
+  if [ -z "${SERVICES_UPDATED}" ]; then
     echo "No services updated."
     return 0
   fi
   local UPDATED_NUM=
-  UPDATED_NUM=$(_get_number_of_elements "${STATIC_VAR_SERVICES_UPDATED}")
+  UPDATED_NUM=$(_get_number_of_elements "${SERVICES_UPDATED}")
   echo "${UPDATED_NUM} service(s) updated:"
-  for S in ${STATIC_VAR_SERVICES_UPDATED}; do
+  for S in ${SERVICES_UPDATED}; do
     echo "- ${S}"
   done
 }
 
 _add_service_update_failed() {
   local SERVICE_NAME="${1}"
-  if [ -z "${STATIC_VAR_SERVICES_UPDATE_FAILED}" ]; then
-    STATIC_VAR_SERVICES_UPDATE_FAILED=${SERVICE_NAME}
-    return 0
-  fi
-  STATIC_VAR_SERVICES_UPDATE_FAILED=$(add_uniq_to_list "${STATIC_VAR_SERVICES_UPDATE_FAILED}" "${SERVICE_NAME}")
+  _static_variable_add_unique_to_list STATIC_VAR_SERVICES_UPDATE_FAILED "${SERVICE_NAME}"
 }
 
 _report_services_update_failed() {
-  if [ -z "${STATIC_VAR_SERVICES_UPDATE_FAILED}" ]; then
+  local SERVICES_UPDATE_FAILED
+  SERVICES_UPDATE_FAILED=$(_static_variable_read_list STATIC_VAR_SERVICES_UPDATE_FAILED)
+  if [ -z "${SERVICES_UPDATE_FAILED}" ]; then
     return 0
   fi
   local FAILED_NUM=
-  FAILED_NUM=$(_get_number_of_elements "${STATIC_VAR_SERVICES_UPDATE_FAILED}")
+  FAILED_NUM=$(_get_number_of_elements "${SERVICES_UPDATE_FAILED}")
   echo "${FAILED_NUM} service(s) update failed:"
-  for S in ${STATIC_VAR_SERVICES_UPDATE_FAILED}; do
+  for S in ${SERVICES_UPDATE_FAILED}; do
     echo "- ${S}"
   done
 }
@@ -247,8 +274,11 @@ _report_services() {
   echo "${FAILED_MSG}" | log_lines INFO
   # Send notification
   local UPDATED_NUM FAILED_NUM TITLE BODY
-  UPDATED_NUM=$(_get_number_of_elements "${STATIC_VAR_SERVICES_UPDATED}")
-  FAILED_NUM=$(_get_number_of_elements "${STATIC_VAR_SERVICES_UPDATE_FAILED}")
+  local SERVICES_UPDATED SERVICES_UPDATE_FAILED
+  SERVICES_UPDATED=$(_static_variable_read_list STATIC_VAR_SERVICES_UPDATED)
+  SERVICES_UPDATE_FAILED=$(_static_variable_read_list STATIC_VAR_SERVICES_UPDATE_FAILED)
+  UPDATED_NUM=$(_get_number_of_elements "${SERVICES_UPDATED}")
+  FAILED_NUM=$(_get_number_of_elements "${SERVICES_UPDATE_FAILED}")
   local TYPE="success"
   [ "${FAILED_NUM}" -ne "0" ] && TYPE="failure"
   TITLE="[gantry] ${UPDATED_NUM} services updated ${FAILED_NUM} failed"
@@ -268,7 +298,9 @@ _in_list() {
 }
 
 _current_container_name() {
-  [ -n "${STATIC_VAR_CURRENT_CONTAINER_NAME}" ] && echo "${STATIC_VAR_CURRENT_CONTAINER_NAME}" && return 0
+  local CURRENT_CONTAINER_NAME=
+  CURRENT_CONTAINER_NAME=$(_static_variable_read_list STATIC_VAR_CURRENT_CONTAINER_NAME)
+  [ -n "${CURRENT_CONTAINER_NAME}" ] && echo "${CURRENT_CONTAINER_NAME}" && return 0
   local ALL_NETWORKS GWBRIDGE_NETWORK IPS;
   ALL_NETWORKS=$(docker network ls --format '{{.ID}}') || return 1;
   [ -z "${ALL_NETWORKS}" ] && return 0;
@@ -286,7 +318,7 @@ _current_container_name() {
         echo "${NAME_AND_IP}" | grep -q "${IP}" || continue;
         local NAME;
         NAME=$(echo "${NAME_AND_IP}" | sed "s/\(.*\)=${IP}.*$/\1/");
-        STATIC_VAR_CURRENT_CONTAINER_NAME=${NAME}
+        _static_variable_add_unique_to_list STATIC_VAR_CURRENT_CONTAINER_NAME "${NAME}"
         echo "${NAME}";
         return 0;
       done;
@@ -296,13 +328,15 @@ _current_container_name() {
 }
 
 _current_service_name() {
-  [ -n "${STATIC_VAR_CURRENT_SERVICE_NAME}" ] && echo "${STATIC_VAR_CURRENT_SERVICE_NAME}" && return 0
+  local CURRENT_SERVICE_NAME=
+  CURRENT_SERVICE_NAME=$(_static_variable_read_list STATIC_VAR_CURRENT_SERVICE_NAME)
+  [ -n "${CURRENT_SERVICE_NAME}" ] && echo "${CURRENT_SERVICE_NAME}" && return 0
   local CNAME=
   CNAME=$(_current_container_name) || return 1
   [ -z "${CNAME}" ] && return 0
   local SNAME=
   SNAME=$(docker container inspect "${CNAME}" --format '{{range $key,$value := .Config.Labels}}{{$key}}={{println $value}}{{end}}' | grep "com.docker.swarm.service.name" | sed "s/com.docker.swarm.service.name=\(.*\)$/\1/") || return 1
-  STATIC_VAR_CURRENT_SERVICE_NAME=${SNAME}
+  _static_variable_add_unique_to_list STATIC_VAR_CURRENT_SERVICE_NAME "${SNAME}"
   echo "${SNAME}"
 }
 
@@ -381,16 +415,34 @@ _get_image_info() {
   local MANIFEST_CMD="${1}"
   local IMAGE="${2}"
   local DOCKER_CONFIG="${3}"
-  if echo "${MANIFEST_CMD}" | grep -q -i "manifest"; then
+  local MSG RETURN_VALUE
+  if echo "${MANIFEST_CMD}" | grep -q -i "buildx"; then
+    # https://github.com/orgs/community/discussions/45779
+    [ -n "${MANIFEST_OPTIONS}" ] && log DEBUG "Adding options \"${MANIFEST_OPTIONS}\" to the command \"docker buildx imagetools inspect\"."
     # SC2086: Double quote to prevent globbing and word splitting.
     # shellcheck disable=SC2086
-    docker ${DOCKER_CONFIG} manifest inspect ${MANIFEST_OPTIONS} "${IMAGE}"
-    return $?
+    MSG=$(docker ${DOCKER_CONFIG} buildx imagetools inspect ${MANIFEST_OPTIONS} "${IMAGE}" 2>&1);
+    RETURN_VALUE=$?
+  elif echo "${MANIFEST_CMD}" | grep -q -i "manifest"; then
+    [ -n "${MANIFEST_OPTIONS}" ] && log DEBUG "Adding options \"${MANIFEST_OPTIONS}\" to the command \"docker manifest inspect\"."
+    # SC2086: Double quote to prevent globbing and word splitting.
+    # shellcheck disable=SC2086
+    MSG=$(docker ${DOCKER_CONFIG} manifest inspect ${MANIFEST_OPTIONS} "${IMAGE}" 2>&1);
+    RETURN_VALUE=$?
+  elif echo "${MANIFEST_CMD}" | grep -q -i "none"; then
+    # We should never reach here, the "none" command is already checked inside the function _inspect_image.
+    log DEBUG "MANIFEST_CMD is \"none\"."
+    return 0
+  else
+    log ERROR "Unknown MANIFEST_CMD \"${MANIFEST_CMD}\"."
+    return 1
   fi
-  # https://github.com/orgs/community/discussions/45779
-  # SC2086: Double quote to prevent globbing and word splitting.
-  # shellcheck disable=SC2086
-  docker ${DOCKER_CONFIG} buildx imagetools inspect ${MANIFEST_OPTIONS} "${IMAGE}"
+  if [ "${RETURN_VALUE}" != "0" ];  then
+    log ERROR "Image ${IMAGE} does not exist or it is not available. ${MSG}"
+    return 1
+  fi
+  echo "${MSG}"
+  return 0
 }
 
 # echo nothing if we found no new images.
@@ -409,28 +461,42 @@ _inspect_image() {
   local DIGEST=
   IMAGE=$(echo "${IMAGE_WITH_DIGEST}" | cut -d@ -f1)
   DIGEST=$(echo "${IMAGE_WITH_DIGEST}" | cut -d@ -f2)
-  # Never skip inspecting self
-  if echo "${MANIFEST_CMD}" | grep -q -i "none" && ! _service_is_self "${SERVICE_NAME}"; then
-    echo "${IMAGE}"
+  if echo "${MANIFEST_CMD}" | grep -q -i "none"; then
+    if _service_is_self "${SERVICE_NAME}"; then
+      # Always inspecting self, never skipping.
+      MANIFEST_CMD="buildx"
+    else
+      log DEBUG "Perform updating ${SERVICE_NAME} because MANIFEST_CMD is \"none\"."
+      echo "${IMAGE}"
+      return 0
+    fi
+  fi
+  local NO_NEW_IMAGES=
+  NO_NEW_IMAGES=$(_static_variable_read_list STATIC_VAR_NO_NEW_IMAGES)
+  if _in_list "${NO_NEW_IMAGES}" "${DIGEST}"; then
+    log DEBUG "Skip updating ${SERVICE_NAME} because there is no known newer version of image ${IMAGE_WITH_DIGEST}."
     return 0
   fi
-  if _in_list "${STATIC_VAR_NO_NEW_IMAGES}" "${DIGEST}"; then
-    return 0
-  fi
-  if _in_list "${STATIC_VAR_NEW_IMAGES}" "${DIGEST}"; then
+  local HAS_NEW_IMAGES=
+  HAS_NEW_IMAGES=$(_static_variable_read_list STATIC_VAR_NEW_IMAGES)
+  if _in_list "${HAS_NEW_IMAGES}" "${DIGEST}"; then
+    log DEBUG "Perform updating ${SERVICE_NAME} because there is a known newer version of image ${IMAGE_WITH_DIGEST}."
     echo "${IMAGE}"
     return 0
   fi
   local IMAGE_INFO=
-  if ! IMAGE_INFO=$(_get_image_info "${MANIFEST_CMD}" "${IMAGE}" "${DOCKER_CONFIG}" 2>&1); then
-    log ERROR "Image ${IMAGE} does not exist or it is not available. ${IMAGE_INFO}"
+  if ! IMAGE_INFO=$(_get_image_info "${MANIFEST_CMD}" "${IMAGE}" "${DOCKER_CONFIG}"); then
+    log DEBUG "Skip updating ${SERVICE_NAME} because there is a failure to obtain the manifest from the registry of image ${IMAGE}."
     return 1
   fi
+  [ -z "${IMAGE_INFO}" ] && log DEBUG "IMAGE_INFO is empty."
   if [ -n "${DIGEST}" ] && echo "${IMAGE_INFO}" | grep -q "${DIGEST}"; then
-    STATIC_VAR_NO_NEW_IMAGES=$(add_uniq_to_list "${STATIC_VAR_NO_NEW_IMAGES}" "${DIGEST}")
+    _static_variable_add_unique_to_list STATIC_VAR_NO_NEW_IMAGES "${DIGEST}"
+    log DEBUG "Skip updating ${SERVICE_NAME} because the current version is the latest of image ${IMAGE_WITH_DIGEST}."
     return 0
   fi
-  STATIC_VAR_NEW_IMAGES=$(add_uniq_to_list "${STATIC_VAR_NEW_IMAGES}" "${DIGEST}")
+  _static_variable_add_unique_to_list STATIC_VAR_NEW_IMAGES "${DIGEST}"
+  log DEBUG "Perform updating ${SERVICE_NAME} because there is a newer version of image ${IMAGE_WITH_DIGEST}."
   echo "${IMAGE}"
   return 0
 }
@@ -481,8 +547,8 @@ _rollback_service() {
     return 0
   fi
   log INFO "Rolling back ${SERVICE_NAME}."
-  [ -n "${ADDITIONAL_OPTIONS}" ] && log DEBUG "Adding options \"${ADDITIONAL_OPTIONS}\" to the \"docker service update --rollback\" command."
-  [ -n "${ROLLBACK_OPTIONS}" ] && log DEBUG "Adding options \"${ROLLBACK_OPTIONS}\" to the \"docker service update --rollback\" command."
+  [ -n "${ADDITIONAL_OPTIONS}" ] && log DEBUG "Adding options \"${ADDITIONAL_OPTIONS}\" to the command \"docker service update --rollback\"."
+  [ -n "${ROLLBACK_OPTIONS}" ] && log DEBUG "Adding options \"${ROLLBACK_OPTIONS}\" to the command \"docker service update --rollback\"."
   local ROLLBACK_MSG=
   # Add "-quiet" to suppress progress output.
   # SC2086: Double quote to prevent globbing and word splitting.
@@ -510,18 +576,21 @@ _update_single_service() {
   fi
   local DOCKER_CONFIG=
   DOCKER_CONFIG=$(_get_config_from_service "${SERVICE_NAME}")
-  [ -n "${DOCKER_CONFIG}" ] && log DEBUG "Add option \"${DOCKER_CONFIG}\" to docker commands."
+  [ -n "${DOCKER_CONFIG}" ] && log DEBUG "Adding options \"${DOCKER_CONFIG}\" to docker commands."
   local IMAGE=
   if ! IMAGE=$(_inspect_image "${SERVICE_NAME}" "${DOCKER_CONFIG}"); then
     _add_service_update_failed "${SERVICE_NAME}"
     return 1
   fi
-  [ -z "${IMAGE}" ] && log INFO "No new images." && return 0
-  log INFO "Updating with image ${IMAGE}"
+  if [ -z "${IMAGE}" ]; then
+    log INFO "No new images for ${SERVICE_NAME}."
+    return 0
+  fi
+  log INFO "Updating ${SERVICE_NAME} with image ${IMAGE}"
   local ADDITIONAL_OPTIONS=
   ADDITIONAL_OPTIONS=$(_get_service_update_additional_options "${SERVICE_NAME}")
-  [ -n "${ADDITIONAL_OPTIONS}" ] && log DEBUG "Adding options \"${ADDITIONAL_OPTIONS}\" to the \"docker service update\" command."
-  [ -n "${UPDATE_OPTIONS}" ] && log DEBUG "Adding options \"${UPDATE_OPTIONS}\" to the \"docker service update\" command."
+  [ -n "${ADDITIONAL_OPTIONS}" ] && log DEBUG "Adding options \"${ADDITIONAL_OPTIONS}\" to the command \"docker service update\"."
+  [ -n "${UPDATE_OPTIONS}" ] && log DEBUG "Adding options \"${UPDATE_OPTIONS}\" to the command \"docker service update\"."
   local UPDATE_MSG=
   # Add "-quiet" to suppress progress output.
   # SC2086: Double quote to prevent globbing and word splitting.
@@ -540,12 +609,12 @@ _update_single_service() {
   PREVIOUS_IMAGE=$(_get_service_previous_image "${SERVICE_NAME}")
   CURRENT_IMAGE=$(_get_service_image "${SERVICE_NAME}")
   if [ "${PREVIOUS_IMAGE}" = "${CURRENT_IMAGE}" ]; then
-    log INFO "No updates."
+    log INFO "No updates for ${SERVICE_NAME}."
     return 0
   fi
   _add_service_updated "${SERVICE_NAME}"
   _add_image_to_remove "${PREVIOUS_IMAGE}"
-  log INFO "UPDATED."
+  log INFO "UPDATED ${SERVICE_NAME}."
   return 0
 }
 
@@ -568,11 +637,15 @@ _get_services_filted() {
 
 gantry_initialize() {
   local STACK="${1:-gantry}"
-  STATIC_VAR_IMAGES_TO_REMOVE=
-  STATIC_VAR_SERVICES_UPDATED=
-  STATIC_VAR_SERVICES_UPDATE_FAILED=
-  STATIC_VAR_NO_NEW_IMAGES=
-  STATIC_VAR_NEW_IMAGES=
+  # We want the static variables live longer than a function.
+  # However if we call the function in a subprocess, which could be casued by
+  # 1. pipe, e.g. echo "message" | my_function
+  # 2. assign to a variable, e.g. MY_VAR=$(my_function)
+  # and changing the static variables, the value won't go back to the parent process.
+  # So here we use the file system to pass value between multiple processes.
+  STATIC_VARIABLES_FOLDER=$(mktemp -d)
+  export STATIC_VARIABLES_FOLDER
+  log DEBUG "Created ${STATIC_VARIABLES_FOLDER} to store static variables."
   _authenticate_to_registries
 }
 
@@ -616,7 +689,7 @@ gantry_update_services_list() {
   local ACCUMULATED_ERRORS=0
   local LOG_SCOPE_SAVED="${LOG_SCOPE}"
   for SERVICE in ${LIST}; do
-    LOG_SCOPE="Updating service ${SERVICE}"
+    LOG_SCOPE="Updating ${SERVICE}"
     _update_single_service "${SERVICE}"
     ACCUMULATED_ERRORS=$((ACCUMULATED_ERRORS + $?))
   done
@@ -628,4 +701,5 @@ gantry_finalize() {
   local STACK="${1:-gantry}"
   _remove_images "${STACK}_image-remover"
   _report_services;
+  [ -n "${STATIC_VARIABLES_FOLDER}" ] && log DEBUG "Removing STATIC_VARIABLES_FOLDER ${STATIC_VARIABLES_FOLDER}" && rm -r "${STATIC_VARIABLES_FOLDER}"
 }

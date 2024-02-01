@@ -17,22 +17,28 @@
 
 _docker_hub_rate_token() {
   local IMAGE="${1:-ratelimitpreview/test}"
+  local USER_AND_PASS="${2}"
   local TOKEN_URL="https://auth.docker.io/token?service=registry.docker.io&scope=repository:${IMAGE}:pull"
   if curl --version 1>/dev/null 2>&1; then
-    curl -s "${TOKEN_URL}"
+    if [ -n "${USER_AND_PASS}" ]; then
+      curl -s -S --user "${USER_AND_PASS}" "${TOKEN_URL}"
+      return $?
+    fi
+    curl -s -S "${TOKEN_URL}"
     return $?
   fi
+  [ -n "${USER_AND_PASS}" ] && log WARN "Cannot read docker hub rate for the given user because curl is not available."
   wget -qO- "${TOKEN_URL}"
 }
 
 _docker_hub_rate_read_rate() {
   local IMAGE="${1:-ratelimitpreview/test}"
   local TOKEN="${2}"
-  [ -z "${TOKEN}" ] && echo "[GET TOKEN ERROR]" && return 1
+  [ -z "${TOKEN}" ] && echo "[EMPTY TOKEN ERROR]" && return 1
   local HEADER="Authorization: Bearer ${TOKEN}"
   local URL="https://registry-1.docker.io/v2/${IMAGE}/manifests/latest"
   if curl --version 1>/dev/null 2>&1; then
-    curl --head -H "${HEADER}" "${URL}" 2>&1
+    curl -s -S --head -H "${HEADER}" "${URL}" 2>&1
     return $?
   fi
   # Add `--spider`` implies that you want to send a HEAD request (as opposed to GET or POST).
@@ -42,23 +48,41 @@ _docker_hub_rate_read_rate() {
 
 docker_hub_rate() {
   local IMAGE="${1:-ratelimitpreview/test}"
+  local USER_AND_PASS="${2}"
+  if ! log INFO "" 1>/dev/null 2>/dev/null; then
+    # Assume the error is due to log function is not available.
+    log() {
+      echo "${*}" >&2
+    }
+  fi
   local RESPONSE=
-  if ! RESPONSE=$(_docker_hub_rate_token "${IMAGE}"); then
+  if ! RESPONSE=$(_docker_hub_rate_token "${IMAGE}" "${USER_AND_PASS}"); then
+    log DEBUG "_docker_hub_rate_token error: RESPONSE=${RESPONSE}"
     echo "[GET TOKEN RESPONSE ERROR]"
     return 1
   fi
   local TOKEN=
   TOKEN=$(echo "${RESPONSE}" | sed 's/.*"token":"\([^"]*\).*/\1/')
+  if [ -z "${TOKEN}" ]; then
+    log DEBUG "parse token error: RESPONSE=${RESPONSE}"
+    echo "[PARSE TOKEN ERROR]"
+    return 1
+  fi
   if ! RESPONSE=$(_docker_hub_rate_read_rate "${IMAGE}" "${TOKEN}"); then
     if echo "${RESPONSE}" | grep -q "Too Many Requests" ; then
       echo "0"
       return 0
     fi
+    log DEBUG "_docker_hub_rate_read_rate error: RESPONSE=${RESPONSE}"
     echo "[GET RATE RESPONSE ERROR]"
     return 1
   fi
   local RATE=
   RATE=$(echo "${RESPONSE}" | sed -n 's/.*ratelimit-remaining: \([0-9]*\).*/\1/p' )
-  [ -z "${RATE}" ] && echo "[GET RATE ERROR]" && return 1
+  if [ -z "${RATE}" ]; then
+    log DEBUG "parse rate error: RESPONSE=${RESPONSE}"
+    echo "[PARSE RATE ERROR]"
+    return 1
+  fi
   echo "${RATE}"
 }

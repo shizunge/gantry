@@ -174,9 +174,10 @@ time_elapsed_since() {
   _time_elapsed_between "$(date +%s)" "${START_TIME}"
 }
 
-add_uniq_to_list() {
+add_unique_to_list() {
   local OLD_LIST="${1}"
   local NEW_ITEM="${2}"
+  [ -z "${OLD_LIST}" ] && echo "${NEW_ITEM}" && return 0
   echo -e "${OLD_LIST}\n${NEW_ITEM}" | sort | uniq
 }
 

@@ -1,0 +1,38 @@
+# .shellcheckrc
+
+# https://github.com/koalaman/shellcheck/wiki/Optional
+enable=add-default-case
+enable=avoid-nullary-conditions
+enable=check-unassigned-uppercase
+enable=deprecate-which
+enable=require-variable-braces
+
+# SC1090 (warning): ShellCheck can't follow non-constant source. Use a directive to specify location.
+disable=SC1090
+
+# SC1091 (info): Not following: ./notification.sh was not specified as input (see shellcheck -x).
+disable=SC1091
+
+# SC2039: In POSIX sh, 'local' is undefined.
+disable=SC2039
+
+# SC3001 (warning): In POSIX sh, process substitution is undefined.
+disable=SC3001
+
+# SC3037 (warning): In POSIX sh, echo flags are undefined.
+disable=SC3037
+
+# SC3043 (warning): In POSIX sh, 'local' is undefined.
+disable=SC3043
+
+# SC3046 (warning): In POSIX sh, 'source' in place of '.' is undefined.
+disable=SC3046
+
+# SC3051 (warning): In POSIX sh, 'source' in place of '.' is undefined.
+disable=SC3051
+
+# SC3057 (warning): In POSIX sh, string indexing is undefined.
+disable=SC3057
+
+# SC2154 (warning): VAR is referenced but not assigned.
+disable=SC2154
