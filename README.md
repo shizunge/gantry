@@ -1,8 +1,8 @@
-[![Release](https://img.shields.io/github/release/shizunge/gantry.svg)](https://github.com/shizunge/gantry/releases/latest)
-[![Docker Pulls](https://img.shields.io/docker/pulls/shizunge/gantry.svg)](https://hub.docker.com/r/shizunge/gantry)
-[![Docker Image Size](https://img.shields.io/docker/image-size/shizunge/gantry/latest.svg)](https://hub.docker.com/r/shizunge/gantry)
-[![Build](https://github.com/shizunge/gantry/actions/workflows/build.yml/badge.svg?branch=main)](https://github.com/shizunge/gantry/actions/workflows/build.yml)
-[![codecov](https://codecov.io/gh/shizunge/gantry/graph/badge.svg?token=47MWUJOH4Q)](https://codecov.io/gh/shizunge/gantry)
+[![Release](https://img.shields.io/github/release/shizunge/gantry.svg?label=Release)](https://github.com/shizunge/gantry/releases/latest)
+[![Docker Pulls](https://img.shields.io/docker/pulls/shizunge/gantry.svg?label=Docker%20Pulls)](https://hub.docker.com/r/shizunge/gantry)
+[![Docker Image Size](https://img.shields.io/docker/image-size/shizunge/gantry/latest.svg?label=Image%20Size)](https://hub.docker.com/r/shizunge/gantry)
+[![Build](https://github.com/shizunge/gantry/actions/workflows/build.yml/badge.svg?label=Build&branch=main)](https://github.com/shizunge/gantry/actions/workflows/build.yml)
+[![Coverage](https://codecov.io/gh/shizunge/gantry/graph/badge.svg?token=47MWUJOH4Q&label=Coverage)](https://codecov.io/gh/shizunge/gantry)
 
 # Gantry - Docker service updater
 
