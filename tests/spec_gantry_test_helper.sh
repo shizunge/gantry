@@ -128,15 +128,22 @@ _init_swarm() {
   docker swarm init
 }
 
+# Image for the software under test (SUT)
+_get_sut_image() {
+  local SUT_REPO_TAG="${GANTRY_TEST_CONTAINER_REPO_TAG:-""}"
+  echo "${SUT_REPO_TAG}"
+}
+
 _start_registry() {
   local SUITE_NAME="${1:?}"
   SUITE_NAME=$(echo "${SUITE_NAME}" | tr ' ' '-')
+  export REGISTRY_SERVICE_NAME="gantry-test-registry-${SUITE_NAME}"
   export TEST_IMAGE="gantry/test"
-  local TEST_REGISTRY_PORT=5000
-  export TEST_REGISTRY="127.0.0.1:${TEST_REGISTRY_PORT}"
+  local TEST_REGISTRY_BASE="127.0.0.1"
+  local TEST_REGISTRY_PORT="5000"
+  export TEST_REGISTRY="${TEST_REGISTRY_BASE}:${TEST_REGISTRY_PORT}"
   export TEST_USERNAME="gantry"
   export TEST_PASSWORD="gantry"
-  export REGISTRY_SERVICE_NAME="gantry-test-registry-${SUITE_NAME}"
   local REGISTRY_IMAGE="docker.io/registry"
   local TRIES=0
   local MAX_RETRIES=50
@@ -152,7 +159,7 @@ _start_registry() {
     -p "${TEST_REGISTRY_PORT}:5000" \
     "${REGISTRY_IMAGE}" 2>/dev/null; do
     TEST_REGISTRY_PORT=$((TEST_REGISTRY_PORT+1))
-    export TEST_REGISTRY="127.0.0.1:${TEST_REGISTRY_PORT}"
+    export TEST_REGISTRY="${TEST_REGISTRY_BASE}:${TEST_REGISTRY_PORT}"
     echo -n "Starting registry ${TEST_REGISTRY} again "
     if [ "${TRIES}" -ge "${MAX_RETRIES}" ]; then
       return 1
@@ -221,6 +228,7 @@ initialize_test() {
   export GANTRY_UPDATE_OPTIONS=
   export GANTRY_UPDATE_TIMEOUT_SECONDS=
   export GANTRY_CLEANUP_IMAGES=
+  export GANTRY_CLEANUP_IMAGES_OPTIONS=
   export GANTRY_NOTIFICATION_APPRISE_URL=
   export GANTRY_NOTIFICATION_TITLE=
 }
@@ -465,16 +473,18 @@ _get_entrypoint() {
 }
 
 _run_gantry_container() {
-  local CONTAINER_REPO_TAG="${GANTRY_TEST_CONTAINER_REPO_TAG:-""}"
-  if [ -z "${CONTAINER_REPO_TAG}" ]; then
+  local STACK="${1}"
+  local SUT_REPO_TAG=
+  SUT_REPO_TAG="$(_get_sut_image)"
+  if [ -z "${SUT_REPO_TAG}" ]; then
     return 1
   fi
-  local STACK="${1}"
-  local SERVICE_NAME="gantry-test"
+  local SERVICE_NAME=
+  SERVICE_NAME="gantry-test-SUT-$(unique_id)"
   local CMD_OUTPUT=
   docker service rm "${SERVICE_NAME}" >/dev/null 2>&1;
-  if ! CMD_OUTPUT=$(docker service create --quiet --name "${SERVICE_NAME}" \
-    --mode replicated-job \
+  docker service create --quiet --name "${SERVICE_NAME}" \
+    --mode replicated-job --restart-condition=none --network host \
     --constraint "node.role==manager" \
     --mount type=bind,source=/var/run/docker.sock,target=/var/run/docker.sock \
     --env "GANTRY_LOG_LEVEL=${GANTRY_LOG_LEVEL}" \
@@ -503,12 +513,12 @@ _run_gantry_container() {
     --env "GANTRY_UPDATE_OPTIONS=${GANTRY_UPDATE_OPTIONS}" \
     --env "GANTRY_UPDATE_TIMEOUT_SECONDS=${GANTRY_UPDATE_TIMEOUT_SECONDS}" \
     --env "GANTRY_CLEANUP_IMAGES=${GANTRY_CLEANUP_IMAGES}" \
+    --env "GANTRY_CLEANUP_IMAGES_OPTIONS=${GANTRY_CLEANUP_IMAGES_OPTIONS}" \
     --env "GANTRY_NOTIFICATION_APPRISE_URL=${GANTRY_NOTIFICATION_APPRISE_URL}" \
     --env "GANTRY_NOTIFICATION_TITLE=${GANTRY_NOTIFICATION_TITLE}" \
-    "${CONTAINER_REPO_TAG}" \
-    "${STACK}" 2>&1); then
-    echo "Failed to create service ${SERVICE_NAME}: ${CMD_OUTPUT}" >&2
-  fi
+    --env "TZ=${TZ}" \
+    "${SUT_REPO_TAG}" \
+    "${STACK}" >/dev/null 2>&1;
   docker service logs --raw "${SERVICE_NAME}"
   if ! CMD_OUTPUT=$(docker service rm "${SERVICE_NAME}" 2>&1); then
     echo "Failed to remove service ${SERVICE_NAME}: ${CMD_OUTPUT}" >&2

@@ -19,7 +19,7 @@ Describe 'Manifest_command'
   SUITE_NAME="Manifest_command"
   BeforeAll "initialize_all_tests ${SUITE_NAME}"
   AfterAll "finish_all_tests ${SUITE_NAME}"
-  Describe "test_MANIFEST_CMD_none"
+  Describe "test_MANIFEST_CMD_none" "container_test:true"
     TEST_NAME="test_MANIFEST_CMD_none"
     IMAGE_WITH_TAG=$(get_image_with_tag)
     SERVICE_NAME="gantry-test-$(unique_id)"
@@ -61,7 +61,7 @@ Describe 'Manifest_command'
       The stderr should satisfy spec_expect_no_message "${FAILED_TO_REMOVE_IMAGE}.*${IMAGE_WITH_TAG}"
     End
   End
-  Describe "test_MANIFEST_CMD_none_SERVICES_SELF"
+  Describe "test_MANIFEST_CMD_none_SERVICES_SELF" "container_test:true"
     TEST_NAME="test_MANIFEST_CMD_none_SERVICES_SELF"
     IMAGE_WITH_TAG=$(get_image_with_tag)
     SERVICE_NAME="gantry-test-$(unique_id)"
@@ -100,7 +100,7 @@ Describe 'Manifest_command'
       The stderr should satisfy spec_expect_no_message "${FAILED_TO_REMOVE_IMAGE}.*${IMAGE_WITH_TAG}"
     End
   End
-  Describe "test_MANIFEST_CMD_manifest"
+  Describe "test_MANIFEST_CMD_manifest" "container_test:true"
     TEST_NAME="test_MANIFEST_CMD_manifest"
     IMAGE_WITH_TAG=$(get_image_with_tag)
     SERVICE_NAME="gantry-test-$(unique_id)"
@@ -136,7 +136,7 @@ Describe 'Manifest_command'
       The stderr should satisfy spec_expect_no_message "${FAILED_TO_REMOVE_IMAGE}.*${IMAGE_WITH_TAG}"
     End
   End
-  Describe "test_MANIFEST_CMD_unsupported_cmd"
+  Describe "test_MANIFEST_CMD_unsupported_cmd" "container_test:false"
     TEST_NAME="test_MANIFEST_CMD_unsupported_cmd"
     IMAGE_WITH_TAG=$(get_image_with_tag)
     SERVICE_NAME="gantry-test-$(unique_id)"
@@ -174,7 +174,7 @@ Describe 'Manifest_command'
       The stderr should satisfy spec_expect_no_message "${FAILED_TO_REMOVE_IMAGE}.*${IMAGE_WITH_TAG}"
     End
   End
-  Describe "test_MANIFEST_CMD_failure"
+  Describe "test_MANIFEST_CMD_failure" "container_test:false"
     TEST_NAME="test_MANIFEST_CMD_failure"
     IMAGE_WITH_TAG=$(get_image_with_tag)
     SERVICE_NAME="gantry-test-$(unique_id)"

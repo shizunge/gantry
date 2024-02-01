@@ -20,7 +20,7 @@ Describe 'Login'
   BeforeAll "initialize_all_tests ${SUITE_NAME}"
   AfterAll "finish_all_tests ${SUITE_NAME}"
   # Here are just simple login tests.
-  Describe "test_login_config"
+  Describe "test_login_config" "container_test:false"
     TEST_NAME="test_login_config"
     IMAGE_WITH_TAG=$(get_image_with_tag)
     SERVICE_NAME="gantry-test-$(unique_id)"
@@ -76,7 +76,7 @@ Describe 'Login'
       The stderr should satisfy spec_expect_no_message "${FAILED_TO_REMOVE_IMAGE}.*${IMAGE_WITH_TAG}"
     End
   End
-  Describe "test_login_REGISTRY_CONFIGS_FILE"
+  Describe "test_login_REGISTRY_CONFIGS_FILE" "container_test:false"
     TEST_NAME="test_login_REGISTRY_CONFIGS_FILE"
     IMAGE_WITH_TAG=$(get_image_with_tag)
     SERVICE_NAME="gantry-test-$(unique_id)"
@@ -127,7 +127,7 @@ Describe 'Login'
       The stderr should satisfy spec_expect_no_message "${FAILED_TO_REMOVE_IMAGE}.*${IMAGE_WITH_TAG}"
     End
   End
-  Describe "test_login_REGISTRY_CONFIGS_FILE_bad_format_extra"
+  Describe "test_login_REGISTRY_CONFIGS_FILE_bad_format_extra" "container_test:false"
     TEST_NAME="test_login_REGISTRY_CONFIGS_FILE_bad_format_extra"
     IMAGE_WITH_TAG=$(get_image_with_tag)
     SERVICE_NAME="gantry-test-$(unique_id)"
@@ -180,7 +180,7 @@ Describe 'Login'
       The stderr should satisfy spec_expect_no_message "${FAILED_TO_REMOVE_IMAGE}.*${IMAGE_WITH_TAG}"
     End
   End
-  Describe "test_login_REGISTRY_CONFIGS_FILE_bad_format_missing"
+  Describe "test_login_REGISTRY_CONFIGS_FILE_bad_format_missing" "container_test:false"
     TEST_NAME="test_login_REGISTRY_CONFIGS_FILE_bad_format_missing"
     IMAGE_WITH_TAG=$(get_image_with_tag)
     SERVICE_NAME="gantry-test-$(unique_id)"

@@ -19,7 +19,7 @@ Describe 'Job'
   SUITE_NAME="Job"
   BeforeAll "initialize_all_tests ${SUITE_NAME}"
   AfterAll "finish_all_tests ${SUITE_NAME}"
-  Describe "test_jobs_skipping"
+  Describe "test_jobs_skipping" "container_test:true"
     TEST_NAME="test_jobs_skipping"
     IMAGE_WITH_TAG=$(get_image_with_tag)
     SERVICE_NAME="gantry-test-$(unique_id)"
@@ -49,7 +49,7 @@ Describe 'Job'
       The stderr should satisfy spec_expect_no_message "${FAILED_TO_REMOVE_IMAGE}.*${IMAGE_WITH_TAG}"
     End
   End
-  Describe "test_jobs_UPDATE_JOBS_true"
+  Describe "test_jobs_UPDATE_JOBS_true" "container_test:true"
     TEST_NAME="test_jobs_UPDATE_JOBS_true"
     IMAGE_WITH_TAG=$(get_image_with_tag)
     SERVICE_NAME="gantry-test-$(unique_id)"
@@ -87,7 +87,7 @@ Describe 'Job'
       The stderr should satisfy spec_expect_message    "${FAILED_TO_REMOVE_IMAGE}.*${IMAGE_WITH_TAG}"
     End
   End
-  Describe "test_jobs_UPDATE_JOBS_true_no_running_tasks"
+  Describe "test_jobs_UPDATE_JOBS_true_no_running_tasks" "container_test:true"
     TEST_NAME="test_jobs_UPDATE_JOBS_true_no_running_tasks"
     IMAGE_WITH_TAG=$(get_image_with_tag)
     SERVICE_NAME="gantry-test-$(unique_id)"

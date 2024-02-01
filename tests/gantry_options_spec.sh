@@ -19,7 +19,7 @@ Describe 'Options'
   SUITE_NAME="Options"
   BeforeAll "initialize_all_tests ${SUITE_NAME}"
   AfterAll "finish_all_tests ${SUITE_NAME}"
-  Describe "test_options_LOG_LEVEL_none"
+  Describe "test_options_LOG_LEVEL_none" "container_test:true"
     TEST_NAME="test_options_LOG_LEVEL_none"
     IMAGE_WITH_TAG=$(get_image_with_tag)
     SERVICE_NAME="gantry-test-$(unique_id)"
@@ -40,7 +40,7 @@ Describe 'Options'
       The stderr should satisfy spec_expect_no_message ".+"
     End
   End
-  Describe "test_options_UPDATE_OPTIONS"
+  Describe "test_options_UPDATE_OPTIONS" "container_test:true"
     TEST_NAME="test_options_UPDATE_OPTIONS"
     IMAGE_WITH_TAG=$(get_image_with_tag)
     SERVICE_NAME="gantry-test-$(unique_id)"
@@ -90,7 +90,7 @@ Describe 'Options'
       The stderr should satisfy spec_expect_no_message "${FAILED_TO_REMOVE_IMAGE}.*${IMAGE_WITH_TAG}"
     End
   End
-  Describe "test_options_UPDATE_TIMEOUT_SECONDS_not_a_number"
+  Describe "test_options_UPDATE_TIMEOUT_SECONDS_not_a_number" "container_test:false"
     TEST_NAME="test_options_UPDATE_TIMEOUT_SECONDS_not_a_number"
     IMAGE_WITH_TAG=$(get_image_with_tag)
     SERVICE_NAME="gantry-test-$(unique_id)"
@@ -124,7 +124,7 @@ Describe 'Options'
       The stderr should satisfy spec_expect_no_message "${FAILED_TO_REMOVE_IMAGE}.*${IMAGE_WITH_TAG}"
     End
   End
-  Describe "test_options_PRE_POST_RUN_CMD"
+  Describe "test_options_PRE_POST_RUN_CMD" "container_test:true"
     TEST_NAME="test_options_PRE_POST_RUN_CMD"
     IMAGE_WITH_TAG=$(get_image_with_tag)
     SERVICE_NAME="gantry-test-$(unique_id)"
