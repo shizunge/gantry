@@ -100,6 +100,12 @@ Describe 'Login'
       echo "# Test comments: CONFIG REGISTRY USERNAME PASSWORD" >> "${CONFIGS_FILE}"
       echo "${CONFIG} ${REGISTRY} ${USERNAME} ${PASSWORD}" >> "${CONFIGS_FILE}"
       export GANTRY_REGISTRY_CONFIGS_FILE="${CONFIGS_FILE}"
+      # Since we pass credentials via the configs file, we can use other envs to login to docker hub and check the rate.
+      # However we do not actually check whether we read rates correctly, in case password or usrename for docker hub is not set.
+      # It seems there is no rate limit when running from the github actions, which also gives us a NaN error.
+      export GANTRY_REGISTRY_HOST="docker.io"
+      export GANTRY_REGISTRY_PASSWORD="${DOCKERHUB_PASSWORD:-""}"
+      export GANTRY_REGISTRY_USER="${DOCKERHUB_USERNAME:-""}"
       local RETURN_VALUE=
       run_gantry "${TEST_NAME}"
       RETURN_VALUE="${?}"

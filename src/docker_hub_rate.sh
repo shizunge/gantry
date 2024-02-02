@@ -50,19 +50,11 @@ docker_hub_rate() {
   local IMAGE="${1:-ratelimitpreview/test}"
   local USER_AND_PASS="${2}"
   if ! type log 1>/dev/null 2>&1; then
-    log() {
-      echo "${*}" >&2
-    }
+    log() { echo "${*}" >&2; }
   fi
   if ! type log_lines 1>/dev/null 2>&1; then
     # Usage: echo "${LOGS}" | log_lines LEVLE
-    log_lines() {
-      local LEVEL="${1}";
-      while read -r LINE; do
-        [ -z "${LINE}" ] && continue;
-        log "${LEVEL}" "${LINE}";
-      done
-    }
+    log_lines() { local LEVEL="${1}"; while read -r LINE; do [ -z "${LINE}" ] && continue; log "${LEVEL}" "${LINE}"; done; }
   fi
   local RESPONSE=
   if ! RESPONSE=$(_docker_hub_rate_token "${IMAGE}" "${USER_AND_PASS}"); then
