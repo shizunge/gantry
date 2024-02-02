@@ -66,7 +66,7 @@ docker_hub_rate() {
   fi
   local RESPONSE=
   if ! RESPONSE=$(_docker_hub_rate_token "${IMAGE}" "${USER_AND_PASS}"); then
-    log DEBUG "_docker_hub_rate_token error: RESPONSE="
+    log DEBUG "Read docker hub token error: RESPONSE="
     echo "${RESPONSE}" | log_lines DEBUG
     echo "[GET TOKEN RESPONSE ERROR]"
     return 1
@@ -74,7 +74,8 @@ docker_hub_rate() {
   local TOKEN=
   TOKEN=$(echo "${RESPONSE}" | sed 's/.*"token":"\([^"]*\).*/\1/')
   if [ -z "${TOKEN}" ]; then
-    log DEBUG "parse token error: RESPONSE=${RESPONSE}"
+    log DEBUG "Parse docker hub token error: RESPONSE="
+    echo "${RESPONSE}" | log_lines DEBUG
     echo "[PARSE TOKEN ERROR]"
     return 1
   fi
@@ -83,7 +84,7 @@ docker_hub_rate() {
       echo "0"
       return 0
     fi
-    log DEBUG "_docker_hub_rate_read_rate error: RESPONSE="
+    log DEBUG "Read docker hub rate error: RESPONSE="
     echo "${RESPONSE}" | log_lines DEBUG
     echo "[GET RATE RESPONSE ERROR]"
     return 1
@@ -91,7 +92,8 @@ docker_hub_rate() {
   local RATE=
   RATE=$(echo "${RESPONSE}" | sed -n 's/.*ratelimit-remaining: \([0-9]*\).*/\1/p' )
   if [ -z "${RATE}" ]; then
-    log DEBUG "parse rate error: RESPONSE=${RESPONSE}"
+    log DEBUG "Parse docker hub rate error: RESPONSE="
+    echo "${RESPONSE}" | log_lines DEBUG
     echo "[PARSE RATE ERROR]"
     return 1
   fi

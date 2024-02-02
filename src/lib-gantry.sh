@@ -175,6 +175,8 @@ gantry_remove_images() {
 _remove_images() {
   local CLEANUP_IMAGES="${GANTRY_CLEANUP_IMAGES:-"true"}"
   local CLEANUP_IMAGES_OPTIONS="${GANTRY_CLEANUP_IMAGES_OPTIONS:-""}"
+  # Use this image when not running gantry as a docker swarm service.
+  local DEFAULT_IMAGES_REMOVER="${GANTRY_CLEANUP_IMAGES_REMOVER:="ghcr.io/shizunge/gantry"}"
   if ! is_true "${CLEANUP_IMAGES}"; then
     log INFO "Skip removing images."
     return 0
@@ -193,9 +195,10 @@ _remove_images() {
   for I in $(echo "${IMAGES_TO_REMOVE}" | tr '\n' ' '); do
     log INFO "- ${I}"
   done
-  local IMAGE_OF_THIS_CONTAINER=
-  IMAGE_OF_THIS_CONTAINER=$(_get_service_image "$(_current_service_name)")
-  [ -z "${IMAGE_OF_THIS_CONTAINER}" ] && IMAGE_OF_THIS_CONTAINER="ghcr.io/shizunge/gantry-development"
+  local IMAGES_REMOVER=
+  IMAGES_REMOVER=$(_get_service_image "$(_current_service_name)")
+  [ -z "${IMAGES_REMOVER}" ] && IMAGES_REMOVER="${DEFAULT_IMAGES_REMOVER}"
+  log DEBUG "Set IMAGES_REMOVER=${IMAGES_REMOVER}"
   local IMAGES_TO_REMOVE_LIST=
   IMAGES_TO_REMOVE_LIST=$(echo "${IMAGES_TO_REMOVE}" | tr '\n' ' ')
   [ -n "${CLEANUP_IMAGES_OPTIONS}" ] && log DEBUG "Adding options \"${CLEANUP_IMAGES_OPTIONS}\" to the global job ${SERVICE_NAME}."
@@ -208,7 +211,7 @@ _remove_images() {
     --mount type=bind,source=/var/run/docker.sock,destination=/var/run/docker.sock \
     --env "GANTRY_IMAGES_TO_REMOVE=${IMAGES_TO_REMOVE_LIST}" \
     ${CLEANUP_IMAGES_OPTIONS} \
-    "${IMAGE_OF_THIS_CONTAINER}" 2>&1); then
+    "${IMAGES_REMOVER}" 2>&1); then
     log ERROR "Failed to remove images: ${RMI_MSG}"
   fi
   wait_service_state "${SERVICE_NAME}" --complete;
@@ -645,7 +648,7 @@ gantry_initialize() {
   # So here we use the file system to pass value between multiple processes.
   STATIC_VARIABLES_FOLDER=$(mktemp -d)
   export STATIC_VARIABLES_FOLDER
-  log DEBUG "Created ${STATIC_VARIABLES_FOLDER} to store static variables."
+  log DEBUG "Created STATIC_VARIABLES_FOLDER ${STATIC_VARIABLES_FOLDER}"
   _authenticate_to_registries
 }
 
