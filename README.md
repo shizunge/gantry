@@ -2,11 +2,11 @@
 
 [![Release](https://img.shields.io/github/release/shizunge/gantry.svg?label=Release)](https://github.com/shizunge/gantry/releases/latest)
 [![License](https://img.shields.io/badge/License-GPLv3-blue)](https://github.com/shizunge/gantry/blob/main/LICENSE)
-[![Docker Pulls](https://img.shields.io/docker/pulls/shizunge/gantry.svg?label=Docker%20Pulls)](https://hub.docker.com/r/shizunge/gantry)
-[![Docker Image Size](https://img.shields.io/docker/image-size/shizunge/gantry/latest.svg?label=Image%20Size)](https://hub.docker.com/r/shizunge/gantry)
+[![Image Size](https://img.shields.io/docker/image-size/shizunge/gantry/latest.svg?label=Image%20Size)](https://hub.docker.com/r/shizunge/gantry)
+[![Docker Pulls](https://img.shields.io/docker/pulls/shizunge/gantry.svg?label=Docker%20Pulls&logo=Docker)](https://hub.docker.com/r/shizunge/gantry)
 [![Build](https://github.com/shizunge/gantry/actions/workflows/build.yml/badge.svg?label=Build&branch=main)](https://github.com/shizunge/gantry/actions/workflows/build.yml)
-[![Coverage](https://img.shields.io/codecov/c/github/shizunge/gantry.svg?token=47MWUJOH4Q&label=Coverage)](https://codecov.io/gh/shizunge/gantry)
-[![CodeFactor Grade](https://img.shields.io/codefactor/grade/github/shizunge/gantry?label=CodeFactor)](https://www.codefactor.io/repository/github/shizunge/gantry)
+[![Coverage](https://img.shields.io/codecov/c/github/shizunge/gantry.svg?token=47MWUJOH4Q&label=Coverage&logo=Codecov)](https://codecov.io/gh/shizunge/gantry)
+[![CodeFactor Grade](https://img.shields.io/codefactor/grade/github/shizunge/gantry?label=CodeFactor&logo=CodeFactor)](https://www.codefactor.io/repository/github/shizunge/gantry)
 
 [*Gantry*](https://github.com/shizunge/gantry) automatically updates selected docker swarm services to newer images with the same tag. It is inspired by but [enhanced Shepherd](docs/migration.md).
 

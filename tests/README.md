@@ -1,7 +1,7 @@
 ## Test *Gantry* Docker service updater
 
-[![Coverage](https://img.shields.io/codecov/c/github/shizunge/gantry.svg?token=47MWUJOH4Q&label=Coverage)](https://codecov.io/gh/shizunge/gantry)
-[![CodeFactor Grade](https://img.shields.io/codefactor/grade/github/shizunge/gantry?label=CodeFactor)](https://www.codefactor.io/repository/github/shizunge/gantry)
+[![Coverage](https://img.shields.io/codecov/c/github/shizunge/gantry.svg?token=47MWUJOH4Q&label=Coverage&logo=Codecov)](https://codecov.io/gh/shizunge/gantry)
+[![CodeFactor Grade](https://img.shields.io/codefactor/grade/github/shizunge/gantry?label=CodeFactor&logo=CodeFactor)](https://www.codefactor.io/repository/github/shizunge/gantry)
 
 Majority of the configuration options are covered by end-to-end tests. The tests are utilizing [shellspec](https://github.com/shellspec/shellspec) framework. A quick installation of `shellspec` can be done by `curl -fsSL https://git.io/shellspec | sh`. See their website for more installation options.
 
