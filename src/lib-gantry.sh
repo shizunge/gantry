@@ -126,11 +126,6 @@ _static_variable_add_unique_to_list() {
   echo "${NEW_LIST}" > "${FILE_NAME}"
 }
 
-_add_image_to_remove() {
-  local IMAGE="${1}"
-  _static_variable_add_unique_to_list STATIC_VAR_IMAGES_TO_REMOVE "${IMAGE}"
-}
-
 _remove_container() {
   local IMAGE="${1}";
   local STATUS="${2}";
@@ -217,11 +212,6 @@ _remove_images() {
   wait_service_state "${SERVICE_NAME}" --complete;
   docker_service_logs "${SERVICE_NAME}"
   docker_service_remove "${SERVICE_NAME}"
-}
-
-_add_service_updated() {
-  local SERVICE_NAME="${1}"
-  _static_variable_add_unique_to_list STATIC_VAR_SERVICES_UPDATED "${SERVICE_NAME}"
 }
 
 _report_services_updated() {
@@ -413,6 +403,20 @@ _get_config_from_service() {
   echo "--config ${AUTH_CONFIG}"
 }
 
+_skip_jobs() {
+  local UPDATE_JOBS="${GANTRY_UPDATE_JOBS:-"false"}"
+  local SERVICE_NAME="${1}"
+  if is_true "${UPDATE_JOBS}"; then
+    return 1
+  fi
+  local MODE=
+  if MODE=$(_service_is_job "${SERVICE_NAME}"); then
+    log DEBUG "Skip updating ${SERVICE_NAME} because it is in ${MODE} mode."
+    return 0
+  fi
+  return 1
+}
+
 _get_image_info() {
   local MANIFEST_OPTIONS="${GANTRY_MANIFEST_OPTIONS:-""}"
   local MANIFEST_CMD="${1}"
@@ -448,27 +452,12 @@ _get_image_info() {
   return 0
 }
 
-_skip_jobs() {
-  local UPDATE_JOBS="${GANTRY_UPDATE_JOBS:-"false"}"
-  local SERVICE_NAME="${1}"
-  if is_true "${UPDATE_JOBS}"; then
-    return 1
-  fi
-  local MODE=
-  if MODE=$(_service_is_job "${SERVICE_NAME}"); then
-    log DEBUG "Skip updating ${SERVICE_NAME} because it is in ${MODE} mode."
-    return 0
-  fi
-  return 1
-}
-
 # echo nothing if we found no new images.
 # echo the image if we found a new image.
 # return the number of errors.
 _inspect_image() {
   local MANIFEST_CMD="${GANTRY_MANIFEST_CMD:-"buildx"}"
   local SERVICE_NAME="${1}"
-  local DOCKER_CONFIG="${2}"
   local IMAGE_WITH_DIGEST=
   if ! IMAGE_WITH_DIGEST=$(_get_service_image "${SERVICE_NAME}" 2>&1); then
     log ERROR "Failed to obtain image from service ${SERVICE_NAME}. ${IMAGE_WITH_DIGEST}"
@@ -501,6 +490,9 @@ _inspect_image() {
     echo "${IMAGE}"
     return 0
   fi
+  local DOCKER_CONFIG=
+  DOCKER_CONFIG=$(_get_config_from_service "${SERVICE}")
+  [ -n "${DOCKER_CONFIG}" ] && log DEBUG "Adding options \"${DOCKER_CONFIG}\" to docker commands."
   local IMAGE_INFO=
   if ! IMAGE_INFO=$(_get_image_info "${MANIFEST_CMD}" "${IMAGE}" "${DOCKER_CONFIG}"); then
     log DEBUG "Skip updating ${SERVICE_NAME} because there is a failure to obtain the manifest from the registry of image ${IMAGE}."
@@ -515,6 +507,26 @@ _inspect_image() {
   _static_variable_add_unique_to_list STATIC_VAR_NEW_IMAGES "${DIGEST}"
   log DEBUG "Perform updating ${SERVICE_NAME} because there is a newer version of image ${IMAGE_WITH_DIGEST}."
   echo "${IMAGE}"
+  return 0
+}
+
+# return 0 if need to update the service
+# return 1 if no need to update the service
+_inspect_service() {
+  local SERVICE_NAME="${1}"
+  if _skip_jobs "${SERVICE_NAME}"; then
+    return 1
+  fi
+  local IMAGE=
+  if ! IMAGE=$(_inspect_image "${SERVICE_NAME}"); then
+    _add_service_update_failed "${SERVICE_NAME}"
+    return 1
+  fi
+  if [ -z "${IMAGE}" ]; then
+    log INFO "No new images for ${SERVICE_NAME}."
+    return 1
+  fi
+  _static_variable_add_unique_to_list STATIC_VAR_SERVICES_TO_UPDATE "${SERVICE_NAME} ${IMAGE}"
   return 0
 }
 
@@ -584,15 +596,19 @@ _update_single_service() {
   local UPDATE_OPTIONS="${GANTRY_UPDATE_OPTIONS:-""}"
   if ! is_number "${UPDATE_TIMEOUT_SECONDS}"; then
     log ERROR "GANTRY_UPDATE_TIMEOUT_SECONDS must be a number. Got \"${GANTRY_UPDATE_TIMEOUT_SECONDS}\"."
+    _add_service_update_failed "${SERVICE}"
     return 1;
   fi
   local SERVICE_NAME="${1}"
   local IMAGE="${2}"
-  local DOCKER_CONFIG="${3}"
+  [ -z "${SERVICE_NAME}" ] && log ERROR "Updating service: SERVICE_NAME must not be empty." && return 1
   [ -z "${IMAGE}" ] && log ERROR "Updating ${SERVICE_NAME}: IMAGE must not be empty." && return 1
   log INFO "Updating ${SERVICE_NAME} with image ${IMAGE}"
+  local DOCKER_CONFIG=
   local ADDITIONAL_OPTIONS=
+  DOCKER_CONFIG=$(_get_config_from_service "${SERVICE}")
   ADDITIONAL_OPTIONS=$(_get_service_update_additional_options "${SERVICE_NAME}")
+  [ -n "${DOCKER_CONFIG}" ] && log DEBUG "Adding options \"${DOCKER_CONFIG}\" to docker commands."
   [ -n "${ADDITIONAL_OPTIONS}" ] && log DEBUG "Adding options \"${ADDITIONAL_OPTIONS}\" to the command \"docker service update\"."
   [ -n "${UPDATE_OPTIONS}" ] && log DEBUG "Adding options \"${UPDATE_OPTIONS}\" to the command \"docker service update\"."
   local UPDATE_MSG=
@@ -602,6 +618,7 @@ _update_single_service() {
   if ! UPDATE_MSG=$(timeout "${UPDATE_TIMEOUT_SECONDS}" docker ${DOCKER_CONFIG} service update --quiet ${ADDITIONAL_OPTIONS} ${UPDATE_OPTIONS} --image="${IMAGE}" "${SERVICE_NAME}" 2>&1); then
     log ERROR "docker service update failed or timeout. ${UPDATE_MSG}"
     _rollback_service "${SERVICE_NAME}" "${DOCKER_CONFIG}"
+    _add_service_update_failed "${SERVICE}"
     return 1
   fi
   local PREVIOUS_IMAGE=
@@ -612,8 +629,8 @@ _update_single_service() {
     log INFO "No updates for ${SERVICE_NAME}."
     return 0
   fi
-  _add_service_updated "${SERVICE_NAME}"
-  _add_image_to_remove "${PREVIOUS_IMAGE}"
+  _static_variable_add_unique_to_list STATIC_VAR_SERVICES_UPDATED "${SERVICE_NAME}"
+  _static_variable_add_unique_to_list STATIC_VAR_IMAGES_TO_REMOVE "${PREVIOUS_IMAGE}"
   log INFO "UPDATED ${SERVICE_NAME}."
   return 0
 }
@@ -688,27 +705,18 @@ gantry_update_services_list() {
   local LIST="${*}"
   local LOG_SCOPE_SAVED="${LOG_SCOPE}"
   for SERVICE in ${LIST}; do
-    export LOG_SCOPE="Updating ${SERVICE}"
-    if _skip_jobs "${SERVICE}"; then
-      continue;
-    fi
-    local DOCKER_CONFIG=
-    DOCKER_CONFIG=$(_get_config_from_service "${SERVICE}")
-    [ -n "${DOCKER_CONFIG}" ] && log DEBUG "Adding options \"${DOCKER_CONFIG}\" to docker commands."
-    local IMAGE=
-    if ! IMAGE=$(_inspect_image "${SERVICE}" "${DOCKER_CONFIG}"); then
-      _add_service_update_failed "${SERVICE}"
-      continue;
-    fi
-    if [ -z "${IMAGE}" ]; then
-      log INFO "No new images for ${SERVICE}."
-      continue;
-    fi
-    if ! _update_single_service "${SERVICE}" "${IMAGE}" "${DOCKER_CONFIG}"; then
-      _add_service_update_failed "${SERVICE}"
-      continue;
-    fi
+    export LOG_SCOPE="Inspecting ${SERVICE}"
+    _inspect_service "${SERVICE}"
   done
+  local SERVICES_TO_UPDATE=
+  SERVICES_TO_UPDATE=$(_static_variable_read_list STATIC_VAR_SERVICES_TO_UPDATE)
+  while read -r SERVICE_AND_IMAGE; do
+    export LOG_SCOPE="Updating ${SERVICE}"
+    local SERVICE IMAGE
+    SERVICE=$(echo "${SERVICE_AND_IMAGE}" | cut -d ' ' -f 1)
+    IMAGE=$(echo "${SERVICE_AND_IMAGE}" | cut -d ' ' -f 2)
+    _update_single_service "${SERVICE}" "${IMAGE}"
+  done < <(echo "${SERVICES_TO_UPDATE}")
   export LOG_SCOPE="${LOG_SCOPE_SAVED}"
   local SERVICES_UPDATE_FAILED FAILED_NUM
   SERVICES_UPDATE_FAILED=$(_static_variable_read_list STATIC_VAR_SERVICES_UPDATE_FAILED)
