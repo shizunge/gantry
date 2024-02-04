@@ -30,9 +30,8 @@ Describe 'Simple'
       The status should be success
       The stdout should satisfy display_output
       The stderr should satisfy display_output
-      The stderr should satisfy spec_expect_message    "${SKIP_UPDATING}.*${SERVICE_NAME}.*${REASON_CURRENT_IS_LATEST}"
-      The stderr should satisfy spec_expect_no_message "${SKIP_UPDATING_JOB}.*${SERVICE_NAME}"
-      The stderr should satisfy spec_expect_message    "${SKIP_UPDATING}.*${SERVICE_NAME}.*${REASON_CURRENT_IS_LATEST}"
+      The stderr should satisfy spec_expect_message    "${SKIP_UPDATING}.*${SERVICE_NAME}.*${SKIP_REASON_CURRENT_IS_LATEST}"
+      The stderr should satisfy spec_expect_no_message "${PERFORM_UPDATING}.*${SERVICE_NAME}"
       The stderr should satisfy spec_expect_message    "${NO_NEW_IMAGE}.*${SERVICE_NAME}"
       The stderr should satisfy spec_expect_no_message "${UPDATED}.*${SERVICE_NAME}"
       The stderr should satisfy spec_expect_no_message "${NO_UPDATES}.*${SERVICE_NAME}"
@@ -60,8 +59,8 @@ Describe 'Simple'
       The status should be success
       The stdout should satisfy display_output
       The stderr should satisfy display_output
-      The stderr should satisfy spec_expect_no_message "${SKIP_UPDATING_JOB}.*${SERVICE_NAME}"
-      The stderr should satisfy spec_expect_message    "${PERFORM_UPDATING}.*${SERVICE_NAME}.*${REASON_HAS_NEWER_IMAGE}"
+      The stderr should satisfy spec_expect_no_message "${SKIP_UPDATING}.*${SERVICE_NAME}"
+      The stderr should satisfy spec_expect_message    "${PERFORM_UPDATING}.*${SERVICE_NAME}.*${PERFORM_REASON_HAS_NEWER_IMAGE}"
       The stderr should satisfy spec_expect_no_message "${NO_NEW_IMAGE}.*${SERVICE_NAME}"
       The stderr should satisfy spec_expect_message    "${UPDATED}.*${SERVICE_NAME}"
       The stderr should satisfy spec_expect_no_message "${NO_UPDATES}.*${SERVICE_NAME}"
@@ -97,7 +96,6 @@ Describe 'Simple'
       The stderr should satisfy display_output
       The stderr should satisfy spec_expect_message    "Failed to obtain services list.*"
       The stderr should satisfy spec_expect_message    "${SKIP_UPDATING_ALL}"
-      The stderr should satisfy spec_expect_no_message "${SKIP_UPDATING_JOB}.*${SERVICE_NAME}"
       The stderr should satisfy spec_expect_no_message "${SKIP_UPDATING}.*${SERVICE_NAME}"
       The stderr should satisfy spec_expect_no_message "${PERFORM_UPDATING}.*${SERVICE_NAME}"
       The stderr should satisfy spec_expect_no_message "${NO_NEW_IMAGE}.*${SERVICE_NAME}"
@@ -133,7 +131,7 @@ Describe 'Simple'
       The status should be success
       The stdout should satisfy display_output
       The stderr should satisfy display_output
-      The stderr should satisfy spec_expect_no_message "${SKIP_UPDATING_JOB}.*${SERVICE_NAME}"
+      The stderr should satisfy spec_expect_no_message "${SKIP_UPDATING_ALL}"
       The stderr should satisfy spec_expect_no_message "${SKIP_UPDATING}.*${SERVICE_NAME}"
       The stderr should satisfy spec_expect_no_message "${PERFORM_UPDATING}.*${SERVICE_NAME}"
       The stderr should satisfy spec_expect_no_message "${NO_NEW_IMAGE}.*${SERVICE_NAME}"
@@ -169,7 +167,7 @@ Describe 'Simple'
       The status should be success
       The stdout should satisfy display_output
       The stderr should satisfy display_output
-      The stderr should satisfy spec_expect_no_message "${SKIP_UPDATING_JOB}.*${SERVICE_NAME}"
+      The stderr should satisfy spec_expect_no_message "${SKIP_UPDATING_ALL}"
       The stderr should satisfy spec_expect_no_message "${SKIP_UPDATING}.*${SERVICE_NAME}"
       The stderr should satisfy spec_expect_no_message "${PERFORM_UPDATING}.*${SERVICE_NAME}"
       The stderr should satisfy spec_expect_no_message "${NO_NEW_IMAGE}.*${SERVICE_NAME}"
@@ -207,7 +205,6 @@ Describe 'Simple'
       The stderr should satisfy display_output
       The stderr should satisfy spec_expect_message    "Failed to obtain services list.*"
       The stderr should satisfy spec_expect_message    "${SKIP_UPDATING_ALL}"
-      The stderr should satisfy spec_expect_no_message "${SKIP_UPDATING_JOB}.*${SERVICE_NAME}"
       The stderr should satisfy spec_expect_no_message "${SKIP_UPDATING}.*${SERVICE_NAME}"
       The stderr should satisfy spec_expect_no_message "${PERFORM_UPDATING}.*${SERVICE_NAME}"
       The stderr should satisfy spec_expect_no_message "${NO_NEW_IMAGE}.*${SERVICE_NAME}"

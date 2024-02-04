@@ -85,13 +85,18 @@ Describe 'Multiple_services'
       # Service 1 and 2 should be excluded.
       # Service 4 and 5 created with new image, no update.
       # Failed to remove the image as service 1 and 2 are still using it.
-      The stderr should satisfy spec_expect_no_message "${SKIP_UPDATING_JOB}.*${SERVICE_NAME}"
-      The stderr should satisfy spec_expect_message    "${PERFORM_UPDATING}.*${SERVICE_NAME0}.*${REASON_HAS_NEWER_IMAGE}"
+      The stderr should satisfy spec_expect_no_message "${SKIP_UPDATING}.*${SERVICE_NAME0}"
+      The stderr should satisfy spec_expect_message    "${PERFORM_UPDATING}.*${SERVICE_NAME0}.*${PERFORM_REASON_HAS_NEWER_IMAGE}"
       The stderr should satisfy spec_expect_no_message "${SKIP_UPDATING}.*${SERVICE_NAME1}"
+      The stderr should satisfy spec_expect_no_message "${PERFORM_UPDATING}.*${SERVICE_NAME1}"
       The stderr should satisfy spec_expect_no_message "${SKIP_UPDATING}.*${SERVICE_NAME2}"
-      The stderr should satisfy spec_expect_message    "${PERFORM_UPDATING}.*${SERVICE_NAME3}.*${REASON_KNOWN_NEWER_IMAGE}"
-      The stderr should satisfy spec_expect_message    "${SKIP_UPDATING}.*${SERVICE_NAME4}.*${REASON_CURRENT_IS_LATEST}"
-      The stderr should satisfy spec_expect_message    "${SKIP_UPDATING}.*${SERVICE_NAME5}.*${REASON_NO_KNOWN_NEWER_IMAGE}"
+      The stderr should satisfy spec_expect_no_message "${PERFORM_UPDATING}.*${SERVICE_NAME2}"
+      The stderr should satisfy spec_expect_no_message "${SKIP_UPDATING}.*${SERVICE_NAME3}"
+      The stderr should satisfy spec_expect_message    "${PERFORM_UPDATING}.*${SERVICE_NAME3}.*${PERFORM_REASON_KNOWN_NEWER_IMAGE}"
+      The stderr should satisfy spec_expect_message    "${SKIP_UPDATING}.*${SERVICE_NAME4}.*${SKIP_REASON_CURRENT_IS_LATEST}"
+      The stderr should satisfy spec_expect_no_message "${PERFORM_UPDATING}.*${SERVICE_NAME4}"
+      The stderr should satisfy spec_expect_message    "${SKIP_UPDATING}.*${SERVICE_NAME5}.*${SKIP_REASON_NO_KNOWN_NEWER_IMAGE}"
+      The stderr should satisfy spec_expect_no_message "${PERFORM_UPDATING}.*${SERVICE_NAME5}"
       The stderr should satisfy spec_expect_no_message "${SERVICE_NAME0}.*${NO_NEW_IMAGE}"
       The stderr should satisfy spec_expect_no_message "${SERVICE_NAME1}.*${NO_NEW_IMAGE}"
       The stderr should satisfy spec_expect_no_message "${SERVICE_NAME2}.*${NO_NEW_IMAGE}"

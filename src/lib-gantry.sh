@@ -448,6 +448,20 @@ _get_image_info() {
   return 0
 }
 
+_skip_jobs() {
+  local UPDATE_JOBS="${GANTRY_UPDATE_JOBS:-"false"}"
+  local SERVICE_NAME="${1}"
+  if is_true "${UPDATE_JOBS}"; then
+    return 1
+  fi
+  local MODE=
+  if MODE=$(_service_is_job "${SERVICE_NAME}"); then
+    log DEBUG "Skip updating ${SERVICE_NAME} because it is in ${MODE} mode."
+    return 0
+  fi
+  return 1
+}
+
 # echo nothing if we found no new images.
 # echo the image if we found a new image.
 # return the number of errors.
@@ -545,7 +559,9 @@ _rollback_service() {
   local ROLLBACK_OPTIONS="${GANTRY_ROLLBACK_OPTIONS:-""}"
   local SERVICE_NAME="${1}"
   local DOCKER_CONFIG="${2}"
-  local ADDITIONAL_OPTIONS="${3}"
+  # "service update --rollback" needs to take different options from "service update"
+  # Today no options are added based on services label/status. This is just a placeholder now.
+  local ADDITIONAL_OPTIONS=
   if ! is_true "${ROLLBACK_ON_FAILURE}"; then
     return 0
   fi
@@ -564,7 +580,6 @@ _rollback_service() {
 }
 
 _update_single_service() {
-  local UPDATE_JOBS="${GANTRY_UPDATE_JOBS:-"false"}"
   local UPDATE_TIMEOUT_SECONDS="${GANTRY_UPDATE_TIMEOUT_SECONDS:-300}"
   local UPDATE_OPTIONS="${GANTRY_UPDATE_OPTIONS:-""}"
   if ! is_number "${UPDATE_TIMEOUT_SECONDS}"; then
@@ -572,23 +587,9 @@ _update_single_service() {
     return 1;
   fi
   local SERVICE_NAME="${1}"
-  local MODE=
-  if ! is_true "${UPDATE_JOBS}" && MODE=$(_service_is_job "${SERVICE_NAME}"); then
-    log DEBUG "Skip updating service in ${MODE} mode: ${SERVICE_NAME}."
-    return 0;
-  fi
-  local DOCKER_CONFIG=
-  DOCKER_CONFIG=$(_get_config_from_service "${SERVICE_NAME}")
-  [ -n "${DOCKER_CONFIG}" ] && log DEBUG "Adding options \"${DOCKER_CONFIG}\" to docker commands."
-  local IMAGE=
-  if ! IMAGE=$(_inspect_image "${SERVICE_NAME}" "${DOCKER_CONFIG}"); then
-    _add_service_update_failed "${SERVICE_NAME}"
-    return 1
-  fi
-  if [ -z "${IMAGE}" ]; then
-    log INFO "No new images for ${SERVICE_NAME}."
-    return 0
-  fi
+  local IMAGE="${2}"
+  local DOCKER_CONFIG="${3}"
+  [ -z "${IMAGE}" ] && log ERROR "Updating ${SERVICE_NAME}: IMAGE must not be empty." && return 1
   log INFO "Updating ${SERVICE_NAME} with image ${IMAGE}"
   local ADDITIONAL_OPTIONS=
   ADDITIONAL_OPTIONS=$(_get_service_update_additional_options "${SERVICE_NAME}")
@@ -600,11 +601,7 @@ _update_single_service() {
   # shellcheck disable=SC2086
   if ! UPDATE_MSG=$(timeout "${UPDATE_TIMEOUT_SECONDS}" docker ${DOCKER_CONFIG} service update --quiet ${ADDITIONAL_OPTIONS} ${UPDATE_OPTIONS} --image="${IMAGE}" "${SERVICE_NAME}" 2>&1); then
     log ERROR "docker service update failed or timeout. ${UPDATE_MSG}"
-    # "service update --rollback" needs to take different options from "service update"
-    # Today no options are added based on services label/status. This is just a placeholder now.
-    local ROLLBACK_ADDITIONAL_OPTIONS=
-    _rollback_service "${SERVICE_NAME}" "${DOCKER_CONFIG}" "${ROLLBACK_ADDITIONAL_OPTIONS}"
-    _add_service_update_failed "${SERVICE_NAME}"
+    _rollback_service "${SERVICE_NAME}" "${DOCKER_CONFIG}"
     return 1
   fi
   local PREVIOUS_IMAGE=
@@ -689,15 +686,34 @@ gantry_get_services_list() {
 
 gantry_update_services_list() {
   local LIST="${*}"
-  local ACCUMULATED_ERRORS=0
   local LOG_SCOPE_SAVED="${LOG_SCOPE}"
   for SERVICE in ${LIST}; do
-    LOG_SCOPE="Updating ${SERVICE}"
-    _update_single_service "${SERVICE}"
-    ACCUMULATED_ERRORS=$((ACCUMULATED_ERRORS + $?))
+    export LOG_SCOPE="Updating ${SERVICE}"
+    if _skip_jobs "${SERVICE}"; then
+      continue;
+    fi
+    local DOCKER_CONFIG=
+    DOCKER_CONFIG=$(_get_config_from_service "${SERVICE}")
+    [ -n "${DOCKER_CONFIG}" ] && log DEBUG "Adding options \"${DOCKER_CONFIG}\" to docker commands."
+    local IMAGE=
+    if ! IMAGE=$(_inspect_image "${SERVICE}" "${DOCKER_CONFIG}"); then
+      _add_service_update_failed "${SERVICE}"
+      continue;
+    fi
+    if [ -z "${IMAGE}" ]; then
+      log INFO "No new images for ${SERVICE}."
+      continue;
+    fi
+    if ! _update_single_service "${SERVICE}" "${IMAGE}" "${DOCKER_CONFIG}"; then
+      _add_service_update_failed "${SERVICE}"
+      continue;
+    fi
   done
-  LOG_SCOPE=${LOG_SCOPE_SAVED}
-  return ${ACCUMULATED_ERRORS}
+  export LOG_SCOPE="${LOG_SCOPE_SAVED}"
+  local SERVICES_UPDATE_FAILED FAILED_NUM
+  SERVICES_UPDATE_FAILED=$(_static_variable_read_list STATIC_VAR_SERVICES_UPDATE_FAILED)
+  FAILED_NUM=$(_get_number_of_elements "${SERVICES_UPDATE_FAILED}")
+  return "${FAILED_NUM}"
 }
 
 gantry_finalize() {
