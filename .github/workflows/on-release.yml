@@ -33,6 +33,7 @@ jobs:
         test_suit:
           - gantry_cleanup_images_spec.sh
           - gantry_entrypoint_spec.sh
+          - gantry_filters_spec.sh
           - gantry_job_spec.sh
           - gantry_login_spec.sh
           - gantry_manifest_spec.sh

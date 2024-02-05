@@ -214,6 +214,14 @@ _remove_images() {
   docker_service_remove "${SERVICE_NAME}"
 }
 
+_report_list() {
+  local LIST="${1}"
+  local ITEM=
+  for ITEM in ${LIST}; do
+    echo "- ${ITEM}"
+  done
+}
+
 _report_services_updated() {
   local SERVICES_UPDATED
   SERVICES_UPDATED=$(_static_variable_read_list STATIC_VAR_SERVICES_UPDATED)
@@ -224,9 +232,7 @@ _report_services_updated() {
   local UPDATED_NUM=
   UPDATED_NUM=$(_get_number_of_elements "${SERVICES_UPDATED}")
   echo "${UPDATED_NUM} service(s) updated:"
-  for S in ${SERVICES_UPDATED}; do
-    echo "- ${S}"
-  done
+  _report_list "${SERVICES_UPDATED}"
 }
 
 _add_service_update_failed() {
@@ -243,9 +249,7 @@ _report_services_update_failed() {
   local FAILED_NUM=
   FAILED_NUM=$(_get_number_of_elements "${SERVICES_UPDATE_FAILED}")
   echo "${FAILED_NUM} service(s) update failed:"
-  for S in ${SERVICES_UPDATE_FAILED}; do
-    echo "- ${S}"
-  done
+  _report_list "${SERVICES_UPDATE_FAILED}"
 }
 
 _get_number_of_elements() {
@@ -282,6 +286,7 @@ _report_services() {
 _in_list() {
   local LIST="${1}"
   local SEARCHED_ITEM="${2}"
+  [ -z "${SEARCHED_ITEM}" ] && return 1
   for ITEM in ${LIST}; do
     if [ "${ITEM}" = "${SEARCHED_ITEM}" ]; then
       return 0
@@ -465,8 +470,10 @@ _inspect_image() {
   fi
   local IMAGE=
   local DIGEST=
-  IMAGE=$(echo "${IMAGE_WITH_DIGEST}" | cut -d@ -f1)
-  DIGEST=$(echo "${IMAGE_WITH_DIGEST}" | cut -d@ -f2)
+  # If IMAGE_WITH_DIGEST contains no "@", then "cut -d@ -f2" will also return the entire string.
+  # Adding a "@" to ensure the string contains at least one "@". Thus DIGEST will be empty when original IMAGE_WITH_DIGEST contains no "@"
+  IMAGE=$(echo "${IMAGE_WITH_DIGEST}@" | cut -d@ -f1)
+  DIGEST=$(echo "${IMAGE_WITH_DIGEST}@" | cut -d@ -f2)
   if echo "${MANIFEST_CMD}" | grep -q -i "none"; then
     if _service_is_self "${SERVICE_NAME}"; then
       # Always inspecting self, never skipping.
@@ -499,6 +506,15 @@ _inspect_image() {
     return 1
   fi
   [ -z "${IMAGE_INFO}" ] && log DEBUG "IMAGE_INFO is empty."
+  if [ -z "${DIGEST}" ]; then
+    # The image may not contain the digest for the following reasons:
+    # 1. The image has not been push to or pulled from a V2 registry
+    # 2. The image has been pulled from a V1 registry
+    # 3. The service has not been updated via docker CLI, but via a 3rd party tool, i.e. via Docker API.
+    log DEBUG "Perform updating ${SERVICE_NAME} because DIGEST is empty in ${IMAGE_WITH_DIGEST}, assume there is a new image."
+    echo "${IMAGE}"
+    return 0
+  fi
   if [ -n "${DIGEST}" ] && echo "${IMAGE_INFO}" | grep -q "${DIGEST}"; then
     _static_variable_add_unique_to_list STATIC_VAR_NO_NEW_IMAGES "${DIGEST}"
     log DEBUG "Skip updating ${SERVICE_NAME} because the current version is the latest of image ${IMAGE_WITH_DIGEST}."
@@ -704,14 +720,18 @@ gantry_get_services_list() {
 gantry_update_services_list() {
   local LIST="${*}"
   local LOG_SCOPE_SAVED="${LOG_SCOPE}"
+  export LOG_SCOPE="inspecting"
+  [ -n "${LOG_SCOPE_SAVED}" ] && export LOG_SCOPE="${LOG_SCOPE_SAVED} ${LOG_SCOPE}"
   for SERVICE in ${LIST}; do
-    export LOG_SCOPE="Inspecting ${SERVICE}"
     _inspect_service "${SERVICE}"
   done
+  export LOG_SCOPE="${LOG_SCOPE_SAVED}"
   local SERVICES_TO_UPDATE=
   SERVICES_TO_UPDATE=$(_static_variable_read_list STATIC_VAR_SERVICES_TO_UPDATE)
+  export LOG_SCOPE="updating"
+  [ -n "${LOG_SCOPE_SAVED}" ] && export LOG_SCOPE="${LOG_SCOPE_SAVED} ${LOG_SCOPE}"
   while read -r SERVICE_AND_IMAGE; do
-    export LOG_SCOPE="Updating ${SERVICE}"
+    [ -z "${SERVICE_AND_IMAGE}" ] && continue
     local SERVICE IMAGE
     SERVICE=$(echo "${SERVICE_AND_IMAGE}" | cut -d ' ' -f 1)
     IMAGE=$(echo "${SERVICE_AND_IMAGE}" | cut -d ' ' -f 2)
