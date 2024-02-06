@@ -32,7 +32,10 @@ Describe 'Simple'
       The stderr should satisfy display_output
       The stderr should satisfy spec_expect_message    "${SKIP_UPDATING}.*${SERVICE_NAME}.*${SKIP_REASON_CURRENT_IS_LATEST}"
       The stderr should satisfy spec_expect_no_message "${PERFORM_UPDATING}.*${SERVICE_NAME}"
-      The stderr should satisfy spec_expect_message    "${NO_NEW_IMAGE}.*${SERVICE_NAME}"
+      The stderr should satisfy spec_expect_no_message "${NUM_SERVICES_SKIP_JOBS}"
+      The stderr should satisfy spec_expect_no_message "${NUM_SERVICES_INSPECT_FAILURE}"
+      The stderr should satisfy spec_expect_message    "${NUM_SERVICES_NO_NEW_IMAGES}"
+      The stderr should satisfy spec_expect_no_message "${NUM_SERVICES_UPDATING}"
       The stderr should satisfy spec_expect_no_message "${UPDATED}.*${SERVICE_NAME}"
       The stderr should satisfy spec_expect_no_message "${NO_UPDATES}.*${SERVICE_NAME}"
       The stderr should satisfy spec_expect_no_message "${ROLLING_BACK}.*${SERVICE_NAME}"
@@ -41,6 +44,7 @@ Describe 'Simple'
       The stderr should satisfy spec_expect_message    "${NO_SERVICES_UPDATED}"
       The stderr should satisfy spec_expect_no_message "${NUM_SERVICES_UPDATED}"
       The stderr should satisfy spec_expect_no_message "${NUM_SERVICES_UPDATE_FAILED}"
+      The stderr should satisfy spec_expect_no_message "${NUM_SERVICES_ERRORS}"
       The stderr should satisfy spec_expect_message    "${NO_IMAGES_TO_REMOVE}"
       The stderr should satisfy spec_expect_no_message "${REMOVING_NUM_IMAGES}"
       The stderr should satisfy spec_expect_no_message "${SKIP_REMOVING_IMAGES}"
@@ -61,7 +65,10 @@ Describe 'Simple'
       The stderr should satisfy display_output
       The stderr should satisfy spec_expect_no_message "${SKIP_UPDATING}.*${SERVICE_NAME}"
       The stderr should satisfy spec_expect_message    "${PERFORM_UPDATING}.*${SERVICE_NAME}.*${PERFORM_REASON_HAS_NEWER_IMAGE}"
-      The stderr should satisfy spec_expect_no_message "${NO_NEW_IMAGE}.*${SERVICE_NAME}"
+      The stderr should satisfy spec_expect_no_message "${NUM_SERVICES_SKIP_JOBS}"
+      The stderr should satisfy spec_expect_no_message "${NUM_SERVICES_INSPECT_FAILURE}"
+      The stderr should satisfy spec_expect_no_message "${NUM_SERVICES_NO_NEW_IMAGES}"
+      The stderr should satisfy spec_expect_message    "${NUM_SERVICES_UPDATING}"
       The stderr should satisfy spec_expect_message    "${UPDATED}.*${SERVICE_NAME}"
       The stderr should satisfy spec_expect_no_message "${NO_UPDATES}.*${SERVICE_NAME}"
       The stderr should satisfy spec_expect_no_message "${ROLLING_BACK}.*${SERVICE_NAME}"
@@ -70,6 +77,7 @@ Describe 'Simple'
       The stderr should satisfy spec_expect_no_message "${NO_SERVICES_UPDATED}"
       The stderr should satisfy spec_expect_message    "${NUM_SERVICES_UPDATED}"
       The stderr should satisfy spec_expect_no_message "${NUM_SERVICES_UPDATE_FAILED}"
+      The stderr should satisfy spec_expect_no_message "${NUM_SERVICES_ERRORS}"
       The stderr should satisfy spec_expect_no_message "${NO_IMAGES_TO_REMOVE}"
       The stderr should satisfy spec_expect_message    "${REMOVING_NUM_IMAGES}"
       The stderr should satisfy spec_expect_no_message "${SKIP_REMOVING_IMAGES}"
@@ -78,7 +86,7 @@ Describe 'Simple'
     End
   End
   Describe "test_new_image_no_digest" "container_test:true"
-    TEST_NAME="test_MANIFEST_CMD_failure"
+    TEST_NAME="test_new_image_no_digest"
     IMAGE_WITH_TAG=$(get_image_with_tag)
     SERVICE_NAME="gantry-test-$(unique_id)"
     test_start() {
@@ -102,7 +110,10 @@ Describe 'Simple'
       The stderr should satisfy display_output
       The stderr should satisfy spec_expect_no_message "${SKIP_UPDATING}.*${SERVICE_NAME}"
       The stderr should satisfy spec_expect_message    "${PERFORM_UPDATING}.*${SERVICE_NAME}.*${PERFORM_REASON_DIGEST_IS_EMPTY}"
-      The stderr should satisfy spec_expect_no_message "${NO_NEW_IMAGE}.*${SERVICE_NAME}"
+      The stderr should satisfy spec_expect_no_message "${NUM_SERVICES_SKIP_JOBS}"
+      The stderr should satisfy spec_expect_no_message "${NUM_SERVICES_INSPECT_FAILURE}"
+      The stderr should satisfy spec_expect_no_message "${NUM_SERVICES_NO_NEW_IMAGES}"
+      The stderr should satisfy spec_expect_message    "${NUM_SERVICES_UPDATING}"
       The stderr should satisfy spec_expect_message    "${UPDATED}.*${SERVICE_NAME}"
       The stderr should satisfy spec_expect_no_message "${NO_UPDATES}.*${SERVICE_NAME}"
       The stderr should satisfy spec_expect_no_message "${ROLLING_BACK}.*${SERVICE_NAME}"
@@ -111,6 +122,7 @@ Describe 'Simple'
       The stderr should satisfy spec_expect_no_message "${NO_SERVICES_UPDATED}"
       The stderr should satisfy spec_expect_message    "${NUM_SERVICES_UPDATED}"
       The stderr should satisfy spec_expect_no_message "${NUM_SERVICES_UPDATE_FAILED}"
+      The stderr should satisfy spec_expect_no_message "${NUM_SERVICES_ERRORS}"
       The stderr should satisfy spec_expect_no_message "${NO_IMAGES_TO_REMOVE}"
       The stderr should satisfy spec_expect_message    "${REMOVING_NUM_IMAGES}"
       The stderr should satisfy spec_expect_no_message "${SKIP_REMOVING_IMAGES}"

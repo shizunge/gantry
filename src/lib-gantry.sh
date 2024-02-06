@@ -214,42 +214,35 @@ _remove_images() {
   docker_service_remove "${SERVICE_NAME}"
 }
 
-_report_list() {
-  local LIST="${1}"
+_report_services_list() {
+  local PRE="${1}"; shift
+  local POST="${1}"; shift
+  local LIST="${*}"
+  local NUM=
+  NUM=$(_get_number_of_elements "${LIST}")
+  local TITLE=
+  [ -n "${PRE}" ] && TITLE="${PRE} "
+  TITLE="${TITLE}${NUM} service(s)"
+  [ -n "${POST}" ] && TITLE="${TITLE} ${POST}"
+  echo "${TITLE}:"
   local ITEM=
   for ITEM in ${LIST}; do
     echo "- ${ITEM}"
   done
 }
 
-_report_services_updated() {
-  local SERVICES_UPDATED
-  SERVICES_UPDATED=$(_static_variable_read_list STATIC_VAR_SERVICES_UPDATED)
-  if [ -z "${SERVICES_UPDATED}" ]; then
-    echo "No services updated."
+_report_services_from_static_variable() {
+  local VARIABLE_NAME="${1}"
+  local PRE="${2}"
+  local POST="${3}"
+  local EMPTY="${4}"
+  local LIST=
+  LIST=$(_static_variable_read_list "${VARIABLE_NAME}")
+  if [ -z "${LIST}" ]; then
+    echo "${EMPTY}"
     return 0
   fi
-  local UPDATED_NUM=
-  UPDATED_NUM=$(_get_number_of_elements "${SERVICES_UPDATED}")
-  echo "${UPDATED_NUM} service(s) updated:"
-  _report_list "${SERVICES_UPDATED}"
-}
-
-_add_service_update_failed() {
-  local SERVICE_NAME="${1}"
-  _static_variable_add_unique_to_list STATIC_VAR_SERVICES_UPDATE_FAILED "${SERVICE_NAME}"
-}
-
-_report_services_update_failed() {
-  local SERVICES_UPDATE_FAILED
-  SERVICES_UPDATE_FAILED=$(_static_variable_read_list STATIC_VAR_SERVICES_UPDATE_FAILED)
-  if [ -z "${SERVICES_UPDATE_FAILED}" ]; then
-    return 0
-  fi
-  local FAILED_NUM=
-  FAILED_NUM=$(_get_number_of_elements "${SERVICES_UPDATE_FAILED}")
-  echo "${FAILED_NUM} service(s) update failed:"
-  _report_list "${SERVICES_UPDATE_FAILED}"
+  _report_services_list "${PRE}" "${POST}" "${LIST}"
 }
 
 _get_number_of_elements() {
@@ -262,24 +255,40 @@ _get_number_of_elements() {
   echo "${NUM}"
 }
 
+_get_number_of_elements_in_static_variable() {
+  local VARIABLE_NAME="${1}"
+  local LIST=
+  LIST=$(_static_variable_read_list "${VARIABLE_NAME}")
+  NUM=$(_get_number_of_elements "${LIST}")
+  echo "${NUM}"
+}
+
 _report_services() {
   local UPDATED_MSG=
-  local FAILED_MSG=
-  UPDATED_MSG=$(_report_services_updated)
+  UPDATED_MSG=$(_report_services_from_static_variable STATIC_VAR_SERVICES_UPDATED "" "updated" "No services updated.")
   echo "${UPDATED_MSG}" | log_lines INFO
-  FAILED_MSG=$(_report_services_update_failed)
-  echo "${FAILED_MSG}" | log_lines INFO
+
+  local FAILED_MSG=
+  FAILED_MSG=$(_report_services_from_static_variable STATIC_VAR_SERVICES_UPDATE_FAILED "" "update failed")
+  echo "${FAILED_MSG}" | log_lines ERROR
+
+  local ERROR_MSG=
+  ERROR_MSG=$(_report_services_from_static_variable STATIC_VAR_SERVICES_UPDATE_INPUT_ERROR "Skip updating" "due to error(s)")
+  echo "${ERROR_MSG}" | log_lines ERROR
+
   # Send notification
-  local UPDATED_NUM FAILED_NUM TITLE BODY
-  local SERVICES_UPDATED SERVICES_UPDATE_FAILED
-  SERVICES_UPDATED=$(_static_variable_read_list STATIC_VAR_SERVICES_UPDATED)
-  SERVICES_UPDATE_FAILED=$(_static_variable_read_list STATIC_VAR_SERVICES_UPDATE_FAILED)
-  UPDATED_NUM=$(_get_number_of_elements "${SERVICES_UPDATED}")
-  FAILED_NUM=$(_get_number_of_elements "${SERVICES_UPDATE_FAILED}")
+  local UPDATED_NUM FAILED_NUM ERROR_NUM TOTAL_ERROR_NUM
+  UPDATED_NUM=$(_get_number_of_elements_in_static_variable STATIC_VAR_SERVICES_UPDATED)
+  FAILED_NUM=$(_get_number_of_elements_in_static_variable STATIC_VAR_SERVICES_UPDATE_FAILED)
+  ERROR_NUM=$(_get_number_of_elements_in_static_variable STATIC_VAR_SERVICES_UPDATE_INPUT_ERROR)
+  TOTAL_ERROR_NUM=$((FAILED_NUM+ERROR_NUM))
   local TYPE="success"
-  [ "${FAILED_NUM}" -ne "0" ] && TYPE="failure"
-  TITLE="[gantry] ${UPDATED_NUM} services updated ${FAILED_NUM} failed"
-  BODY=$(echo -e "${UPDATED_MSG}\n${FAILED_MSG}")
+  [ "${TOTAL_ERROR_NUM}" -ne "0" ] && TYPE="failure"
+  local ERROR_STRING=
+  [ "${ERROR_NUM}" -ne "0" ] && ERROR_STRING=" ${ERROR_NUM} errors"
+  local TITLE BODY
+  TITLE="[gantry] ${UPDATED_NUM} services updated ${FAILED_NUM} failed${ERROR_STRING}"
+  BODY=$(echo -e "${UPDATED_MSG}\n${FAILED_MSG}\n${ERROR_MSG}")
   _send_notification "${TYPE}" "${TITLE}" "${BODY}"
 }
 
@@ -427,7 +436,8 @@ _get_image_info() {
   local MANIFEST_CMD="${1}"
   local IMAGE="${2}"
   local DOCKER_CONFIG="${3}"
-  local MSG RETURN_VALUE
+  local MSG=
+  local RETURN_VALUE=0
   if echo "${MANIFEST_CMD}" | grep -q -i "buildx"; then
     # https://github.com/orgs/community/discussions/45779
     [ -n "${MANIFEST_OPTIONS}" ] && log DEBUG "Adding options \"${MANIFEST_OPTIONS}\" to the command \"docker buildx imagetools inspect\"."
@@ -528,21 +538,24 @@ _inspect_image() {
 
 # return 0 if need to update the service
 # return 1 if no need to update the service
+# return 2 if there is an error
 _inspect_service() {
   local SERVICE_NAME="${1}"
   if _skip_jobs "${SERVICE_NAME}"; then
+    _static_variable_add_unique_to_list STATIC_VAR_SERVICES_SKIP_JOB "${SERVICE_NAME}"
     return 1
   fi
   local IMAGE=
   if ! IMAGE=$(_inspect_image "${SERVICE_NAME}"); then
-    _add_service_update_failed "${SERVICE_NAME}"
-    return 1
+    _static_variable_add_unique_to_list STATIC_VAR_SERVICES_UPDATE_FAILED "${SERVICE_NAME}"
+    return 2
   fi
   if [ -z "${IMAGE}" ]; then
-    log INFO "No new images for ${SERVICE_NAME}."
+    _static_variable_add_unique_to_list STATIC_VAR_SERVICES_NO_NEW_IMAGE "${SERVICE_NAME}"
     return 1
   fi
-  _static_variable_add_unique_to_list STATIC_VAR_SERVICES_TO_UPDATE "${SERVICE_NAME} ${IMAGE}"
+  _static_variable_add_unique_to_list STATIC_VAR_SERVICES_AND_IMAGES_TO_UPDATE "${SERVICE_NAME} ${IMAGE}"
+  _static_variable_add_unique_to_list STATIC_VAR_SERVICES_TO_UPDATE "${SERVICE_NAME}"
   return 0
 }
 
@@ -566,6 +579,7 @@ _get_service_update_additional_options() {
   local NUM_RUNS=
   NUM_RUNS=$(_get_number_of_running_tasks "${SERVICE_NAME}")
   if ! is_number "${NUM_RUNS}"; then
+    log WARN "NUM_RUNS \"${NUM_RUNS}\" is not a number."
     return 1
   fi
   local OPTIONS=
@@ -610,15 +624,16 @@ _rollback_service() {
 _update_single_service() {
   local UPDATE_TIMEOUT_SECONDS="${GANTRY_UPDATE_TIMEOUT_SECONDS:-300}"
   local UPDATE_OPTIONS="${GANTRY_UPDATE_OPTIONS:-""}"
-  if ! is_number "${UPDATE_TIMEOUT_SECONDS}"; then
-    log ERROR "GANTRY_UPDATE_TIMEOUT_SECONDS must be a number. Got \"${GANTRY_UPDATE_TIMEOUT_SECONDS}\"."
-    _add_service_update_failed "${SERVICE}"
-    return 1;
-  fi
   local SERVICE_NAME="${1}"
   local IMAGE="${2}"
-  [ -z "${SERVICE_NAME}" ] && log ERROR "Updating service: SERVICE_NAME must not be empty." && return 1
-  [ -z "${IMAGE}" ] && log ERROR "Updating ${SERVICE_NAME}: IMAGE must not be empty." && return 1
+  local INPUT_ERROR=0
+  if ! is_number "${UPDATE_TIMEOUT_SECONDS}"; then log ERROR "GANTRY_UPDATE_TIMEOUT_SECONDS must be a number. Got \"${GANTRY_UPDATE_TIMEOUT_SECONDS}\"."; INPUT_ERROR=1; fi
+  [ -z "${SERVICE_NAME}" ] && log ERROR "Updating service: SERVICE_NAME must not be empty." && INPUT_ERROR=1
+  [ -z "${IMAGE}" ] && log ERROR "Updating ${SERVICE_NAME}: IMAGE must not be empty." && INPUT_ERROR=1
+  if [ "${INPUT_ERROR}" -ne "0" ]; then
+    _static_variable_add_unique_to_list STATIC_VAR_SERVICES_UPDATE_INPUT_ERROR "${SERVICE_NAME}"
+    return 1;
+  fi
   log INFO "Updating ${SERVICE_NAME} with image ${IMAGE}"
   local DOCKER_CONFIG=
   local ADDITIONAL_OPTIONS=
@@ -634,7 +649,7 @@ _update_single_service() {
   if ! UPDATE_MSG=$(timeout "${UPDATE_TIMEOUT_SECONDS}" docker ${DOCKER_CONFIG} service update --quiet ${ADDITIONAL_OPTIONS} ${UPDATE_OPTIONS} --image="${IMAGE}" "${SERVICE_NAME}" 2>&1); then
     log ERROR "docker service update failed or timeout. ${UPDATE_MSG}"
     _rollback_service "${SERVICE_NAME}" "${DOCKER_CONFIG}"
-    _add_service_update_failed "${SERVICE}"
+    _static_variable_add_unique_to_list STATIC_VAR_SERVICES_UPDATE_FAILED "${SERVICE_NAME}"
     return 1
   fi
   local PREVIOUS_IMAGE=
@@ -719,34 +734,42 @@ gantry_get_services_list() {
 
 gantry_update_services_list() {
   local LIST="${*}"
-  local LOG_SCOPE_SAVED="${LOG_SCOPE}"
-  export LOG_SCOPE="inspecting"
-  [ -n "${LOG_SCOPE_SAVED}" ] && export LOG_SCOPE="${LOG_SCOPE_SAVED} ${LOG_SCOPE}"
+  local NUM=
+  NUM=$(_get_number_of_elements "${LIST}")
+  log INFO "Inspecting ${NUM} service(s)."
   for SERVICE in ${LIST}; do
     _inspect_service "${SERVICE}"
   done
-  export LOG_SCOPE="${LOG_SCOPE_SAVED}"
-  local SERVICES_TO_UPDATE=
-  SERVICES_TO_UPDATE=$(_static_variable_read_list STATIC_VAR_SERVICES_TO_UPDATE)
-  export LOG_SCOPE="updating"
-  [ -n "${LOG_SCOPE_SAVED}" ] && export LOG_SCOPE="${LOG_SCOPE_SAVED} ${LOG_SCOPE}"
+
+  _report_services_from_static_variable STATIC_VAR_SERVICES_SKIP_JOB "Skip updating" "due to they are job(s)" | log_lines INFO
+  _report_services_from_static_variable STATIC_VAR_SERVICES_UPDATE_FAILED "Failed to inspect" | log_lines ERROR
+  _report_services_from_static_variable STATIC_VAR_SERVICES_NO_NEW_IMAGE "No new images for" | log_lines INFO
+  _report_services_from_static_variable STATIC_VAR_SERVICES_TO_UPDATE "Updating" | log_lines INFO
+
+  local SERVICES_AND_IMAGES_TO_UPDATE=
+  SERVICES_AND_IMAGES_TO_UPDATE=$(_static_variable_read_list STATIC_VAR_SERVICES_AND_IMAGES_TO_UPDATE)
   while read -r SERVICE_AND_IMAGE; do
     [ -z "${SERVICE_AND_IMAGE}" ] && continue
     local SERVICE IMAGE
     SERVICE=$(echo "${SERVICE_AND_IMAGE}" | cut -d ' ' -f 1)
     IMAGE=$(echo "${SERVICE_AND_IMAGE}" | cut -d ' ' -f 2)
     _update_single_service "${SERVICE}" "${IMAGE}"
-  done < <(echo "${SERVICES_TO_UPDATE}")
-  export LOG_SCOPE="${LOG_SCOPE_SAVED}"
-  local SERVICES_UPDATE_FAILED FAILED_NUM
-  SERVICES_UPDATE_FAILED=$(_static_variable_read_list STATIC_VAR_SERVICES_UPDATE_FAILED)
-  FAILED_NUM=$(_get_number_of_elements "${SERVICES_UPDATE_FAILED}")
-  return "${FAILED_NUM}"
+  done < <(echo "${SERVICES_AND_IMAGES_TO_UPDATE}")
+
+  local FAILED_NUM ERROR_NUM TOTAL_ERROR_NUM
+  FAILED_NUM=$(_get_number_of_elements_in_static_variable STATIC_VAR_SERVICES_UPDATE_FAILED)
+  ERROR_NUM=$(_get_number_of_elements_in_static_variable STATIC_VAR_SERVICES_UPDATE_INPUT_ERROR)
+  TOTAL_ERROR_NUM=$((FAILED_NUM+ERROR_NUM))
+  return "${TOTAL_ERROR_NUM}"
 }
 
 gantry_finalize() {
   local STACK="${1:-gantry}"
+  local ACCUMULATED_ERRORS=0
   _remove_images "${STACK}_image-remover"
+  ACCUMULATED_ERRORS=$((ACCUMULATED_ERRORS + $?))
   _report_services;
+  ACCUMULATED_ERRORS=$((ACCUMULATED_ERRORS + $?))
   [ -n "${STATIC_VARIABLES_FOLDER}" ] && log DEBUG "Removing STATIC_VARIABLES_FOLDER ${STATIC_VARIABLES_FOLDER}" && rm -r "${STATIC_VARIABLES_FOLDER}"
+  return "${ACCUMULATED_ERRORS}"
 }
