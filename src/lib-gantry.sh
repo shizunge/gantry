@@ -349,9 +349,15 @@ _current_service_name() {
 
 _service_is_self() {
   if [ -z "${GANTRY_SERVICES_SELF}" ]; then
-    GANTRY_SERVICES_SELF=$(_current_service_name)
-    export GANTRY_SERVICES_SELF
-    [ -n "${GANTRY_SERVICES_SELF}" ] && log INFO "Set GANTRY_SERVICES_SELF to ${GANTRY_SERVICES_SELF}."
+    # If _service_is_self is called inside a subprocess, export won't affect the parent process.
+    # We only want to log it once, thus try to read the value from a static variable firstly.
+    # The static variable should be set inside the function _current_service_name. If it is set, skip logging.
+    GANTRY_SERVICES_SELF=$(_static_variable_read_list STATIC_VAR_CURRENT_SERVICE_NAME)
+    if [ -z "${GANTRY_SERVICES_SELF}" ]; then
+      GANTRY_SERVICES_SELF=$(_current_service_name)
+      export GANTRY_SERVICES_SELF
+      [ -n "${GANTRY_SERVICES_SELF}" ] && log INFO "Set GANTRY_SERVICES_SELF to ${GANTRY_SERVICES_SELF}."
+    fi
   fi
   local SELF="${GANTRY_SERVICES_SELF}"
   local SERVICE_NAME="${1}"
@@ -520,7 +526,7 @@ _inspect_image() {
     # The image may not contain the digest for the following reasons:
     # 1. The image has not been push to or pulled from a V2 registry
     # 2. The image has been pulled from a V1 registry
-    # 3. The service has not been updated via docker CLI, but via a 3rd party tool, i.e. via Docker API.
+    # 3. The service has not been updated via Docker CLI, but via Docker API, i.e. via 3rd party tools.
     log DEBUG "Perform updating ${SERVICE_NAME} because DIGEST is empty in ${IMAGE_WITH_DIGEST}, assume there is a new image."
     echo "${IMAGE}"
     return 0
@@ -538,9 +544,9 @@ _inspect_image() {
 
 # return 0 if need to update the service
 # return 1 if no need to update the service
-# return 2 if there is an error
 _inspect_service() {
   local SERVICE_NAME="${1}"
+  local RUN_UPDATE="${2:-false}"
   if _skip_jobs "${SERVICE_NAME}"; then
     _static_variable_add_unique_to_list STATIC_VAR_SERVICES_SKIP_JOB "${SERVICE_NAME}"
     return 1
@@ -548,14 +554,18 @@ _inspect_service() {
   local IMAGE=
   if ! IMAGE=$(_inspect_image "${SERVICE_NAME}"); then
     _static_variable_add_unique_to_list STATIC_VAR_SERVICES_UPDATE_FAILED "${SERVICE_NAME}"
-    return 2
+    return 1
   fi
   if [ -z "${IMAGE}" ]; then
     _static_variable_add_unique_to_list STATIC_VAR_SERVICES_NO_NEW_IMAGE "${SERVICE_NAME}"
     return 1
   fi
-  _static_variable_add_unique_to_list STATIC_VAR_SERVICES_AND_IMAGES_TO_UPDATE "${SERVICE_NAME} ${IMAGE}"
+  if is_true "${RUN_UPDATE}"; then
+    _update_single_service "${SERVICE_NAME}" "${IMAGE}"
+    return 1
+  fi
   _static_variable_add_unique_to_list STATIC_VAR_SERVICES_TO_UPDATE "${SERVICE_NAME}"
+  _static_variable_add_unique_to_list STATIC_VAR_SERVICES_AND_IMAGES_TO_UPDATE "${SERVICE_NAME} ${IMAGE}"
   return 0
 }
 
@@ -676,7 +686,7 @@ _get_services_filted() {
   # SC2086: Double quote to prevent globbing and word splitting.
   # shellcheck disable=SC2086
   if ! SERVICES=$(docker service ls --quiet ${FILTERS} --format '{{.Name}}' 2>&1); then
-    log ERROR "Failed to obtain services list with \"${FILTERS}\"."
+    log ERROR "Failed to obtain services list with \"${FILTERS}\". ${SERVICES}"
     return 1
   fi
   echo -e "${SERVICES}"
@@ -737,8 +747,13 @@ gantry_update_services_list() {
   local NUM=
   NUM=$(_get_number_of_elements "${LIST}")
   log INFO "Inspecting ${NUM} service(s)."
+  local RUN_UPDATE=
   for SERVICE in ${LIST}; do
-    _inspect_service "${SERVICE}"
+    # Immediately update self service after inspection, do not wait for other inspections to finish.
+    # This avoids running inspection on the same service twice, due to interruption from updating self, when running as a service.
+    # The self service is usually the first of the list.
+    RUN_UPDATE=$(_service_is_self "${SERVICE}" && echo "true" || echo "false")
+    _inspect_service "${SERVICE}" "${RUN_UPDATE}"
   done
 
   _report_services_from_static_variable STATIC_VAR_SERVICES_SKIP_JOB "Skip updating" "due to they are job(s)" | log_lines INFO
