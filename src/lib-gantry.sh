@@ -93,7 +93,7 @@ _authenticate_to_registries() {
       return 1
     fi
     _login_registry "${USER}" "${PASSWORD}" "${HOST}" "${CONFIG}"
-  done <"${CONFIGS_FILE}"
+  done < <(cat "${CONFIGS_FILE}"; echo;)
 }
 
 _send_notification() {
