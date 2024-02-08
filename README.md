@@ -4,7 +4,7 @@
 [![License](https://img.shields.io/badge/License-GPLv3-blue)](https://github.com/shizunge/gantry/blob/main/LICENSE)
 [![Image Size](https://img.shields.io/docker/image-size/shizunge/gantry/latest.svg?label=Image%20Size)](https://hub.docker.com/r/shizunge/gantry)
 [![Docker Pulls](https://img.shields.io/docker/pulls/shizunge/gantry.svg?label=Docker%20Pulls&logo=Docker)](https://hub.docker.com/r/shizunge/gantry)
-[![Build](https://github.com/shizunge/gantry/actions/workflows/build.yml/badge.svg?label=Build&branch=main)](https://github.com/shizunge/gantry/actions/workflows/build.yml)
+[![Build](https://img.shields.io/github/actions/workflow/status/shizunge/gantry/on-push.yml?label=Build&branch=main&logo=GitHub)](https://github.com/shizunge/gantry/actions/workflows/on-push.yml)
 [![Coverage](https://img.shields.io/codecov/c/github/shizunge/gantry.svg?token=47MWUJOH4Q&label=Coverage&logo=Codecov)](https://codecov.io/gh/shizunge/gantry)
 [![CodeFactor Grade](https://img.shields.io/codefactor/grade/github/shizunge/gantry?label=CodeFactor&logo=CodeFactor)](https://www.codefactor.io/repository/github/shizunge/gantry)
 
