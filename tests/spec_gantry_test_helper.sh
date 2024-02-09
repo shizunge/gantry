@@ -16,7 +16,9 @@
 #
 
 # Constant strings for checks.
-export SKIP_UPDATING_ALL="Skip updating all services due to previous errors"
+export SKIP_UPDATING_ALL="Skip updating all services"
+export SKIP_REASON_NOT_SWARM_MANAGER="is not a swarm manager"
+export SKIP_REASON_PREVIOUS_ERRORS="due to previous errors"
 export SKIP_UPDATING="Skip updating"
 export SKIP_REASON_IS_JOB="because it is in .*job mode"
 export SKIP_REASON_NO_KNOWN_NEWER_IMAGE="because there is no known newer version of image"
@@ -207,6 +209,7 @@ initialize_test() {
   echo "=============================="
   echo "== Starting ${TEST_NAME}"
   echo "=============================="
+  export DOCKER_HOST=
   export GANTRY_LOG_LEVEL="DEBUG"
   export GANTRY_NODE_NAME=
   export GANTRY_POST_RUN_CMD=
@@ -513,6 +516,7 @@ _run_gantry_container() {
     --constraint "node.role==manager" \
     --mount type=bind,source=/var/run/docker.sock,target=/var/run/docker.sock \
     ${MOUNT_OPTIONS} \
+    --env "DOCKER_HOST=${DOCKER_HOST}" \
     --env "GANTRY_LOG_LEVEL=${GANTRY_LOG_LEVEL}" \
     --env "GANTRY_NODE_NAME=${GANTRY_NODE_NAME}" \
     --env "GANTRY_POST_RUN_CMD=${GANTRY_POST_RUN_CMD}" \

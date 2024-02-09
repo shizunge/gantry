@@ -39,15 +39,14 @@ load_libraries() {
   . "${LIB_DIR}/lib-gantry.sh"
 }
 
-_skip_current_node() {
-  local SELF_ID=
-  SELF_ID=$(docker node inspect self --format "{{.Description.Hostname}}" 2>/dev/null);
-  if [ -z "${SELF_ID}" ]; then
-    log WARN "Skip because the current node is not a swarm manager.";
-    return 0
+_run_on_node() {
+  local HOST_NAME=
+  if ! HOST_NAME=$(docker node inspect self --format "{{.Description.Hostname}}" 2>&1); then
+    log DEBUG "Failed to run \"docker node inspect self\": ${HOST_NAME}"
+    return 1
   fi
-  log INFO "Run on current node ${SELF_ID}.";
-  return 1
+  echo "${HOST_NAME}"
+  return 0
 }
 
 _read_docker_hub_rate() {
@@ -76,27 +75,34 @@ _read_docker_hub_rate() {
 }
 
 gantry() {
+  local PRE_RUN_CMD="${GANTRY_PRE_RUN_CMD:-""}"
+  local POST_RUN_CMD="${GANTRY_POST_RUN_CMD:-""}"
   local STACK="${1:-gantry}"
+  export LOG_SCOPE="${STACK}"
   local START_TIME=
   START_TIME=$(date +%s)
 
-  if _skip_current_node ; then
-    return 0
+  local RUN_ON_NODE=
+  if ! RUN_ON_NODE=$(_run_on_node); then
+    local HOST_STRING="${DOCKER_HOST:-"the current node"}"
+    log ERROR "Skip updating all services because ${HOST_STRING} is not a swarm manager.";
+    return 1
+  elif [ -z "${NODE_NAME}" ]; then
+    log DEBUG "Set NODE_NAME=${RUN_ON_NODE}"
+    export NODE_NAME="${RUN_ON_NODE}"
   fi
-  local ACCUMULATED_ERRORS=0
-  local DOCKER_HUB_RATE_BEFORE=
-  local DOCKER_HUB_RATE_AFTER=
-  local DOCKER_HUB_RATE_USED=
-  local TIME_ELAPSED=
+  [ -n "${DOCKER_HOST}" ] && log DEBUG "DOCKER_HOST=${DOCKER_HOST}"
+  log INFO "Run on Docker host ${RUN_ON_NODE}."
 
-  eval_cmd "pre-run" "${GANTRY_PRE_RUN_CMD:-""}"
+  local ACCUMULATED_ERRORS=0
+
+  eval_cmd "pre-run" "${PRE_RUN_CMD}"
 
   log INFO "Starting."
   gantry_initialize "${STACK}"
   ACCUMULATED_ERRORS=$((ACCUMULATED_ERRORS + $?))
 
-  # SC2119: Use docker_hub_rate "$@" if function's $1 should mean script's $1.
-  # shellcheck disable=SC2119
+  local DOCKER_HUB_RATE_BEFORE=
   DOCKER_HUB_RATE_BEFORE=$(_read_docker_hub_rate)
   log INFO "Before updating, Docker Hub rate remains ${DOCKER_HUB_RATE_BEFORE}."
 
@@ -112,8 +118,8 @@ gantry() {
     log WARN "Skip updating all services due to previous errors."
   fi
 
-  # SC2119: Use docker_hub_rate "$@" if function's $1 should mean script's $1.
-  # shellcheck disable=SC2119
+  local DOCKER_HUB_RATE_AFTER=
+  local DOCKER_HUB_RATE_USED=
   DOCKER_HUB_RATE_AFTER=$(_read_docker_hub_rate)
   DOCKER_HUB_RATE_USED=$(difference_between "${DOCKER_HUB_RATE_BEFORE}" "${DOCKER_HUB_RATE_AFTER}")
   log INFO "After updating, Docker Hub rate remains ${DOCKER_HUB_RATE_AFTER}. Used rate ${DOCKER_HUB_RATE_USED}."
@@ -121,8 +127,9 @@ gantry() {
   gantry_finalize "${STACK}";
   ACCUMULATED_ERRORS=$((ACCUMULATED_ERRORS + $?))
 
-  eval_cmd "post-run" "${GANTRY_POST_RUN_CMD:-""}"
+  eval_cmd "post-run" "${POST_RUN_CMD}"
 
+  local TIME_ELAPSED=
   TIME_ELAPSED=$(time_elapsed_since "${START_TIME}")
   local MESSAGE="Done. Use ${TIME_ELAPSED}. ${ACCUMULATED_ERRORS} errors."
   if [ ${ACCUMULATED_ERRORS} -gt 0 ]; then
@@ -137,29 +144,27 @@ main() {
   LOG_LEVEL="${GANTRY_LOG_LEVEL:-${LOG_LEVEL}}"
   NODE_NAME="${GANTRY_NODE_NAME:-${NODE_NAME}}"
   export LOG_LEVEL NODE_NAME
-  if [ -n "${GANTRY_IMAGES_TO_REMOVE:-""}" ]; then
-    # Image remover runs as a global job. The log will be collected via docker commands then formatted.
-    # Redefine the log function for the formater.
-    log() { echo "${@}"; }
-    gantry_remove_images "${GANTRY_IMAGES_TO_REMOVE}"
-    return $?
-  fi
+  local IMAGES_TO_REMOVE="${GANTRY_IMAGES_TO_REMOVE:-""}"
   local INTERVAL_SECONDS="${GANTRY_SLEEP_SECONDS:-0}"
   if ! is_number "${INTERVAL_SECONDS}"; then 
     log ERROR "GANTRY_SLEEP_SECONDS must be a number. Got \"${GANTRY_SLEEP_SECONDS}\"."
     return 1;
   fi
-  local STACK="${1:-gantry}"
+  if [ -n "${IMAGES_TO_REMOVE}" ]; then
+    # Image remover runs as a global job. The log will be collected via docker commands then formatted.
+    # Redefine the log function for the formater.
+    log() { echo "${@}"; }
+    gantry_remove_images "${IMAGES_TO_REMOVE}"
+    return $?
+  fi
   local RETURN_VALUE=0
-  local NEXT_RUN_TARGET_TIME SLEEP_SECONDS
   while true; do
-    export LOG_SCOPE="${STACK}"
-    NEXT_RUN_TARGET_TIME=$(($(date +%s) + INTERVAL_SECONDS))
+    local NEXT_RUN_TARGET_TIME=$(($(date +%s) + INTERVAL_SECONDS))
     gantry "${@}"
     RETURN_VALUE=$?
     [ "${INTERVAL_SECONDS}" -le 0 ] && break;
     log INFO "Schedule next update at $(busybox date -d "@${NEXT_RUN_TARGET_TIME}" -Iseconds)."
-    SLEEP_SECONDS=$((NEXT_RUN_TARGET_TIME - $(date +%s)))
+    local SLEEP_SECONDS=$((NEXT_RUN_TARGET_TIME - $(date +%s)))
     if [ "${SLEEP_SECONDS}" -gt 0 ]; then
       log INFO "Sleep ${SLEEP_SECONDS} seconds before next update."
       sleep "${SLEEP_SECONDS}"

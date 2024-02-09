@@ -37,7 +37,7 @@ Describe 'Filters'
       The stdout should satisfy display_output
       The stderr should satisfy display_output
       The stderr should satisfy spec_expect_message    "Failed to obtain services list.*"
-      The stderr should satisfy spec_expect_message    "${SKIP_UPDATING_ALL}"
+      The stderr should satisfy spec_expect_message    "${SKIP_UPDATING_ALL}.*${SKIP_REASON_PREVIOUS_ERRORS}"
       The stderr should satisfy spec_expect_no_message "${SKIP_UPDATING}.*${SERVICE_NAME}"
       The stderr should satisfy spec_expect_no_message "${PERFORM_UPDATING}.*${SERVICE_NAME}"
       The stderr should satisfy spec_expect_no_message "${NUM_SERVICES_SKIP_JOBS}"
@@ -158,7 +158,7 @@ Describe 'Filters'
       The stdout should satisfy display_output
       The stderr should satisfy display_output
       The stderr should satisfy spec_expect_message    "Failed to obtain services list.*"
-      The stderr should satisfy spec_expect_message    "${SKIP_UPDATING_ALL}"
+      The stderr should satisfy spec_expect_message    "${SKIP_UPDATING_ALL}.*${SKIP_REASON_PREVIOUS_ERRORS}"
       The stderr should satisfy spec_expect_no_message "${SKIP_UPDATING}.*${SERVICE_NAME}"
       The stderr should satisfy spec_expect_no_message "${PERFORM_UPDATING}.*${SERVICE_NAME}"
       The stderr should satisfy spec_expect_no_message "${NUM_SERVICES_SKIP_JOBS}"
