@@ -121,6 +121,8 @@ gantry() {
   gantry_finalize "${STACK}";
   ACCUMULATED_ERRORS=$((ACCUMULATED_ERRORS + $?))
 
+  eval_cmd "post-run" "${GANTRY_POST_RUN_CMD:-""}"
+
   TIME_ELAPSED=$(time_elapsed_since "${START_TIME}")
   local MESSAGE="Done. Use ${TIME_ELAPSED}. ${ACCUMULATED_ERRORS} errors."
   if [ ${ACCUMULATED_ERRORS} -gt 0 ]; then
@@ -128,9 +130,6 @@ gantry() {
   else
     log INFO "${MESSAGE}"
   fi
-
-  eval_cmd "post-run" "${GANTRY_POST_RUN_CMD:-""}"
-
   return ${ACCUMULATED_ERRORS}
 }
 
