@@ -132,12 +132,15 @@ gantry() {
   local TIME_ELAPSED=
   TIME_ELAPSED=$(time_elapsed_since "${START_TIME}")
   local MESSAGE="Done. Use ${TIME_ELAPSED}. ${ACCUMULATED_ERRORS} errors."
+  local RETURN_VALUE=0
   if [ ${ACCUMULATED_ERRORS} -gt 0 ]; then
     log ERROR "${MESSAGE}"
+    RETURN_VALUE=1
   else
     log INFO "${MESSAGE}"
+    RETURN_VALUE=0
   fi
-  return ${ACCUMULATED_ERRORS}
+  return ${RETURN_VALUE}
 }
 
 main() {

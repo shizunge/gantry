@@ -771,20 +771,25 @@ gantry_update_services_list() {
     _update_single_service "${SERVICE}" "${IMAGE}"
   done < <(echo "${SERVICES_AND_IMAGES_TO_UPDATE}")
 
-  local FAILED_NUM ERROR_NUM TOTAL_ERROR_NUM
+  local RETURN_VALUE=0
+  local FAILED_NUM=
   FAILED_NUM=$(_get_number_of_elements_in_static_variable STATIC_VAR_SERVICES_UPDATE_FAILED)
+  [ "${FAILED_NUM}" -ne 0 ] && RETURN_VALUE=1
+  local ERROR_NUM=
   ERROR_NUM=$(_get_number_of_elements_in_static_variable STATIC_VAR_SERVICES_UPDATE_INPUT_ERROR)
-  TOTAL_ERROR_NUM=$((FAILED_NUM+ERROR_NUM))
-  return "${TOTAL_ERROR_NUM}"
+  [ "${ERROR_NUM}" -ne 0 ] && RETURN_VALUE=1
+  return "${RETURN_VALUE}"
 }
 
 gantry_finalize() {
   local STACK="${1:-gantry}"
-  local ACCUMULATED_ERRORS=0
-  _remove_images "${STACK}_image-remover"
-  ACCUMULATED_ERRORS=$((ACCUMULATED_ERRORS + $?))
-  _report_services;
-  ACCUMULATED_ERRORS=$((ACCUMULATED_ERRORS + $?))
+  local RETURN_VALUE=0
+  if ! _remove_images "${STACK}_image-remover"; then
+    RETURN_VALUE=1
+  fi
+  if ! _report_services; then
+    RETURN_VALUE=1
+  fi
   [ -n "${STATIC_VARIABLES_FOLDER}" ] && log DEBUG "Removing STATIC_VARIABLES_FOLDER ${STATIC_VARIABLES_FOLDER}" && rm -r "${STATIC_VARIABLES_FOLDER}"
-  return "${ACCUMULATED_ERRORS}"
+  return "${RETURN_VALUE}"
 }
