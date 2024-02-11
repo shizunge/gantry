@@ -44,6 +44,7 @@ jobs:
           - gantry_manifest_spec.sh
           - gantry_multiple_services_spec.sh
           - gantry_no_running_tasks_spec.sh
+          - gantry_notify_spec.sh
           - gantry_options_spec.sh
           - gantry_rollback_spec.sh
           - gantry_simple_spec.sh

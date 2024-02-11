@@ -455,7 +455,7 @@ stop_service() {
   docker service rm "${SERVICE_NAME}"
 }
 
-_get_script_dir() {
+get_script_dir() {
   # SC2128: Expanding an array without an index only gives the first element.
   # SC3054 (warning): In POSIX sh, array references are undefined.
   # shellcheck disable=SC2128,SC3054
@@ -466,7 +466,7 @@ _get_script_dir() {
   fi
   local SCRIPT_DIR=
   # SC3054 (warning): In POSIX sh, array references are undefined.
-    # shellcheck disable=SC3054
+  # shellcheck disable=SC3054
   SCRIPT_DIR="$( cd "$(dirname "${BASH_SOURCE[0]}")" || return 1; pwd -P )"
   echo "${SCRIPT_DIR}"
 }
@@ -477,7 +477,7 @@ _get_entrypoint() {
     return 0
   fi
   local SCRIPT_DIR=
-  SCRIPT_DIR="$(_get_script_dir)" || return 1
+  SCRIPT_DIR="$(get_script_dir)" || return 1
   export STATIC_VAR_ENTRYPOINT="${SCRIPT_DIR}/../src/entrypoint.sh"
   echo "source ${STATIC_VAR_ENTRYPOINT}"
 }

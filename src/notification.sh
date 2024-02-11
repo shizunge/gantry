@@ -15,12 +15,19 @@
 # along with this program.  If not, see <https://www.gnu.org/licenses/>.
 #
 
+# Replace newline with '\n'
+_replace_newline() {
+  local STRING="${1}"
+  echo "${STRING}" | sed 's/$/\\n/' | tr -d '\n'
+}
+
 _notify_via_apprise() {
-  local URL="${GANTRY_NOTIFICATION_APPRISE_URL:-""}"
-  local TYPE="${1}"
-  local TITLE="${2}"
-  local BODY="${3}"
+  local URL="${1}"
+  local TYPE="${2}"
+  local TITLE="${3}"
+  local BODY="${4}"
   if [ -z "${URL}" ]; then
+    log DEBUG "Skip sending notification via Apprise."
     return 0
   fi
   # info, success, warning, failure
@@ -28,14 +35,36 @@ _notify_via_apprise() {
     TYPE="info"
   fi
   [ -z "${BODY}" ] && BODY="${TITLE}"
-  curl -X POST -H "Content-Type: application/json" --data "{\"title\": \"${TITLE}\", \"body\": \"${BODY}\", \"type\": \"${TYPE}\"}" "${URL}"
+  TITLE=$(_replace_newline "${TITLE}")
+  BODY=$(_replace_newline "${BODY}")
+  local RETURN_VALUE=0
+  local LOG=
+  LOG=$(curl --silent -X POST -H "Content-Type: application/json" --data "{\"title\": \"${TITLE}\", \"body\": \"${BODY}\", \"type\": \"${TYPE}\"}" "${URL}" 2>&1)
+  RETURN_VALUE="${?}"
+  if [ "${RETURN_VALUE}" = "0" ]; then
+    log INFO "Sent notification via Apprise:"
+    echo "${LOG}" | log_lines INFO
+  else
+    log WARN "Failed to send notification via Apprise:"
+    echo "${LOG}" | log_lines WARN
+  fi
+  return 0
 }
 
 notify_summary() {
   local CUSTOMIZED_TITLE="${GANTRY_NOTIFICATION_TITLE:-""}"
+  local APPRISE_URL="${GANTRY_NOTIFICATION_APPRISE_URL:-""}"
   local TYPE="${1}"
   local TITLE="${2}"
   local BODY="${3}"
+  local RETURN_VALUE=0
+  local OLD_LOG_SCOPE="${LOG_SCOPE}"
+  LOG_SCOPE=$(attach_tag_to_log_scope "notify")
+  export LOG_SCOPE
   [ -n "${CUSTOMIZED_TITLE}" ] && TITLE="${TITLE} ${CUSTOMIZED_TITLE}"
-  _notify_via_apprise "${TYPE}" "${TITLE}" "${BODY}"
+  if ! _notify_via_apprise "${APPRISE_URL}" "${TYPE}" "${TITLE}" "${BODY}"; then
+    RETURN_VALUE=1
+  fi
+  export LOG_SCOPE="${OLD_LOG_SCOPE}"
+  return "${RETURN_VALUE}"
 }

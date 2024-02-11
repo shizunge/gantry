@@ -212,14 +212,21 @@ read_env() {
   return 0
 }
 
+attach_tag_to_log_scope() {
+  local TAG="${1}"
+  local OLD_LOG_SCOPE="${LOG_SCOPE:-""}"
+  local SEP=" "
+  [ -z "${OLD_LOG_SCOPE}" ] && SEP=""
+  echo "${OLD_LOG_SCOPE}${SEP}${TAG}"
+}
+
 eval_cmd() {
   local TAG="${1}"; shift;
   local CMD="${*}"
   [ -z "${CMD}" ] && return 0
   local OLD_LOG_SCOPE="${LOG_SCOPE}"
-  local SEP=" "
-  [ -z "${OLD_LOG_SCOPE}" ] && SEP=""
-  export LOG_SCOPE="${OLD_LOG_SCOPE}${SEP}${TAG}"
+  LOG_SCOPE=$(attach_tag_to_log_scope "${TAG}")
+  export LOG_SCOPE
   local LOG=
   local RT=0
   log INFO "Run ${TAG} command: ${CMD}"
