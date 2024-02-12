@@ -21,10 +21,10 @@ _docker_hub_rate_token() {
   local TOKEN_URL="https://auth.docker.io/token?service=registry.docker.io&scope=repository:${IMAGE}:pull"
   if curl --version 1>/dev/null 2>&1; then
     if [ -n "${USER_AND_PASS}" ]; then
-      curl -s -S --user "${USER_AND_PASS}" "${TOKEN_URL}"
+      curl --silent --show-error --user "${USER_AND_PASS}" "${TOKEN_URL}"
       return $?
     fi
-    curl -s -S "${TOKEN_URL}"
+    curl --silent --show-error "${TOKEN_URL}"
     return $?
   fi
   [ -n "${USER_AND_PASS}" ] && log WARN "Cannot read docker hub rate for the given user because curl is not available."
@@ -38,7 +38,7 @@ _docker_hub_rate_read_rate() {
   local HEADER="Authorization: Bearer ${TOKEN}"
   local URL="https://registry-1.docker.io/v2/${IMAGE}/manifests/latest"
   if curl --version 1>/dev/null 2>&1; then
-    curl -s -S --head -H "${HEADER}" "${URL}" 2>&1
+    curl --silent --show-error --head -H "${HEADER}" "${URL}" 2>&1
     return $?
   fi
   # Add `--spider`` implies that you want to send a HEAD request (as opposed to GET or POST).
@@ -57,7 +57,7 @@ docker_hub_rate() {
     log_lines() { local LEVEL="${1}"; while read -r LINE; do [ -z "${LINE}" ] && continue; log "${LEVEL}" "${LINE}"; done; }
   fi
   local RESPONSE=
-  if ! RESPONSE=$(_docker_hub_rate_token "${IMAGE}" "${USER_AND_PASS}"); then
+  if ! RESPONSE=$(_docker_hub_rate_token "${IMAGE}" "${USER_AND_PASS}" 2>&1); then
     log DEBUG "Read docker hub token error: RESPONSE="
     echo "${RESPONSE}" | log_lines DEBUG
     echo "[GET TOKEN RESPONSE ERROR]"
@@ -71,7 +71,7 @@ docker_hub_rate() {
     echo "[PARSE TOKEN ERROR]"
     return 1
   fi
-  if ! RESPONSE=$(_docker_hub_rate_read_rate "${IMAGE}" "${TOKEN}"); then
+  if ! RESPONSE=$(_docker_hub_rate_read_rate "${IMAGE}" "${TOKEN}" 2>&1); then
     if echo "${RESPONSE}" | grep -q "Too Many Requests" ; then
       echo "0"
       return 0

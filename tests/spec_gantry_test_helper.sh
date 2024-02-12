@@ -187,6 +187,9 @@ _stop_registry() {
 initialize_all_tests() {
   local SUITE_NAME="${1:-"gantry"}"
   SUITE_NAME=$(echo "${SUITE_NAME}" | tr ' ' '-')
+  local SCRIPT_DIR=
+  SCRIPT_DIR="$(_get_script_dir)" || return 1
+  source "${SCRIPT_DIR}/../src/lib-common.sh"
   echo "=============================="
   echo "== Starting tests in ${SUITE_NAME}"
   echo "=============================="
@@ -455,7 +458,7 @@ stop_service() {
   docker service rm "${SERVICE_NAME}"
 }
 
-get_script_dir() {
+_get_script_dir() {
   # SC2128: Expanding an array without an index only gives the first element.
   # SC3054 (warning): In POSIX sh, array references are undefined.
   # shellcheck disable=SC2128,SC3054
@@ -477,7 +480,7 @@ _get_entrypoint() {
     return 0
   fi
   local SCRIPT_DIR=
-  SCRIPT_DIR="$(get_script_dir)" || return 1
+  SCRIPT_DIR="$(_get_script_dir)" || return 1
   export STATIC_VAR_ENTRYPOINT="${SCRIPT_DIR}/../src/entrypoint.sh"
   echo "source ${STATIC_VAR_ENTRYPOINT}"
 }

@@ -34,18 +34,15 @@ Describe 'Notify'
       local EMAIL_API_PORT=8025
       local SERVICE_NAME_APPRISE="${SERVICE_NAME}-apprise"
       local SERVICE_NAME_MAILPIT="${SERVICE_NAME}-mailpit"
-      local SCRIPT_DIR=
-      SCRIPT_DIR="$(get_script_dir)" || return 1
-      source "${SCRIPT_DIR}/../src/lib-common.sh"
       docker pull caronc/apprise
       docker pull axllent/mailpit
-      # Use docker_run to improve coverage on lib-common.sh.
+      # Use docker_run to improve coverage on lib-common.sh. `docker run` can do the same thing.
       docker_run -d --restart=on-failure:10 --name="${SERVICE_NAME_APPRISE}" --network=host \
         -e "APPRISE_STATELESS_URLS=mailto://localhost:${SMTP_PORT}?user=userid&pass=password" \
         caronc/apprise
       docker_run -d --restart=on-failure:10 --name="${SERVICE_NAME_MAILPIT}" --network=host \
         axllent/mailpit \
-        --smtp "0.0.0.0:${SMTP_PORT}" --listen "0.0.0.0:${EMAIL_API_PORT}" \
+        --smtp "localhost:${SMTP_PORT}" --listen "localhost:${EMAIL_API_PORT}" \
         --smtp-auth-accept-any --smtp-auth-allow-insecure
       export GANTRY_NOTIFICATION_APPRISE_URL="http://localhost:${APPRISE_PORT}/notify"
       export GANTRY_NOTIFICATION_TITLE="TEST_TITLE"
@@ -58,7 +55,7 @@ Describe 'Notify'
       docker logs "${SERVICE_NAME_APPRISE}" 2>&1
       echo "Print Mailpit log:"
       docker logs "${SERVICE_NAME_MAILPIT}" 2>&1
-      # Use docker_remove to improve coverage on lib-common.sh.
+      # Use docker_remove to improve coverage on lib-common.sh. `docker stop` and `docker rm` can do the same thing.
       docker_remove "${SERVICE_NAME_APPRISE}"
       docker_remove "${SERVICE_NAME_MAILPIT}"
       return "${RETURN_VALUE}"

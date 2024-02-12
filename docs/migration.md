@@ -4,7 +4,7 @@
 
 * `docker manifest` CLI failed to get the image meta data for some registries.
 * High usage of docker hub rate. Getting manifest and then pulling the image double the usage.
-* Unnecessary `docker service update` commands slow down the overall process.
+* Running `docker service update` command when there is no new image slows down the overall process.
 * Removing images related
     * Failure of removing old images will exit and block subsequent updating.
     * `docker rmi` only works for the current host.

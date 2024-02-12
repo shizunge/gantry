@@ -82,6 +82,7 @@ gantry() {
   local START_TIME=
   START_TIME=$(date +%s)
 
+  [ -n "${DOCKER_HOST}" ] && log DEBUG "DOCKER_HOST=${DOCKER_HOST}"
   local RUN_ON_NODE=
   if ! RUN_ON_NODE=$(_run_on_node); then
     local HOST_STRING="${DOCKER_HOST:-"the current node"}"
@@ -91,7 +92,6 @@ gantry() {
     log DEBUG "Set NODE_NAME=${RUN_ON_NODE}"
     export NODE_NAME="${RUN_ON_NODE}"
   fi
-  [ -n "${DOCKER_HOST}" ] && log DEBUG "DOCKER_HOST=${DOCKER_HOST}"
   log INFO "Run on Docker host ${RUN_ON_NODE}."
 
   local ACCUMULATED_ERRORS=0
