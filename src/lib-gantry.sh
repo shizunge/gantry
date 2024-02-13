@@ -37,9 +37,10 @@ _login_registry() {
   # shellcheck disable=SC2086
   if ! LOGIN_MSG=$(echo "${PASSWORD}" | docker ${DOCKER_CONFIG} login --username="${USER}" --password-stdin "${HOST}" 2>&1); then
     log ERROR "Failed to login to registry${CONFIG_MESSAGE}. ${LOGIN_MSG}"
-  else
-    log INFO "Logged into registry${CONFIG_MESSAGE}. ${LOGIN_MSG}"
+    return 1
   fi
+  log INFO "Logged into registry${CONFIG_MESSAGE}. ${LOGIN_MSG}"
+  return 0
 }
 
 gantry_read_registry_username() {
@@ -69,10 +70,15 @@ _authenticate_to_registries() {
   if ! USER=$(gantry_read_registry_username 2>&1); then
     log ERROR "Failed to set USER: ${USER}" && return 1;
   fi
+  local ACCUMULATED_ERRORS=0
   if [ -n "${USER}" ]; then
     _login_registry "${USER}" "${PASSWORD}" "${HOST}" "${CONFIG}"
+    ACCUMULATED_ERRORS=$((ACCUMULATED_ERRORS + $?))
   fi
-  [ -z "${CONFIGS_FILE}" ] && return 0
+  if [ -z "${CONFIGS_FILE}" ]; then
+    [ ${ACCUMULATED_ERRORS} -gt 0 ] && return 1
+    return 0
+  fi
   [ ! -r "${CONFIGS_FILE}" ] && log ERROR "Failed to read ${CONFIGS_FILE}." && return 1
   local LINE=
   while read -r LINE; do
@@ -86,14 +92,24 @@ _authenticate_to_registries() {
     USER=$(echo "${LINE}" | cut -d ' ' -f 3)
     PASSWORD=$(echo "${LINE}" | cut -d ' ' -f 4)
     OTHERS=$(echo "${LINE}" | cut -d ' ' -f 5-)
-    if [ -n "${OTHERS}" ] || [ -z "${CONFIG}" ] || \
-       [ -z "${HOST}" ] || [ -z "${USER}" ] || [ -z "${PASSWORD}" ]; then
-      log ERROR "CONFIGS_FILE ${CONFIGS_FILE} format error. A line should contains only \"<CONFIG> <HOST> <USER> <PASSWORD>\"."
+    local ERROR_MSG=
+    if [ -n "${OTHERS}" ]; then
+      ERROR_MSG="Found extra item(s)."
+    fi
+    if [ -z "${CONFIG}" ] || [ -z "${HOST}" ] || [ -z "${USER}" ] || [ -z "${PASSWORD}" ]; then
+      ERROR_MSG="Missing item(s)."
+    fi
+    if [ -n "${ERROR_MSG}" ]; then
+      log ERROR "CONFIGS_FILE ${CONFIGS_FILE} format error. ${ERROR_MSG} A line should contains exactly \"<CONFIG> <HOST> <USER> <PASSWORD>\"."
       log DEBUG "CONFIGS_FILE ${CONFIGS_FILE} format error. Got \"${LINE}\"."
-      return 1
+      ACCUMULATED_ERRORS=$((ACCUMULATED_ERRORS + 1))
+      continue
     fi
     _login_registry "${USER}" "${PASSWORD}" "${HOST}" "${CONFIG}"
+    ACCUMULATED_ERRORS=$((ACCUMULATED_ERRORS + $?))
   done < <(cat "${CONFIGS_FILE}"; echo;)
+  [ ${ACCUMULATED_ERRORS} -gt 0 ] && return 1
+  return 0
 }
 
 _send_notification() {
@@ -134,7 +150,7 @@ _remove_container() {
     log ERROR "Failed to list ${STATUS} containers with image ${IMAGE}.";
     echo "${CIDS}" | log_lines ERROR
     return 1;
-  fi;
+  fi
   local CID CNAME CRM_MSG
   for CID in ${CIDS}; do
     CNAME=$(docker container inspect --format '{{.Name}}' "${CID}");
@@ -144,8 +160,8 @@ _remove_container() {
       continue;
     fi
     log INFO "Removed ${STATUS} container ${CNAME}. It was using image ${IMAGE}.";
-  done;
-};
+  done
+}
 
 gantry_remove_images() {
   local IMAGES_TO_REMOVE="${1}"
@@ -154,16 +170,16 @@ gantry_remove_images() {
     if ! docker image inspect "${IMAGE}" 1>/dev/null 2>&1 ; then
       log DEBUG "There is no image ${IMAGE} on the node.";
       continue;
-    fi;
+    fi
     _remove_container "${IMAGE}" exited;
     _remove_container "${IMAGE}" dead;
     if ! RMI_MSG=$(docker rmi "${IMAGE}" 2>&1); then
       log ERROR "Failed to remove image ${IMAGE}.";
       echo "${RMI_MSG}" | log_lines ERROR
       continue;
-    fi;
+    fi
     log INFO "Removed image ${IMAGE}.";
-  done;
+  done
   log INFO "Done removing images.";
 }
 
@@ -328,9 +344,9 @@ _current_container_name() {
         _static_variable_add_unique_to_list STATIC_VAR_CURRENT_CONTAINER_NAME "${NAME}"
         echo "${NAME}";
         return 0;
-      done;
-    done;
-  done;
+      done
+    done
+  done
   return 0;
 }
 
@@ -631,6 +647,8 @@ _rollback_service() {
   log INFO "Rolled back ${SERVICE_NAME}."
 }
 
+# return 0 when there is no error or failure.
+# return 1 when there are error(s) or failure(s).
 _update_single_service() {
   local UPDATE_TIMEOUT_SECONDS="${GANTRY_UPDATE_TIMEOUT_SECONDS:-300}"
   local UPDATE_OPTIONS="${GANTRY_UPDATE_OPTIONS:-""}"
