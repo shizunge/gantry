@@ -565,11 +565,14 @@ _run_gantry_container() {
   MOUNT_OPTIONS=$(_add_file_to_mount_options "${MOUNT_OPTIONS}" "${GANTRY_REGISTRY_HOST_FILE}")
   MOUNT_OPTIONS=$(_add_file_to_mount_options "${MOUNT_OPTIONS}" "${GANTRY_REGISTRY_PASSWORD_FILE}")
   MOUNT_OPTIONS=$(_add_file_to_mount_options "${MOUNT_OPTIONS}" "${GANTRY_REGISTRY_USER_FILE}")
-  local RETURN_VALUE=
-  echo -n "Starting SUT service ${SERVICE_NAME} "
+  if [ "${GANTRY_LOG_LEVEL}" != "NONE" ]; then
+    echo "Starting SUT service ${SERVICE_NAME} with image ${SUT_REPO_TAG}."
+  fi
+  local RETURN_VALUE=0
+  local CMD_OUTPUT=
   # SC2086 (info): Double quote to prevent globbing and word splitting.
   # shellcheck disable=SC2086
-  docker service create --quiet --name "${SERVICE_NAME}" \
+  if ! CMD_OUTPUT=$(docker service create --name "${SERVICE_NAME}" \
     --mode replicated-job --restart-condition=none --network host \
     --constraint "node.role==manager" \
     --mount type=bind,source=/var/run/docker.sock,target=/var/run/docker.sock \
@@ -607,12 +610,14 @@ _run_gantry_container() {
     --env "GANTRY_NOTIFICATION_TITLE=${GANTRY_NOTIFICATION_TITLE}" \
     --env "TZ=${TZ}" \
     "${SUT_REPO_TAG}" \
-    "${STACK}";
-  RETURN_VALUE="${?}"
+    "${STACK}" 2>&1); then
+    echo "Failed to create service ${SERVICE_NAME}: ${CMD_OUTPUT}" >&2
+    RETURN_VALUE=1
+  fi
   docker service logs --raw "${SERVICE_NAME}"
-  local CMD_OUTPUT=
   if ! CMD_OUTPUT=$(docker service rm "${SERVICE_NAME}" 2>&1); then
     echo "Failed to remove service ${SERVICE_NAME}: ${CMD_OUTPUT}" >&2
+    RETURN_VALUE=1
   fi
   return "${RETURN_VALUE}"
 }
