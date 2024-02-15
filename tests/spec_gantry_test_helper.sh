@@ -543,7 +543,7 @@ _get_entrypoint() {
 _add_file_to_mount_options() {
   local MOUNT_OPTIONS="${1}"
   local FILE="${2}"
-  if [ -n "${FILE}" ]; then
+  if [ -n "${FILE}" ] && [ -r "${FILE}" ]; then
     MOUNT_OPTIONS="${MOUNT_OPTIONS} --mount type=bind,source=${FILE},target=${FILE}"
   fi
   echo "${MOUNT_OPTIONS}"

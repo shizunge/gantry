@@ -60,7 +60,7 @@ _read_docker_hub_rate() {
     USER=
   fi
   if ! HOST=$(gantry_read_registry_host 2>&1); then
-    log ERROR "Failed to read HOST: ${HOST}";
+    log ERROR "Failed to read registry HOST: ${HOST}";
     HOST=
   fi
   local USER_AND_PASS=
@@ -133,7 +133,7 @@ gantry() {
   TIME_ELAPSED=$(time_elapsed_since "${START_TIME}")
   local MESSAGE="Done. Use ${TIME_ELAPSED}. ${ACCUMULATED_ERRORS} errors."
   local RETURN_VALUE=0
-  if [ ${ACCUMULATED_ERRORS} -gt 0 ]; then
+  if [ "${ACCUMULATED_ERRORS}" -gt 0 ]; then
     log ERROR "${MESSAGE}"
     RETURN_VALUE=1
   else

@@ -63,20 +63,24 @@ _authenticate_to_registries() {
   local ACCUMULATED_ERRORS=0
   local CONFIG HOST PASSWORD USER
   if ! CONFIG=$(read_config GANTRY_REGISTRY_CONFIG 2>&1); then
-    log ERROR "Failed to read CONFIG: ${CONFIG}"
+    log ERROR "Failed to read registry CONFIG: ${CONFIG}"
     ACCUMULATED_ERRORS=$((ACCUMULATED_ERRORS + 1))
+    CONFIG=
   fi
   if ! HOST=$(gantry_read_registry_host 2>&1); then
-    log ERROR "Failed to read HOST: ${HOST}"
+    log ERROR "Failed to read registry HOST: ${HOST}"
     ACCUMULATED_ERRORS=$((ACCUMULATED_ERRORS + 1))
+    HOST=
   fi
   if ! PASSWORD=$(gantry_read_registry_password 2>&1); then
-    log ERROR "Failed to read PASSWORD: ${PASSWORD}"
+    log ERROR "Failed to read registry PASSWORD: ${PASSWORD}"
     ACCUMULATED_ERRORS=$((ACCUMULATED_ERRORS + 1))
+    PASSWORD=
   fi
   if ! USER=$(gantry_read_registry_username 2>&1); then
-    log ERROR "Failed to read USER: ${USER}"
+    log ERROR "Failed to read registry USER: ${USER}"
     ACCUMULATED_ERRORS=$((ACCUMULATED_ERRORS + 1))
+    USER=
   fi
   if [ "${ACCUMULATED_ERRORS}" -gt 0 ]; then
     log ERROR "Skip logging in due to previous errors."
@@ -88,7 +92,10 @@ _authenticate_to_registries() {
     [ "${ACCUMULATED_ERRORS}" -gt 0 ] && return 1
     return 0
   fi
-  [ ! -r "${CONFIGS_FILE}" ] && log ERROR "Failed to read ${CONFIGS_FILE}." && return 1
+  if [ ! -r "${CONFIGS_FILE}" ]; then
+    log ERROR "Failed to read CONFIGS_FILE ${CONFIGS_FILE}."
+    return 1
+  fi
   local LINE=
   while read -r LINE; do
     # skip comments
@@ -117,7 +124,7 @@ _authenticate_to_registries() {
     _login_registry "${USER}" "${PASSWORD}" "${HOST}" "${CONFIG}"
     ACCUMULATED_ERRORS=$((ACCUMULATED_ERRORS + $?))
   done < <(cat "${CONFIGS_FILE}"; echo;)
-  [ ${ACCUMULATED_ERRORS} -gt 0 ] && return 1
+  [ "${ACCUMULATED_ERRORS}" -gt 0 ] && return 1
   return 0
 }
 
