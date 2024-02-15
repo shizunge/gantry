@@ -83,7 +83,7 @@ log() {
   if _log_level "${1}" >/dev/null; then
     LEVEL="${1}";
     shift;
-  fi;
+  fi
   _log_formatter "${LEVEL}" "$(date -Iseconds)" "${NODE_NAME}" "${LOG_SCOPE}" "${@}";
 }
 
@@ -329,50 +329,45 @@ wait_service_state() {
   local WAIT_RUNNING WAIT_COMPLETE;
   WAIT_RUNNING=$(echo "${@}" | grep -q -- "--running" && echo "true" || echo "false")
   WAIT_COMPLETE=$(echo "${@}" | grep -q -- "--complete" && echo "true" || echo "false")
-  local RETURN_VALUE=0
   local SLEEP_SECONDS=1
   local STATES=
-  STATES=$(_docker_service_task_states "${SERVICE_NAME}" 2>&1)
-  while is_true "${WAIT_RUNNING}" || is_true "${WAIT_COMPLETE}" ; do
+  while STATES=$(_docker_service_task_states "${SERVICE_NAME}" 2>&1); do
     local NUM_LINES=0
     local NUM_RUNS=0
     local NUM_DONES=0
     local NUM_FAILS=0
     while read -r LINE; do
       [ -z "${LINE}" ] && continue;
+      log INFO "Service ${SERVICE_NAME}: ${LINE}."
       NUM_LINES=$((NUM_LINES+1));
       echo "${LINE}" | grep -q "Running" && NUM_RUNS=$((NUM_RUNS+1));
       echo "${LINE}" | grep -q "Complete" && NUM_DONES=$((NUM_DONES+1));
       echo "${LINE}" | grep -q "Failed" && NUM_FAILS=$((NUM_FAILS+1));
     done < <(echo "${STATES}")
-    if [ ${NUM_LINES} -gt 0 ]; then
-      if ${WAIT_RUNNING} && [ ${NUM_RUNS} -eq ${NUM_LINES} ]; then
-        break
+    if [ "${NUM_LINES}" -gt 0 ]; then
+      if "${WAIT_RUNNING}" && [ "${NUM_RUNS}" -eq "${NUM_LINES}" ]; then
+        return 0;
       fi
-      if ${WAIT_COMPLETE} && [ ${NUM_DONES} -eq ${NUM_LINES} ]; then
-        break
+      if "${WAIT_COMPLETE}" && [ "${NUM_DONES}" -eq "${NUM_LINES}" ]; then
+        return 0;
       fi
-      if ${WAIT_COMPLETE} && [ ${NUM_FAILS} -gt 0 ]; then
+      if "${WAIT_COMPLETE}" && [ "${NUM_FAILS}" -gt 0 ]; then
         # Get return value of the task from the string "task: non-zero exit (1)".
-        local TASK_STATE=
         local TASK_RETURN_VALUE=
-        TASK_STATE=$(echo "${STATES}" | grep "Failed")
-        TASK_RETURN_VALUE=$(echo "${TASK_STATE}" | sed -n 's/.*task: non-zero exit (\([0-9]\+\)).*/\1/p')
+        TASK_RETURN_VALUE=$(echo "${STATES}" | grep "Failed" | sed -n 's/.*task: non-zero exit (\([0-9]\+\)).*/\1/p')
         # Get the first error code.
+        local RETURN_VALUE=0
         RETURN_VALUE=$(echo "${TASK_RETURN_VALUE:-1}" | cut -d ' ' -f 1)
-        break
+        return "${RETURN_VALUE}"
       fi
+    fi
+    if ! ("${WAIT_RUNNING}" || "${WAIT_COMPLETE}"); then
+      return 0;
     fi
     sleep "${SLEEP_SECONDS}"
-    if ! STATES=$(_docker_service_task_states "${SERVICE_NAME}" 2>&1); then
-      log ERROR "Failed to obtain task states of service ${SERVICE_NAME}: ${STATES}"
-      return 1
-    fi
   done
-  echo "${STATES}" | while read -r LINE; do
-    log INFO "Service ${SERVICE_NAME}: ${LINE}."
-  done
-  return "${RETURN_VALUE}"
+  log ERROR "Failed to obtain task states of service ${SERVICE_NAME}: ${STATES}"
+  return 1
 }
 
 docker_service_remove() {
@@ -389,7 +384,8 @@ docker_service_remove() {
 
 # We do not expect failures when using docker_global_job.
 # Docker will try to restart the failed tasks.
-# We do not check the converge of the service. It must be used togther with wait_service_state.
+# We do not check the converge of the service, thus some jobs may failed on some nodes.
+# It is better to be used togther with wait_service_state.
 docker_global_job() {
   local SERVICE_NAME=
   SERVICE_NAME=$(_get_docker_command_name_arg "${@}")

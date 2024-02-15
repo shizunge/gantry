@@ -20,6 +20,9 @@ _login_registry() {
   local PASSWORD="${2}"
   local HOST="${3}"
   local CONFIG="${4}"
+  if [ -z "${USER}" ] && [ -z "${PASSWORD}" ] && [ -z "${HOST}" ] && [ -z "${CONFIG}" ]; then
+    return 0
+  fi
   [ -z "${USER}" ] && log ERROR "USER is empty." && return 1
   [ -z "${PASSWORD}" ] && log ERROR "PASSWORD is empty." && return 1
   local DOCKER_CONFIG=
@@ -57,26 +60,32 @@ gantry_read_registry_host() {
 
 _authenticate_to_registries() {
   local CONFIGS_FILE="${GANTRY_REGISTRY_CONFIGS_FILE:-""}"
+  local ACCUMULATED_ERRORS=0
   local CONFIG HOST PASSWORD USER
   if ! CONFIG=$(read_config GANTRY_REGISTRY_CONFIG 2>&1); then
-    log ERROR "Failed to set CONFIG: ${CONFIG}" && return 1;
+    log ERROR "Failed to read CONFIG: ${CONFIG}"
+    ACCUMULATED_ERRORS=$((ACCUMULATED_ERRORS + 1))
   fi
   if ! HOST=$(gantry_read_registry_host 2>&1); then
-    log ERROR "Failed to set HOST: ${HOST}" && return 1;
+    log ERROR "Failed to read HOST: ${HOST}"
+    ACCUMULATED_ERRORS=$((ACCUMULATED_ERRORS + 1))
   fi
   if ! PASSWORD=$(gantry_read_registry_password 2>&1); then
-    log ERROR "Failed to set PASSWORD: ${PASSWORD}" && return 1;
+    log ERROR "Failed to read PASSWORD: ${PASSWORD}"
+    ACCUMULATED_ERRORS=$((ACCUMULATED_ERRORS + 1))
   fi
   if ! USER=$(gantry_read_registry_username 2>&1); then
-    log ERROR "Failed to set USER: ${USER}" && return 1;
+    log ERROR "Failed to read USER: ${USER}"
+    ACCUMULATED_ERRORS=$((ACCUMULATED_ERRORS + 1))
   fi
-  local ACCUMULATED_ERRORS=0
-  if [ -n "${USER}" ]; then
+  if [ "${ACCUMULATED_ERRORS}" -gt 0 ]; then
+    log ERROR "Skip logging in due to previous errors."
+  else
     _login_registry "${USER}" "${PASSWORD}" "${HOST}" "${CONFIG}"
     ACCUMULATED_ERRORS=$((ACCUMULATED_ERRORS + $?))
   fi
   if [ -z "${CONFIGS_FILE}" ]; then
-    [ ${ACCUMULATED_ERRORS} -gt 0 ] && return 1
+    [ "${ACCUMULATED_ERRORS}" -gt 0 ] && return 1
     return 0
   fi
   [ ! -r "${CONFIGS_FILE}" ] && log ERROR "Failed to read ${CONFIGS_FILE}." && return 1
@@ -193,6 +202,7 @@ _remove_images() {
     return 0
   fi
   local SERVICE_NAME="${1:-"gantry-image-remover"}"
+  SERVICE_NAME=$(echo "${SERVICE_NAME}" | tr ' ' '-')
   docker_service_remove "${SERVICE_NAME}"
   local IMAGES_TO_REMOVE=
   IMAGES_TO_REMOVE=$(_static_variable_read_list STATIC_VAR_IMAGES_TO_REMOVE)
@@ -225,7 +235,7 @@ _remove_images() {
     "${IMAGES_REMOVER}" 2>&1); then
     log ERROR "Failed to remove images: ${RMI_MSG}"
   fi
-  wait_service_state "${SERVICE_NAME}" --complete;
+  wait_service_state "${SERVICE_NAME}"
   docker_service_logs "${SERVICE_NAME}"
   docker_service_remove "${SERVICE_NAME}"
 }
