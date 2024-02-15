@@ -21,10 +21,12 @@ Describe 'Entrypoint'
   AfterAll "finish_all_tests ${SUITE_NAME}"
   Describe "test_DOCKER_HOST_not_swarm_manager" "container_test:false"
     TEST_NAME="test_DOCKER_HOST_not_swarm_manager"
-    IMAGE_WITH_TAG=$(get_image_with_tag)
+    IMAGE_WITH_TAG=$(get_image_with_tag "${SUITE_NAME}")
     SERVICE_NAME="gantry-test-$(unique_id)"
     test_DOCKER_HOST_not_swarm_manager() {
       local TEST_NAME=${1}
+      local SERVICE_NAME=${2}
+      reset_gantry_env "${SERVICE_NAME}"
       export DOCKER_HOST="8.8.8.8:53"
       local RETURN_VALUE=0
       run_gantry "${TEST_NAME}"
@@ -32,10 +34,10 @@ Describe 'Entrypoint'
       export DOCKER_HOST=
       return "${RETURN_VALUE}"
     }
-    Before "common_setup_new_image ${TEST_NAME} ${IMAGE_WITH_TAG} ${SERVICE_NAME}"
-    After "common_cleanup ${TEST_NAME} ${IMAGE_WITH_TAG} ${SERVICE_NAME}"
-    It 'run_gantry'
-      When call test_DOCKER_HOST_not_swarm_manager "${TEST_NAME}"
+    BeforeEach "common_setup_new_image ${TEST_NAME} ${IMAGE_WITH_TAG} ${SERVICE_NAME}"
+    AfterEach "common_cleanup ${TEST_NAME} ${IMAGE_WITH_TAG} ${SERVICE_NAME}"
+    It 'run_test'
+      When run test_DOCKER_HOST_not_swarm_manager "${TEST_NAME}" "${SERVICE_NAME}"
       The status should be failure
       The stdout should satisfy display_output
       The stderr should satisfy display_output
@@ -65,17 +67,19 @@ Describe 'Entrypoint'
   End
   Describe "test_SLEEP_SECONDS_not_a_number" "container_test:false"
     TEST_NAME="test_SLEEP_SECONDS_not_a_number"
-    IMAGE_WITH_TAG=$(get_image_with_tag)
+    IMAGE_WITH_TAG=$(get_image_with_tag "${SUITE_NAME}")
     SERVICE_NAME="gantry-test-$(unique_id)"
     test_SLEEP_SECONDS_not_a_number() {
       local TEST_NAME=${1}
+      local SERVICE_NAME=${2}
+      reset_gantry_env "${SERVICE_NAME}"
       export GANTRY_SLEEP_SECONDS="NotANumber"
       run_gantry "${TEST_NAME}"
     }
-    Before "common_setup_new_image ${TEST_NAME} ${IMAGE_WITH_TAG} ${SERVICE_NAME}"
-    After "common_cleanup ${TEST_NAME} ${IMAGE_WITH_TAG} ${SERVICE_NAME}"
-    It 'run_gantry'
-      When call test_SLEEP_SECONDS_not_a_number "${TEST_NAME}"
+    BeforeEach "common_setup_new_image ${TEST_NAME} ${IMAGE_WITH_TAG} ${SERVICE_NAME}"
+    AfterEach "common_cleanup ${TEST_NAME} ${IMAGE_WITH_TAG} ${SERVICE_NAME}"
+    It 'run_test'
+      When run test_SLEEP_SECONDS_not_a_number "${TEST_NAME}" "${SERVICE_NAME}"
       The status should be failure
       The stdout should satisfy display_output
       The stderr should satisfy display_output
@@ -107,7 +111,7 @@ Describe 'Entrypoint'
   Describe "test_IMAGES_TO_REMOVE_none_empty" "container_test:true"
     # Test the remove image entrypoint. To improve coverage.
     TEST_NAME="test_IMAGES_TO_REMOVE_none_empty"
-    IMAGE_WITH_TAG=$(get_image_with_tag)
+    IMAGE_WITH_TAG=$(get_image_with_tag "${SUITE_NAME}")
     IMAGE_WITH_TAG0="${IMAGE_WITH_TAG}-0"
     IMAGE_WITH_TAG1="${IMAGE_WITH_TAG}-1"
     IMAGE_WITH_TAG2="${IMAGE_WITH_TAG}-2"
@@ -133,7 +137,17 @@ Describe 'Entrypoint'
       # The tasks should exit after TASK_SECONDS seconds sleep. Then it will have 0 running tasks.
       wait_zero_running_tasks "${SERVICE_NAME0}"
       # Do not creat the Image IMAGE_WITH_TAG2, to run the test on a non-exist image.
+    }
+    test_IMAGES_TO_REMOVE_none_empty() {
+      local TEST_NAME=${1}
+      local SERVICE_NAME=${2}
+      local IMAGE_WITH_TAG=${3}
+      local IMAGE_WITH_TAG0="${IMAGE_WITH_TAG}-0"
+      local IMAGE_WITH_TAG1="${IMAGE_WITH_TAG}-1"
+      local IMAGE_WITH_TAG2="${IMAGE_WITH_TAG}-2"
+      reset_gantry_env "${SERVICE_NAME}"
       export GANTRY_IMAGES_TO_REMOVE="${IMAGE_WITH_TAG0} ${IMAGE_WITH_TAG1} ${IMAGE_WITH_TAG2}"
+      run_gantry "${TEST_NAME}"
     }
     test_end() {
       local TEST_NAME=${1}
@@ -150,10 +164,10 @@ Describe 'Entrypoint'
       prune_local_test_image "${IMAGE_WITH_TAG1}"
       finalize_test "${TEST_NAME}"
     }
-    Before "test_start ${TEST_NAME} ${IMAGE_WITH_TAG} ${SERVICE_NAME}"
-    After "test_end ${TEST_NAME} ${IMAGE_WITH_TAG} ${SERVICE_NAME}"
-    It 'run_gantry'
-      When call run_gantry "${TEST_NAME}"
+    BeforeEach "test_start ${TEST_NAME} ${IMAGE_WITH_TAG} ${SERVICE_NAME}"
+    AfterEach "test_end ${TEST_NAME} ${IMAGE_WITH_TAG} ${SERVICE_NAME}"
+    It 'run_test'
+      When run test_IMAGES_TO_REMOVE_none_empty "${TEST_NAME}" "${SERVICE_NAME}" "${IMAGE_WITH_TAG}"
       The status should be success
       The stdout should satisfy display_output
       The stdout should satisfy spec_expect_message "Removed exited container.*${SERVICE_NAME0}.*${IMAGE_WITH_TAG0}"

@@ -21,19 +21,20 @@ Describe "No_Running_Tasks"
   AfterAll "finish_all_tests ${SUITE_NAME}"
   Describe "test_no_running_tasks_replicated" "container_test:true"
     TEST_NAME="test_no_running_tasks_replicated"
-    IMAGE_WITH_TAG=$(get_image_with_tag)
+    IMAGE_WITH_TAG=$(get_image_with_tag "${SUITE_NAME}")
     SERVICE_NAME="gantry-test-$(unique_id)"
     test_no_running_tasks_replicated() {
       local TEST_NAME=${1}
       local SERVICE_NAME=${2}
       docker service update --quiet --replicas=0 "${SERVICE_NAME}"
       wait_zero_running_tasks "${SERVICE_NAME}"
+      reset_gantry_env "${SERVICE_NAME}"
       run_gantry "${TEST_NAME}"
     }
-    Before "common_setup_new_image ${TEST_NAME} ${IMAGE_WITH_TAG} ${SERVICE_NAME}"
-    After "common_cleanup ${TEST_NAME} ${IMAGE_WITH_TAG} ${SERVICE_NAME}"
-    It 'run_gantry'
-      When call test_no_running_tasks_replicated "${TEST_NAME}" "${SERVICE_NAME}"
+    BeforeEach "common_setup_new_image ${TEST_NAME} ${IMAGE_WITH_TAG} ${SERVICE_NAME}"
+    AfterEach "common_cleanup ${TEST_NAME} ${IMAGE_WITH_TAG} ${SERVICE_NAME}"
+    It 'run_test'
+      When run test_no_running_tasks_replicated "${TEST_NAME}" "${SERVICE_NAME}"
       The status should be success
       The stdout should satisfy display_output
       The stderr should satisfy display_output
@@ -65,7 +66,7 @@ Describe "No_Running_Tasks"
   End
   Describe "test_no_running_tasks_global" "container_test:true"
     TEST_NAME="test_no_running_tasks_global"
-    IMAGE_WITH_TAG=$(get_image_with_tag)
+    IMAGE_WITH_TAG=$(get_image_with_tag "${SUITE_NAME}")
     SERVICE_NAME="gantry-test-$(unique_id)"
     test_start() {
       local TEST_NAME=${1}
@@ -77,14 +78,19 @@ Describe "No_Running_Tasks"
       build_and_push_test_image "${IMAGE_WITH_TAG}" "${TASK_SECONDS}"
       start_global_service "${SERVICE_NAME}" "${IMAGE_WITH_TAG}"
       build_and_push_test_image "${IMAGE_WITH_TAG}"
-      export GANTRY_SERVICES_FILTERS="name=${SERVICE_NAME}"
       # The tasks should exit after TASK_SECONDS seconds sleep. Then it will have 0 running tasks.
       wait_zero_running_tasks "${SERVICE_NAME}"
     }
-    Before "test_start ${TEST_NAME} ${IMAGE_WITH_TAG} ${SERVICE_NAME}"
-    After "common_cleanup ${TEST_NAME} ${IMAGE_WITH_TAG} ${SERVICE_NAME}"
-    It 'run_gantry'
-      When call run_gantry "${TEST_NAME}"
+    test_no_running_tasks_global() {
+      local TEST_NAME=${1}
+      local SERVICE_NAME=${2}
+      reset_gantry_env "${SERVICE_NAME}"
+      run_gantry "${TEST_NAME}"
+    }
+    BeforeEach "test_start ${TEST_NAME} ${IMAGE_WITH_TAG} ${SERVICE_NAME}"
+    AfterEach "common_cleanup ${TEST_NAME} ${IMAGE_WITH_TAG} ${SERVICE_NAME}"
+    It 'run_test'
+      When run test_no_running_tasks_global "${TEST_NAME}" "${SERVICE_NAME}"
       The status should be success
       The stdout should satisfy display_output
       The stderr should satisfy display_output

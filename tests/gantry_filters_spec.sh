@@ -21,18 +21,19 @@ Describe 'Filters'
   AfterAll "finish_all_tests ${SUITE_NAME}"
   Describe "test_SERVICES_FILTERS_bad" "container_test:false"
     TEST_NAME="test_SERVICES_FILTERS_bad"
-    IMAGE_WITH_TAG=$(get_image_with_tag)
+    IMAGE_WITH_TAG=$(get_image_with_tag "${SUITE_NAME}")
     SERVICE_NAME="gantry-test-$(unique_id)"
     test_SERVICES_FILTERS_bad() {
       local TEST_NAME=${1}
       local SERVICE_NAME=${2}
+      reset_gantry_env "${SERVICE_NAME}"
       export GANTRY_SERVICES_FILTERS="BadFilterValue"
       run_gantry "${TEST_NAME}"
     }
-    Before "common_setup_new_image ${TEST_NAME} ${IMAGE_WITH_TAG} ${SERVICE_NAME}"
-    After "common_cleanup ${TEST_NAME} ${IMAGE_WITH_TAG} ${SERVICE_NAME}"
-    It 'run_gantry'
-      When call test_SERVICES_FILTERS_bad "${TEST_NAME}" "${SERVICE_NAME}"
+    BeforeEach "common_setup_new_image ${TEST_NAME} ${IMAGE_WITH_TAG} ${SERVICE_NAME}"
+    AfterEach "common_cleanup ${TEST_NAME} ${IMAGE_WITH_TAG} ${SERVICE_NAME}"
+    It 'run_test'
+      When run test_SERVICES_FILTERS_bad "${TEST_NAME}" "${SERVICE_NAME}"
       The status should be failure
       The stdout should satisfy display_output
       The stderr should satisfy display_output
@@ -62,18 +63,19 @@ Describe 'Filters'
   End
   Describe "test_SERVICES_EXCLUDED" "container_test:true"
     TEST_NAME="test_SERVICES_EXCLUDED"
-    IMAGE_WITH_TAG=$(get_image_with_tag)
+    IMAGE_WITH_TAG=$(get_image_with_tag "${SUITE_NAME}")
     SERVICE_NAME="gantry-test-$(unique_id)"
     test_SERVICES_EXCLUDED() {
       local TEST_NAME=${1}
       local SERVICE_NAME=${2}
+      reset_gantry_env "${SERVICE_NAME}"
       export GANTRY_SERVICES_EXCLUDED="${SERVICE_NAME}"
       run_gantry "${TEST_NAME}"
     }
-    Before "common_setup_new_image ${TEST_NAME} ${IMAGE_WITH_TAG} ${SERVICE_NAME}"
-    After "common_cleanup ${TEST_NAME} ${IMAGE_WITH_TAG} ${SERVICE_NAME}"
-    It 'run_gantry'
-      When call test_SERVICES_EXCLUDED "${TEST_NAME}" "${SERVICE_NAME}"
+    BeforeEach "common_setup_new_image ${TEST_NAME} ${IMAGE_WITH_TAG} ${SERVICE_NAME}"
+    AfterEach "common_cleanup ${TEST_NAME} ${IMAGE_WITH_TAG} ${SERVICE_NAME}"
+    It 'run_test'
+      When run test_SERVICES_EXCLUDED "${TEST_NAME}" "${SERVICE_NAME}"
       The status should be success
       The stdout should satisfy display_output
       The stderr should satisfy display_output
@@ -102,18 +104,19 @@ Describe 'Filters'
   End
   Describe "test_SERVICES_EXCLUDED_FILTERS" "container_test:true"
     TEST_NAME="test_SERVICES_EXCLUDED_FILTERS"
-    IMAGE_WITH_TAG=$(get_image_with_tag)
+    IMAGE_WITH_TAG=$(get_image_with_tag "${SUITE_NAME}")
     SERVICE_NAME="gantry-test-$(unique_id)"
     test_SERVICES_EXCLUDED_FILTERS() {
       local TEST_NAME=${1}
       local SERVICE_NAME=${2}
+      reset_gantry_env "${SERVICE_NAME}"
       export GANTRY_SERVICES_EXCLUDED_FILTERS="name=${SERVICE_NAME}"
       run_gantry "${TEST_NAME}"
     }
-    Before "common_setup_new_image ${TEST_NAME} ${IMAGE_WITH_TAG} ${SERVICE_NAME}"
-    After "common_cleanup ${TEST_NAME} ${IMAGE_WITH_TAG} ${SERVICE_NAME}"
-    It 'run_gantry'
-      When call test_SERVICES_EXCLUDED_FILTERS "${TEST_NAME}" "${SERVICE_NAME}"
+    BeforeEach "common_setup_new_image ${TEST_NAME} ${IMAGE_WITH_TAG} ${SERVICE_NAME}"
+    AfterEach "common_cleanup ${TEST_NAME} ${IMAGE_WITH_TAG} ${SERVICE_NAME}"
+    It 'run_test'
+      When run test_SERVICES_EXCLUDED_FILTERS "${TEST_NAME}" "${SERVICE_NAME}"
       The status should be success
       The stdout should satisfy display_output
       The stderr should satisfy display_output
@@ -142,18 +145,19 @@ Describe 'Filters'
   End
   Describe "test_SERVICES_EXCLUDED_FILTERS_bad" "container_test:false"
     TEST_NAME="test_SERVICES_EXCLUDED_FILTERS_bad"
-    IMAGE_WITH_TAG=$(get_image_with_tag)
+    IMAGE_WITH_TAG=$(get_image_with_tag "${SUITE_NAME}")
     SERVICE_NAME="gantry-test-$(unique_id)"
     test_SERVICES_EXCLUDED_FILTERS_bad() {
       local TEST_NAME=${1}
       local SERVICE_NAME=${2}
+      reset_gantry_env "${SERVICE_NAME}"
       export GANTRY_SERVICES_EXCLUDED_FILTERS="BadFilterValue"
       run_gantry "${TEST_NAME}"
     }
-    Before "common_setup_new_image ${TEST_NAME} ${IMAGE_WITH_TAG} ${SERVICE_NAME}"
-    After "common_cleanup ${TEST_NAME} ${IMAGE_WITH_TAG} ${SERVICE_NAME}"
-    It 'run_gantry'
-      When call test_SERVICES_EXCLUDED_FILTERS_bad "${TEST_NAME}" "${SERVICE_NAME}"
+    BeforeEach "common_setup_new_image ${TEST_NAME} ${IMAGE_WITH_TAG} ${SERVICE_NAME}"
+    AfterEach "common_cleanup ${TEST_NAME} ${IMAGE_WITH_TAG} ${SERVICE_NAME}"
+    It 'run_test'
+      When run test_SERVICES_EXCLUDED_FILTERS_bad "${TEST_NAME}" "${SERVICE_NAME}"
       The status should be failure
       The stdout should satisfy display_output
       The stderr should satisfy display_output

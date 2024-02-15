@@ -21,12 +21,18 @@ Describe 'Simple'
   AfterAll "finish_all_tests ${SUITE_NAME}"
   Describe "test_new_image_no" "container_test:true"
     TEST_NAME="test_new_image_no"
-    IMAGE_WITH_TAG=$(get_image_with_tag)
+    IMAGE_WITH_TAG=$(get_image_with_tag "${SUITE_NAME}")
     SERVICE_NAME="gantry-test-$(unique_id)"
-    Before "common_setup_no_new_image ${TEST_NAME} ${IMAGE_WITH_TAG} ${SERVICE_NAME}"
-    After "common_cleanup ${TEST_NAME} ${IMAGE_WITH_TAG} ${SERVICE_NAME}"
-    It 'run_gantry'
-      When call run_gantry "${TEST_NAME}"
+    test_new_image_no() {
+      local TEST_NAME=${1}
+      local SERVICE_NAME=${2}
+      reset_gantry_env "${SERVICE_NAME}"
+      run_gantry "${TEST_NAME}"
+    }
+    BeforeEach "common_setup_no_new_image ${TEST_NAME} ${IMAGE_WITH_TAG} ${SERVICE_NAME}"
+    AfterEach "common_cleanup ${TEST_NAME} ${IMAGE_WITH_TAG} ${SERVICE_NAME}"
+    It 'run_test'
+      When run test_new_image_no "${TEST_NAME}" "${SERVICE_NAME}"
       The status should be success
       The stdout should satisfy display_output
       The stderr should satisfy display_output
@@ -54,12 +60,18 @@ Describe 'Simple'
   End
   Describe "test_new_image_yes" "container_test:true"
     TEST_NAME="test_new_image_yes"
-    IMAGE_WITH_TAG=$(get_image_with_tag)
+    IMAGE_WITH_TAG=$(get_image_with_tag "${SUITE_NAME}")
     SERVICE_NAME="gantry-test-$(unique_id)"
-    Before "common_setup_new_image ${TEST_NAME} ${IMAGE_WITH_TAG} ${SERVICE_NAME}"
-    After "common_cleanup ${TEST_NAME} ${IMAGE_WITH_TAG} ${SERVICE_NAME}"
-    It 'run_gantry'
-      When call run_gantry "${TEST_NAME}"
+    test_new_image_yes() {
+      local TEST_NAME=${1}
+      local SERVICE_NAME=${2}
+      reset_gantry_env "${SERVICE_NAME}"
+      run_gantry "${TEST_NAME}"
+    }
+    BeforeEach "common_setup_new_image ${TEST_NAME} ${IMAGE_WITH_TAG} ${SERVICE_NAME}"
+    AfterEach "common_cleanup ${TEST_NAME} ${IMAGE_WITH_TAG} ${SERVICE_NAME}"
+    It 'run_test'
+      When run test_new_image_yes "${TEST_NAME}" "${SERVICE_NAME}"
       The status should be success
       The stdout should satisfy display_output
       The stderr should satisfy display_output
@@ -87,24 +99,28 @@ Describe 'Simple'
   End
   Describe "test_new_image_no_digest" "container_test:true"
     TEST_NAME="test_new_image_no_digest"
-    IMAGE_WITH_TAG=$(get_image_with_tag)
+    IMAGE_WITH_TAG=$(get_image_with_tag "${SUITE_NAME}")
     SERVICE_NAME="gantry-test-$(unique_id)"
     test_start() {
       local TEST_NAME=${1}
       local IMAGE_WITH_TAG=${2}
       local SERVICE_NAME=${3}
-      initialize_test "${TEST_NAME}"
       # Start a service with image not available on the registry, the digest will not be available.
       build_test_image "${IMAGE_WITH_TAG}"
       start_replicated_service "${SERVICE_NAME}" "${IMAGE_WITH_TAG}" 2>&1
       # Push a new image to registry, thus manifest command will success.
       build_and_push_test_image "${IMAGE_WITH_TAG}"
-      export GANTRY_SERVICES_FILTERS="name=${SERVICE_NAME}"
     }
-    Before "test_start ${TEST_NAME} ${IMAGE_WITH_TAG} ${SERVICE_NAME}"
-    After "common_cleanup ${TEST_NAME} ${IMAGE_WITH_TAG} ${SERVICE_NAME}"
-    It 'run_gantry'
-      When call run_gantry "${TEST_NAME}"
+    test_new_image_no_digest() {
+      local TEST_NAME=${1}
+      local SERVICE_NAME=${2}
+      reset_gantry_env "${SERVICE_NAME}"
+      run_gantry "${TEST_NAME}"
+    }
+    BeforeEach "test_start ${TEST_NAME} ${IMAGE_WITH_TAG} ${SERVICE_NAME}"
+    AfterEach "common_cleanup ${TEST_NAME} ${IMAGE_WITH_TAG} ${SERVICE_NAME}"
+    It 'run_test'
+      When run test_new_image_no_digest "${TEST_NAME}" "${SERVICE_NAME}"
       The status should be success
       The stdout should satisfy display_output
       The stderr should satisfy display_output

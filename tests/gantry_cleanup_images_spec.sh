@@ -22,17 +22,19 @@ Describe 'Cleanup_images'
   AfterAll "finish_all_tests ${SUITE_NAME}"
   Describe "test_CLEANUP_IMAGES_false" "container_test:true"
     TEST_NAME="test_CLEANUP_IMAGES_false"
-    IMAGE_WITH_TAG=$(get_image_with_tag)
+    IMAGE_WITH_TAG=$(get_image_with_tag "${SUITE_NAME}")
     SERVICE_NAME="gantry-test-$(unique_id)"
     test_CLEANUP_IMAGES_false() {
       local TEST_NAME=${1}
+      local SERVICE_NAME=${2}
+      reset_gantry_env "${SERVICE_NAME}"
       export GANTRY_CLEANUP_IMAGES="false"
       run_gantry "${TEST_NAME}"
     }
-    Before "common_setup_new_image ${TEST_NAME} ${IMAGE_WITH_TAG} ${SERVICE_NAME}"
-    After "common_cleanup ${TEST_NAME} ${IMAGE_WITH_TAG} ${SERVICE_NAME}"
-    It 'run_gantry'
-      When call test_CLEANUP_IMAGES_false "${TEST_NAME}"
+    BeforeEach "common_setup_new_image ${TEST_NAME} ${IMAGE_WITH_TAG} ${SERVICE_NAME}"
+    AfterEach "common_cleanup ${TEST_NAME} ${IMAGE_WITH_TAG} ${SERVICE_NAME}"
+    It 'run_test'
+      When run test_CLEANUP_IMAGES_false "${TEST_NAME}" "${SERVICE_NAME}"
       The status should be success
       The stdout should satisfy display_output
       The stderr should satisfy display_output
@@ -60,19 +62,21 @@ Describe 'Cleanup_images'
   End
   Describe "test_CLEANUP_IMAGES_OPTIONS_bad" "container_test:true"
     TEST_NAME="test_CLEANUP_IMAGES_OPTIONS_bad"
-    IMAGE_WITH_TAG=$(get_image_with_tag)
+    IMAGE_WITH_TAG=$(get_image_with_tag "${SUITE_NAME}")
     SERVICE_NAME="gantry-test-$(unique_id)"
     test_CLEANUP_IMAGES_OPTIONS_bad() {
       local TEST_NAME=${1}
+      local SERVICE_NAME=${2}
+      reset_gantry_env "${SERVICE_NAME}"
       export GANTRY_CLEANUP_IMAGES="true"
       # Image remover would fail due to the incorrect option.
       export GANTRY_CLEANUP_IMAGES_OPTIONS="--incorrect-option"
       run_gantry "${TEST_NAME}"
     }
-    Before "common_setup_new_image ${TEST_NAME} ${IMAGE_WITH_TAG} ${SERVICE_NAME}"
-    After "common_cleanup ${TEST_NAME} ${IMAGE_WITH_TAG} ${SERVICE_NAME}"
-    It 'run_gantry'
-      When call test_CLEANUP_IMAGES_OPTIONS_bad "${TEST_NAME}"
+    BeforeEach "common_setup_new_image ${TEST_NAME} ${IMAGE_WITH_TAG} ${SERVICE_NAME}"
+    AfterEach "common_cleanup ${TEST_NAME} ${IMAGE_WITH_TAG} ${SERVICE_NAME}"
+    It 'run_test'
+      When run test_CLEANUP_IMAGES_OPTIONS_bad "${TEST_NAME}" "${SERVICE_NAME}"
       The status should be success
       The stdout should satisfy display_output
       The stderr should satisfy display_output
@@ -102,18 +106,20 @@ Describe 'Cleanup_images'
   End
   Describe "test_CLEANUP_IMAGES_OPTIONS_good" "container_test:true"
     TEST_NAME="test_CLEANUP_IMAGES_OPTIONS_good"
-    IMAGE_WITH_TAG=$(get_image_with_tag)
+    IMAGE_WITH_TAG=$(get_image_with_tag "${SUITE_NAME}")
     SERVICE_NAME="gantry-test-$(unique_id)"
     test_CLEANUP_IMAGES_OPTIONS_good() {
       local TEST_NAME=${1}
+      local SERVICE_NAME=${2}
+      reset_gantry_env "${SERVICE_NAME}"
       export GANTRY_CLEANUP_IMAGES="true"
       export GANTRY_CLEANUP_IMAGES_OPTIONS="--container-label=test"
       run_gantry "${TEST_NAME}"
     }
-    Before "common_setup_new_image ${TEST_NAME} ${IMAGE_WITH_TAG} ${SERVICE_NAME}"
-    After "common_cleanup ${TEST_NAME} ${IMAGE_WITH_TAG} ${SERVICE_NAME}"
-    It 'run_gantry'
-      When call test_CLEANUP_IMAGES_OPTIONS_good "${TEST_NAME}"
+    BeforeEach "common_setup_new_image ${TEST_NAME} ${IMAGE_WITH_TAG} ${SERVICE_NAME}"
+    AfterEach "common_cleanup ${TEST_NAME} ${IMAGE_WITH_TAG} ${SERVICE_NAME}"
+    It 'run_test'
+      When run test_CLEANUP_IMAGES_OPTIONS_good "${TEST_NAME}" "${SERVICE_NAME}"
       The status should be success
       The stdout should satisfy display_output
       The stderr should satisfy display_output

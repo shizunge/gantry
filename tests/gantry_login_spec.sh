@@ -22,8 +22,9 @@ Describe 'Login'
   # Here are just simple login tests.
   Describe "test_login_config" "container_test:true"
     TEST_NAME="test_login_config"
-    IMAGE_WITH_TAG=$(get_image_with_tag)
+    IMAGE_WITH_TAG=$(get_image_with_tag "${SUITE_NAME}")
     SERVICE_NAME="gantry-test-$(unique_id)"
+    TEST_REGISTRY=$(load_test_registry "${SUITE_NAME}") || return 1
     test_login_config() {
       local TEST_NAME=${1}
       local SERVICE_NAME=${2}
@@ -41,6 +42,7 @@ Describe 'Login'
       docker service update --quiet --label-add "${LABEL}=${CONFIG}" "${SERVICE_NAME}"
       echo "${USERNAME}" > "${USER_FILE}"
       echo "${PASSWORD}" > "${PASS_FILE}"
+      reset_gantry_env "${SERVICE_NAME}"
       export GANTRY_REGISTRY_CONFIG="${CONFIG}"
       export GANTRY_REGISTRY_HOST="${REGISTRY}"
       export GANTRY_REGISTRY_PASSWORD_FILE="${PASS_FILE}"
@@ -53,10 +55,10 @@ Describe 'Login'
       [ -d "${CONFIG}" ] && rm -r "${CONFIG}"
       return "${RETURN_VALUE}"
     }
-    Before "common_setup_new_image ${TEST_NAME} ${IMAGE_WITH_TAG} ${SERVICE_NAME}"
-    After "common_cleanup ${TEST_NAME} ${IMAGE_WITH_TAG} ${SERVICE_NAME}"
-    It 'run_gantry'
-      When call test_login_config "${TEST_NAME}" "${SERVICE_NAME}" "${TEST_REGISTRY}" "${TEST_USERNAME}" "${TEST_PASSWORD}"
+    BeforeEach "common_setup_new_image ${TEST_NAME} ${IMAGE_WITH_TAG} ${SERVICE_NAME}"
+    AfterEach "common_cleanup ${TEST_NAME} ${IMAGE_WITH_TAG} ${SERVICE_NAME}"
+    It 'run_test'
+      When run test_login_config "${TEST_NAME}" "${SERVICE_NAME}" "${TEST_REGISTRY}" "${TEST_USERNAME}" "${TEST_PASSWORD}"
       The status should be success
       The stdout should satisfy display_output
       The stderr should satisfy display_output
@@ -86,8 +88,9 @@ Describe 'Login'
   End
   Describe "test_login_REGISTRY_CONFIGS_FILE" "container_test:true"
     TEST_NAME="test_login_REGISTRY_CONFIGS_FILE"
-    IMAGE_WITH_TAG=$(get_image_with_tag)
+    IMAGE_WITH_TAG=$(get_image_with_tag "${SUITE_NAME}")
     SERVICE_NAME="gantry-test-$(unique_id)"
+    TEST_REGISTRY=$(load_test_registry "${SUITE_NAME}") || return 1
     test_login_REGISTRY_CONFIGS_FILE() {
       local TEST_NAME=${1}
       local SERVICE_NAME=${2}
@@ -104,6 +107,7 @@ Describe 'Login'
       docker service update --quiet --label-add "${LABEL}=${CONFIG}" "${SERVICE_NAME}"
       echo "# Test comments: CONFIG REGISTRY USERNAME PASSWORD" >> "${CONFIGS_FILE}"
       echo "${CONFIG} ${REGISTRY} ${USERNAME} ${PASSWORD}" >> "${CONFIGS_FILE}"
+      reset_gantry_env "${SERVICE_NAME}"
       export GANTRY_REGISTRY_CONFIGS_FILE="${CONFIGS_FILE}"
       # Since we pass credentials via the configs file, we can use other envs to login to docker hub and check the rate.
       # However we do not actually check whether we read rates correctly, in case password or usrename for docker hub is not set.
@@ -119,10 +123,10 @@ Describe 'Login'
       [ -d "${CONFIG}" ] && rm -r "${CONFIG}"
       return "${RETURN_VALUE}"
     }
-    Before "common_setup_new_image ${TEST_NAME} ${IMAGE_WITH_TAG} ${SERVICE_NAME}"
-    After "common_cleanup ${TEST_NAME} ${IMAGE_WITH_TAG} ${SERVICE_NAME}"
-    It 'run_gantry'
-      When call test_login_REGISTRY_CONFIGS_FILE "${TEST_NAME}" "${SERVICE_NAME}" "${TEST_REGISTRY}" "${TEST_USERNAME}" "${TEST_PASSWORD}" 
+    BeforeEach "common_setup_new_image ${TEST_NAME} ${IMAGE_WITH_TAG} ${SERVICE_NAME}"
+    AfterEach "common_cleanup ${TEST_NAME} ${IMAGE_WITH_TAG} ${SERVICE_NAME}"
+    It 'run_test'
+      When run test_login_REGISTRY_CONFIGS_FILE "${TEST_NAME}" "${SERVICE_NAME}" "${TEST_REGISTRY}" "${TEST_USERNAME}" "${TEST_PASSWORD}" 
       The status should be success
       The stdout should satisfy display_output
       The stderr should satisfy display_output
@@ -152,8 +156,9 @@ Describe 'Login'
   End
   Describe "test_login_REGISTRY_CONFIGS_FILE_bad_format" "container_test:false"
     TEST_NAME="test_login_REGISTRY_CONFIGS_FILE_bad_format_extra"
-    IMAGE_WITH_TAG=$(get_image_with_tag)
+    IMAGE_WITH_TAG=$(get_image_with_tag "${SUITE_NAME}")
     SERVICE_NAME="gantry-test-$(unique_id)"
+    TEST_REGISTRY=$(load_test_registry "${SUITE_NAME}") || return 1
     test_login_REGISTRY_CONFIGS_FILE_bad_format_extra() {
       local TEST_NAME=${1}
       local SERVICE_NAME=${2}
@@ -172,6 +177,7 @@ Describe 'Login'
       echo "${CONFIG} ${REGISTRY} ${USERNAME} ${PASSWORD} Extra" >> "${CONFIGS_FILE}"
       # Missing an item from the line.
       echo "${REGISTRY} ${USERNAME} ${PASSWORD}" >> "${CONFIGS_FILE}"
+      reset_gantry_env "${SERVICE_NAME}"
       export GANTRY_REGISTRY_CONFIGS_FILE="${CONFIGS_FILE}"
       local RETURN_VALUE=
       run_gantry "${TEST_NAME}"
@@ -180,10 +186,10 @@ Describe 'Login'
       [ -d "${CONFIG}" ] && rm -r "${CONFIG}"
       return "${RETURN_VALUE}"
     }
-    Before "common_setup_new_image ${TEST_NAME} ${IMAGE_WITH_TAG} ${SERVICE_NAME}"
-    After "common_cleanup ${TEST_NAME} ${IMAGE_WITH_TAG} ${SERVICE_NAME}"
-    It 'run_gantry'
-      When call test_login_REGISTRY_CONFIGS_FILE_bad_format_extra "${TEST_NAME}" "${SERVICE_NAME}" "${TEST_REGISTRY}" "${TEST_USERNAME}" "${TEST_PASSWORD}"
+    BeforeEach "common_setup_new_image ${TEST_NAME} ${IMAGE_WITH_TAG} ${SERVICE_NAME}"
+    AfterEach "common_cleanup ${TEST_NAME} ${IMAGE_WITH_TAG} ${SERVICE_NAME}"
+    It 'run_test'
+      When run test_login_REGISTRY_CONFIGS_FILE_bad_format_extra "${TEST_NAME}" "${SERVICE_NAME}" "${TEST_REGISTRY}" "${TEST_USERNAME}" "${TEST_PASSWORD}"
       The status should be failure
       The stdout should satisfy display_output
       The stderr should satisfy display_output

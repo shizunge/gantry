@@ -21,18 +21,20 @@ Describe 'Options'
   AfterAll "finish_all_tests ${SUITE_NAME}"
   Describe "test_options_LOG_LEVEL_none" "container_test:true"
     TEST_NAME="test_options_LOG_LEVEL_none"
-    IMAGE_WITH_TAG=$(get_image_with_tag)
+    IMAGE_WITH_TAG=$(get_image_with_tag "${SUITE_NAME}")
     SERVICE_NAME="gantry-test-$(unique_id)"
     test_options_LOG_LEVEL_none() {
       local TEST_NAME=${1}
+      local SERVICE_NAME=${2}
+      reset_gantry_env "${SERVICE_NAME}"
       # Same as test_new_image_yes, except set LOG_LEVEL to NONE
       export GANTRY_LOG_LEVEL=NONE
       run_gantry "${TEST_NAME}"
     }
-    Before "common_setup_new_image ${TEST_NAME} ${IMAGE_WITH_TAG} ${SERVICE_NAME}"
-    After "common_cleanup ${TEST_NAME} ${IMAGE_WITH_TAG} ${SERVICE_NAME}"
-    It 'run_gantry'
-      When call test_options_LOG_LEVEL_none "${TEST_NAME}"
+    BeforeEach "common_setup_new_image ${TEST_NAME} ${IMAGE_WITH_TAG} ${SERVICE_NAME}"
+    AfterEach "common_cleanup ${TEST_NAME} ${IMAGE_WITH_TAG} ${SERVICE_NAME}"
+    It 'run_test'
+      When run test_options_LOG_LEVEL_none "${TEST_NAME}" "${SERVICE_NAME}"
       The status should be success
       The stdout should satisfy display_output
       The stdout should satisfy spec_expect_no_message ".+"
@@ -42,7 +44,7 @@ Describe 'Options'
   End
   Describe "test_options_UPDATE_OPTIONS" "container_test:true"
     TEST_NAME="test_options_UPDATE_OPTIONS"
-    IMAGE_WITH_TAG=$(get_image_with_tag)
+    IMAGE_WITH_TAG=$(get_image_with_tag "${SUITE_NAME}")
     SERVICE_NAME="gantry-test-$(unique_id)"
     _read_service_label() {
       local SERVICE_NAME="${1}"
@@ -54,10 +56,10 @@ Describe 'Options'
       local SERVICE_NAME=${2}
       local LABEL="gantry.test"
       local LABEL_VALUE=
-      export GANTRY_UPDATE_OPTIONS="--label-add=${LABEL}=${SERVICE_NAME}"
-
       LABEL_VALUE=$(_read_service_label "${SERVICE_NAME}" "${LABEL}")
       echo "Before updating: LABEL_VALUE=${LABEL_VALUE}"
+      reset_gantry_env "${SERVICE_NAME}"
+      export GANTRY_UPDATE_OPTIONS="--label-add=${LABEL}=${SERVICE_NAME}"
       local RETURN_VALUE=
       run_gantry "${TEST_NAME}"
       RETURN_VALUE="${?}"
@@ -65,10 +67,10 @@ Describe 'Options'
       echo "After updating: LABEL_VALUE=${LABEL_VALUE}"
       return "${RETURN_VALUE}"
     }
-    Before "common_setup_new_image ${TEST_NAME} ${IMAGE_WITH_TAG} ${SERVICE_NAME}"
-    After "common_cleanup ${TEST_NAME} ${IMAGE_WITH_TAG} ${SERVICE_NAME}"
-    It 'run_gantry'
-      When call test_options_UPDATE_OPTIONS "${TEST_NAME}" "${SERVICE_NAME}"
+    BeforeEach "common_setup_new_image ${TEST_NAME} ${IMAGE_WITH_TAG} ${SERVICE_NAME}"
+    AfterEach "common_cleanup ${TEST_NAME} ${IMAGE_WITH_TAG} ${SERVICE_NAME}"
+    It 'run_test'
+      When run test_options_UPDATE_OPTIONS "${TEST_NAME}" "${SERVICE_NAME}"
       The status should be success
       The stdout should satisfy display_output
       # Check an observable difference before and after applying UPDATE_OPTIONS.
@@ -100,17 +102,19 @@ Describe 'Options'
   End
   Describe "test_options_UPDATE_TIMEOUT_SECONDS_not_a_number" "container_test:false"
     TEST_NAME="test_options_UPDATE_TIMEOUT_SECONDS_not_a_number"
-    IMAGE_WITH_TAG=$(get_image_with_tag)
+    IMAGE_WITH_TAG=$(get_image_with_tag "${SUITE_NAME}")
     SERVICE_NAME="gantry-test-$(unique_id)"
     test_options_UPDATE_TIMEOUT_SECONDS_not_a_number() {
       local TEST_NAME=${1}
+      local SERVICE_NAME=${2}
+      reset_gantry_env "${SERVICE_NAME}"
       export GANTRY_UPDATE_TIMEOUT_SECONDS="NotANumber"
       run_gantry "${TEST_NAME}"
     }
-    Before "common_setup_new_image ${TEST_NAME} ${IMAGE_WITH_TAG} ${SERVICE_NAME}"
-    After "common_cleanup ${TEST_NAME} ${IMAGE_WITH_TAG} ${SERVICE_NAME}"
-    It 'run_gantry'
-      When call test_options_UPDATE_TIMEOUT_SECONDS_not_a_number "${TEST_NAME}"
+    BeforeEach "common_setup_new_image ${TEST_NAME} ${IMAGE_WITH_TAG} ${SERVICE_NAME}"
+    AfterEach "common_cleanup ${TEST_NAME} ${IMAGE_WITH_TAG} ${SERVICE_NAME}"
+    It 'run_test'
+      When run test_options_UPDATE_TIMEOUT_SECONDS_not_a_number "${TEST_NAME}" "${SERVICE_NAME}"
       The status should be failure
       The stdout should satisfy display_output
       The stderr should satisfy display_output
@@ -139,18 +143,20 @@ Describe 'Options'
   End
   Describe "test_options_PRE_POST_RUN_CMD" "container_test:true"
     TEST_NAME="test_options_PRE_POST_RUN_CMD"
-    IMAGE_WITH_TAG=$(get_image_with_tag)
+    IMAGE_WITH_TAG=$(get_image_with_tag "${SUITE_NAME}")
     SERVICE_NAME="gantry-test-$(unique_id)"
     test_options_PRE_POST_RUN_CMD() {
       local TEST_NAME=${1}
+      local SERVICE_NAME=${2}
+      reset_gantry_env "${SERVICE_NAME}"
       export GANTRY_PRE_RUN_CMD="echo \"Pre update\""
       export GANTRY_POST_RUN_CMD="echo \"Post update\""
       run_gantry "${TEST_NAME}"
     }
-    Before "common_setup_new_image ${TEST_NAME} ${IMAGE_WITH_TAG} ${SERVICE_NAME}"
-    After "common_cleanup ${TEST_NAME} ${IMAGE_WITH_TAG} ${SERVICE_NAME}"
-    It 'run_gantry'
-      When call test_options_PRE_POST_RUN_CMD "${TEST_NAME}"
+    BeforeEach "common_setup_new_image ${TEST_NAME} ${IMAGE_WITH_TAG} ${SERVICE_NAME}"
+    AfterEach "common_cleanup ${TEST_NAME} ${IMAGE_WITH_TAG} ${SERVICE_NAME}"
+    It 'run_test'
+      When run test_options_PRE_POST_RUN_CMD "${TEST_NAME}" "${SERVICE_NAME}"
       The status should be success
       The stdout should satisfy display_output
       The stderr should satisfy display_output

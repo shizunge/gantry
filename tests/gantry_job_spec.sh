@@ -21,12 +21,18 @@ Describe 'Job'
   AfterAll "finish_all_tests ${SUITE_NAME}"
   Describe "test_jobs_skipping" "container_test:true"
     TEST_NAME="test_jobs_skipping"
-    IMAGE_WITH_TAG=$(get_image_with_tag)
+    IMAGE_WITH_TAG=$(get_image_with_tag "${SUITE_NAME}")
     SERVICE_NAME="gantry-test-$(unique_id)"
-    Before "common_setup_job ${TEST_NAME} ${IMAGE_WITH_TAG} ${SERVICE_NAME}"
-    After "common_cleanup ${TEST_NAME} ${IMAGE_WITH_TAG} ${SERVICE_NAME}"
-    It 'run_gantry'
-      When call run_gantry "${TEST_NAME}"
+    test_jobs_skipping() {
+      local TEST_NAME=${1}
+      local SERVICE_NAME=${2}
+      reset_gantry_env "${SERVICE_NAME}"
+      run_gantry "${TEST_NAME}"
+    }
+    BeforeEach "common_setup_job ${TEST_NAME} ${IMAGE_WITH_TAG} ${SERVICE_NAME}"
+    AfterEach "common_cleanup ${TEST_NAME} ${IMAGE_WITH_TAG} ${SERVICE_NAME}"
+    It 'run_test'
+      When run test_jobs_skipping "${TEST_NAME}" "${SERVICE_NAME}"
       The status should be success
       The stdout should satisfy display_output
       The stderr should satisfy display_output
@@ -55,19 +61,21 @@ Describe 'Job'
   End
   Describe "test_jobs_UPDATE_JOBS_true" "container_test:true"
     TEST_NAME="test_jobs_UPDATE_JOBS_true"
-    IMAGE_WITH_TAG=$(get_image_with_tag)
+    IMAGE_WITH_TAG=$(get_image_with_tag "${SUITE_NAME}")
     SERVICE_NAME="gantry-test-$(unique_id)"
     test_jobs_UPDATE_JOBS_true() {
       local TEST_NAME=${1}
+      local SERVICE_NAME=${2}
+      reset_gantry_env "${SERVICE_NAME}"
       export GANTRY_UPDATE_JOBS="true"
       # The job may not reach the desired "Complete" state and blocking update CLI. So add "--detach=true"
       export GANTRY_UPDATE_OPTIONS="--detach=true"
       run_gantry "${TEST_NAME}"
     }
-    Before "common_setup_job ${TEST_NAME} ${IMAGE_WITH_TAG} ${SERVICE_NAME}"
-    After "common_cleanup ${TEST_NAME} ${IMAGE_WITH_TAG} ${SERVICE_NAME}"
-    It 'run_gantry'
-      When call test_jobs_UPDATE_JOBS_true "${TEST_NAME}"
+    BeforeEach "common_setup_job ${TEST_NAME} ${IMAGE_WITH_TAG} ${SERVICE_NAME}"
+    AfterEach "common_cleanup ${TEST_NAME} ${IMAGE_WITH_TAG} ${SERVICE_NAME}"
+    It 'run_test'
+      When run test_jobs_UPDATE_JOBS_true "${TEST_NAME}" "${SERVICE_NAME}"
       The status should be success
       The stdout should satisfy display_output
       The stderr should satisfy display_output
@@ -97,7 +105,7 @@ Describe 'Job'
   End
   Describe "test_jobs_UPDATE_JOBS_true_no_running_tasks" "container_test:true"
     TEST_NAME="test_jobs_UPDATE_JOBS_true_no_running_tasks"
-    IMAGE_WITH_TAG=$(get_image_with_tag)
+    IMAGE_WITH_TAG=$(get_image_with_tag "${SUITE_NAME}")
     SERVICE_NAME="gantry-test-$(unique_id)"
     TASK_SECONDS=15
     test_jobs_UPDATE_JOBS_true_no_running_tasks() {
@@ -105,14 +113,15 @@ Describe 'Job'
       local SERVICE_NAME=${2}
       # The tasks should exit after TASK_SECONDS seconds sleep. Then it will have 0 running tasks.
       wait_zero_running_tasks "${SERVICE_NAME}"
+      reset_gantry_env "${SERVICE_NAME}"
       export GANTRY_UPDATE_JOBS="true"
       run_gantry "${TEST_NAME}"
     }
     # The task will finish in ${TASK_SECONDS} seconds
-    Before "common_setup_job ${TEST_NAME} ${IMAGE_WITH_TAG} ${SERVICE_NAME} ${TASK_SECONDS}"
-    After "common_cleanup ${TEST_NAME} ${IMAGE_WITH_TAG} ${SERVICE_NAME}"
-    It 'run_gantry'
-      When call test_jobs_UPDATE_JOBS_true_no_running_tasks "${TEST_NAME}" "${SERVICE_NAME}"
+    BeforeEach "common_setup_job ${TEST_NAME} ${IMAGE_WITH_TAG} ${SERVICE_NAME} ${TASK_SECONDS}"
+    AfterEach "common_cleanup ${TEST_NAME} ${IMAGE_WITH_TAG} ${SERVICE_NAME}"
+    It 'run_test'
+      When run test_jobs_UPDATE_JOBS_true_no_running_tasks "${TEST_NAME}" "${SERVICE_NAME}"
       The status should be success
       The stdout should satisfy display_output
       The stderr should satisfy display_output
