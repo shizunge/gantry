@@ -224,24 +224,21 @@ _remove_images() {
     log INFO "- ${I}"
   done
   local IMAGES_REMOVER=
-  IMAGES_REMOVER=$(_get_service_image "$(_current_service_name)")
+  IMAGES_REMOVER=$(_get_service_image "$(gantry_current_service_name)")
   [ -z "${IMAGES_REMOVER}" ] && IMAGES_REMOVER="${DEFAULT_IMAGES_REMOVER}"
   log DEBUG "Set IMAGES_REMOVER=${IMAGES_REMOVER}"
   local IMAGES_TO_REMOVE_LIST=
   IMAGES_TO_REMOVE_LIST=$(echo "${IMAGES_TO_REMOVE}" | tr '\n' ' ')
   [ -n "${CLEANUP_IMAGES_OPTIONS}" ] && log DEBUG "Adding options \"${CLEANUP_IMAGES_OPTIONS}\" to the global job ${SERVICE_NAME}."
-  local RMI_MSG=
   # SC2086: Double quote to prevent globbing and word splitting.
   # shellcheck disable=SC2086
-  if ! RMI_MSG=$(docker_global_job --name "${SERVICE_NAME}" \
+  docker_global_job --name "${SERVICE_NAME}" \
     --restart-condition on-failure \
     --restart-max-attempts 1 \
     --mount type=bind,source=/var/run/docker.sock,destination=/var/run/docker.sock \
     --env "GANTRY_IMAGES_TO_REMOVE=${IMAGES_TO_REMOVE_LIST}" \
     ${CLEANUP_IMAGES_OPTIONS} \
-    "${IMAGES_REMOVER}"); then
-    log ERROR "Failed to remove images."
-  fi
+    "${IMAGES_REMOVER}";
   wait_service_state "${SERVICE_NAME}"
   docker_service_logs "${SERVICE_NAME}"
   docker_service_remove "${SERVICE_NAME}"
@@ -341,19 +338,26 @@ _current_container_name() {
   local CURRENT_CONTAINER_NAME=
   CURRENT_CONTAINER_NAME=$(_static_variable_read_list STATIC_VAR_CURRENT_CONTAINER_NAME)
   [ -n "${CURRENT_CONTAINER_NAME}" ] && echo "${CURRENT_CONTAINER_NAME}" && return 0
-  local ALL_NETWORKS GWBRIDGE_NETWORK IPS;
+  local ALL_NETWORKS=
   ALL_NETWORKS=$(docker network ls --format '{{.ID}}') || return 1;
   [ -z "${ALL_NETWORKS}" ] && return 0;
-  GWBRIDGE_NETWORK=$(docker network ls --format '{{.ID}}' --filter 'name=docker_gwbridge') || return 1;
+  local IPS=;
   IPS=$(ip route | grep src | sed -n "s/.* src \(\S*\).*$/\1/p");
   [ -z "${IPS}" ] && return 0;
+  local GWBRIDGE_NETWORK HOST_NETWORK;
+  GWBRIDGE_NETWORK=$(docker network ls --format '{{.ID}}' --filter 'name=^docker_gwbridge$') || return 1;
+  HOST_NETWORK=$(docker network ls --format '{{.ID}}' --filter 'name=^host$') || return 1;
   local NID=;
   for NID in ${ALL_NETWORKS}; do
+    # The output of gwbridge does not contain the container name. It looks like gateway_8f55496ce4f1/172.18.0.5/16.
     [ "${NID}" = "${GWBRIDGE_NETWORK}" ] && continue;
+    # The output of host does not contain an IP.
+    [ "${NID}" = "${HOST_NETWORK}" ] && continue;
     local ALL_LOCAL_NAME_AND_IP=;
     ALL_LOCAL_NAME_AND_IP=$(docker network inspect "${NID}" --format "{{range .Containers}}{{.Name}}/{{println .IPv4Address}}{{end}}") || return 1;
     for NAME_AND_IP in ${ALL_LOCAL_NAME_AND_IP}; do
       [ -z "${NAME_AND_IP}" ] && continue;
+      # NAME_AND_IP will be in one of the following formats:
       # '<container name>/<ip>/<mask>'
       # '<container name>/' (when network mode is host)
       local CNAME CIP
@@ -372,7 +376,7 @@ _current_container_name() {
   return 0;
 }
 
-_current_service_name() {
+gantry_current_service_name() {
   local CURRENT_SERVICE_NAME=
   CURRENT_SERVICE_NAME=$(_static_variable_read_list STATIC_VAR_CURRENT_SERVICE_NAME)
   [ -n "${CURRENT_SERVICE_NAME}" ] && echo "${CURRENT_SERVICE_NAME}" && return 0
@@ -389,10 +393,10 @@ _service_is_self() {
   if [ -z "${GANTRY_SERVICES_SELF}" ]; then
     # If _service_is_self is called inside a subprocess, export won't affect the parent process.
     # We only want to log it once, thus try to read the value from a static variable firstly.
-    # The static variable should be set inside the function _current_service_name. If it is set, skip logging.
+    # The static variable should be set inside the function gantry_current_service_name. If it is set, skip logging.
     GANTRY_SERVICES_SELF=$(_static_variable_read_list STATIC_VAR_CURRENT_SERVICE_NAME)
     if [ -z "${GANTRY_SERVICES_SELF}" ]; then
-      GANTRY_SERVICES_SELF=$(_current_service_name)
+      GANTRY_SERVICES_SELF=$(gantry_current_service_name)
       export GANTRY_SERVICES_SELF
       [ -n "${GANTRY_SERVICES_SELF}" ] && log INFO "Set GANTRY_SERVICES_SELF to ${GANTRY_SERVICES_SELF}."
     fi
@@ -830,6 +834,9 @@ gantry_finalize() {
   if ! _report_services; then
     RETURN_VALUE=1
   fi
-  [ -n "${STATIC_VARIABLES_FOLDER}" ] && log DEBUG "Removing STATIC_VARIABLES_FOLDER ${STATIC_VARIABLES_FOLDER}" && rm -r "${STATIC_VARIABLES_FOLDER}"
+  if [ -n "${STATIC_VARIABLES_FOLDER}" ]; then
+    log DEBUG "Removing STATIC_VARIABLES_FOLDER ${STATIC_VARIABLES_FOLDER}"
+    rm -r "${STATIC_VARIABLES_FOLDER}"
+  fi
   return "${RETURN_VALUE}"
 }

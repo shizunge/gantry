@@ -77,7 +77,9 @@ _read_docker_hub_rate() {
 gantry() {
   local PRE_RUN_CMD="${GANTRY_PRE_RUN_CMD:-""}"
   local POST_RUN_CMD="${GANTRY_POST_RUN_CMD:-""}"
-  local STACK="${1:-gantry}"
+  local STACK="${1}"
+  [ -z "${STACK}" ] && STACK=$(gantry_current_service_name)
+  [ -z "${STACK}" ] && STACK="gantry"
   export LOG_SCOPE="${STACK}"
   local START_TIME=
   START_TIME=$(date +%s)
@@ -131,7 +133,7 @@ gantry() {
 
   local TIME_ELAPSED=
   TIME_ELAPSED=$(time_elapsed_since "${START_TIME}")
-  local MESSAGE="Done. Use ${TIME_ELAPSED}. ${ACCUMULATED_ERRORS} errors."
+  local MESSAGE="Done. Use ${TIME_ELAPSED}. ${ACCUMULATED_ERRORS} error(s)."
   local RETURN_VALUE=0
   if [ "${ACCUMULATED_ERRORS}" -gt 0 ]; then
     log ERROR "${MESSAGE}"

@@ -376,10 +376,13 @@ docker_service_remove() {
     return 0
   fi
   log INFO "Removing service ${SERVICE_NAME}."
-  docker service rm "${SERVICE_NAME}" >/dev/null
-  local RETURN_VALUE=$?
+  local LOG=
+  if ! LOG=$(docker service rm "${SERVICE_NAME}" 2>&1); then
+    log ERROR "Failed to remove docker service ${SERVICE_NAME}: ${LOG}"
+    return 1
+  fi
   log INFO "Removed service ${SERVICE_NAME}."
-  return ${RETURN_VALUE}
+  return 0
 }
 
 # We do not expect failures when using docker_global_job.
@@ -389,10 +392,13 @@ docker_service_remove() {
 docker_global_job() {
   local SERVICE_NAME=
   SERVICE_NAME=$(_get_docker_command_name_arg "${@}")
-  log INFO "Starting service ${SERVICE_NAME}."
-  docker service create \
-    --mode global-job \
-    "${@}" >/dev/null
+  log INFO "Starting global-job ${SERVICE_NAME}."
+  local LOG=
+  if ! LOG=$(docker service create --mode global-job "${@}"  2>&1); then
+    log ERROR "Failed to create global-job ${SERVICE_NAME}: ${LOG}"
+    return 1
+  fi
+  return 0
 }
 
 # A job could fail when using docker_replicated_job.
@@ -403,16 +409,17 @@ docker_replicated_job() {
   IS_DETACH=$(_get_docker_command_detach "${@}")
   # Add "--detach" to work around https://github.com/docker/cli/issues/2979
   # The Docker CLI does not exit on failures.
-  log INFO "Starting service ${SERVICE_NAME}."
-  docker service create \
-    --mode replicated-job --detach \
-    "${@}" >/dev/null
-  local RETURN_VALUE=$?
+  log INFO "Starting replicated-job ${SERVICE_NAME}."
+  local LOG=
+  if ! LOG=$(docker service create --mode replicated-job --detach "${@}" 2>&1); then
+    log ERROR "Failed to create replicated-job ${SERVICE_NAME}: ${LOG}"
+    return 1
+  fi
   # If the command line does not contain '--detach', the function returns til the replicated job is complete.
   if ! "${IS_DETACH}"; then
     wait_service_state "${SERVICE_NAME}" --complete || return $?
   fi
-  return ${RETURN_VALUE}
+  return 0
 }
 
 _container_status() {
@@ -438,9 +445,7 @@ docker_run() {
   local RETRIES=0
   local MAX_RETRIES=5
   local SLEEP_SECONDS=10
-  while ! docker run \
-    "${@}" >/dev/null;
-  do
+  while ! docker run "${@}" >/dev/null; do
     if [ ${RETRIES} -ge ${MAX_RETRIES} ]; then
       echo "Failed to run docker. Reached the max retries ${MAX_RETRIES}." >&2
       return 1

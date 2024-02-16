@@ -98,8 +98,8 @@ Describe 'Cleanup_images'
       The stderr should satisfy spec_expect_no_message "${NO_IMAGES_TO_REMOVE}"
       The stderr should satisfy spec_expect_message    "${REMOVING_NUM_IMAGES}"
       The stderr should satisfy spec_expect_no_message "${SKIP_REMOVING_IMAGES}"
-      The stderr should satisfy spec_expect_message    "${ADDING_OPTIONS}.*${GANTRY_CLEANUP_IMAGES_OPTIONS}"
-      The stderr should satisfy spec_expect_message    "${FAILED_TO_REMOVE_IMAGE}.*${GANTRY_CLEANUP_IMAGES_OPTIONS}"
+      The stderr should satisfy spec_expect_message    "${ADDING_OPTIONS}.*--incorrect-option"
+      The stderr should satisfy spec_expect_message    "Failed.*--incorrect-option"
       The stderr should satisfy spec_expect_no_message "${REMOVED_IMAGE}.*${IMAGE_WITH_TAG}"
       The stderr should satisfy spec_expect_no_message "${FAILED_TO_REMOVE_IMAGE}.*${IMAGE_WITH_TAG}"
     End
@@ -141,8 +141,8 @@ Describe 'Cleanup_images'
       The stderr should satisfy spec_expect_no_message "${NO_IMAGES_TO_REMOVE}"
       The stderr should satisfy spec_expect_message    "${REMOVING_NUM_IMAGES}"
       The stderr should satisfy spec_expect_no_message "${SKIP_REMOVING_IMAGES}"
-      The stderr should satisfy spec_expect_message    "${ADDING_OPTIONS}.*${GANTRY_CLEANUP_IMAGES_OPTIONS}"
-      The stderr should satisfy spec_expect_no_message "${FAILED_TO_REMOVE_IMAGE}.*${GANTRY_CLEANUP_IMAGES_OPTIONS}"
+      The stderr should satisfy spec_expect_message    "${ADDING_OPTIONS}.*--container-label=test"
+      The stderr should satisfy spec_expect_no_message "Failed.*--container-label=test"
       The stderr should satisfy spec_expect_message    "${REMOVED_IMAGE}.*${IMAGE_WITH_TAG}"
       The stderr should satisfy spec_expect_no_message "${FAILED_TO_REMOVE_IMAGE}.*${IMAGE_WITH_TAG}"
     End
