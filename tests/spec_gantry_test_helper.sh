@@ -168,9 +168,10 @@ load_test_registry() {
 _start_registry() {
   local SUITE_NAME="${1:?}"
   SUITE_NAME=$(echo "${SUITE_NAME}" | tr ' ' '-')
+  local SUITE_NAME_LENGTH="${#SUITE_NAME}"
   local REGISTRY_SERVICE_NAME="gantry-test-registry-${SUITE_NAME}"
   local REGISTRY_BASE="127.0.0.1"
-  local REGISTRY_PORT="5000"
+  local REGISTRY_PORT=$((55000+SUITE_NAME_LENGTH*2))
   local TEST_REGISTRY="${REGISTRY_BASE}:${REGISTRY_PORT}"
   export TEST_USERNAME="gantry"
   export TEST_PASSWORD="gantry"
@@ -178,31 +179,44 @@ _start_registry() {
   local TRIES=0
   local MAX_RETRIES=50
   local PORT_LIMIT=500
-  REGISTRY_PORT=$(_next_available_port "${REGISTRY_PORT}" "${PORT_LIMIT}") || return 1
-  [ -z "${REGISTRY_PORT}" ] && return 1
-  TEST_REGISTRY="${REGISTRY_BASE}:${REGISTRY_PORT}"
-  echo -n "${SUITE_NAME} starting registry ${TEST_REGISTRY} "
-  # SC2046 (warning): Quote this to prevent word splitting.
-  # shellcheck disable=SC2046
-  while ! docker service create --quiet \
-    --name "${REGISTRY_SERVICE_NAME}" \
-    --restart-condition "on-failure" \
-    --restart-max-attempts 5 \
-    $(_location_constraints) \
-    --mode=replicated \
-    -p "${REGISTRY_PORT}:5000" \
-    "${REGISTRY_IMAGE}" 2>&1; do
+  while true; do
+    if ! REGISTRY_PORT=$(_next_available_port "${REGISTRY_PORT}" "${PORT_LIMIT}" 2>&1); then
+      echo "_start_registry _next_available_port error: ${REGISTRY_PORT}" >&2
+      return 1
+    fi
+    if [ -z "${REGISTRY_PORT}" ]; then
+      echo "_start_registry _next_available_port error: REGISTRY_PORT is empty." >&2
+      return 1
+    fi
     stop_service "${REGISTRY_SERVICE_NAME}" 1>/dev/null 2>&1
-    [ "${TRIES}" -ge "${MAX_RETRIES}" ] && echo "_start_registry Reach MAX_RETRIES ${MAX_RETRIES}" && return 1
-    TRIES=$((TRIES+1))
-    sleep 1
-    REGISTRY_PORT=$(_next_available_port "${REGISTRY_PORT}" "${PORT_LIMIT}") || return 1
-    [ -z "${REGISTRY_PORT}" ] && return 1
     TEST_REGISTRY="${REGISTRY_BASE}:${REGISTRY_PORT}"
-    echo -n "${SUITE_NAME} starting registry ${TEST_REGISTRY} again "
+    echo "${SUITE_NAME} starting registry ${TEST_REGISTRY} "
+    # SC2046 (warning): Quote this to prevent word splitting.
+    # shellcheck disable=SC2046
+    if docker service create --quiet \
+      --name "${REGISTRY_SERVICE_NAME}" \
+      --restart-condition "on-failure" \
+      --restart-max-attempts 5 \
+      $(_location_constraints) \
+      --mode=replicated \
+      -p "${REGISTRY_PORT}:5000" \
+      "${REGISTRY_IMAGE}" 2>&1; then
+      break;
+    fi
+    if [ "${TRIES}" -ge "${MAX_RETRIES}" ]; then
+      echo "_start_registry Reach MAX_RETRIES ${MAX_RETRIES}" >&2
+      return 1
+    fi
+    TRIES=$((TRIES+1))
+    REGISTRY_PORT=$((REGISTRY_PORT+1))
+    sleep 1
   done
   local REGISTRY_FILE=
-  REGISTRY_FILE=$(_get_test_registry_file "${SUITE_NAME}") || return 1
+  if ! REGISTRY_FILE=$(_get_test_registry_file "${SUITE_NAME}" 2>&1); then
+    echo "_start_registry _get_test_registry_file error: ${REGISTRY_FILE}" >&2
+    return 1
+  fi
+  echo "${SUITE_NAME} uses registry ${TEST_REGISTRY}."
   echo "${TEST_REGISTRY}" > "${REGISTRY_FILE}"
 }
 
@@ -212,7 +226,7 @@ _stop_registry() {
   local REGISTRY_SERVICE_NAME="gantry-test-registry-${SUITE_NAME}"
   local REGISTRY=
   REGISTRY=$(load_test_registry "${SUITE_NAME}") || return 1
-  echo -n "Removing registry ${REGISTRY} "
+  echo "Removing registry ${REGISTRY} "
   stop_service "${REGISTRY_SERVICE_NAME}"
   local REGISTRY_FILE=
   REGISTRY_FILE=$(_get_test_registry_file "${SUITE_NAME}") || return 1
@@ -380,7 +394,7 @@ build_test_image() {
   FILE=$(mktemp)
   echo "FROM alpinelinux/docker-cli:latest" > "${FILE}"
   echo "ENTRYPOINT [\"sh\", \"-c\", \"echo $(unique_id); trap \\\"${EXIT_CMD}\\\" HUP INT TERM; ${TASK_CMD}\"]" >> "${FILE}"
-  echo -n "Building ${IMAGE_WITH_TAG} "
+  echo "Building ${IMAGE_WITH_TAG} "
   timeout 120 docker build --quiet --tag "${IMAGE_WITH_TAG}" --file "${FILE}" .
   rm "${FILE}"
 }
@@ -390,7 +404,7 @@ build_and_push_test_image() {
   local TASK_SECONDS="${2}"
   local EXIT_SECONDS="${3}"
   build_test_image "${IMAGE_WITH_TAG}" "${TASK_SECONDS}" "${EXIT_SECONDS}"
-  echo -n "Pushing image "
+  echo "Pushing image "
   docker push --quiet "${IMAGE_WITH_TAG}"
 }
 
@@ -418,7 +432,10 @@ wait_zero_running_tasks() {
       _handle_failure "Failed to obtain task states of service ${SERVICE_NAME}: ${REPLICAS}"
       return 1
     fi
-    [ "${TRIES}" -ge "${MAX_RETRIES}" ] && echo "wait_zero_running_tasks Reach MAX_RETRIES ${MAX_RETRIES}" && return 1
+    if [ "${TRIES}" -ge "${MAX_RETRIES}" ]; then
+      echo "wait_zero_running_tasks Reach MAX_RETRIES ${MAX_RETRIES}" >&2
+      return 1
+    fi
     TRIES=$((TRIES+1))
     # https://docs.docker.com/engine/reference/commandline/service_ls/#examples
     # The REPLICAS is like "5/5" or "1/1 (3/5 completed)"
@@ -454,7 +471,10 @@ _wait_service_state() {
   local TRIES=0
   local MAX_RETRIES=120
   while ! docker service ps --format "{{.CurrentState}}" "${SERVICE_NAME}" | grep -q "${STATE}"; do
-    [ "${TRIES}" -ge "${MAX_RETRIES}" ] && echo "_wait_service_state Reach MAX_RETRIES ${MAX_RETRIES}" && return 1
+    if [ "${TRIES}" -ge "${MAX_RETRIES}" ]; then
+      echo "_wait_service_state Reach MAX_RETRIES ${MAX_RETRIES}" >&2
+      return 1
+    fi
     TRIES=$((TRIES+1))
     sleep 1
   done
@@ -463,7 +483,7 @@ _wait_service_state() {
 start_replicated_service() {
   local SERVICE_NAME="${1}"
   local IMAGE_WITH_TAG="${2}"
-  echo -n "Creating service ${SERVICE_NAME} in replicated mode "
+  echo "Creating service ${SERVICE_NAME} in replicated mode "
   # SC2046 (warning): Quote this to prevent word splitting.
   # shellcheck disable=SC2046
   timeout 120 docker service create --quiet \
@@ -478,7 +498,7 @@ start_replicated_service() {
 start_global_service() {
   local SERVICE_NAME="${1}"
   local IMAGE_WITH_TAG="${2}"
-  echo -n "Creating service ${SERVICE_NAME} in global mode "
+  echo "Creating service ${SERVICE_NAME} in global mode "
   # SC2046 (warning): Quote this to prevent word splitting.
   # shellcheck disable=SC2046
   timeout 120 docker service create --quiet \
@@ -493,7 +513,7 @@ start_global_service() {
 _start_replicated_job() {
   local SERVICE_NAME="${1}"
   local IMAGE_WITH_TAG="${2}"
-  echo -n "Creating service ${SERVICE_NAME} in replicated job mode "
+  echo "Creating service ${SERVICE_NAME} in replicated job mode "
   # SC2046 (warning): Quote this to prevent word splitting.
   # shellcheck disable=SC2046
   timeout 120 docker service create --quiet \
@@ -509,7 +529,7 @@ _start_replicated_job() {
 
 stop_service() {
   local SERVICE_NAME="${1}"
-  echo -n "Removing service "
+  echo "Removing service "
   docker service rm "${SERVICE_NAME}"
 }
 
@@ -605,6 +625,7 @@ _run_gantry_container() {
     --env "GANTRY_UPDATE_TIMEOUT_SECONDS=${GANTRY_UPDATE_TIMEOUT_SECONDS}" \
     --env "GANTRY_CLEANUP_IMAGES=${GANTRY_CLEANUP_IMAGES}" \
     --env "GANTRY_CLEANUP_IMAGES_OPTIONS=${GANTRY_CLEANUP_IMAGES_OPTIONS}" \
+    --env "GANTRY_CLEANUP_IMAGES_REMOVER=${GANTRY_CLEANUP_IMAGES_REMOVER}" \
     --env "GANTRY_IMAGES_TO_REMOVE=${GANTRY_IMAGES_TO_REMOVE}" \
     --env "GANTRY_NOTIFICATION_APPRISE_URL=${GANTRY_NOTIFICATION_APPRISE_URL}" \
     --env "GANTRY_NOTIFICATION_TITLE=${GANTRY_NOTIFICATION_TITLE}" \

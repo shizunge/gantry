@@ -239,8 +239,8 @@ _remove_images() {
     --mount type=bind,source=/var/run/docker.sock,destination=/var/run/docker.sock \
     --env "GANTRY_IMAGES_TO_REMOVE=${IMAGES_TO_REMOVE_LIST}" \
     ${CLEANUP_IMAGES_OPTIONS} \
-    "${IMAGES_REMOVER}" 2>&1); then
-    log ERROR "Failed to remove images: ${RMI_MSG}"
+    "${IMAGES_REMOVER}"); then
+    log ERROR "Failed to remove images."
   fi
   wait_service_state "${SERVICE_NAME}"
   docker_service_logs "${SERVICE_NAME}"
@@ -347,19 +347,24 @@ _current_container_name() {
   GWBRIDGE_NETWORK=$(docker network ls --format '{{.ID}}' --filter 'name=docker_gwbridge') || return 1;
   IPS=$(ip route | grep src | sed -n "s/.* src \(\S*\).*$/\1/p");
   [ -z "${IPS}" ] && return 0;
-  local NID;
+  local NID=;
   for NID in ${ALL_NETWORKS}; do
     [ "${NID}" = "${GWBRIDGE_NETWORK}" ] && continue;
-    local ALL_LOCAL_NAME_AND_IP;
-    ALL_LOCAL_NAME_AND_IP=$(docker network inspect "${NID}" --format "{{range .Containers}}{{.Name}}={{println .IPv4Address}}{{end}}") || return 1;
+    local ALL_LOCAL_NAME_AND_IP=;
+    ALL_LOCAL_NAME_AND_IP=$(docker network inspect "${NID}" --format "{{range .Containers}}{{.Name}}/{{println .IPv4Address}}{{end}}") || return 1;
     for NAME_AND_IP in ${ALL_LOCAL_NAME_AND_IP}; do
       [ -z "${NAME_AND_IP}" ] && continue;
+      # '<container name>/<ip>/<mask>'
+      # '<container name>/' (when network mode is host)
+      local CNAME CIP
+      CNAME=$(echo "${NAME_AND_IP}" | cut -d/ -f1);
+      CIP=$(echo "${NAME_AND_IP}" | cut -d/ -f2);
+      # Unable to find the container IP when network mode is host.
+      [ -z "${CIP}" ] && continue;
       for IP in ${IPS}; do
-        echo "${NAME_AND_IP}" | grep -q "${IP}" || continue;
-        local NAME;
-        NAME=$(echo "${NAME_AND_IP}" | sed "s/\(.*\)=${IP}.*$/\1/");
-        _static_variable_add_unique_to_list STATIC_VAR_CURRENT_CONTAINER_NAME "${NAME}"
-        echo "${NAME}";
+        [ "${IP}" != "${CIP}" ] && continue;
+        _static_variable_add_unique_to_list STATIC_VAR_CURRENT_CONTAINER_NAME "${CNAME}"
+        echo "${CNAME}";
         return 0;
       done
     done
