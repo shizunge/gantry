@@ -15,8 +15,8 @@
 # along with this program.  If not, see <https://www.gnu.org/licenses/>.
 #
 
-Describe "No_Running_Tasks"
-  SUITE_NAME="No_Running_Tasks"
+Describe "service-no-running-tasks"
+  SUITE_NAME="service-no-running-tasks"
   BeforeAll "initialize_all_tests ${SUITE_NAME}"
   AfterAll "finish_all_tests ${SUITE_NAME}"
   Describe "test_no_running_tasks_replicated" "container_test:true"

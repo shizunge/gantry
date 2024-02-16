@@ -17,8 +17,8 @@
 
 export SKIP_NOTIFY_APPRISE="Skip sending notification via Apprise"
 
-Describe 'Notify'
-  SUITE_NAME="Notify"
+Describe 'notify'
+  SUITE_NAME="notify"
   BeforeAll "initialize_all_tests ${SUITE_NAME}"
   AfterAll "finish_all_tests ${SUITE_NAME}"
   Describe "test_notify_apprise" "container_test:true"

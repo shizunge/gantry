@@ -15,166 +15,136 @@
 # along with this program.  If not, see <https://www.gnu.org/licenses/>.
 #
 
-Describe 'Entrypoint'
-  SUITE_NAME="Entrypoint"
+Describe 'service-single-service'
+  SUITE_NAME="service-single-service"
   BeforeAll "initialize_all_tests ${SUITE_NAME}"
   AfterAll "finish_all_tests ${SUITE_NAME}"
-  Describe "test_DOCKER_HOST_not_swarm_manager" "container_test:false"
-    TEST_NAME="test_DOCKER_HOST_not_swarm_manager"
+  Describe "test_new_image_no" "container_test:true"
+    TEST_NAME="test_new_image_no"
     IMAGE_WITH_TAG=$(get_image_with_tag "${SUITE_NAME}")
     SERVICE_NAME="gantry-test-$(unique_id)"
-    test_DOCKER_HOST_not_swarm_manager() {
+    test_new_image_no() {
       local TEST_NAME=${1}
       local SERVICE_NAME=${2}
       reset_gantry_env "${SERVICE_NAME}"
-      export DOCKER_HOST="8.8.8.8:53"
-      local RETURN_VALUE=0
       run_gantry "${TEST_NAME}"
-      RETURN_VALUE="${?}"
-      export DOCKER_HOST=
-      return "${RETURN_VALUE}"
     }
-    BeforeEach "common_setup_new_image ${TEST_NAME} ${IMAGE_WITH_TAG} ${SERVICE_NAME}"
+    BeforeEach "common_setup_no_new_image ${TEST_NAME} ${IMAGE_WITH_TAG} ${SERVICE_NAME}"
     AfterEach "common_cleanup ${TEST_NAME} ${IMAGE_WITH_TAG} ${SERVICE_NAME}"
     It 'run_test'
-      When run test_DOCKER_HOST_not_swarm_manager "${TEST_NAME}" "${SERVICE_NAME}"
-      The status should be failure
+      When run test_new_image_no "${TEST_NAME}" "${SERVICE_NAME}"
+      The status should be success
       The stdout should satisfy display_output
       The stderr should satisfy display_output
-      The stderr should satisfy spec_expect_message    "${SKIP_UPDATING_ALL}.*${SKIP_REASON_NOT_SWARM_MANAGER}"
-      The stderr should satisfy spec_expect_no_message "${SKIP_UPDATING}.*${SERVICE_NAME}"
+      The stderr should satisfy spec_expect_message    "${SKIP_UPDATING}.*${SERVICE_NAME}.*${SKIP_REASON_CURRENT_IS_LATEST}"
       The stderr should satisfy spec_expect_no_message "${PERFORM_UPDATING}.*${SERVICE_NAME}"
       The stderr should satisfy spec_expect_no_message "${NUM_SERVICES_SKIP_JOBS}"
       The stderr should satisfy spec_expect_no_message "${NUM_SERVICES_INSPECT_FAILURE}"
-      The stderr should satisfy spec_expect_no_message "${NUM_SERVICES_NO_NEW_IMAGES}"
+      The stderr should satisfy spec_expect_message    "${NUM_SERVICES_NO_NEW_IMAGES}"
       The stderr should satisfy spec_expect_no_message "${NUM_SERVICES_UPDATING}"
       The stderr should satisfy spec_expect_no_message "${UPDATED}.*${SERVICE_NAME}"
       The stderr should satisfy spec_expect_no_message "${NO_UPDATES}.*${SERVICE_NAME}"
       The stderr should satisfy spec_expect_no_message "${ROLLING_BACK}.*${SERVICE_NAME}"
       The stderr should satisfy spec_expect_no_message "${FAILED_TO_ROLLBACK}.*${SERVICE_NAME}"
       The stderr should satisfy spec_expect_no_message "${ROLLED_BACK}.*${SERVICE_NAME}"
-      The stderr should satisfy spec_expect_no_message "${NO_SERVICES_UPDATED}"
+      The stderr should satisfy spec_expect_message    "${NO_SERVICES_UPDATED}"
       The stderr should satisfy spec_expect_no_message "${NUM_SERVICES_UPDATED}"
       The stderr should satisfy spec_expect_no_message "${NUM_SERVICES_UPDATE_FAILED}"
       The stderr should satisfy spec_expect_no_message "${NUM_SERVICES_ERRORS}"
-      The stderr should satisfy spec_expect_no_message "${NO_IMAGES_TO_REMOVE}"
+      The stderr should satisfy spec_expect_message    "${NO_IMAGES_TO_REMOVE}"
       The stderr should satisfy spec_expect_no_message "${REMOVING_NUM_IMAGES}"
       The stderr should satisfy spec_expect_no_message "${SKIP_REMOVING_IMAGES}"
       The stderr should satisfy spec_expect_no_message "${REMOVED_IMAGE}.*${IMAGE_WITH_TAG}"
       The stderr should satisfy spec_expect_no_message "${FAILED_TO_REMOVE_IMAGE}.*${IMAGE_WITH_TAG}"
-      The stderr should satisfy spec_expect_no_message "${SLEEP_SECONDS_BEFORE_NEXT_UPDATE}"
     End
   End
-  Describe "test_SLEEP_SECONDS_not_a_number" "container_test:false"
-    TEST_NAME="test_SLEEP_SECONDS_not_a_number"
+  Describe "test_new_image_yes" "container_test:true"
+    TEST_NAME="test_new_image_yes"
     IMAGE_WITH_TAG=$(get_image_with_tag "${SUITE_NAME}")
     SERVICE_NAME="gantry-test-$(unique_id)"
-    test_SLEEP_SECONDS_not_a_number() {
+    test_new_image_yes() {
       local TEST_NAME=${1}
       local SERVICE_NAME=${2}
       reset_gantry_env "${SERVICE_NAME}"
-      export GANTRY_SLEEP_SECONDS="NotANumber"
       run_gantry "${TEST_NAME}"
     }
     BeforeEach "common_setup_new_image ${TEST_NAME} ${IMAGE_WITH_TAG} ${SERVICE_NAME}"
     AfterEach "common_cleanup ${TEST_NAME} ${IMAGE_WITH_TAG} ${SERVICE_NAME}"
     It 'run_test'
-      When run test_SLEEP_SECONDS_not_a_number "${TEST_NAME}" "${SERVICE_NAME}"
-      The status should be failure
+      When run test_new_image_yes "${TEST_NAME}" "${SERVICE_NAME}"
+      The status should be success
       The stdout should satisfy display_output
       The stderr should satisfy display_output
-      The stderr should satisfy spec_expect_message    "GANTRY_SLEEP_SECONDS must be a number.*"
-      The stderr should satisfy spec_expect_no_message "${SKIP_UPDATING_ALL}"
       The stderr should satisfy spec_expect_no_message "${SKIP_UPDATING}.*${SERVICE_NAME}"
-      The stderr should satisfy spec_expect_no_message "${PERFORM_UPDATING}.*${SERVICE_NAME}"
+      The stderr should satisfy spec_expect_message    "${PERFORM_UPDATING}.*${SERVICE_NAME}.*${PERFORM_REASON_HAS_NEWER_IMAGE}"
       The stderr should satisfy spec_expect_no_message "${NUM_SERVICES_SKIP_JOBS}"
       The stderr should satisfy spec_expect_no_message "${NUM_SERVICES_INSPECT_FAILURE}"
       The stderr should satisfy spec_expect_no_message "${NUM_SERVICES_NO_NEW_IMAGES}"
-      The stderr should satisfy spec_expect_no_message "${NUM_SERVICES_UPDATING}"
-      The stderr should satisfy spec_expect_no_message "${UPDATED}.*${SERVICE_NAME}"
+      The stderr should satisfy spec_expect_message    "${NUM_SERVICES_UPDATING}"
+      The stderr should satisfy spec_expect_message    "${UPDATED}.*${SERVICE_NAME}"
       The stderr should satisfy spec_expect_no_message "${NO_UPDATES}.*${SERVICE_NAME}"
       The stderr should satisfy spec_expect_no_message "${ROLLING_BACK}.*${SERVICE_NAME}"
       The stderr should satisfy spec_expect_no_message "${FAILED_TO_ROLLBACK}.*${SERVICE_NAME}"
       The stderr should satisfy spec_expect_no_message "${ROLLED_BACK}.*${SERVICE_NAME}"
       The stderr should satisfy spec_expect_no_message "${NO_SERVICES_UPDATED}"
-      The stderr should satisfy spec_expect_no_message "${NUM_SERVICES_UPDATED}"
+      The stderr should satisfy spec_expect_message    "${NUM_SERVICES_UPDATED}"
       The stderr should satisfy spec_expect_no_message "${NUM_SERVICES_UPDATE_FAILED}"
       The stderr should satisfy spec_expect_no_message "${NUM_SERVICES_ERRORS}"
       The stderr should satisfy spec_expect_no_message "${NO_IMAGES_TO_REMOVE}"
-      The stderr should satisfy spec_expect_no_message "${REMOVING_NUM_IMAGES}"
+      The stderr should satisfy spec_expect_message    "${REMOVING_NUM_IMAGES}"
       The stderr should satisfy spec_expect_no_message "${SKIP_REMOVING_IMAGES}"
-      The stderr should satisfy spec_expect_no_message "${REMOVED_IMAGE}.*${IMAGE_WITH_TAG}"
+      The stderr should satisfy spec_expect_message    "${REMOVED_IMAGE}.*${IMAGE_WITH_TAG}"
       The stderr should satisfy spec_expect_no_message "${FAILED_TO_REMOVE_IMAGE}.*${IMAGE_WITH_TAG}"
-      The stderr should satisfy spec_expect_no_message "${SLEEP_SECONDS_BEFORE_NEXT_UPDATE}"
     End
   End
-  Describe "test_IMAGES_TO_REMOVE_none_empty" "container_test:true"
-    # Test the remove image entrypoint. To improve coverage.
-    TEST_NAME="test_IMAGES_TO_REMOVE_none_empty"
+  Describe "test_new_image_no_digest" "container_test:true"
+    TEST_NAME="test_new_image_no_digest"
     IMAGE_WITH_TAG=$(get_image_with_tag "${SUITE_NAME}")
-    IMAGE_WITH_TAG0="${IMAGE_WITH_TAG}-0"
-    IMAGE_WITH_TAG1="${IMAGE_WITH_TAG}-1"
-    IMAGE_WITH_TAG2="${IMAGE_WITH_TAG}-2"
     SERVICE_NAME="gantry-test-$(unique_id)"
-    SERVICE_NAME0="${SERVICE_NAME}-0"
-    SERVICE_NAME1="${SERVICE_NAME}-1"
     test_start() {
       local TEST_NAME=${1}
       local IMAGE_WITH_TAG=${2}
       local SERVICE_NAME=${3}
-      local IMAGE_WITH_TAG0="${IMAGE_WITH_TAG}-0"
-      local IMAGE_WITH_TAG1="${IMAGE_WITH_TAG}-1"
-      local IMAGE_WITH_TAG2="${IMAGE_WITH_TAG}-2"
-      local SERVICE_NAME0="${SERVICE_NAME}-0"
-      local SERVICE_NAME1="${SERVICE_NAME}-1"
-      local TASK_SECONDS=15
-      initialize_test "${TEST_NAME}"
-      # The task will finish in ${TASK_SECONDS} seconds
-      build_and_push_test_image "${IMAGE_WITH_TAG0}" "${TASK_SECONDS}"
-      start_global_service "${SERVICE_NAME0}" "${IMAGE_WITH_TAG0}"
-      build_and_push_test_image "${IMAGE_WITH_TAG1}"
-      start_global_service "${SERVICE_NAME1}" "${IMAGE_WITH_TAG1}"
-      # The tasks should exit after TASK_SECONDS seconds sleep. Then it will have 0 running tasks.
-      wait_zero_running_tasks "${SERVICE_NAME0}"
-      # Do not creat the Image IMAGE_WITH_TAG2, to run the test on a non-exist image.
+      # Start a service with image not available on the registry, the digest will not be available.
+      build_test_image "${IMAGE_WITH_TAG}"
+      start_replicated_service "${SERVICE_NAME}" "${IMAGE_WITH_TAG}" 2>&1
+      # Push a new image to registry, thus manifest command will success.
+      build_and_push_test_image "${IMAGE_WITH_TAG}"
     }
-    test_IMAGES_TO_REMOVE_none_empty() {
+    test_new_image_no_digest() {
       local TEST_NAME=${1}
       local SERVICE_NAME=${2}
-      local IMAGE_WITH_TAG=${3}
-      local IMAGE_WITH_TAG0="${IMAGE_WITH_TAG}-0"
-      local IMAGE_WITH_TAG1="${IMAGE_WITH_TAG}-1"
-      local IMAGE_WITH_TAG2="${IMAGE_WITH_TAG}-2"
       reset_gantry_env "${SERVICE_NAME}"
-      export GANTRY_IMAGES_TO_REMOVE="${IMAGE_WITH_TAG0} ${IMAGE_WITH_TAG1} ${IMAGE_WITH_TAG2}"
       run_gantry "${TEST_NAME}"
     }
-    test_end() {
-      local TEST_NAME=${1}
-      local IMAGE_WITH_TAG=${2}
-      local SERVICE_NAME=${3}
-      local IMAGE_WITH_TAG0="${IMAGE_WITH_TAG}-0"
-      local IMAGE_WITH_TAG1="${IMAGE_WITH_TAG}-1"
-      local SERVICE_NAME0="${SERVICE_NAME}-0"
-      local SERVICE_NAME1="${SERVICE_NAME}-1"
-      stop_service "${SERVICE_NAME0}"
-      stop_service "${SERVICE_NAME1}"
-      # If run successfully, IMAGE_WITH_TAG0 should already be removed.
-      prune_local_test_image "${IMAGE_WITH_TAG0}" 2>&1
-      prune_local_test_image "${IMAGE_WITH_TAG1}"
-      finalize_test "${TEST_NAME}"
-    }
     BeforeEach "test_start ${TEST_NAME} ${IMAGE_WITH_TAG} ${SERVICE_NAME}"
-    AfterEach "test_end ${TEST_NAME} ${IMAGE_WITH_TAG} ${SERVICE_NAME}"
+    AfterEach "common_cleanup ${TEST_NAME} ${IMAGE_WITH_TAG} ${SERVICE_NAME}"
     It 'run_test'
-      When run test_IMAGES_TO_REMOVE_none_empty "${TEST_NAME}" "${SERVICE_NAME}" "${IMAGE_WITH_TAG}"
+      When run test_new_image_no_digest "${TEST_NAME}" "${SERVICE_NAME}"
       The status should be success
       The stdout should satisfy display_output
-      The stdout should satisfy spec_expect_message "Removed exited container.*${SERVICE_NAME0}.*${IMAGE_WITH_TAG0}"
-      The stdout should satisfy spec_expect_message "${REMOVED_IMAGE}.*${IMAGE_WITH_TAG0}"
-      The stdout should satisfy spec_expect_message "${FAILED_TO_REMOVE_IMAGE}.*${IMAGE_WITH_TAG1}"
-      The stdout should satisfy spec_expect_message "There is no image.*${IMAGE_WITH_TAG2}"
       The stderr should satisfy display_output
+      The stderr should satisfy spec_expect_no_message "${SKIP_UPDATING}.*${SERVICE_NAME}"
+      The stderr should satisfy spec_expect_message    "${PERFORM_UPDATING}.*${SERVICE_NAME}.*${PERFORM_REASON_DIGEST_IS_EMPTY}"
+      The stderr should satisfy spec_expect_no_message "${NUM_SERVICES_SKIP_JOBS}"
+      The stderr should satisfy spec_expect_no_message "${NUM_SERVICES_INSPECT_FAILURE}"
+      The stderr should satisfy spec_expect_no_message "${NUM_SERVICES_NO_NEW_IMAGES}"
+      The stderr should satisfy spec_expect_message    "${NUM_SERVICES_UPDATING}"
+      The stderr should satisfy spec_expect_message    "${UPDATED}.*${SERVICE_NAME}"
+      The stderr should satisfy spec_expect_no_message "${NO_UPDATES}.*${SERVICE_NAME}"
+      The stderr should satisfy spec_expect_no_message "${ROLLING_BACK}.*${SERVICE_NAME}"
+      The stderr should satisfy spec_expect_no_message "${FAILED_TO_ROLLBACK}.*${SERVICE_NAME}"
+      The stderr should satisfy spec_expect_no_message "${ROLLED_BACK}.*${SERVICE_NAME}"
+      The stderr should satisfy spec_expect_no_message "${NO_SERVICES_UPDATED}"
+      The stderr should satisfy spec_expect_message    "${NUM_SERVICES_UPDATED}"
+      The stderr should satisfy spec_expect_no_message "${NUM_SERVICES_UPDATE_FAILED}"
+      The stderr should satisfy spec_expect_no_message "${NUM_SERVICES_ERRORS}"
+      The stderr should satisfy spec_expect_no_message "${NO_IMAGES_TO_REMOVE}"
+      The stderr should satisfy spec_expect_message    "${REMOVING_NUM_IMAGES}"
+      The stderr should satisfy spec_expect_no_message "${SKIP_REMOVING_IMAGES}"
+      # Failed to removing the old image due to it has no digest.
+      The stderr should satisfy spec_expect_no_message "${REMOVED_IMAGE}.*${IMAGE_WITH_TAG}"
+      The stderr should satisfy spec_expect_message    "${FAILED_TO_REMOVE_IMAGE}.*${IMAGE_WITH_TAG}"
     End
   End
-End # Describe 'Single service'
+End # Describe 'Simple'

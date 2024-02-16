@@ -15,8 +15,8 @@
 # along with this program.  If not, see <https://www.gnu.org/licenses/>.
 #
 
-Describe 'Manifest_command'
-  SUITE_NAME="Manifest_command"
+Describe 'manifest-command'
+  SUITE_NAME="manifest-command"
   BeforeAll "initialize_all_tests ${SUITE_NAME}"
   AfterAll "finish_all_tests ${SUITE_NAME}"
   Describe "test_MANIFEST_CMD_none" "container_test:true"

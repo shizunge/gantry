@@ -15,8 +15,8 @@
 # along with this program.  If not, see <https://www.gnu.org/licenses/>.
 #
 
-Describe 'Multiple_services'
-  SUITE_NAME="Multiple_services"
+Describe 'service-multiple-services'
+  SUITE_NAME="service-multiple-services"
   BeforeAll "initialize_all_tests ${SUITE_NAME}"
   AfterAll "finish_all_tests ${SUITE_NAME}"
   Describe "test_multiple_services_excluded_filters" "container_test:true"

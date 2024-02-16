@@ -15,8 +15,8 @@
 # along with this program.  If not, see <https://www.gnu.org/licenses/>.
 #
 
-Describe 'Login'
-  SUITE_NAME="Login"
+Describe 'login'
+  SUITE_NAME="login"
   BeforeAll "initialize_all_tests ${SUITE_NAME}"
   AfterAll "finish_all_tests ${SUITE_NAME}"
   # Here are just simple login tests.

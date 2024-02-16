@@ -15,15 +15,15 @@
 # along with this program.  If not, see <https://www.gnu.org/licenses/>.
 #
 
-Describe 'Job'
-  SUITE_NAME="Job"
+Describe 'update-options'
+  SUITE_NAME="update-options"
   BeforeAll "initialize_all_tests ${SUITE_NAME}"
   AfterAll "finish_all_tests ${SUITE_NAME}"
-  Describe "test_jobs_skipping" "container_test:true"
-    TEST_NAME="test_jobs_skipping"
+  Describe "test_update_jobs_skipping" "container_test:true"
+    TEST_NAME="test_update_jobs_skipping"
     IMAGE_WITH_TAG=$(get_image_with_tag "${SUITE_NAME}")
     SERVICE_NAME="gantry-test-$(unique_id)"
-    test_jobs_skipping() {
+    test_update_jobs_skipping() {
       local TEST_NAME=${1}
       local SERVICE_NAME=${2}
       reset_gantry_env "${SERVICE_NAME}"
@@ -32,7 +32,7 @@ Describe 'Job'
     BeforeEach "common_setup_job ${TEST_NAME} ${IMAGE_WITH_TAG} ${SERVICE_NAME}"
     AfterEach "common_cleanup ${TEST_NAME} ${IMAGE_WITH_TAG} ${SERVICE_NAME}"
     It 'run_test'
-      When run test_jobs_skipping "${TEST_NAME}" "${SERVICE_NAME}"
+      When run test_update_jobs_skipping "${TEST_NAME}" "${SERVICE_NAME}"
       The status should be success
       The stdout should satisfy display_output
       The stderr should satisfy display_output
@@ -59,11 +59,11 @@ Describe 'Job'
       The stderr should satisfy spec_expect_no_message "${FAILED_TO_REMOVE_IMAGE}.*${IMAGE_WITH_TAG}"
     End
   End
-  Describe "test_jobs_UPDATE_JOBS_true" "container_test:true"
-    TEST_NAME="test_jobs_UPDATE_JOBS_true"
+  Describe "test_update_jobs_UPDATE_JOBS_true" "container_test:true"
+    TEST_NAME="test_update_jobs_UPDATE_JOBS_true"
     IMAGE_WITH_TAG=$(get_image_with_tag "${SUITE_NAME}")
     SERVICE_NAME="gantry-test-$(unique_id)"
-    test_jobs_UPDATE_JOBS_true() {
+    test_update_jobs_UPDATE_JOBS_true() {
       local TEST_NAME=${1}
       local SERVICE_NAME=${2}
       reset_gantry_env "${SERVICE_NAME}"
@@ -75,7 +75,7 @@ Describe 'Job'
     BeforeEach "common_setup_job ${TEST_NAME} ${IMAGE_WITH_TAG} ${SERVICE_NAME}"
     AfterEach "common_cleanup ${TEST_NAME} ${IMAGE_WITH_TAG} ${SERVICE_NAME}"
     It 'run_test'
-      When run test_jobs_UPDATE_JOBS_true "${TEST_NAME}" "${SERVICE_NAME}"
+      When run test_update_jobs_UPDATE_JOBS_true "${TEST_NAME}" "${SERVICE_NAME}"
       The status should be success
       The stdout should satisfy display_output
       The stderr should satisfy display_output
@@ -103,12 +103,12 @@ Describe 'Job'
       The stderr should satisfy spec_expect_message    "${FAILED_TO_REMOVE_IMAGE}.*${IMAGE_WITH_TAG}"
     End
   End
-  Describe "test_jobs_UPDATE_JOBS_true_no_running_tasks" "container_test:true"
-    TEST_NAME="test_jobs_UPDATE_JOBS_true_no_running_tasks"
+  Describe "test_update_jobs_no_running_tasks" "container_test:true"
+    TEST_NAME="test_update_jobs_no_running_tasks"
     IMAGE_WITH_TAG=$(get_image_with_tag "${SUITE_NAME}")
     SERVICE_NAME="gantry-test-$(unique_id)"
     TASK_SECONDS=15
-    test_jobs_UPDATE_JOBS_true_no_running_tasks() {
+    test_update_jobs_no_running_tasks() {
       local TEST_NAME=${1}
       local SERVICE_NAME=${2}
       # The tasks should exit after TASK_SECONDS seconds sleep. Then it will have 0 running tasks.
@@ -121,7 +121,7 @@ Describe 'Job'
     BeforeEach "common_setup_job ${TEST_NAME} ${IMAGE_WITH_TAG} ${SERVICE_NAME} ${TASK_SECONDS}"
     AfterEach "common_cleanup ${TEST_NAME} ${IMAGE_WITH_TAG} ${SERVICE_NAME}"
     It 'run_test'
-      When run test_jobs_UPDATE_JOBS_true_no_running_tasks "${TEST_NAME}" "${SERVICE_NAME}"
+      When run test_update_jobs_no_running_tasks "${TEST_NAME}" "${SERVICE_NAME}"
       The status should be success
       The stdout should satisfy display_output
       The stderr should satisfy display_output
@@ -150,4 +150,103 @@ Describe 'Job'
       The stderr should satisfy spec_expect_no_message "${FAILED_TO_REMOVE_IMAGE}.*${IMAGE_WITH_TAG}"
     End
   End
-End # Describe 'Job'
+  Describe "test_update_UPDATE_OPTIONS" "container_test:true"
+    TEST_NAME="test_update_UPDATE_OPTIONS"
+    IMAGE_WITH_TAG=$(get_image_with_tag "${SUITE_NAME}")
+    SERVICE_NAME="gantry-test-$(unique_id)"
+    _read_service_label() {
+      local SERVICE_NAME="${1}"
+      local LABEL="${2}"
+      docker service inspect -f "{{index .Spec.Labels \"${LABEL}\"}}" "${SERVICE_NAME}"
+    }
+    test_update_UPDATE_OPTIONS() {
+      local TEST_NAME=${1}
+      local SERVICE_NAME=${2}
+      local LABEL="gantry.test"
+      local LABEL_VALUE=
+      LABEL_VALUE=$(_read_service_label "${SERVICE_NAME}" "${LABEL}")
+      echo "Before updating: LABEL_VALUE=${LABEL_VALUE}"
+      reset_gantry_env "${SERVICE_NAME}"
+      export GANTRY_UPDATE_OPTIONS="--label-add=${LABEL}=${SERVICE_NAME}"
+      local RETURN_VALUE=
+      run_gantry "${TEST_NAME}"
+      RETURN_VALUE="${?}"
+      LABEL_VALUE=$(_read_service_label "${SERVICE_NAME}" "${LABEL}")
+      echo "After updating: LABEL_VALUE=${LABEL_VALUE}"
+      return "${RETURN_VALUE}"
+    }
+    BeforeEach "common_setup_new_image ${TEST_NAME} ${IMAGE_WITH_TAG} ${SERVICE_NAME}"
+    AfterEach "common_cleanup ${TEST_NAME} ${IMAGE_WITH_TAG} ${SERVICE_NAME}"
+    It 'run_test'
+      When run test_update_UPDATE_OPTIONS "${TEST_NAME}" "${SERVICE_NAME}"
+      The status should be success
+      The stdout should satisfy display_output
+      # Check an observable difference before and after applying UPDATE_OPTIONS.
+      The stdout should satisfy spec_expect_no_message "Before updating: LABEL_VALUE=.*${SERVICE_NAME}"
+      The stdout should satisfy spec_expect_message    "After updating: LABEL_VALUE=.*${SERVICE_NAME}"
+      The stderr should satisfy display_output
+      The stderr should satisfy spec_expect_no_message "${SKIP_UPDATING}.*${SERVICE_NAME}"
+      The stderr should satisfy spec_expect_message    "${PERFORM_UPDATING}.*${SERVICE_NAME}.*${PERFORM_REASON_HAS_NEWER_IMAGE}"
+      The stderr should satisfy spec_expect_no_message "${NUM_SERVICES_SKIP_JOBS}"
+      The stderr should satisfy spec_expect_no_message "${NUM_SERVICES_INSPECT_FAILURE}"
+      The stderr should satisfy spec_expect_no_message "${NUM_SERVICES_NO_NEW_IMAGES}"
+      The stderr should satisfy spec_expect_message    "${NUM_SERVICES_UPDATING}"
+      The stderr should satisfy spec_expect_message    "${ADDING_OPTIONS}.*--label-add=gantry.test=${SERVICE_NAME}"
+      The stderr should satisfy spec_expect_message    "${UPDATED}.*${SERVICE_NAME}"
+      The stderr should satisfy spec_expect_no_message "${NO_UPDATES}.*${SERVICE_NAME}"
+      The stderr should satisfy spec_expect_no_message "${ROLLING_BACK}.*${SERVICE_NAME}"
+      The stderr should satisfy spec_expect_no_message "${FAILED_TO_ROLLBACK}.*${SERVICE_NAME}"
+      The stderr should satisfy spec_expect_no_message "${ROLLED_BACK}.*${SERVICE_NAME}"
+      The stderr should satisfy spec_expect_no_message "${NO_SERVICES_UPDATED}"
+      The stderr should satisfy spec_expect_message    "${NUM_SERVICES_UPDATED}"
+      The stderr should satisfy spec_expect_no_message "${NUM_SERVICES_UPDATE_FAILED}"
+      The stderr should satisfy spec_expect_no_message "${NUM_SERVICES_ERRORS}"
+      The stderr should satisfy spec_expect_no_message "${NO_IMAGES_TO_REMOVE}"
+      The stderr should satisfy spec_expect_message    "${REMOVING_NUM_IMAGES}"
+      The stderr should satisfy spec_expect_no_message "${SKIP_REMOVING_IMAGES}"
+      The stderr should satisfy spec_expect_message    "${REMOVED_IMAGE}.*${IMAGE_WITH_TAG}"
+      The stderr should satisfy spec_expect_no_message "${FAILED_TO_REMOVE_IMAGE}.*${IMAGE_WITH_TAG}"
+    End
+  End
+  Describe "test_update_UPDATE_TIMEOUT_SECONDS_not_a_number" "container_test:false"
+    TEST_NAME="test_update_UPDATE_TIMEOUT_SECONDS_not_a_number"
+    IMAGE_WITH_TAG=$(get_image_with_tag "${SUITE_NAME}")
+    SERVICE_NAME="gantry-test-$(unique_id)"
+    test_update_UPDATE_TIMEOUT_SECONDS_not_a_number() {
+      local TEST_NAME=${1}
+      local SERVICE_NAME=${2}
+      reset_gantry_env "${SERVICE_NAME}"
+      export GANTRY_UPDATE_TIMEOUT_SECONDS="NotANumber"
+      run_gantry "${TEST_NAME}"
+    }
+    BeforeEach "common_setup_new_image ${TEST_NAME} ${IMAGE_WITH_TAG} ${SERVICE_NAME}"
+    AfterEach "common_cleanup ${TEST_NAME} ${IMAGE_WITH_TAG} ${SERVICE_NAME}"
+    It 'run_test'
+      When run test_update_UPDATE_TIMEOUT_SECONDS_not_a_number "${TEST_NAME}" "${SERVICE_NAME}"
+      The status should be failure
+      The stdout should satisfy display_output
+      The stderr should satisfy display_output
+      The stderr should satisfy spec_expect_message    "GANTRY_UPDATE_TIMEOUT_SECONDS must be a number.*"
+      The stderr should satisfy spec_expect_no_message "${SKIP_UPDATING}.*${SERVICE_NAME}"
+      The stderr should satisfy spec_expect_message    "${PERFORM_UPDATING}.*${SERVICE_NAME}.*${PERFORM_REASON_HAS_NEWER_IMAGE}"
+      The stderr should satisfy spec_expect_no_message "${NUM_SERVICES_SKIP_JOBS}"
+      The stderr should satisfy spec_expect_no_message "${NUM_SERVICES_INSPECT_FAILURE}"
+      The stderr should satisfy spec_expect_no_message "${NUM_SERVICES_NO_NEW_IMAGES}"
+      The stderr should satisfy spec_expect_message    "${NUM_SERVICES_UPDATING}"
+      The stderr should satisfy spec_expect_no_message "${UPDATED}.*${SERVICE_NAME}"
+      The stderr should satisfy spec_expect_no_message "${NO_UPDATES}.*${SERVICE_NAME}"
+      The stderr should satisfy spec_expect_no_message "${ROLLING_BACK}.*${SERVICE_NAME}"
+      The stderr should satisfy spec_expect_no_message "${FAILED_TO_ROLLBACK}.*${SERVICE_NAME}"
+      The stderr should satisfy spec_expect_no_message "${ROLLED_BACK}.*${SERVICE_NAME}"
+      The stderr should satisfy spec_expect_message    "${NO_SERVICES_UPDATED}"
+      The stderr should satisfy spec_expect_no_message "${NUM_SERVICES_UPDATED}"
+      The stderr should satisfy spec_expect_no_message "${NUM_SERVICES_UPDATE_FAILED}"
+      The stderr should satisfy spec_expect_message    "${NUM_SERVICES_ERRORS}"
+      The stderr should satisfy spec_expect_message    "${NO_IMAGES_TO_REMOVE}"
+      The stderr should satisfy spec_expect_no_message "${REMOVING_NUM_IMAGES}"
+      The stderr should satisfy spec_expect_no_message "${SKIP_REMOVING_IMAGES}"
+      The stderr should satisfy spec_expect_no_message "${REMOVED_IMAGE}.*${IMAGE_WITH_TAG}"
+      The stderr should satisfy spec_expect_no_message "${FAILED_TO_REMOVE_IMAGE}.*${IMAGE_WITH_TAG}"
+    End
+  End
+End # Describe 'Single service'

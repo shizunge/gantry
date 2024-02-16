@@ -15,8 +15,8 @@
 # along with this program.  If not, see <https://www.gnu.org/licenses/>.
 #
 
-Describe 'Rollback'
-  SUITE_NAME="Rollback"
+Describe 'rollback'
+  SUITE_NAME="rollback"
   BeforeAll "initialize_all_tests ${SUITE_NAME}"
   AfterAll "finish_all_tests ${SUITE_NAME}"
   Describe "test_rollback_due_to_timeout" "container_test:false"
