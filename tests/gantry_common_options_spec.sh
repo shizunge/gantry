@@ -120,7 +120,7 @@ Describe 'common-options'
       The stderr should satisfy spec_expect_no_message "${FAILED_TO_ROLLBACK}.*${SERVICE_NAME}"
       The stderr should satisfy spec_expect_no_message "${ROLLED_BACK}.*${SERVICE_NAME}"
       The stderr should satisfy spec_expect_no_message "${NO_SERVICES_UPDATED}"
-      The stderr should satisfy spec_expect_message    "${NUM_SERVICES_UPDATED}"
+      The stderr should satisfy spec_expect_message    "1 ${SERVICES_UPDATED}"
       The stderr should satisfy spec_expect_no_message "${NUM_SERVICES_UPDATE_FAILED}"
       The stderr should satisfy spec_expect_no_message "${NUM_SERVICES_ERRORS}"
       The stderr should satisfy spec_expect_no_message "${NO_IMAGES_TO_REMOVE}"

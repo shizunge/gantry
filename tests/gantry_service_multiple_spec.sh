@@ -114,7 +114,7 @@ Describe 'service-multiple-services'
       The stderr should satisfy spec_expect_no_message "${UPDATED}.*${SERVICE_NAME4}"
       The stderr should satisfy spec_expect_no_message "${UPDATED}.*${SERVICE_NAME5}"
       The stderr should satisfy spec_expect_no_message "${NO_SERVICES_UPDATED}"
-      The stderr should satisfy spec_expect_message    "${NUM_SERVICES_UPDATED}"
+      The stderr should satisfy spec_expect_message    "2 ${SERVICES_UPDATED}"
       The stderr should satisfy spec_expect_no_message "${NUM_SERVICES_UPDATE_FAILED}"
       The stderr should satisfy spec_expect_no_message "${NUM_SERVICES_ERRORS}"
       The stderr should satisfy spec_expect_no_message "${NO_IMAGES_TO_REMOVE}"
