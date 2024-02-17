@@ -65,6 +65,7 @@ The label on the services to select config to enable authentication is renamed t
 | GANTRY_SERVICES_EXCLUDED_FILTERS |
 | GANTRY_SERVICES_SELF             |
 | GANTRY_UPDATE_JOBS               |
+| GANTRY_UPDATE_NUM_WORKERS        |
 
 ### License
 

@@ -19,8 +19,8 @@ Describe 'service-parallel'
   SUITE_NAME="service-parallel"
   BeforeAll "initialize_all_tests ${SUITE_NAME}"
   AfterAll "finish_all_tests ${SUITE_NAME}"
-  Describe "test_service_parallel_less_workers" "container_test:true"
-    TEST_NAME="test_service_parallel_less_workers"
+  Describe "test_parallel_less_workers" "container_test:true"
+    TEST_NAME="test_parallel_less_workers"
     IMAGE_WITH_TAG=$(get_image_with_tag "${SUITE_NAME}")
     SERVICE_NAME="gantry-test-$(unique_id)"
     test_start() {
@@ -50,11 +50,11 @@ Describe 'service-parallel'
       # shellcheck disable=SC2086
       wait ${PIDS}
     }
-    test_service_parallel_less_workers() {
+    test_parallel_less_workers() {
       local TEST_NAME=${1}
       local SERVICE_NAME=${2}
       reset_gantry_env "${SERVICE_NAME}"
-      export GANTRY_UPDATE_WORKERS=5
+      export GANTRY_UPDATE_NUM_WORKERS=5
       run_gantry "${TEST_NAME}"
     }
     test_end() {
@@ -62,17 +62,22 @@ Describe 'service-parallel'
       local IMAGE_WITH_TAG=${2}
       local SERVICE_NAME=${3}
       local NUM=
+      local PIDS=
       for NUM in $(seq 0 9); do
         local SERVICE_NAME_NUM="${SERVICE_NAME}-${NUM}"
-        stop_service "${SERVICE_NAME_NUM}"
+        stop_service "${SERVICE_NAME_NUM}" &
+        PIDS="${!} ${PIDS}"
       done
+      # SC2086 (info): Double quote to prevent globbing and word splitting.
+      # shellcheck disable=SC2086
+      wait ${PIDS}
       prune_local_test_image "${IMAGE_WITH_TAG}"
       finalize_test "${TEST_NAME}"
     }
     BeforeEach "test_start ${TEST_NAME} ${IMAGE_WITH_TAG} ${SERVICE_NAME}"
     AfterEach "test_end ${TEST_NAME} ${IMAGE_WITH_TAG} ${SERVICE_NAME}"
     It 'run_test'
-      When run test_service_parallel_less_workers "${TEST_NAME}" "${SERVICE_NAME}"
+      When run test_parallel_less_workers "${TEST_NAME}" "${SERVICE_NAME}"
       The status should be success
       The stdout should satisfy display_output
       The stderr should satisfy display_output
@@ -111,8 +116,8 @@ Describe 'service-parallel'
       The stderr should satisfy spec_expect_no_message "${FAILED_TO_REMOVE_IMAGE}.*${IMAGE_WITH_TAG}"
     End
   End
-  Describe "test_service_parallel_more_workers" "container_test:true"
-    TEST_NAME="test_service_parallel_more_workers"
+  Describe "test_parallel_more_workers" "container_test:true"
+    TEST_NAME="test_parallel_more_workers"
     IMAGE_WITH_TAG=$(get_image_with_tag "${SUITE_NAME}")
     SERVICE_NAME="gantry-test-$(unique_id)"
     test_start() {
@@ -142,11 +147,11 @@ Describe 'service-parallel'
       # shellcheck disable=SC2086
       wait ${PIDS}
     }
-    test_service_parallel_more_workers() {
+    test_parallel_more_workers() {
       local TEST_NAME=${1}
       local SERVICE_NAME=${2}
       reset_gantry_env "${SERVICE_NAME}"
-      export GANTRY_UPDATE_WORKERS=50
+      export GANTRY_UPDATE_NUM_WORKERS=50
       run_gantry "${TEST_NAME}"
     }
     test_end() {
@@ -154,17 +159,22 @@ Describe 'service-parallel'
       local IMAGE_WITH_TAG=${2}
       local SERVICE_NAME=${3}
       local NUM=
+      local PIDS=
       for NUM in $(seq 0 8); do
         local SERVICE_NAME_NUM="${SERVICE_NAME}-${NUM}"
-        stop_service "${SERVICE_NAME_NUM}"
+        stop_service "${SERVICE_NAME_NUM}" &
+        PIDS="${!} ${PIDS}"
       done
+      # SC2086 (info): Double quote to prevent globbing and word splitting.
+      # shellcheck disable=SC2086
+      wait ${PIDS}
       prune_local_test_image "${IMAGE_WITH_TAG}"
       finalize_test "${TEST_NAME}"
     }
     BeforeEach "test_start ${TEST_NAME} ${IMAGE_WITH_TAG} ${SERVICE_NAME}"
     AfterEach "test_end ${TEST_NAME} ${IMAGE_WITH_TAG} ${SERVICE_NAME}"
     It 'run_test'
-      When run test_service_parallel_more_workers "${TEST_NAME}" "${SERVICE_NAME}"
+      When run test_parallel_more_workers "${TEST_NAME}" "${SERVICE_NAME}"
       The status should be success
       The stdout should satisfy display_output
       The stderr should satisfy display_output
@@ -200,6 +210,47 @@ Describe 'service-parallel'
       The stderr should satisfy spec_expect_message    "${REMOVING_NUM_IMAGES}"
       The stderr should satisfy spec_expect_no_message "${SKIP_REMOVING_IMAGES}"
       The stderr should satisfy spec_expect_message    "${REMOVED_IMAGE}.*${IMAGE_WITH_TAG}"
+      The stderr should satisfy spec_expect_no_message "${FAILED_TO_REMOVE_IMAGE}.*${IMAGE_WITH_TAG}"
+    End
+  End
+  Describe "test_parallel_GANTRY_UPDATE_NUM_WORKERS_not_a_number" "container_test:false"
+    TEST_NAME="test_parallel_GANTRY_UPDATE_NUM_WORKERS_not_a_number"
+    IMAGE_WITH_TAG=$(get_image_with_tag "${SUITE_NAME}")
+    SERVICE_NAME="gantry-test-$(unique_id)"
+    test_parallel_GANTRY_UPDATE_NUM_WORKERS_not_a_number() {
+      local TEST_NAME=${1}
+      local SERVICE_NAME=${2}
+      reset_gantry_env "${SERVICE_NAME}"
+      export GANTRY_UPDATE_NUM_WORKERS="NotANumber"
+      run_gantry "${TEST_NAME}"
+    }
+    BeforeEach "common_setup_new_image ${TEST_NAME} ${IMAGE_WITH_TAG} ${SERVICE_NAME}"
+    AfterEach "common_cleanup ${TEST_NAME} ${IMAGE_WITH_TAG} ${SERVICE_NAME}"
+    It 'run_test'
+      When run test_parallel_GANTRY_UPDATE_NUM_WORKERS_not_a_number "${TEST_NAME}" "${SERVICE_NAME}"
+      The status should be failure
+      The stdout should satisfy display_output
+      The stderr should satisfy display_output
+      The stderr should satisfy spec_expect_message    "GANTRY_UPDATE_NUM_WORKERS must be a number.*"
+      The stderr should satisfy spec_expect_no_message "${SKIP_UPDATING}.*${SERVICE_NAME}"
+      The stderr should satisfy spec_expect_no_message "${PERFORM_UPDATING}.*${SERVICE_NAME}.*${PERFORM_REASON_HAS_NEWER_IMAGE}"
+      The stderr should satisfy spec_expect_no_message "${NUM_SERVICES_SKIP_JOBS}"
+      The stderr should satisfy spec_expect_no_message "${NUM_SERVICES_INSPECT_FAILURE}"
+      The stderr should satisfy spec_expect_no_message "${NUM_SERVICES_NO_NEW_IMAGES}"
+      The stderr should satisfy spec_expect_no_message "${NUM_SERVICES_UPDATING}"
+      The stderr should satisfy spec_expect_no_message "${UPDATED}.*${SERVICE_NAME}"
+      The stderr should satisfy spec_expect_no_message "${NO_UPDATES}.*${SERVICE_NAME}"
+      The stderr should satisfy spec_expect_no_message "${ROLLING_BACK}.*${SERVICE_NAME}"
+      The stderr should satisfy spec_expect_no_message "${FAILED_TO_ROLLBACK}.*${SERVICE_NAME}"
+      The stderr should satisfy spec_expect_no_message "${ROLLED_BACK}.*${SERVICE_NAME}"
+      The stderr should satisfy spec_expect_message    "${NO_SERVICES_UPDATED}"
+      The stderr should satisfy spec_expect_no_message "${NUM_SERVICES_UPDATED}"
+      The stderr should satisfy spec_expect_no_message "${NUM_SERVICES_UPDATE_FAILED}"
+      The stderr should satisfy spec_expect_no_message "${NUM_SERVICES_ERRORS}"
+      The stderr should satisfy spec_expect_message    "${NO_IMAGES_TO_REMOVE}"
+      The stderr should satisfy spec_expect_no_message "${REMOVING_NUM_IMAGES}"
+      The stderr should satisfy spec_expect_no_message "${SKIP_REMOVING_IMAGES}"
+      The stderr should satisfy spec_expect_no_message "${REMOVED_IMAGE}.*${IMAGE_WITH_TAG}"
       The stderr should satisfy spec_expect_no_message "${FAILED_TO_REMOVE_IMAGE}.*${IMAGE_WITH_TAG}"
     End
   End

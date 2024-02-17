@@ -167,7 +167,19 @@ _static_variable_add_unique_to_list_core() {
   OLD_LIST=$(_static_variable_read_list_core "${LIST_NAME}")
   NEW_LIST=$(add_unique_to_list "${OLD_LIST}" "${VALUE}")
   echo "${NEW_LIST}" > "${FILE_NAME}"
-  
+}
+
+_static_variable_pop_list_core() {
+  local LIST_NAME="${1}"
+  [ -z "${LIST_NAME}" ] && log ERROR "LIST_NAME is empty." && return 1
+  local FILE_NAME="${STATIC_VARIABLES_FOLDER}/${LIST_NAME}"
+  [ ! -e "${FILE_NAME}" ] && touch "${FILE_NAME}"
+  local ITEM=
+  ITEM=$(head -1 "${FILE_NAME}")
+  local NEW_LIST=
+  NEW_LIST=$(tail -n+2 "${FILE_NAME}")
+  echo "${NEW_LIST}" > "${FILE_NAME}"
+  echo "${ITEM}"
 }
 
 _static_variable_read_list() {
@@ -184,6 +196,16 @@ _static_variable_add_unique_to_list() {
   local LIST_NAME="${1}"
   _lock "${LIST_NAME}"
   _static_variable_add_unique_to_list_core "${@}"
+  local RETURN_VALUE=$?
+  _unlock "${LIST_NAME}"
+  return "${RETURN_VALUE}"
+}
+
+# echo the first item in the list and remove the first item from the list.
+_static_variable_pop_list() {
+  local LIST_NAME="${1}"
+  _lock "${LIST_NAME}"
+  _static_variable_pop_list_core "${@}"
   local RETURN_VALUE=$?
   _unlock "${LIST_NAME}"
   return "${RETURN_VALUE}"
@@ -751,6 +773,25 @@ _update_single_service() {
   return 0
 }
 
+# To run update in parallel
+_update_worker() {
+  local INDEX="${1}"
+  local STATIC_VAR_LIST_NAME="${2}"
+  local OLD_LOG_SCOPE="${LOG_SCOPE}"
+  LOG_SCOPE=$(attach_tag_to_log_scope "worker${INDEX}")
+  export LOG_SCOPE
+  local SERVICE_AND_IMAGE=
+  local SERVICE IMAGE
+  while true; do
+    SERVICE_AND_IMAGE=$(_static_variable_pop_list "${STATIC_VAR_LIST_NAME}")
+    [ -z "${SERVICE_AND_IMAGE}" ] && break;
+    SERVICE=$(echo "${SERVICE_AND_IMAGE}" | cut -d ' ' -f 1)
+    IMAGE=$(echo "${SERVICE_AND_IMAGE}" | cut -d ' ' -f 2)
+    _update_single_service "${SERVICE}" "${IMAGE}"
+  done
+  export LOG_SCOPE="${OLD_LOG_SCOPE}"
+}
+
 _get_services_filted() {
   local SERVICES_FILTERS="${1}"
   local SERVICES=
@@ -818,7 +859,12 @@ gantry_get_services_list() {
 }
 
 gantry_update_services_list() {
+  local NUM_WORKERS="${GANTRY_UPDATE_NUM_WORKERS:-1}"
   local LIST="${*}"
+  if ! is_number "${NUM_WORKERS}"; then
+    log ERROR "GANTRY_UPDATE_NUM_WORKERS must be a number. Got \"${GANTRY_UPDATE_NUM_WORKERS}\"."
+    return 1;
+  fi
   local NUM=
   NUM=$(_get_number_of_elements "${LIST}")
   log INFO "Inspecting ${NUM} service(s)."
@@ -836,15 +882,15 @@ gantry_update_services_list() {
   _report_services_from_static_variable STATIC_VAR_SERVICES_NO_NEW_IMAGE "No new images for" | log_lines INFO
   _report_services_from_static_variable STATIC_VAR_SERVICES_TO_UPDATE "Updating" | log_lines INFO
 
-  local SERVICES_AND_IMAGES_TO_UPDATE=
-  SERVICES_AND_IMAGES_TO_UPDATE=$(_static_variable_read_list STATIC_VAR_SERVICES_AND_IMAGES_TO_UPDATE)
-  while read -r SERVICE_AND_IMAGE; do
-    [ -z "${SERVICE_AND_IMAGE}" ] && continue
-    local SERVICE IMAGE
-    SERVICE=$(echo "${SERVICE_AND_IMAGE}" | cut -d ' ' -f 1)
-    IMAGE=$(echo "${SERVICE_AND_IMAGE}" | cut -d ' ' -f 2)
-    _update_single_service "${SERVICE}" "${IMAGE}"
-  done < <(echo "${SERVICES_AND_IMAGES_TO_UPDATE}")
+  log DEBUG "NUM_WORKERS=${NUM_WORKERS}"
+  local PIDS=
+  for INDEX in $(seq 0 $((NUM_WORKERS-1)) ); do
+    _update_worker "${INDEX}" STATIC_VAR_SERVICES_AND_IMAGES_TO_UPDATE &
+    PIDS="${!} ${PIDS}"
+  done
+  # SC2086 (info): Double quote to prevent globbing and word splitting.
+  # shellcheck disable=SC2086
+  wait ${PIDS}
 
   local RETURN_VALUE=0
   local FAILED_NUM=
