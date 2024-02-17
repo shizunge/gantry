@@ -15,6 +15,25 @@
 # along with this program.  If not, see <https://www.gnu.org/licenses/>.
 #
 
+# Read a number from an environment variable. Log an error is it is not a number.
+gantry_read_number() {
+  local VNAME="${1}"
+  local DEFAULT_VALUE="${2}"
+  if ! is_number "${DEFAULT_VALUE}"; then
+    log ERROR "DEFAULT_VALUE must be a number. Got \"${DEFAULT_VALUE}\"."
+    return 1
+  fi
+  local READ_VALUE VALUE
+  READ_VALUE=$(read_env "${VNAME}" "${DEFAULT_VALUE}")
+  VALUE="${READ_VALUE}"
+  [ -z "${VALUE}" ] && VALUE="${DEFAULT_VALUE}"
+  if ! is_number "${VALUE}"; then
+    log ERROR "${VNAME} must be a number. Got \"${READ_VALUE}\"."
+    return 1;
+  fi
+  echo "${VALUE}"
+}
+
 _login_registry() {
   local USER="${1}"
   local PASSWORD="${2}"
@@ -83,7 +102,7 @@ _authenticate_to_registries() {
     USER=
   fi
   if [ "${ACCUMULATED_ERRORS}" -gt 0 ]; then
-    log ERROR "Skip logging in due to previous errors."
+    log ERROR "Skip logging in due to previous error(s)."
   else
     _login_registry "${USER}" "${PASSWORD}" "${HOST}" "${CONFIG}"
     ACCUMULATED_ERRORS=$((ACCUMULATED_ERRORS + $?))
@@ -347,6 +366,11 @@ _get_number_of_elements_in_static_variable() {
 }
 
 _report_services() {
+  local STACK="${1:-gantry}"
+  # ACCUMULATED_ERRORS is the number of errors that are not caused by updating.
+  local ACCUMULATED_ERRORS="${2:-0}"
+  if ! is_number "${ACCUMULATED_ERRORS}"; then log WARN "ACCUMULATED_ERRORS \"${ACCUMULATED_ERRORS}\" is not a number." && ACCUMULATED_ERRORS=0; fi
+
   local UPDATED_MSG=
   UPDATED_MSG=$(_report_services_from_static_variable STATIC_VAR_SERVICES_UPDATED "" "updated" "No services updated.")
   echo "${UPDATED_MSG}" | log_lines INFO
@@ -360,17 +384,20 @@ _report_services() {
   echo "${ERROR_MSG}" | log_lines ERROR
 
   # Send notification
-  local UPDATED_NUM FAILED_NUM ERROR_NUM TOTAL_ERROR_NUM
-  UPDATED_NUM=$(_get_number_of_elements_in_static_variable STATIC_VAR_SERVICES_UPDATED)
-  FAILED_NUM=$(_get_number_of_elements_in_static_variable STATIC_VAR_SERVICES_UPDATE_FAILED)
-  ERROR_NUM=$(_get_number_of_elements_in_static_variable STATIC_VAR_SERVICES_UPDATE_INPUT_ERROR)
-  TOTAL_ERROR_NUM=$((FAILED_NUM+ERROR_NUM))
+  local NUM_UPDATED NUM_FAILED NUM_ERRORS
+  NUM_UPDATED=$(_get_number_of_elements_in_static_variable STATIC_VAR_SERVICES_UPDATED)
+  NUM_FAILED=$(_get_number_of_elements_in_static_variable STATIC_VAR_SERVICES_UPDATE_FAILED)
+  NUM_ERRORS=$(_get_number_of_elements_in_static_variable STATIC_VAR_SERVICES_UPDATE_INPUT_ERROR)
+  if [ "${NUM_FAILED}" -eq 0 ] && [ "${NUM_ERRORS}" -eq 0 ]; then
+    NUM_ERRORS="${ACCUMULATED_ERRORS}"
+  fi
+  local NUM_TOTAL_ERRORS=$((NUM_FAILED+NUM_ERRORS))
   local TYPE="success"
-  [ "${TOTAL_ERROR_NUM}" -ne "0" ] && TYPE="failure"
+  [ "${NUM_TOTAL_ERRORS}" -ne "0" ] && TYPE="failure"
   local ERROR_STRING=
-  [ "${ERROR_NUM}" -ne "0" ] && ERROR_STRING=" ${ERROR_NUM} errors"
+  [ "${NUM_ERRORS}" -ne "0" ] && ERROR_STRING=" ${NUM_TOTAL_ERRORS} error(s)"
   local TITLE BODY
-  TITLE="[gantry] ${UPDATED_NUM} services updated ${FAILED_NUM} failed${ERROR_STRING}"
+  TITLE="[${STACK}] ${NUM_UPDATED} services updated ${NUM_FAILED} failed${ERROR_STRING}"
   BODY=$(echo -e "${UPDATED_MSG}\n${FAILED_MSG}\n${ERROR_MSG}")
   _send_notification "${TYPE}" "${TITLE}" "${BODY}"
 }
@@ -565,7 +592,6 @@ _get_image_info() {
     return 1
   fi
   echo "${MSG}"
-  return 0
 }
 
 # echo nothing if we found no new images.
@@ -729,12 +755,12 @@ _rollback_service() {
 # return 0 when there is no error or failure.
 # return 1 when there are error(s) or failure(s).
 _update_single_service() {
-  local UPDATE_TIMEOUT_SECONDS="${GANTRY_UPDATE_TIMEOUT_SECONDS:-300}"
+  local INPUT_ERROR=0
+  local UPDATE_TIMEOUT_SECONDS=
+  UPDATE_TIMEOUT_SECONDS=$(gantry_read_number GANTRY_UPDATE_TIMEOUT_SECONDS 300) || INPUT_ERROR=1
   local UPDATE_OPTIONS="${GANTRY_UPDATE_OPTIONS:-""}"
   local SERVICE_NAME="${1}"
   local IMAGE="${2}"
-  local INPUT_ERROR=0
-  if ! is_number "${UPDATE_TIMEOUT_SECONDS}"; then log ERROR "GANTRY_UPDATE_TIMEOUT_SECONDS must be a number. Got \"${GANTRY_UPDATE_TIMEOUT_SECONDS}\"."; INPUT_ERROR=1; fi
   [ -z "${SERVICE_NAME}" ] && log ERROR "Updating service: SERVICE_NAME must not be empty." && INPUT_ERROR=1
   [ -z "${IMAGE}" ] && log ERROR "Updating ${SERVICE_NAME}: IMAGE must not be empty." && INPUT_ERROR=1
   if [ "${INPUT_ERROR}" -ne "0" ]; then
@@ -859,12 +885,9 @@ gantry_get_services_list() {
 }
 
 gantry_update_services_list() {
-  local NUM_WORKERS="${GANTRY_UPDATE_NUM_WORKERS:-1}"
+  local NUM_WORKERS=
+  NUM_WORKERS=$(gantry_read_number GANTRY_UPDATE_NUM_WORKERS 1) || return 1
   local LIST="${*}"
-  if ! is_number "${NUM_WORKERS}"; then
-    log ERROR "GANTRY_UPDATE_NUM_WORKERS must be a number. Got \"${GANTRY_UPDATE_NUM_WORKERS}\"."
-    return 1;
-  fi
   local NUM=
   NUM=$(_get_number_of_elements "${LIST}")
   log INFO "Inspecting ${NUM} service(s)."
@@ -885,6 +908,7 @@ gantry_update_services_list() {
   log DEBUG "NUM_WORKERS=${NUM_WORKERS}"
   local PIDS=
   for INDEX in $(seq 0 $((NUM_WORKERS-1)) ); do
+    # All workers subscribe to the same list now.
     _update_worker "${INDEX}" STATIC_VAR_SERVICES_AND_IMAGES_TO_UPDATE &
     PIDS="${!} ${PIDS}"
   done
@@ -904,11 +928,12 @@ gantry_update_services_list() {
 
 gantry_finalize() {
   local STACK="${1:-gantry}"
+  local NUM_ERRORS="${2}"
   local RETURN_VALUE=0
   if ! _remove_images "${STACK}_image-remover"; then
     RETURN_VALUE=1
   fi
-  if ! _report_services; then
+  if ! _report_services "${STACK}" "${NUM_ERRORS}"; then
     RETURN_VALUE=1
   fi
   if [ -n "${STATIC_VARIABLES_FOLDER}" ]; then

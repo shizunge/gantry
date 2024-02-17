@@ -35,10 +35,10 @@ jobs:
           - gantry_login_spec.sh
           - gantry_manifest_spec.sh
           - gantry_notify_spec.sh
+          - gantry_parallel_spec.sh
           - gantry_rollback_spec.sh
           - gantry_service_multiple_spec.sh
           - gantry_service_no_running_tasks_spec.sh
-          - gantry_service_parallel_spec.sh
           - gantry_service_single_spec.sh
           - gantry_update_options_spec.sh
     steps:

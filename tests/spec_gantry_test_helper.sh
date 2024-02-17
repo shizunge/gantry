@@ -16,9 +16,10 @@
 #
 
 # Constant strings for checks.
+export MUST_BE_A_NUMBER="must be a number"
 export SKIP_UPDATING_ALL="Skip updating all services"
 export SKIP_REASON_NOT_SWARM_MANAGER="is not a swarm manager"
-export SKIP_REASON_PREVIOUS_ERRORS="due to previous errors"
+export SKIP_REASON_PREVIOUS_ERRORS="due to previous error\(s\)"
 export SKIP_UPDATING="Skip updating"
 export SKIP_REASON_IS_JOB="because it is in .*job mode"
 export SKIP_REASON_NO_KNOWN_NEWER_IMAGE="because there is no known newer version of image"

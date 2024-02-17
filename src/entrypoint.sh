@@ -117,7 +117,7 @@ gantry() {
     gantry_update_services_list "${SERVICES_LIST}"
     ACCUMULATED_ERRORS=$((ACCUMULATED_ERRORS + $?))
   else
-    log WARN "Skip updating all services due to previous errors."
+    log WARN "Skip updating all services due to previous error(s)."
   fi
 
   local DOCKER_HUB_RATE_AFTER=
@@ -149,12 +149,9 @@ main() {
   LOG_LEVEL="${GANTRY_LOG_LEVEL:-${LOG_LEVEL}}"
   NODE_NAME="${GANTRY_NODE_NAME:-${NODE_NAME}}"
   export LOG_LEVEL NODE_NAME
+  local INTERVAL_SECONDS=
+  INTERVAL_SECONDS=$(gantry_read_number GANTRY_SLEEP_SECONDS 0) || return 1
   local IMAGES_TO_REMOVE="${GANTRY_IMAGES_TO_REMOVE:-""}"
-  local INTERVAL_SECONDS="${GANTRY_SLEEP_SECONDS:-0}"
-  if ! is_number "${INTERVAL_SECONDS}"; then 
-    log ERROR "GANTRY_SLEEP_SECONDS must be a number. Got \"${GANTRY_SLEEP_SECONDS}\"."
-    return 1;
-  fi
   if [ -n "${IMAGES_TO_REMOVE}" ]; then
     # Image remover runs as a global job. The log will be collected via docker commands then formatted.
     # Redefine the log function for the formater.
