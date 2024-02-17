@@ -138,7 +138,19 @@ _send_notification() {
   notify_summary "${TYPE}" "${TITLE}" "${BODY}"
 }
 
-_static_variable_read_list() {
+_lock() {
+  local NAME="${1}"
+  local LOCK_NAME="${STATIC_VARIABLES_FOLDER}/${NAME}-LOCK"
+  while ! mkdir "${LOCK_NAME}" >/dev/null 2>&1; do sleep 0.001; done
+}
+
+_unlock() {
+  local NAME="${1}"
+  local LOCK_NAME="${STATIC_VARIABLES_FOLDER}/${NAME}-LOCK"
+  rm -r "${LOCK_NAME}" >/dev/null 2>&1
+}
+
+_static_variable_read_list_core() {
   local LIST_NAME="${1}"
   [ -z "${LIST_NAME}" ] && log ERROR "LIST_NAME is empty." && return 1
   local FILE_NAME="${STATIC_VARIABLES_FOLDER}/${LIST_NAME}"
@@ -146,16 +158,35 @@ _static_variable_read_list() {
   cat "${FILE_NAME}"
 }
 
-# Add unique value to a static variable which holds a list.
-_static_variable_add_unique_to_list() {
+_static_variable_add_unique_to_list_core() {
   local LIST_NAME="${1}"
   local VALUE="${2}"
   [ -z "${LIST_NAME}" ] && log ERROR "LIST_NAME is empty." && return 1
   local FILE_NAME="${STATIC_VARIABLES_FOLDER}/${LIST_NAME}"
   local OLD_LIST NEW_LIST
-  OLD_LIST=$(_static_variable_read_list "${LIST_NAME}")
+  OLD_LIST=$(_static_variable_read_list_core "${LIST_NAME}")
   NEW_LIST=$(add_unique_to_list "${OLD_LIST}" "${VALUE}")
   echo "${NEW_LIST}" > "${FILE_NAME}"
+  
+}
+
+_static_variable_read_list() {
+  local LIST_NAME="${1}"
+  _lock "${LIST_NAME}"
+  _static_variable_read_list_core "${@}"
+  local RETURN_VALUE=$?
+  _unlock "${LIST_NAME}"
+  return "${RETURN_VALUE}"
+}
+
+# Add unique value to a static variable which holds a list.
+_static_variable_add_unique_to_list() {
+  local LIST_NAME="${1}"
+  _lock "${LIST_NAME}"
+  _static_variable_add_unique_to_list_core "${@}"
+  local RETURN_VALUE=$?
+  _unlock "${LIST_NAME}"
+  return "${RETURN_VALUE}"
 }
 
 _remove_container() {
