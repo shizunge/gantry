@@ -27,22 +27,6 @@ jobs:
   tests:
     name: Run tests
     runs-on: ubuntu-latest
-    strategy:
-      fail-fast: false
-      matrix:
-        test_suit:
-          - gantry_cleanup_images_spec.sh
-          - gantry_entrypoint_spec.sh
-          - gantry_filters_spec.sh
-          - gantry_job_spec.sh
-          - gantry_login_spec.sh
-          - gantry_manifest_spec.sh
-          - gantry_multiple_services_spec.sh
-          - gantry_no_running_tasks_spec.sh
-          - gantry_notify_spec.sh
-          - gantry_options_spec.sh
-          - gantry_rollback_spec.sh
-          - gantry_simple_spec.sh
     steps:
       - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@v3.0.0
@@ -60,7 +44,7 @@ jobs:
         run: |
           export DOCKERHUB_PASSWORD=${{ secrets.DOCKERHUB_PASSWORD }}
           export DOCKERHUB_USERNAME=${{ secrets.DOCKERHUB_USERNAME }}
-          bash shellspec --pattern tests/${{ matrix.test_suit }}
+          bash shellspec --jobs 50
 
   build_and_push:
     name: Build and push Docker image

@@ -60,7 +60,7 @@ _read_docker_hub_rate() {
     USER=
   fi
   if ! HOST=$(gantry_read_registry_host 2>&1); then
-    log ERROR "Failed to read HOST: ${HOST}";
+    log ERROR "Failed to read registry HOST: ${HOST}";
     HOST=
   fi
   local USER_AND_PASS=
@@ -77,7 +77,9 @@ _read_docker_hub_rate() {
 gantry() {
   local PRE_RUN_CMD="${GANTRY_PRE_RUN_CMD:-""}"
   local POST_RUN_CMD="${GANTRY_POST_RUN_CMD:-""}"
-  local STACK="${1:-gantry}"
+  local STACK="${1}"
+  [ -z "${STACK}" ] && STACK=$(gantry_current_service_name)
+  [ -z "${STACK}" ] && STACK="gantry"
   export LOG_SCOPE="${STACK}"
   local START_TIME=
   START_TIME=$(date +%s)
@@ -115,7 +117,7 @@ gantry() {
     gantry_update_services_list "${SERVICES_LIST}"
     ACCUMULATED_ERRORS=$((ACCUMULATED_ERRORS + $?))
   else
-    log WARN "Skip updating all services due to previous errors."
+    log WARN "Skip updating all services due to previous error(s)."
   fi
 
   local DOCKER_HUB_RATE_AFTER=
@@ -131,9 +133,9 @@ gantry() {
 
   local TIME_ELAPSED=
   TIME_ELAPSED=$(time_elapsed_since "${START_TIME}")
-  local MESSAGE="Done. Use ${TIME_ELAPSED}. ${ACCUMULATED_ERRORS} errors."
+  local MESSAGE="Done. Use ${TIME_ELAPSED}. ${ACCUMULATED_ERRORS} error(s)."
   local RETURN_VALUE=0
-  if [ ${ACCUMULATED_ERRORS} -gt 0 ]; then
+  if [ "${ACCUMULATED_ERRORS}" -gt 0 ]; then
     log ERROR "${MESSAGE}"
     RETURN_VALUE=1
   else
@@ -147,12 +149,9 @@ main() {
   LOG_LEVEL="${GANTRY_LOG_LEVEL:-${LOG_LEVEL}}"
   NODE_NAME="${GANTRY_NODE_NAME:-${NODE_NAME}}"
   export LOG_LEVEL NODE_NAME
+  local INTERVAL_SECONDS=
+  INTERVAL_SECONDS=$(gantry_read_number GANTRY_SLEEP_SECONDS 0) || return 1
   local IMAGES_TO_REMOVE="${GANTRY_IMAGES_TO_REMOVE:-""}"
-  local INTERVAL_SECONDS="${GANTRY_SLEEP_SECONDS:-0}"
-  if ! is_number "${INTERVAL_SECONDS}"; then 
-    log ERROR "GANTRY_SLEEP_SECONDS must be a number. Got \"${GANTRY_SLEEP_SECONDS}\"."
-    return 1;
-  fi
   if [ -n "${IMAGES_TO_REMOVE}" ]; then
     # Image remover runs as a global job. The log will be collected via docker commands then formatted.
     # Redefine the log function for the formater.

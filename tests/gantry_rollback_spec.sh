@@ -15,18 +15,28 @@
 # along with this program.  If not, see <https://www.gnu.org/licenses/>.
 #
 
-Describe 'Rollback'
-  SUITE_NAME="Rollback"
+Describe 'rollback'
+  SUITE_NAME="rollback"
   BeforeAll "initialize_all_tests ${SUITE_NAME}"
   AfterAll "finish_all_tests ${SUITE_NAME}"
   Describe "test_rollback_due_to_timeout" "container_test:false"
     TEST_NAME="test_rollback_due_to_timeout"
-    IMAGE_WITH_TAG=$(get_image_with_tag)
+    IMAGE_WITH_TAG=$(get_image_with_tag "${SUITE_NAME}")
     SERVICE_NAME="gantry-test-$(unique_id)"
-    Before "common_setup_timeout ${TEST_NAME} ${IMAGE_WITH_TAG} ${SERVICE_NAME}"
-    After "common_cleanup ${TEST_NAME} ${IMAGE_WITH_TAG} ${SERVICE_NAME}"
-    It 'run_gantry'
-      When call run_gantry "${TEST_NAME}"
+    TIMEOUT=3
+    test_rollback_due_to_timeout() {
+      local TEST_NAME=${1}
+      local SERVICE_NAME=${2}
+      local TIMEOUT=${3}
+      reset_gantry_env "${SERVICE_NAME}"
+      # Assume service update won't be done within TIMEOUT second.
+      export GANTRY_UPDATE_TIMEOUT_SECONDS="${TIMEOUT}"
+      run_gantry "${TEST_NAME}"
+    }
+    BeforeEach "common_setup_timeout ${TEST_NAME} ${IMAGE_WITH_TAG} ${SERVICE_NAME} ${TIMEOUT}"
+    AfterEach "common_cleanup ${TEST_NAME} ${IMAGE_WITH_TAG} ${SERVICE_NAME}"
+    It 'run_test'
+      When run test_rollback_due_to_timeout "${TEST_NAME}" "${SERVICE_NAME}" "${TIMEOUT}"
       The status should be failure
       The stdout should satisfy display_output
       The stderr should satisfy display_output
@@ -54,18 +64,24 @@ Describe 'Rollback'
   End
   Describe "test_rollback_failed" "container_test:false"
     TEST_NAME="test_rollback_failed"
-    IMAGE_WITH_TAG=$(get_image_with_tag)
+    IMAGE_WITH_TAG=$(get_image_with_tag "${SUITE_NAME}")
     SERVICE_NAME="gantry-test-$(unique_id)"
+    TIMEOUT=3
     test_rollback_failed() {
       local TEST_NAME=${1}
+      local SERVICE_NAME=${2}
+      local TIMEOUT=${3}
+      reset_gantry_env "${SERVICE_NAME}"
+      # Assume service update won't be done within TIMEOUT second.
+      export GANTRY_UPDATE_TIMEOUT_SECONDS="${TIMEOUT}"
       # Rollback would fail due to the incorrect option.
       export GANTRY_ROLLBACK_OPTIONS="--incorrect-option"
       run_gantry "${TEST_NAME}"
     }
-    Before "common_setup_timeout ${TEST_NAME} ${IMAGE_WITH_TAG} ${SERVICE_NAME}"
-    After "common_cleanup ${TEST_NAME} ${IMAGE_WITH_TAG} ${SERVICE_NAME}"
-    It 'run_gantry'
-      When call test_rollback_failed "${TEST_NAME}"
+    BeforeEach "common_setup_timeout ${TEST_NAME} ${IMAGE_WITH_TAG} ${SERVICE_NAME} ${TIMEOUT}"
+    AfterEach "common_cleanup ${TEST_NAME} ${IMAGE_WITH_TAG} ${SERVICE_NAME}"
+    It 'run_test'
+      When run test_rollback_failed "${TEST_NAME}" "${SERVICE_NAME}" "${TIMEOUT}"
       The status should be failure
       The stdout should satisfy display_output
       The stderr should satisfy display_output
@@ -77,7 +93,7 @@ Describe 'Rollback'
       The stderr should satisfy spec_expect_message    "${NUM_SERVICES_UPDATING}"
       The stderr should satisfy spec_expect_no_message "${UPDATED}.*${SERVICE_NAME}"
       The stderr should satisfy spec_expect_no_message "${NO_UPDATES}.*${SERVICE_NAME}"
-      The stderr should satisfy spec_expect_message    "${ADDING_OPTIONS}.*${GANTRY_ROLLBACK_OPTIONS}"
+      The stderr should satisfy spec_expect_message    "${ADDING_OPTIONS}.*--incorrect-option.*${SERVICE_NAME}"
       The stderr should satisfy spec_expect_message    "${ROLLING_BACK}.*${SERVICE_NAME}"
       The stderr should satisfy spec_expect_message    "${FAILED_TO_ROLLBACK}.*${SERVICE_NAME}"
       The stderr should satisfy spec_expect_no_message "${ROLLED_BACK}.*${SERVICE_NAME}"
@@ -94,17 +110,23 @@ Describe 'Rollback'
   End
   Describe "test_rollback_ROLLBACK_ON_FAILURE_false" "container_test:false"
     TEST_NAME="test_rollback_ROLLBACK_ON_FAILURE_false"
-    IMAGE_WITH_TAG=$(get_image_with_tag)
+    IMAGE_WITH_TAG=$(get_image_with_tag "${SUITE_NAME}")
     SERVICE_NAME="gantry-test-$(unique_id)"
+    TIMEOUT=3
     test_rollback_ROLLBACK_ON_FAILURE_false() {
       local TEST_NAME=${1}
+      local SERVICE_NAME=${2}
+      local TIMEOUT=${3}
+      reset_gantry_env "${SERVICE_NAME}"
+      # Assume service update won't be done within TIMEOUT second.
+      export GANTRY_UPDATE_TIMEOUT_SECONDS="${TIMEOUT}"
       export GANTRY_ROLLBACK_ON_FAILURE="false"
       run_gantry "${TEST_NAME}"
     }
-    Before "common_setup_timeout ${TEST_NAME} ${IMAGE_WITH_TAG} ${SERVICE_NAME}"
-    After "common_cleanup ${TEST_NAME} ${IMAGE_WITH_TAG} ${SERVICE_NAME}"
-    It 'run_gantry'
-      When call test_rollback_ROLLBACK_ON_FAILURE_false "${TEST_NAME}"
+    BeforeEach "common_setup_timeout ${TEST_NAME} ${IMAGE_WITH_TAG} ${SERVICE_NAME} ${TIMEOUT}"
+    AfterEach "common_cleanup ${TEST_NAME} ${IMAGE_WITH_TAG} ${SERVICE_NAME}"
+    It 'run_test'
+      When run test_rollback_ROLLBACK_ON_FAILURE_false "${TEST_NAME}" "${SERVICE_NAME}" "${TIMEOUT}"
       The status should be failure
       The stdout should satisfy display_output
       The stderr should satisfy display_output

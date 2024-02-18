@@ -15,13 +15,13 @@
 # along with this program.  If not, see <https://www.gnu.org/licenses/>.
 #
 
-Describe 'Multiple_services'
-  SUITE_NAME="Multiple_services"
+Describe 'service-multiple-services'
+  SUITE_NAME="service-multiple-services"
   BeforeAll "initialize_all_tests ${SUITE_NAME}"
   AfterAll "finish_all_tests ${SUITE_NAME}"
   Describe "test_multiple_services_excluded_filters" "container_test:true"
     TEST_NAME="test_multiple_services_excluded_filters"
-    IMAGE_WITH_TAG=$(get_image_with_tag)
+    IMAGE_WITH_TAG=$(get_image_with_tag "${SUITE_NAME}")
     SERVICE_NAME="gantry-test-$(unique_id)"
     SERVICE_NAME0="${SERVICE_NAME}-0"
     SERVICE_NAME1="${SERVICE_NAME}-1"
@@ -49,11 +49,17 @@ Describe 'Multiple_services'
       build_and_push_test_image "${IMAGE_WITH_TAG}"
       start_replicated_service "${SERVICE_NAME4}" "${IMAGE_WITH_TAG}"
       start_replicated_service "${SERVICE_NAME5}" "${IMAGE_WITH_TAG}"
-
-      export GANTRY_SERVICES_FILTERS="name=${SERVICE_NAME}"
+    }
+    test_multiple_services_excluded_filters() {
+      local TEST_NAME=${1}
+      local SERVICE_NAME=${2}
+      local SERVICE_NAME1="${SERVICE_NAME}-1"
+      local SERVICE_NAME2="${SERVICE_NAME}-2"
+      reset_gantry_env "${SERVICE_NAME}"
       # test both the list of names and the filters
       export GANTRY_SERVICES_EXCLUDED="${SERVICE_NAME1}"
       export GANTRY_SERVICES_EXCLUDED_FILTERS="name=${SERVICE_NAME2}"
+      run_gantry "${TEST_NAME}"
     }
     test_end() {
       local TEST_NAME=${1}
@@ -74,10 +80,10 @@ Describe 'Multiple_services'
       prune_local_test_image "${IMAGE_WITH_TAG}"
       finalize_test "${TEST_NAME}"
     }
-    Before "test_start ${TEST_NAME} ${IMAGE_WITH_TAG} ${SERVICE_NAME}"
-    After "test_end ${TEST_NAME} ${IMAGE_WITH_TAG} ${SERVICE_NAME}"
-    It 'run_gantry'
-      When call run_gantry "${TEST_NAME}"
+    BeforeEach "test_start ${TEST_NAME} ${IMAGE_WITH_TAG} ${SERVICE_NAME}"
+    AfterEach "test_end ${TEST_NAME} ${IMAGE_WITH_TAG} ${SERVICE_NAME}"
+    It 'run_test'
+      When run test_multiple_services_excluded_filters "${TEST_NAME}" "${SERVICE_NAME}"
       The status should be success
       The stdout should satisfy display_output
       The stderr should satisfy display_output
@@ -108,7 +114,7 @@ Describe 'Multiple_services'
       The stderr should satisfy spec_expect_no_message "${UPDATED}.*${SERVICE_NAME4}"
       The stderr should satisfy spec_expect_no_message "${UPDATED}.*${SERVICE_NAME5}"
       The stderr should satisfy spec_expect_no_message "${NO_SERVICES_UPDATED}"
-      The stderr should satisfy spec_expect_message    "${NUM_SERVICES_UPDATED}"
+      The stderr should satisfy spec_expect_message    "2 ${SERVICES_UPDATED}"
       The stderr should satisfy spec_expect_no_message "${NUM_SERVICES_UPDATE_FAILED}"
       The stderr should satisfy spec_expect_no_message "${NUM_SERVICES_ERRORS}"
       The stderr should satisfy spec_expect_no_message "${NO_IMAGES_TO_REMOVE}"

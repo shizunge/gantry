@@ -17,13 +17,13 @@
 
 export SKIP_NOTIFY_APPRISE="Skip sending notification via Apprise"
 
-Describe 'Notify'
-  SUITE_NAME="Notify"
+Describe 'notify'
+  SUITE_NAME="notify"
   BeforeAll "initialize_all_tests ${SUITE_NAME}"
   AfterAll "finish_all_tests ${SUITE_NAME}"
   Describe "test_notify_apprise" "container_test:true"
     TEST_NAME="test_notify_apprise"
-    IMAGE_WITH_TAG=$(get_image_with_tag)
+    IMAGE_WITH_TAG=$(get_image_with_tag "${SUITE_NAME}")
     SERVICE_NAME="gantry-test-$(unique_id)"
     test_notify_apprise() {
       local TEST_NAME=${1}
@@ -44,6 +44,7 @@ Describe 'Notify'
         axllent/mailpit \
         --smtp "localhost:${SMTP_PORT}" --listen "localhost:${EMAIL_API_PORT}" \
         --smtp-auth-accept-any --smtp-auth-allow-insecure
+      reset_gantry_env "${SERVICE_NAME}"
       export GANTRY_NOTIFICATION_APPRISE_URL="http://localhost:${APPRISE_PORT}/notify"
       export GANTRY_NOTIFICATION_TITLE="TEST_TITLE"
       run_gantry "${TEST_NAME}"
@@ -60,10 +61,10 @@ Describe 'Notify'
       docker_remove "${SERVICE_NAME_MAILPIT}"
       return "${RETURN_VALUE}"
     }
-    Before "common_setup_new_image ${TEST_NAME} ${IMAGE_WITH_TAG} ${SERVICE_NAME}"
-    After "common_cleanup ${TEST_NAME} ${IMAGE_WITH_TAG} ${SERVICE_NAME}"
-    It 'run_gantry'
-      When call test_notify_apprise "${TEST_NAME}" "${SERVICE_NAME}"
+    BeforeEach "common_setup_new_image ${TEST_NAME} ${IMAGE_WITH_TAG} ${SERVICE_NAME}"
+    AfterEach "common_cleanup ${TEST_NAME} ${IMAGE_WITH_TAG} ${SERVICE_NAME}"
+    It 'run_test'
+      When run test_notify_apprise "${TEST_NAME}" "${SERVICE_NAME}"
       The status should be success
       The stdout should satisfy display_output
       The stdout should satisfy spec_expect_message    "Subject.*1 services updated 0 failed TEST_TITLE"
@@ -80,7 +81,7 @@ Describe 'Notify'
       The stderr should satisfy spec_expect_no_message "${FAILED_TO_ROLLBACK}.*${SERVICE_NAME}"
       The stderr should satisfy spec_expect_no_message "${ROLLED_BACK}.*${SERVICE_NAME}"
       The stderr should satisfy spec_expect_no_message "${NO_SERVICES_UPDATED}"
-      The stderr should satisfy spec_expect_message    "${NUM_SERVICES_UPDATED}"
+      The stderr should satisfy spec_expect_message    "1 ${SERVICES_UPDATED}"
       The stderr should satisfy spec_expect_no_message "${NUM_SERVICES_UPDATE_FAILED}"
       The stderr should satisfy spec_expect_no_message "${NUM_SERVICES_ERRORS}"
       The stderr should satisfy spec_expect_no_message "${NO_IMAGES_TO_REMOVE}"
@@ -94,17 +95,19 @@ Describe 'Notify'
   End
   Describe "test_notify_apprise_bad_url" "container_test:true"
     TEST_NAME="test_notify_apprise_bad_url"
-    IMAGE_WITH_TAG=$(get_image_with_tag)
+    IMAGE_WITH_TAG=$(get_image_with_tag "${SUITE_NAME}")
     SERVICE_NAME="gantry-test-$(unique_id)"
     test_notify_apprise_bad_url() {
       local TEST_NAME=${1}
+      local SERVICE_NAME=${2}
+      reset_gantry_env "${SERVICE_NAME}"
       export GANTRY_NOTIFICATION_APPRISE_URL="http://bad-url/notify"
       run_gantry "${TEST_NAME}"
     }
-    Before "common_setup_new_image ${TEST_NAME} ${IMAGE_WITH_TAG} ${SERVICE_NAME}"
-    After "common_cleanup ${TEST_NAME} ${IMAGE_WITH_TAG} ${SERVICE_NAME}"
-    It 'run_gantry'
-      When call test_notify_apprise_bad_url "${TEST_NAME}"
+    BeforeEach "common_setup_new_image ${TEST_NAME} ${IMAGE_WITH_TAG} ${SERVICE_NAME}"
+    AfterEach "common_cleanup ${TEST_NAME} ${IMAGE_WITH_TAG} ${SERVICE_NAME}"
+    It 'run_test'
+      When run test_notify_apprise_bad_url "${TEST_NAME}" "${SERVICE_NAME}"
       The status should be success
       The stdout should satisfy display_output
       The stderr should satisfy display_output
@@ -120,7 +123,7 @@ Describe 'Notify'
       The stderr should satisfy spec_expect_no_message "${FAILED_TO_ROLLBACK}.*${SERVICE_NAME}"
       The stderr should satisfy spec_expect_no_message "${ROLLED_BACK}.*${SERVICE_NAME}"
       The stderr should satisfy spec_expect_no_message "${NO_SERVICES_UPDATED}"
-      The stderr should satisfy spec_expect_message    "${NUM_SERVICES_UPDATED}"
+      The stderr should satisfy spec_expect_message    "1 ${SERVICES_UPDATED}"
       The stderr should satisfy spec_expect_no_message "${NUM_SERVICES_UPDATE_FAILED}"
       The stderr should satisfy spec_expect_no_message "${NUM_SERVICES_ERRORS}"
       The stderr should satisfy spec_expect_no_message "${NO_IMAGES_TO_REMOVE}"

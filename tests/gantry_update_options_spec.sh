@@ -15,201 +15,57 @@
 # along with this program.  If not, see <https://www.gnu.org/licenses/>.
 #
 
-Describe 'login'
-  SUITE_NAME="login"
+Describe 'update-options'
+  SUITE_NAME="update-options"
   BeforeAll "initialize_all_tests ${SUITE_NAME}"
   AfterAll "finish_all_tests ${SUITE_NAME}"
-  # Here are just simple login tests.
-  Describe "test_login_config" "container_test:true"
-    TEST_NAME="test_login_config"
+  Describe "test_update_jobs_skipping" "container_test:true"
+    # For `docker service ls --filter`, the name filter matches on all or the prefix of a service's name
+    # See https://docs.docker.com/engine/reference/commandline/service_ls/#name
+    # It does not do the exact match of the name. See https://github.com/moby/moby/issues/32985
+    # This test also checks whether we do an extra step to to perform the exact match.
+    TEST_NAME="test_update_jobs_skipping"
     IMAGE_WITH_TAG=$(get_image_with_tag "${SUITE_NAME}")
     SERVICE_NAME="gantry-test-$(unique_id)"
-    CONFIG="C$(unique_id)"
-    TEST_REGISTRY=$(load_test_registry "${SUITE_NAME}") || return 1
-    test_login_config() {
+    SERVICE_NAME_SUFFIX="${SERVICE_NAME}-suffix"
+    test_start() {
+      local TEST_NAME="${1}"
+      local IMAGE_WITH_TAG="${2}"
+      local SERVICE_NAME="${3}"
+      local SERVICE_NAME_SUFFIX="${SERVICE_NAME}-suffix"
+      common_setup_job "${TEST_NAME}" "${IMAGE_WITH_TAG}" "${SERVICE_NAME_SUFFIX}"
+      start_replicated_service "${SERVICE_NAME}" "${IMAGE_WITH_TAG}"
+    }
+    test_update_jobs_skipping() {
       local TEST_NAME=${1}
       local SERVICE_NAME=${2}
-      local CONFIG=${3}
-      local REGISTRY=${4}
-      local USERNAME=${5}
-      local PASSWORD=${6}
-      if [ -z "${REGISTRY}" ] || [ -z "${USERNAME}" ] || [ -z "${PASSWORD}" ]; then
-        echo "No REGISTRY, USERNAME or PASSWORD provided." >&2
-        return 1
-      fi
-      local LABEL="gantry.auth.config"
-      local USER_FILE PASS_FILE
-      USER_FILE=$(mktemp)
-      PASS_FILE=$(mktemp)
-      docker service update --quiet --label-add "${LABEL}=${CONFIG}" "${SERVICE_NAME}"
-      echo "${USERNAME}" > "${USER_FILE}"
-      echo "${PASSWORD}" > "${PASS_FILE}"
       reset_gantry_env "${SERVICE_NAME}"
-      export GANTRY_REGISTRY_CONFIG="${CONFIG}"
-      export GANTRY_REGISTRY_HOST="${REGISTRY}"
-      export GANTRY_REGISTRY_PASSWORD_FILE="${PASS_FILE}"
-      export GANTRY_REGISTRY_USER_FILE="${USER_FILE}"
-      local RETURN_VALUE=
       run_gantry "${TEST_NAME}"
-      RETURN_VALUE="${?}"
-      rm "${USER_FILE}"
-      rm "${PASS_FILE}"
-      [ -d "${CONFIG}" ] && rm -r "${CONFIG}"
-      return "${RETURN_VALUE}"
     }
-    BeforeEach "common_setup_new_image ${TEST_NAME} ${IMAGE_WITH_TAG} ${SERVICE_NAME}"
-    AfterEach "common_cleanup ${TEST_NAME} ${IMAGE_WITH_TAG} ${SERVICE_NAME}"
+    test_end() {
+      local TEST_NAME="${1}"
+      local IMAGE_WITH_TAG="${2}"
+      local SERVICE_NAME="${3}"
+      local SERVICE_NAME_SUFFIX="${SERVICE_NAME}-suffix"
+      stop_service "${SERVICE_NAME}"
+      common_cleanup "${TEST_NAME}" "${IMAGE_WITH_TAG}" "${SERVICE_NAME_SUFFIX}"
+    }
+    BeforeEach "test_start ${TEST_NAME} ${IMAGE_WITH_TAG} ${SERVICE_NAME}"
+    AfterEach "test_end ${TEST_NAME} ${IMAGE_WITH_TAG} ${SERVICE_NAME}"
     It 'run_test'
-      When run test_login_config "${TEST_NAME}" "${SERVICE_NAME}" "${CONFIG}" "${TEST_REGISTRY}" "${TEST_USERNAME}" "${TEST_PASSWORD}"
+      When run test_update_jobs_skipping "${TEST_NAME}" "${SERVICE_NAME}"
       The status should be success
       The stdout should satisfy display_output
       The stderr should satisfy display_output
-      The stderr should satisfy spec_expect_message    "Logged into registry *${TEST_REGISTRY} for config ${CONFIG}"
-      The stderr should satisfy spec_expect_no_message "${SKIP_UPDATING}.*${SERVICE_NAME}"
-      The stderr should satisfy spec_expect_message    "${PERFORM_UPDATING}.*${SERVICE_NAME}.*${PERFORM_REASON_HAS_NEWER_IMAGE}"
-      The stderr should satisfy spec_expect_no_message "${NUM_SERVICES_SKIP_JOBS}"
-      The stderr should satisfy spec_expect_no_message "${NUM_SERVICES_INSPECT_FAILURE}"
-      The stderr should satisfy spec_expect_no_message "${NUM_SERVICES_NO_NEW_IMAGES}"
-      The stderr should satisfy spec_expect_message    "${NUM_SERVICES_UPDATING}"
-      The stderr should satisfy spec_expect_message    "${ADDING_OPTIONS}.*--config ${CONFIG}.*${SERVICE_NAME}"
-      The stderr should satisfy spec_expect_message    "${UPDATED}.*${SERVICE_NAME}"
-      The stderr should satisfy spec_expect_no_message "${NO_UPDATES}.*${SERVICE_NAME}"
-      The stderr should satisfy spec_expect_no_message "${ROLLING_BACK}.*${SERVICE_NAME}"
-      The stderr should satisfy spec_expect_no_message "${FAILED_TO_ROLLBACK}.*${SERVICE_NAME}"
-      The stderr should satisfy spec_expect_no_message "${ROLLED_BACK}.*${SERVICE_NAME}"
-      The stderr should satisfy spec_expect_no_message "${NO_SERVICES_UPDATED}"
-      The stderr should satisfy spec_expect_message    "1 ${SERVICES_UPDATED}"
-      The stderr should satisfy spec_expect_no_message "${NUM_SERVICES_UPDATE_FAILED}"
-      The stderr should satisfy spec_expect_no_message "${NUM_SERVICES_ERRORS}"
-      The stderr should satisfy spec_expect_no_message "${NO_IMAGES_TO_REMOVE}"
-      The stderr should satisfy spec_expect_message    "${REMOVING_NUM_IMAGES}"
-      The stderr should satisfy spec_expect_no_message "${SKIP_REMOVING_IMAGES}"
-      The stderr should satisfy spec_expect_message    "${REMOVED_IMAGE}.*${IMAGE_WITH_TAG}"
-      The stderr should satisfy spec_expect_no_message "${FAILED_TO_REMOVE_IMAGE}.*${IMAGE_WITH_TAG}"
-    End
-  End
-  Describe "test_login_REGISTRY_CONFIGS_FILE" "container_test:true"
-    TEST_NAME="test_login_REGISTRY_CONFIGS_FILE"
-    IMAGE_WITH_TAG=$(get_image_with_tag "${SUITE_NAME}")
-    SERVICE_NAME="gantry-test-$(unique_id)"
-    CONFIG="C$(unique_id)"
-    TEST_REGISTRY=$(load_test_registry "${SUITE_NAME}") || return 1
-    test_login_REGISTRY_CONFIGS_FILE() {
-      local TEST_NAME=${1}
-      local SERVICE_NAME=${2}
-      local CONFIG=${3}
-      local REGISTRY=${4}
-      local USERNAME=${5}
-      local PASSWORD=${6}
-      if [ -z "${REGISTRY}" ] || [ -z "${USERNAME}" ] || [ -z "${PASSWORD}" ]; then
-        echo "No REGISTRY, USERNAME or PASSWORD provided." >&2
-        return 1
-      fi
-      local LABEL="gantry.auth.config"
-      local CONFIGS_FILE=
-      CONFIGS_FILE=$(mktemp)
-      docker service update --quiet --label-add "${LABEL}=${CONFIG}" "${SERVICE_NAME}"
-      echo "# Test comments: CONFIG REGISTRY USERNAME PASSWORD" >> "${CONFIGS_FILE}"
-      echo "${CONFIG} ${REGISTRY} ${USERNAME} ${PASSWORD}" >> "${CONFIGS_FILE}"
-      reset_gantry_env "${SERVICE_NAME}"
-      export GANTRY_REGISTRY_CONFIGS_FILE="${CONFIGS_FILE}"
-      # Since we pass credentials via the configs file, we can use other envs to login to docker hub and check the rate.
-      # However we do not actually check whether we read rates correctly, in case password or usrename for docker hub is not set.
-      # It seems there is no rate limit when running from the github actions, which also gives us a NaN error.
-      # Do not set GANTRY_REGISTRY_HOST to test the default config.
-      # export GANTRY_REGISTRY_HOST="docker.io"
-      export GANTRY_REGISTRY_PASSWORD="${DOCKERHUB_PASSWORD:-""}"
-      export GANTRY_REGISTRY_USER="${DOCKERHUB_USERNAME:-""}"
-      local RETURN_VALUE=
-      run_gantry "${TEST_NAME}"
-      RETURN_VALUE="${?}"
-      rm "${CONFIGS_FILE}"
-      [ -d "${CONFIG}" ] && rm -r "${CONFIG}"
-      return "${RETURN_VALUE}"
-    }
-    BeforeEach "common_setup_new_image ${TEST_NAME} ${IMAGE_WITH_TAG} ${SERVICE_NAME}"
-    AfterEach "common_cleanup ${TEST_NAME} ${IMAGE_WITH_TAG} ${SERVICE_NAME}"
-    It 'run_test'
-      When run test_login_REGISTRY_CONFIGS_FILE "${TEST_NAME}" "${SERVICE_NAME}" "${CONFIG}" "${TEST_REGISTRY}" "${TEST_USERNAME}" "${TEST_PASSWORD}"
-      The status should be success
-      The stdout should satisfy display_output
-      The stderr should satisfy display_output
-      The stderr should satisfy spec_expect_message    "Logged into registry *${TEST_REGISTRY} for config ${CONFIG}"
-      The stderr should satisfy spec_expect_no_message "${SKIP_UPDATING}.*${SERVICE_NAME}"
-      The stderr should satisfy spec_expect_message    "${PERFORM_UPDATING}.*${SERVICE_NAME}.*${PERFORM_REASON_HAS_NEWER_IMAGE}"
-      The stderr should satisfy spec_expect_no_message "${NUM_SERVICES_SKIP_JOBS}"
-      The stderr should satisfy spec_expect_no_message "${NUM_SERVICES_INSPECT_FAILURE}"
-      The stderr should satisfy spec_expect_no_message "${NUM_SERVICES_NO_NEW_IMAGES}"
-      The stderr should satisfy spec_expect_message    "${NUM_SERVICES_UPDATING}"
-      The stderr should satisfy spec_expect_message    "${ADDING_OPTIONS}.*--config ${CONFIG}.*${SERVICE_NAME}"
-      The stderr should satisfy spec_expect_message    "${UPDATED}.*${SERVICE_NAME}"
-      The stderr should satisfy spec_expect_no_message "${NO_UPDATES}.*${SERVICE_NAME}"
-      The stderr should satisfy spec_expect_no_message "${ROLLING_BACK}.*${SERVICE_NAME}"
-      The stderr should satisfy spec_expect_no_message "${FAILED_TO_ROLLBACK}.*${SERVICE_NAME}"
-      The stderr should satisfy spec_expect_no_message "${ROLLED_BACK}.*${SERVICE_NAME}"
-      The stderr should satisfy spec_expect_no_message "${NO_SERVICES_UPDATED}"
-      The stderr should satisfy spec_expect_message    "1 ${SERVICES_UPDATED}"
-      The stderr should satisfy spec_expect_no_message "${NUM_SERVICES_UPDATE_FAILED}"
-      The stderr should satisfy spec_expect_no_message "${NUM_SERVICES_ERRORS}"
-      The stderr should satisfy spec_expect_no_message "${NO_IMAGES_TO_REMOVE}"
-      The stderr should satisfy spec_expect_message    "${REMOVING_NUM_IMAGES}"
-      The stderr should satisfy spec_expect_no_message "${SKIP_REMOVING_IMAGES}"
-      The stderr should satisfy spec_expect_message    "${REMOVED_IMAGE}.*${IMAGE_WITH_TAG}"
-      The stderr should satisfy spec_expect_no_message "${FAILED_TO_REMOVE_IMAGE}.*${IMAGE_WITH_TAG}"
-    End
-  End
-  Describe "test_login_REGISTRY_CONFIGS_FILE_bad_format" "container_test:false"
-    TEST_NAME="test_login_REGISTRY_CONFIGS_FILE_bad_format"
-    IMAGE_WITH_TAG=$(get_image_with_tag "${SUITE_NAME}")
-    SERVICE_NAME="gantry-test-$(unique_id)"
-    CONFIG="C$(unique_id)"
-    TEST_REGISTRY=$(load_test_registry "${SUITE_NAME}") || return 1
-    test_login_REGISTRY_CONFIGS_FILE_bad_format() {
-      local TEST_NAME=${1}
-      local SERVICE_NAME=${2}
-      local CONFIG=${3}
-      local REGISTRY=${4}
-      local USERNAME=${5}
-      local PASSWORD=${6}
-      if [ -z "${REGISTRY}" ] || [ -z "${USERNAME}" ] || [ -z "${PASSWORD}" ]; then
-        echo "No REGISTRY, USERNAME or PASSWORD provided." >&2
-        return 1
-      fi
-      local LABEL="gantry.auth.config"
-      local CONFIGS_FILE=
-      CONFIGS_FILE=$(mktemp)
-      docker service update --quiet --label-add "${LABEL}=${CONFIG}" "${SERVICE_NAME}"
-      # Add an extra item to the line.
-      echo "${CONFIG} ${REGISTRY} ${USERNAME} ${PASSWORD} Extra" >> "${CONFIGS_FILE}"
-      # Missing an item from the line.
-      echo "${REGISTRY} ${USERNAME} ${PASSWORD}" >> "${CONFIGS_FILE}"
-      reset_gantry_env "${SERVICE_NAME}"
-      export GANTRY_REGISTRY_CONFIGS_FILE="${CONFIGS_FILE}"
-      local RETURN_VALUE=
-      run_gantry "${TEST_NAME}"
-      RETURN_VALUE="${?}"
-      rm "${CONFIGS_FILE}"
-      [ -d "${CONFIG}" ] && rm -r "${CONFIG}"
-      return "${RETURN_VALUE}"
-    }
-    BeforeEach "common_setup_new_image ${TEST_NAME} ${IMAGE_WITH_TAG} ${SERVICE_NAME}"
-    AfterEach "common_cleanup ${TEST_NAME} ${IMAGE_WITH_TAG} ${SERVICE_NAME}"
-    It 'run_test'
-      When run test_login_REGISTRY_CONFIGS_FILE_bad_format "${TEST_NAME}" "${SERVICE_NAME}" "${CONFIG}" "${TEST_REGISTRY}" "${TEST_USERNAME}" "${TEST_PASSWORD}"
-      The status should be failure
-      The stdout should satisfy display_output
-      The stderr should satisfy display_output
-      The stderr should satisfy spec_expect_message    "format error.*Found extra item\(s\)"
-      The stderr should satisfy spec_expect_message    "format error.*Missing item\(s\)"
-      The stderr should satisfy spec_expect_no_message "Logged into registry *${TEST_REGISTRY} for config ${CONFIG}"
-      The stderr should satisfy spec_expect_message    "${SKIP_UPDATING_ALL}.*${SKIP_REASON_PREVIOUS_ERRORS}"
-      The stderr should satisfy spec_expect_no_message "${SKIP_UPDATING}.*${SERVICE_NAME}"
+      # Check whether it is a job before checking whether there is a new image.
+      The stderr should satisfy spec_expect_message    "${SKIP_UPDATING}.*${SERVICE_NAME_SUFFIX}.*${SKIP_REASON_IS_JOB}"
+      The stderr should satisfy spec_expect_no_message "${PERFORM_UPDATING}.*${SERVICE_NAME_SUFFIX}"
+      The stderr should satisfy spec_expect_message    "${SKIP_UPDATING}.*${SERVICE_NAME}.*${SKIP_REASON_CURRENT_IS_LATEST}"
       The stderr should satisfy spec_expect_no_message "${PERFORM_UPDATING}.*${SERVICE_NAME}"
-      The stderr should satisfy spec_expect_no_message "${NUM_SERVICES_SKIP_JOBS}"
+      The stderr should satisfy spec_expect_message    "${NUM_SERVICES_SKIP_JOBS}"
       The stderr should satisfy spec_expect_no_message "${NUM_SERVICES_INSPECT_FAILURE}"
-      The stderr should satisfy spec_expect_no_message "${NUM_SERVICES_NO_NEW_IMAGES}"
+      The stderr should satisfy spec_expect_message    "${NUM_SERVICES_NO_NEW_IMAGES}"
       The stderr should satisfy spec_expect_no_message "${NUM_SERVICES_UPDATING}"
-      The stderr should satisfy spec_expect_no_message "${ADDING_OPTIONS}.*--config.*"
       The stderr should satisfy spec_expect_no_message "${UPDATED}.*${SERVICE_NAME}"
       The stderr should satisfy spec_expect_no_message "${NO_UPDATES}.*${SERVICE_NAME}"
       The stderr should satisfy spec_expect_no_message "${ROLLING_BACK}.*${SERVICE_NAME}"
@@ -226,54 +82,180 @@ Describe 'login'
       The stderr should satisfy spec_expect_no_message "${FAILED_TO_REMOVE_IMAGE}.*${IMAGE_WITH_TAG}"
     End
   End
-  Describe "test_login_file_not_exist" "container_test:false"
-    TEST_NAME="test_login_file_not_exist"
+  Describe "test_update_jobs_UPDATE_JOBS_true" "container_test:true"
+    TEST_NAME="test_update_jobs_UPDATE_JOBS_true"
     IMAGE_WITH_TAG=$(get_image_with_tag "${SUITE_NAME}")
     SERVICE_NAME="gantry-test-$(unique_id)"
-    CONFIG="C$(unique_id)"
-    TEST_REGISTRY=$(load_test_registry "${SUITE_NAME}") || return 1
-    test_login_file_not_exist() {
+    test_update_jobs_UPDATE_JOBS_true() {
       local TEST_NAME=${1}
       local SERVICE_NAME=${2}
-      local CONFIG=${3}
-      local REGISTRY=${4}
-      local USERNAME=${5}
-      local PASSWORD=${6}
-      if [ -z "${REGISTRY}" ] || [ -z "${USERNAME}" ] || [ -z "${PASSWORD}" ]; then
-        echo "No REGISTRY, USERNAME or PASSWORD provided." >&2
-        return 1
-      fi
-      local LABEL="gantry.auth.config"
-      docker service update --quiet --label-add "${LABEL}=${CONFIG}" "${SERVICE_NAME}"
-      local FILE_NOT_EXIST="/tmp/${CONFIG}"
       reset_gantry_env "${SERVICE_NAME}"
-      export GANTRY_REGISTRY_CONFIG_FILE="${FILE_NOT_EXIST}"
-      export GANTRY_REGISTRY_CONFIGS_FILE="${FILE_NOT_EXIST}"
-      export GANTRY_REGISTRY_HOST_FILE="${FILE_NOT_EXIST}"
-      export GANTRY_REGISTRY_PASSWORD_FILE="${FILE_NOT_EXIST}"
-      export GANTRY_REGISTRY_USER_FILE="${FILE_NOT_EXIST}"
+      export GANTRY_UPDATE_JOBS="true"
+      # The job may not reach the desired "Complete" state and blocking update CLI. So add "--detach=true"
+      export GANTRY_UPDATE_OPTIONS="--detach=true"
+      run_gantry "${TEST_NAME}"
+    }
+    BeforeEach "common_setup_job ${TEST_NAME} ${IMAGE_WITH_TAG} ${SERVICE_NAME}"
+    AfterEach "common_cleanup ${TEST_NAME} ${IMAGE_WITH_TAG} ${SERVICE_NAME}"
+    It 'run_test'
+      When run test_update_jobs_UPDATE_JOBS_true "${TEST_NAME}" "${SERVICE_NAME}"
+      The status should be success
+      The stdout should satisfy display_output
+      The stderr should satisfy display_output
+      The stderr should satisfy spec_expect_no_message "${SKIP_UPDATING}.*${SERVICE_NAME}"
+      The stderr should satisfy spec_expect_message    "${PERFORM_UPDATING}.*${SERVICE_NAME}.*${PERFORM_REASON_HAS_NEWER_IMAGE}"
+      The stderr should satisfy spec_expect_no_message "${NUM_SERVICES_SKIP_JOBS}"
+      The stderr should satisfy spec_expect_no_message "${NUM_SERVICES_INSPECT_FAILURE}"
+      The stderr should satisfy spec_expect_no_message "${NUM_SERVICES_NO_NEW_IMAGES}"
+      The stderr should satisfy spec_expect_message    "${NUM_SERVICES_UPDATING}"
+      The stderr should satisfy spec_expect_message    "${ADDING_OPTIONS}.*--detach=true.*${SERVICE_NAME}"
+      The stderr should satisfy spec_expect_message    "${UPDATED}.*${SERVICE_NAME}"
+      The stderr should satisfy spec_expect_no_message "${NO_UPDATES}.*${SERVICE_NAME}"
+      The stderr should satisfy spec_expect_no_message "${ROLLING_BACK}.*${SERVICE_NAME}"
+      The stderr should satisfy spec_expect_no_message "${FAILED_TO_ROLLBACK}.*${SERVICE_NAME}"
+      The stderr should satisfy spec_expect_no_message "${ROLLED_BACK}.*${SERVICE_NAME}"
+      The stderr should satisfy spec_expect_no_message "${NO_SERVICES_UPDATED}"
+      The stderr should satisfy spec_expect_message    "1 ${SERVICES_UPDATED}"
+      The stderr should satisfy spec_expect_no_message "${NUM_SERVICES_UPDATE_FAILED}"
+      The stderr should satisfy spec_expect_no_message "${NUM_SERVICES_ERRORS}"
+      The stderr should satisfy spec_expect_no_message "${NO_IMAGES_TO_REMOVE}"
+      The stderr should satisfy spec_expect_message    "${REMOVING_NUM_IMAGES}"
+      The stderr should satisfy spec_expect_no_message "${SKIP_REMOVING_IMAGES}"
+      # Since the job may not reach the desired state, they are still using the image. Image remover will fail.
+      The stderr should satisfy spec_expect_no_message "${REMOVED_IMAGE}.*${IMAGE_WITH_TAG}"
+      The stderr should satisfy spec_expect_message    "${FAILED_TO_REMOVE_IMAGE}.*${IMAGE_WITH_TAG}"
+    End
+  End
+  Describe "test_update_jobs_no_running_tasks" "container_test:true"
+    TEST_NAME="test_update_jobs_no_running_tasks"
+    IMAGE_WITH_TAG=$(get_image_with_tag "${SUITE_NAME}")
+    SERVICE_NAME="gantry-test-$(unique_id)"
+    TASK_SECONDS=15
+    test_update_jobs_no_running_tasks() {
+      local TEST_NAME=${1}
+      local SERVICE_NAME=${2}
+      # The tasks should exit after TASK_SECONDS seconds sleep. Then it will have 0 running tasks.
+      wait_zero_running_tasks "${SERVICE_NAME}"
+      reset_gantry_env "${SERVICE_NAME}"
+      export GANTRY_UPDATE_JOBS="true"
+      run_gantry "${TEST_NAME}"
+    }
+    # The task will finish in ${TASK_SECONDS} seconds
+    BeforeEach "common_setup_job ${TEST_NAME} ${IMAGE_WITH_TAG} ${SERVICE_NAME} ${TASK_SECONDS}"
+    AfterEach "common_cleanup ${TEST_NAME} ${IMAGE_WITH_TAG} ${SERVICE_NAME}"
+    It 'run_test'
+      When run test_update_jobs_no_running_tasks "${TEST_NAME}" "${SERVICE_NAME}"
+      The status should be success
+      The stdout should satisfy display_output
+      The stderr should satisfy display_output
+      The stderr should satisfy spec_expect_message    "${ADDING_OPTIONS}.*--detach=true.*${SERVICE_NAME}"
+      # Cannot add "--replicas" to replicated job
+      The stderr should satisfy spec_expect_no_message "${ADDING_OPTIONS}.*--replicas=0"
+      The stderr should satisfy spec_expect_no_message "${SKIP_UPDATING}.*${SERVICE_NAME}"
+      The stderr should satisfy spec_expect_message    "${PERFORM_UPDATING}.*${SERVICE_NAME}.*${PERFORM_REASON_HAS_NEWER_IMAGE}"
+      The stderr should satisfy spec_expect_no_message "${NUM_SERVICES_SKIP_JOBS}"
+      The stderr should satisfy spec_expect_no_message "${NUM_SERVICES_INSPECT_FAILURE}"
+      The stderr should satisfy spec_expect_no_message "${NUM_SERVICES_NO_NEW_IMAGES}"
+      The stderr should satisfy spec_expect_message    "${NUM_SERVICES_UPDATING}"
+      The stderr should satisfy spec_expect_message    "${UPDATED}.*${SERVICE_NAME}"
+      The stderr should satisfy spec_expect_no_message "${NO_UPDATES}.*${SERVICE_NAME}"
+      The stderr should satisfy spec_expect_no_message "${ROLLING_BACK}.*${SERVICE_NAME}"
+      The stderr should satisfy spec_expect_no_message "${FAILED_TO_ROLLBACK}.*${SERVICE_NAME}"
+      The stderr should satisfy spec_expect_no_message "${ROLLED_BACK}.*${SERVICE_NAME}"
+      The stderr should satisfy spec_expect_no_message "${NO_SERVICES_UPDATED}"
+      The stderr should satisfy spec_expect_message    "1 ${SERVICES_UPDATED}"
+      The stderr should satisfy spec_expect_no_message "${NUM_SERVICES_UPDATE_FAILED}"
+      The stderr should satisfy spec_expect_no_message "${NUM_SERVICES_ERRORS}"
+      The stderr should satisfy spec_expect_no_message "${NO_IMAGES_TO_REMOVE}"
+      The stderr should satisfy spec_expect_message    "${REMOVING_NUM_IMAGES}"
+      The stderr should satisfy spec_expect_no_message "${SKIP_REMOVING_IMAGES}"
+      The stderr should satisfy spec_expect_message    "${REMOVED_IMAGE}.*${IMAGE_WITH_TAG}"
+      The stderr should satisfy spec_expect_no_message "${FAILED_TO_REMOVE_IMAGE}.*${IMAGE_WITH_TAG}"
+    End
+  End
+  Describe "test_update_UPDATE_OPTIONS" "container_test:true"
+    TEST_NAME="test_update_UPDATE_OPTIONS"
+    IMAGE_WITH_TAG=$(get_image_with_tag "${SUITE_NAME}")
+    SERVICE_NAME="gantry-test-$(unique_id)"
+    _read_service_label() {
+      local SERVICE_NAME="${1}"
+      local LABEL="${2}"
+      docker service inspect -f "{{index .Spec.Labels \"${LABEL}\"}}" "${SERVICE_NAME}"
+    }
+    test_update_UPDATE_OPTIONS() {
+      local TEST_NAME=${1}
+      local SERVICE_NAME=${2}
+      local LABEL="gantry.test"
+      local LABEL_VALUE=
+      LABEL_VALUE=$(_read_service_label "${SERVICE_NAME}" "${LABEL}")
+      echo "Before updating: LABEL_VALUE=${LABEL_VALUE}"
+      reset_gantry_env "${SERVICE_NAME}"
+      export GANTRY_UPDATE_OPTIONS="--label-add=${LABEL}=${SERVICE_NAME}"
       local RETURN_VALUE=
       run_gantry "${TEST_NAME}"
       RETURN_VALUE="${?}"
-      [ -d "${CONFIG}" ] && rm -r "${CONFIG}"
+      LABEL_VALUE=$(_read_service_label "${SERVICE_NAME}" "${LABEL}")
+      echo "After updating: LABEL_VALUE=${LABEL_VALUE}"
       return "${RETURN_VALUE}"
     }
     BeforeEach "common_setup_new_image ${TEST_NAME} ${IMAGE_WITH_TAG} ${SERVICE_NAME}"
     AfterEach "common_cleanup ${TEST_NAME} ${IMAGE_WITH_TAG} ${SERVICE_NAME}"
     It 'run_test'
-      When run test_login_file_not_exist "${TEST_NAME}" "${SERVICE_NAME}" "${CONFIG}" "${TEST_REGISTRY}" "${TEST_USERNAME}" "${TEST_PASSWORD}"
-      The status should be failure
+      When run test_update_UPDATE_OPTIONS "${TEST_NAME}" "${SERVICE_NAME}"
+      The status should be success
       The stdout should satisfy display_output
+      # Check an observable difference before and after applying UPDATE_OPTIONS.
+      The stdout should satisfy spec_expect_no_message "Before updating: LABEL_VALUE=.*${SERVICE_NAME}"
+      The stdout should satisfy spec_expect_message    "After updating: LABEL_VALUE=.*${SERVICE_NAME}"
       The stderr should satisfy display_output
-      The stderr should satisfy spec_expect_no_message "Logged into registry *${TEST_REGISTRY} for config ${CONFIG}"
-      The stderr should satisfy spec_expect_message    "${SKIP_UPDATING_ALL}.*${SKIP_REASON_PREVIOUS_ERRORS}"
       The stderr should satisfy spec_expect_no_message "${SKIP_UPDATING}.*${SERVICE_NAME}"
-      The stderr should satisfy spec_expect_no_message "${PERFORM_UPDATING}.*${SERVICE_NAME}"
+      The stderr should satisfy spec_expect_message    "${PERFORM_UPDATING}.*${SERVICE_NAME}.*${PERFORM_REASON_HAS_NEWER_IMAGE}"
       The stderr should satisfy spec_expect_no_message "${NUM_SERVICES_SKIP_JOBS}"
       The stderr should satisfy spec_expect_no_message "${NUM_SERVICES_INSPECT_FAILURE}"
       The stderr should satisfy spec_expect_no_message "${NUM_SERVICES_NO_NEW_IMAGES}"
-      The stderr should satisfy spec_expect_no_message "${NUM_SERVICES_UPDATING}"
-      The stderr should satisfy spec_expect_no_message "${ADDING_OPTIONS}.*--config.*"
+      The stderr should satisfy spec_expect_message    "${NUM_SERVICES_UPDATING}"
+      The stderr should satisfy spec_expect_message    "${ADDING_OPTIONS}.*--label-add=gantry.test=${SERVICE_NAME}.*${SERVICE_NAME}"
+      The stderr should satisfy spec_expect_message    "${UPDATED}.*${SERVICE_NAME}"
+      The stderr should satisfy spec_expect_no_message "${NO_UPDATES}.*${SERVICE_NAME}"
+      The stderr should satisfy spec_expect_no_message "${ROLLING_BACK}.*${SERVICE_NAME}"
+      The stderr should satisfy spec_expect_no_message "${FAILED_TO_ROLLBACK}.*${SERVICE_NAME}"
+      The stderr should satisfy spec_expect_no_message "${ROLLED_BACK}.*${SERVICE_NAME}"
+      The stderr should satisfy spec_expect_no_message "${NO_SERVICES_UPDATED}"
+      The stderr should satisfy spec_expect_message    "1 ${SERVICES_UPDATED}"
+      The stderr should satisfy spec_expect_no_message "${NUM_SERVICES_UPDATE_FAILED}"
+      The stderr should satisfy spec_expect_no_message "${NUM_SERVICES_ERRORS}"
+      The stderr should satisfy spec_expect_no_message "${NO_IMAGES_TO_REMOVE}"
+      The stderr should satisfy spec_expect_message    "${REMOVING_NUM_IMAGES}"
+      The stderr should satisfy spec_expect_no_message "${SKIP_REMOVING_IMAGES}"
+      The stderr should satisfy spec_expect_message    "${REMOVED_IMAGE}.*${IMAGE_WITH_TAG}"
+      The stderr should satisfy spec_expect_no_message "${FAILED_TO_REMOVE_IMAGE}.*${IMAGE_WITH_TAG}"
+    End
+  End
+  Describe "test_update_UPDATE_TIMEOUT_SECONDS_not_a_number" "container_test:false"
+    TEST_NAME="test_update_UPDATE_TIMEOUT_SECONDS_not_a_number"
+    IMAGE_WITH_TAG=$(get_image_with_tag "${SUITE_NAME}")
+    SERVICE_NAME="gantry-test-$(unique_id)"
+    test_update_UPDATE_TIMEOUT_SECONDS_not_a_number() {
+      local TEST_NAME=${1}
+      local SERVICE_NAME=${2}
+      reset_gantry_env "${SERVICE_NAME}"
+      export GANTRY_UPDATE_TIMEOUT_SECONDS="NotANumber"
+      run_gantry "${TEST_NAME}"
+    }
+    BeforeEach "common_setup_new_image ${TEST_NAME} ${IMAGE_WITH_TAG} ${SERVICE_NAME}"
+    AfterEach "common_cleanup ${TEST_NAME} ${IMAGE_WITH_TAG} ${SERVICE_NAME}"
+    It 'run_test'
+      When run test_update_UPDATE_TIMEOUT_SECONDS_not_a_number "${TEST_NAME}" "${SERVICE_NAME}"
+      The status should be failure
+      The stdout should satisfy display_output
+      The stderr should satisfy display_output
+      The stderr should satisfy spec_expect_message    "GANTRY_UPDATE_TIMEOUT_SECONDS ${MUST_BE_A_NUMBER}.*"
+      The stderr should satisfy spec_expect_no_message "${SKIP_UPDATING}.*${SERVICE_NAME}"
+      The stderr should satisfy spec_expect_message    "${PERFORM_UPDATING}.*${SERVICE_NAME}.*${PERFORM_REASON_HAS_NEWER_IMAGE}"
+      The stderr should satisfy spec_expect_no_message "${NUM_SERVICES_SKIP_JOBS}"
+      The stderr should satisfy spec_expect_no_message "${NUM_SERVICES_INSPECT_FAILURE}"
+      The stderr should satisfy spec_expect_no_message "${NUM_SERVICES_NO_NEW_IMAGES}"
+      The stderr should satisfy spec_expect_message    "${NUM_SERVICES_UPDATING}"
       The stderr should satisfy spec_expect_no_message "${UPDATED}.*${SERVICE_NAME}"
       The stderr should satisfy spec_expect_no_message "${NO_UPDATES}.*${SERVICE_NAME}"
       The stderr should satisfy spec_expect_no_message "${ROLLING_BACK}.*${SERVICE_NAME}"
@@ -282,7 +264,7 @@ Describe 'login'
       The stderr should satisfy spec_expect_message    "${NO_SERVICES_UPDATED}"
       The stderr should satisfy spec_expect_no_message "${NUM_SERVICES_UPDATED}"
       The stderr should satisfy spec_expect_no_message "${NUM_SERVICES_UPDATE_FAILED}"
-      The stderr should satisfy spec_expect_no_message "${NUM_SERVICES_ERRORS}"
+      The stderr should satisfy spec_expect_message    "${NUM_SERVICES_ERRORS}"
       The stderr should satisfy spec_expect_message    "${NO_IMAGES_TO_REMOVE}"
       The stderr should satisfy spec_expect_no_message "${REMOVING_NUM_IMAGES}"
       The stderr should satisfy spec_expect_no_message "${SKIP_REMOVING_IMAGES}"
@@ -290,4 +272,4 @@ Describe 'login'
       The stderr should satisfy spec_expect_no_message "${FAILED_TO_REMOVE_IMAGE}.*${IMAGE_WITH_TAG}"
     End
   End
-End # Describe 'Login'
+End # Describe 'Single service'

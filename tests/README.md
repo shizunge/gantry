@@ -22,7 +22,12 @@ bash shellspec --pattern tests/<file_name>
 bash shellspec --pattern tests/<file_name> --example <example_within_the_file>
 ```
 
-To generate coverage (need [kcov](https://github.com/SimonKagstrom/kcov) installed):
+To run multiple tests in parallel
+```
+bash shellspec --jobs 50
+```
+
+To generate coverage (require [kcov](https://github.com/SimonKagstrom/kcov) installed):
 ```
 bash shellspec --kcov
 ```
