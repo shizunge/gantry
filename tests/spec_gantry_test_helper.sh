@@ -67,6 +67,26 @@ common_setup_new_image() {
   build_and_push_test_image "${IMAGE_WITH_TAG}"
 }
 
+common_setup_new_image_multiple() {
+  local TEST_NAME="${1}"
+  local IMAGE_WITH_TAG="${2}"
+  local SERVICE_NAME="${3}"
+  local MAX_SERVICES_NUM="${4}"
+  initialize_test "${TEST_NAME}"
+  build_and_push_test_image "${IMAGE_WITH_TAG}"
+  local NUM=
+  local PIDS=
+  for NUM in $(seq 0 "${MAX_SERVICES_NUM}"); do
+    local SERVICE_NAME_NUM="${SERVICE_NAME}-${NUM}"
+    start_replicated_service "${SERVICE_NAME_NUM}" "${IMAGE_WITH_TAG}" &
+    PIDS="${!} ${PIDS}"
+  done
+  # SC2086 (info): Double quote to prevent globbing and word splitting.
+  # shellcheck disable=SC2086
+  wait ${PIDS}
+  build_and_push_test_image "${IMAGE_WITH_TAG}"
+}
+
 common_setup_no_new_image() {
   local TEST_NAME="${1}"
   local IMAGE_WITH_TAG="${2}"
@@ -108,6 +128,25 @@ common_cleanup() {
   local IMAGE_WITH_TAG="${2}"
   local SERVICE_NAME="${3}"
   stop_service "${SERVICE_NAME}"
+  prune_local_test_image "${IMAGE_WITH_TAG}"
+  finalize_test "${TEST_NAME}"
+}
+
+common_cleanup_multiple() {
+  local TEST_NAME="${1}"
+  local IMAGE_WITH_TAG="${2}"
+  local SERVICE_NAME="${3}"
+  local MAX_SERVICES_NUM="${4}"
+  local NUM=
+  local PIDS=
+  for NUM in $(seq 0 "${MAX_SERVICES_NUM}"); do
+    local SERVICE_NAME_NUM="${SERVICE_NAME}-${NUM}"
+    stop_service "${SERVICE_NAME_NUM}" &
+    PIDS="${!} ${PIDS}"
+  done
+  # SC2086 (info): Double quote to prevent globbing and word splitting.
+  # shellcheck disable=SC2086
+  wait ${PIDS}
   prune_local_test_image "${IMAGE_WITH_TAG}"
   finalize_test "${TEST_NAME}"
 }

@@ -23,25 +23,20 @@ Describe 'service-parallel'
     TEST_NAME="test_parallel_less_workers"
     IMAGE_WITH_TAG=$(get_image_with_tag "${SUITE_NAME}")
     SERVICE_NAME="gantry-test-$(unique_id)"
+    MAX_SERVICES_NUM=6
+    MAX_NO_NEW_IMAGE=3
     test_start() {
       local TEST_NAME=${1}
       local IMAGE_WITH_TAG=${2}
       local SERVICE_NAME=${3}
-      initialize_test "${TEST_NAME}"
-      build_and_push_test_image "${IMAGE_WITH_TAG}"
+      local MAX_SERVICES_NUM=${4}
+      local MAX_NO_NEW_IMAGE=${5}
+      common_setup_new_image_multiple "${TEST_NAME}" "${IMAGE_WITH_TAG}" "${SERVICE_NAME}" "${MAX_SERVICES_NUM}"
+      local NO_NEW_IAMGE_START=$((MAX_SERVICES_NUM+1))
+      local NO_NEW_IAMGE_END=$((MAX_SERVICES_NUM+MAX_NO_NEW_IMAGE))
       local NUM=
       local PIDS=
-      for NUM in $(seq 0 6); do
-        local SERVICE_NAME_NUM="${SERVICE_NAME}-${NUM}"
-        start_replicated_service "${SERVICE_NAME_NUM}" "${IMAGE_WITH_TAG}" &
-        PIDS="${!} ${PIDS}"
-      done
-      # SC2086 (info): Double quote to prevent globbing and word splitting.
-      # shellcheck disable=SC2086
-      wait ${PIDS}
-      build_and_push_test_image "${IMAGE_WITH_TAG}"
-      PIDS=
-      for NUM in $(seq 7 9); do
+      for NUM in $(seq "${NO_NEW_IAMGE_START}" "${NO_NEW_IAMGE_END}"); do
         local SERVICE_NAME_NUM="${SERVICE_NAME}-${NUM}"
         start_replicated_service "${SERVICE_NAME_NUM}" "${IMAGE_WITH_TAG}" &
         PIDS="${!} ${PIDS}"
@@ -53,31 +48,15 @@ Describe 'service-parallel'
     test_parallel_less_workers() {
       local TEST_NAME=${1}
       local SERVICE_NAME=${2}
+      local MAX_SERVICES_NUM=${3}
       reset_gantry_env "${SERVICE_NAME}"
-      export GANTRY_UPDATE_NUM_WORKERS=5
+      export GANTRY_UPDATE_NUM_WORKERS=$((MAX_SERVICES_NUM/2+1))
       run_gantry "${TEST_NAME}"
     }
-    test_end() {
-      local TEST_NAME=${1}
-      local IMAGE_WITH_TAG=${2}
-      local SERVICE_NAME=${3}
-      local NUM=
-      local PIDS=
-      for NUM in $(seq 0 9); do
-        local SERVICE_NAME_NUM="${SERVICE_NAME}-${NUM}"
-        stop_service "${SERVICE_NAME_NUM}" &
-        PIDS="${!} ${PIDS}"
-      done
-      # SC2086 (info): Double quote to prevent globbing and word splitting.
-      # shellcheck disable=SC2086
-      wait ${PIDS}
-      prune_local_test_image "${IMAGE_WITH_TAG}"
-      finalize_test "${TEST_NAME}"
-    }
-    BeforeEach "test_start ${TEST_NAME} ${IMAGE_WITH_TAG} ${SERVICE_NAME}"
-    AfterEach "test_end ${TEST_NAME} ${IMAGE_WITH_TAG} ${SERVICE_NAME}"
+    BeforeEach "test_start ${TEST_NAME} ${IMAGE_WITH_TAG} ${SERVICE_NAME} ${MAX_SERVICES_NUM} ${MAX_NO_NEW_IMAGE}"
+    AfterEach "common_cleanup_multiple ${TEST_NAME} ${IMAGE_WITH_TAG} ${SERVICE_NAME} $((MAX_SERVICES_NUM+MAX_NO_NEW_IMAGE))"
     It 'run_test'
-      When run test_parallel_less_workers "${TEST_NAME}" "${SERVICE_NAME}"
+      When run test_parallel_less_workers "${TEST_NAME}" "${SERVICE_NAME}" "${MAX_SERVICES_NUM}"
       The status should be success
       The stdout should satisfy display_output
       The stderr should satisfy display_output
@@ -85,17 +64,17 @@ Describe 'service-parallel'
       The stderr should satisfy spec_expect_no_message "${SKIP_UPDATING}.* ${SERVICE_NAME_NUM} "
       The stderr should satisfy spec_expect_message    "${PERFORM_UPDATING}.* ${SERVICE_NAME_NUM} .*${PERFORM_REASON_HAS_NEWER_IMAGE}"
       The stderr should satisfy spec_expect_message    "${UPDATED}.* ${SERVICE_NAME_NUM}"
-      for NUM in $(seq 1 6); do
+      for NUM in $(seq 1 "${MAX_SERVICES_NUM}"); do
         SERVICE_NAME_NUM="${SERVICE_NAME}-${NUM}"
         The stderr should satisfy spec_expect_no_message "${SKIP_UPDATING}.* ${SERVICE_NAME_NUM} "
         The stderr should satisfy spec_expect_message    "${PERFORM_UPDATING}.* ${SERVICE_NAME_NUM} .*${PERFORM_REASON_KNOWN_NEWER_IMAGE}"
         The stderr should satisfy spec_expect_message    "${UPDATED}.* ${SERVICE_NAME_NUM}"
       done
-      SERVICE_NAME_NUM="${SERVICE_NAME}-7"
+      SERVICE_NAME_NUM="${SERVICE_NAME}-$((MAX_SERVICES_NUM+1))"
       The stderr should satisfy spec_expect_message    "${SKIP_UPDATING}.* ${SERVICE_NAME_NUM} .*${SKIP_REASON_CURRENT_IS_LATEST}"
       The stderr should satisfy spec_expect_no_message "${PERFORM_UPDATING}.* ${SERVICE_NAME_NUM} "
       The stderr should satisfy spec_expect_no_message "${UPDATED}.* ${SERVICE_NAME_NUM}"
-      for NUM in $(seq 8 9); do
+      for NUM in $(seq "$((MAX_SERVICES_NUM+2))" "$((MAX_SERVICES_NUM+MAX_NO_NEW_IMAGE))"); do
         SERVICE_NAME_NUM="${SERVICE_NAME}-${NUM}"
         The stderr should satisfy spec_expect_message    "${SKIP_UPDATING}.* ${SERVICE_NAME_NUM} .*${SKIP_REASON_NO_KNOWN_NEWER_IMAGE}"
         The stderr should satisfy spec_expect_no_message "${PERFORM_UPDATING}.* ${SERVICE_NAME_NUM} "
@@ -120,52 +99,19 @@ Describe 'service-parallel'
     TEST_NAME="test_parallel_more_workers"
     IMAGE_WITH_TAG=$(get_image_with_tag "${SUITE_NAME}")
     SERVICE_NAME="gantry-test-$(unique_id)"
-    test_start() {
-      local TEST_NAME=${1}
-      local IMAGE_WITH_TAG=${2}
-      local SERVICE_NAME=${3}
-      initialize_test "${TEST_NAME}"
-      build_and_push_test_image "${IMAGE_WITH_TAG}"
-      local NUM=
-      local PIDS=
-      for NUM in $(seq 0 10); do
-        local SERVICE_NAME_NUM="${SERVICE_NAME}-${NUM}"
-        start_replicated_service "${SERVICE_NAME_NUM}" "${IMAGE_WITH_TAG}" &
-        PIDS="${!} ${PIDS}"
-      done
-      # SC2086 (info): Double quote to prevent globbing and word splitting.
-      # shellcheck disable=SC2086
-      wait ${PIDS}
-      build_and_push_test_image "${IMAGE_WITH_TAG}"
-    }
+    MAX_SERVICES_NUM=10
     test_parallel_more_workers() {
       local TEST_NAME=${1}
       local SERVICE_NAME=${2}
+      local MAX_SERVICES_NUM=${3}
       reset_gantry_env "${SERVICE_NAME}"
-      export GANTRY_UPDATE_NUM_WORKERS=50
+      export GANTRY_UPDATE_NUM_WORKERS=$((MAX_SERVICES_NUM*3))
       run_gantry "${TEST_NAME}"
     }
-    test_end() {
-      local TEST_NAME=${1}
-      local IMAGE_WITH_TAG=${2}
-      local SERVICE_NAME=${3}
-      local NUM=
-      local PIDS=
-      for NUM in $(seq 0 10); do
-        local SERVICE_NAME_NUM="${SERVICE_NAME}-${NUM}"
-        stop_service "${SERVICE_NAME_NUM}" &
-        PIDS="${!} ${PIDS}"
-      done
-      # SC2086 (info): Double quote to prevent globbing and word splitting.
-      # shellcheck disable=SC2086
-      wait ${PIDS}
-      prune_local_test_image "${IMAGE_WITH_TAG}"
-      finalize_test "${TEST_NAME}"
-    }
-    BeforeEach "test_start ${TEST_NAME} ${IMAGE_WITH_TAG} ${SERVICE_NAME}"
-    AfterEach "test_end ${TEST_NAME} ${IMAGE_WITH_TAG} ${SERVICE_NAME}"
+    BeforeEach "common_setup_new_image_multiple ${TEST_NAME} ${IMAGE_WITH_TAG} ${SERVICE_NAME} ${MAX_SERVICES_NUM}"
+    AfterEach "common_cleanup_multiple ${TEST_NAME} ${IMAGE_WITH_TAG} ${SERVICE_NAME} ${MAX_SERVICES_NUM}"
     It 'run_test'
-      When run test_parallel_more_workers "${TEST_NAME}" "${SERVICE_NAME}"
+      When run test_parallel_more_workers "${TEST_NAME}" "${SERVICE_NAME}" "${MAX_SERVICES_NUM}"
       The status should be success
       The stdout should satisfy display_output
       The stderr should satisfy display_output
@@ -173,7 +119,7 @@ Describe 'service-parallel'
       The stderr should satisfy spec_expect_no_message "${SKIP_UPDATING}.* ${SERVICE_NAME_NUM} "
       The stderr should satisfy spec_expect_message    "${PERFORM_UPDATING}.* ${SERVICE_NAME_NUM} .*${PERFORM_REASON_HAS_NEWER_IMAGE}"
       The stderr should satisfy spec_expect_message    "${UPDATED}.* ${SERVICE_NAME_NUM}"
-      for NUM in $(seq 1 10); do
+      for NUM in $(seq 1 "${MAX_SERVICES_NUM}"); do
         SERVICE_NAME_NUM="${SERVICE_NAME}-${NUM}"
         The stderr should satisfy spec_expect_no_message "${SKIP_UPDATING}.* ${SERVICE_NAME_NUM} "
         The stderr should satisfy spec_expect_message    "${PERFORM_UPDATING}.* ${SERVICE_NAME_NUM} .*${PERFORM_REASON_KNOWN_NEWER_IMAGE}"
