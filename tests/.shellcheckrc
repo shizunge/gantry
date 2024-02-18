@@ -36,3 +36,6 @@ disable=SC3057
 
 # SC2154 (warning): VAR is referenced but not assigned.
 disable=SC2154
+
+# SC2317 (info): Command appears to be unreachable. Check usage (or ignore if invoked indirectly).
+disable=SC2317
