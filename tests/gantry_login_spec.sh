@@ -24,19 +24,21 @@ Describe 'login'
     TEST_NAME="test_login_config"
     IMAGE_WITH_TAG=$(get_image_with_tag "${SUITE_NAME}")
     SERVICE_NAME="gantry-test-$(unique_id)"
+    CONFIG="C$(unique_id)"
     TEST_REGISTRY=$(load_test_registry "${SUITE_NAME}") || return 1
     test_login_config() {
       local TEST_NAME=${1}
       local SERVICE_NAME=${2}
-      local REGISTRY=${3}
-      local USERNAME=${4}
-      local PASSWORD=${5}
+      local CONFIG=${3}
+      local REGISTRY=${4}
+      local USERNAME=${5}
+      local PASSWORD=${6}
       if [ -z "${REGISTRY}" ] || [ -z "${USERNAME}" ] || [ -z "${PASSWORD}" ]; then
         echo "No REGISTRY, USERNAME or PASSWORD provided." >&2
         return 1
       fi
       local LABEL="gantry.auth.config"
-      CONFIG="C$(unique_id)"
+      local USER_FILE PASS_FILE
       USER_FILE=$(mktemp)
       PASS_FILE=$(mktemp)
       docker service update --quiet --label-add "${LABEL}=${CONFIG}" "${SERVICE_NAME}"
@@ -58,7 +60,7 @@ Describe 'login'
     BeforeEach "common_setup_new_image ${TEST_NAME} ${IMAGE_WITH_TAG} ${SERVICE_NAME}"
     AfterEach "common_cleanup ${TEST_NAME} ${IMAGE_WITH_TAG} ${SERVICE_NAME}"
     It 'run_test'
-      When run test_login_config "${TEST_NAME}" "${SERVICE_NAME}" "${TEST_REGISTRY}" "${TEST_USERNAME}" "${TEST_PASSWORD}"
+      When run test_login_config "${TEST_NAME}" "${SERVICE_NAME}" "${CONFIG}" "${TEST_REGISTRY}" "${TEST_USERNAME}" "${TEST_PASSWORD}"
       The status should be success
       The stdout should satisfy display_output
       The stderr should satisfy display_output
@@ -69,7 +71,7 @@ Describe 'login'
       The stderr should satisfy spec_expect_no_message "${NUM_SERVICES_INSPECT_FAILURE}"
       The stderr should satisfy spec_expect_no_message "${NUM_SERVICES_NO_NEW_IMAGES}"
       The stderr should satisfy spec_expect_message    "${NUM_SERVICES_UPDATING}"
-      The stderr should satisfy spec_expect_message    "${ADDING_OPTIONS}.*--config ${CONFIG}"
+      The stderr should satisfy spec_expect_message    "${ADDING_OPTIONS}.*--config ${CONFIG}.*${SERVICE_NAME}"
       The stderr should satisfy spec_expect_message    "${UPDATED}.*${SERVICE_NAME}"
       The stderr should satisfy spec_expect_no_message "${NO_UPDATES}.*${SERVICE_NAME}"
       The stderr should satisfy spec_expect_no_message "${ROLLING_BACK}.*${SERVICE_NAME}"
@@ -90,19 +92,21 @@ Describe 'login'
     TEST_NAME="test_login_REGISTRY_CONFIGS_FILE"
     IMAGE_WITH_TAG=$(get_image_with_tag "${SUITE_NAME}")
     SERVICE_NAME="gantry-test-$(unique_id)"
+    CONFIG="C$(unique_id)"
     TEST_REGISTRY=$(load_test_registry "${SUITE_NAME}") || return 1
     test_login_REGISTRY_CONFIGS_FILE() {
       local TEST_NAME=${1}
       local SERVICE_NAME=${2}
-      local REGISTRY=${3}
-      local USERNAME=${4}
-      local PASSWORD=${5}
+      local CONFIG=${3}
+      local REGISTRY=${4}
+      local USERNAME=${5}
+      local PASSWORD=${6}
       if [ -z "${REGISTRY}" ] || [ -z "${USERNAME}" ] || [ -z "${PASSWORD}" ]; then
         echo "No REGISTRY, USERNAME or PASSWORD provided." >&2
         return 1
       fi
       local LABEL="gantry.auth.config"
-      CONFIG="C$(unique_id)"
+      local CONFIGS_FILE=
       CONFIGS_FILE=$(mktemp)
       docker service update --quiet --label-add "${LABEL}=${CONFIG}" "${SERVICE_NAME}"
       echo "# Test comments: CONFIG REGISTRY USERNAME PASSWORD" >> "${CONFIGS_FILE}"
@@ -126,7 +130,7 @@ Describe 'login'
     BeforeEach "common_setup_new_image ${TEST_NAME} ${IMAGE_WITH_TAG} ${SERVICE_NAME}"
     AfterEach "common_cleanup ${TEST_NAME} ${IMAGE_WITH_TAG} ${SERVICE_NAME}"
     It 'run_test'
-      When run test_login_REGISTRY_CONFIGS_FILE "${TEST_NAME}" "${SERVICE_NAME}" "${TEST_REGISTRY}" "${TEST_USERNAME}" "${TEST_PASSWORD}" 
+      When run test_login_REGISTRY_CONFIGS_FILE "${TEST_NAME}" "${SERVICE_NAME}" "${CONFIG}" "${TEST_REGISTRY}" "${TEST_USERNAME}" "${TEST_PASSWORD}"
       The status should be success
       The stdout should satisfy display_output
       The stderr should satisfy display_output
@@ -137,7 +141,7 @@ Describe 'login'
       The stderr should satisfy spec_expect_no_message "${NUM_SERVICES_INSPECT_FAILURE}"
       The stderr should satisfy spec_expect_no_message "${NUM_SERVICES_NO_NEW_IMAGES}"
       The stderr should satisfy spec_expect_message    "${NUM_SERVICES_UPDATING}"
-      The stderr should satisfy spec_expect_message    "${ADDING_OPTIONS}.*--config ${CONFIG}"
+      The stderr should satisfy spec_expect_message    "${ADDING_OPTIONS}.*--config ${CONFIG}.*${SERVICE_NAME}"
       The stderr should satisfy spec_expect_message    "${UPDATED}.*${SERVICE_NAME}"
       The stderr should satisfy spec_expect_no_message "${NO_UPDATES}.*${SERVICE_NAME}"
       The stderr should satisfy spec_expect_no_message "${ROLLING_BACK}.*${SERVICE_NAME}"
@@ -158,19 +162,21 @@ Describe 'login'
     TEST_NAME="test_login_REGISTRY_CONFIGS_FILE_bad_format"
     IMAGE_WITH_TAG=$(get_image_with_tag "${SUITE_NAME}")
     SERVICE_NAME="gantry-test-$(unique_id)"
+    CONFIG="C$(unique_id)"
     TEST_REGISTRY=$(load_test_registry "${SUITE_NAME}") || return 1
     test_login_REGISTRY_CONFIGS_FILE_bad_format() {
       local TEST_NAME=${1}
       local SERVICE_NAME=${2}
-      local REGISTRY=${3}
-      local USERNAME=${4}
-      local PASSWORD=${5}
+      local CONFIG=${3}
+      local REGISTRY=${4}
+      local USERNAME=${5}
+      local PASSWORD=${6}
       if [ -z "${REGISTRY}" ] || [ -z "${USERNAME}" ] || [ -z "${PASSWORD}" ]; then
         echo "No REGISTRY, USERNAME or PASSWORD provided." >&2
         return 1
       fi
       local LABEL="gantry.auth.config"
-      CONFIG="C$(unique_id)"
+      local CONFIGS_FILE=
       CONFIGS_FILE=$(mktemp)
       docker service update --quiet --label-add "${LABEL}=${CONFIG}" "${SERVICE_NAME}"
       # Add an extra item to the line.
@@ -189,7 +195,7 @@ Describe 'login'
     BeforeEach "common_setup_new_image ${TEST_NAME} ${IMAGE_WITH_TAG} ${SERVICE_NAME}"
     AfterEach "common_cleanup ${TEST_NAME} ${IMAGE_WITH_TAG} ${SERVICE_NAME}"
     It 'run_test'
-      When run test_login_REGISTRY_CONFIGS_FILE_bad_format "${TEST_NAME}" "${SERVICE_NAME}" "${TEST_REGISTRY}" "${TEST_USERNAME}" "${TEST_PASSWORD}"
+      When run test_login_REGISTRY_CONFIGS_FILE_bad_format "${TEST_NAME}" "${SERVICE_NAME}" "${CONFIG}" "${TEST_REGISTRY}" "${TEST_USERNAME}" "${TEST_PASSWORD}"
       The status should be failure
       The stdout should satisfy display_output
       The stderr should satisfy display_output
@@ -224,19 +230,20 @@ Describe 'login'
     TEST_NAME="test_login_file_not_exist"
     IMAGE_WITH_TAG=$(get_image_with_tag "${SUITE_NAME}")
     SERVICE_NAME="gantry-test-$(unique_id)"
+    CONFIG="C$(unique_id)"
     TEST_REGISTRY=$(load_test_registry "${SUITE_NAME}") || return 1
     test_login_file_not_exist() {
       local TEST_NAME=${1}
       local SERVICE_NAME=${2}
-      local REGISTRY=${3}
-      local USERNAME=${4}
-      local PASSWORD=${5}
+      local CONFIG=${3}
+      local REGISTRY=${4}
+      local USERNAME=${5}
+      local PASSWORD=${6}
       if [ -z "${REGISTRY}" ] || [ -z "${USERNAME}" ] || [ -z "${PASSWORD}" ]; then
         echo "No REGISTRY, USERNAME or PASSWORD provided." >&2
         return 1
       fi
       local LABEL="gantry.auth.config"
-      CONFIG="C$(unique_id)"
       docker service update --quiet --label-add "${LABEL}=${CONFIG}" "${SERVICE_NAME}"
       local FILE_NOT_EXIST="/tmp/${CONFIG}"
       reset_gantry_env "${SERVICE_NAME}"
@@ -254,7 +261,7 @@ Describe 'login'
     BeforeEach "common_setup_new_image ${TEST_NAME} ${IMAGE_WITH_TAG} ${SERVICE_NAME}"
     AfterEach "common_cleanup ${TEST_NAME} ${IMAGE_WITH_TAG} ${SERVICE_NAME}"
     It 'run_test'
-      When run test_login_file_not_exist "${TEST_NAME}" "${SERVICE_NAME}" "${TEST_REGISTRY}" "${TEST_USERNAME}" "${TEST_PASSWORD}"
+      When run test_login_file_not_exist "${TEST_NAME}" "${SERVICE_NAME}" "${CONFIG}" "${TEST_REGISTRY}" "${TEST_USERNAME}" "${TEST_PASSWORD}"
       The status should be failure
       The stdout should satisfy display_output
       The stderr should satisfy display_output

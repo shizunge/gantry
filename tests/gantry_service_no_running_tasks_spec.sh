@@ -71,8 +71,8 @@ Describe "service-no-running-tasks"
       # https://github.com/docker/cli/issues/627
       The stderr should satisfy spec_expect_message    "${ADDING_OPTIONS}.*--detach=true.*${SERVICE_NAME}\."
       The stderr should satisfy spec_expect_message    "${ADDING_OPTIONS}.*--replicas=0.*${SERVICE_NAME}\."
-      The stderr should satisfy spec_expect_no_message "${ADDING_OPTIONS}.*--detach=true.*${SERVICE_NAME_SUFFIX}\."
-      The stderr should satisfy spec_expect_no_message "${ADDING_OPTIONS}.*--replicas=0.*${SERVICE_NAME_SUFFIX}\."
+      The stderr should satisfy spec_expect_no_message "${ADDING_OPTIONS}.*--detach=true.*${SERVICE_NAME_SUFFIX}"
+      The stderr should satisfy spec_expect_no_message "${ADDING_OPTIONS}.*--replicas=0.*${SERVICE_NAME_SUFFIX}"
       The stderr should satisfy spec_expect_no_message "${SKIP_UPDATING}.*${SERVICE_NAME}"
       The stderr should satisfy spec_expect_message    "${PERFORM_UPDATING}.*${SERVICE_NAME}.*${PERFORM_REASON_HAS_NEWER_IMAGE}"
       The stderr should satisfy spec_expect_no_message "${SKIP_UPDATING}.*${SERVICE_NAME_SUFFIX}"
@@ -129,7 +129,7 @@ Describe "service-no-running-tasks"
       The stderr should satisfy display_output
       # Add "--detach=true" when there is no running tasks.
       # https://github.com/docker/cli/issues/627
-      The stderr should satisfy spec_expect_message    "${ADDING_OPTIONS}.*--detach=true"
+      The stderr should satisfy spec_expect_message    "${ADDING_OPTIONS}.*--detach=true.*${SERVICE_NAME}"
       # Cannot add "--replicas" to global mode
       The stderr should satisfy spec_expect_no_message "${ADDING_OPTIONS}.*--replicas=0"
       The stderr should satisfy spec_expect_no_message "${SKIP_UPDATING}.*${SERVICE_NAME}"

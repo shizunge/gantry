@@ -651,7 +651,7 @@ _inspect_image() {
   fi
   local DOCKER_CONFIG=
   DOCKER_CONFIG=$(_get_config_from_service "${SERVICE}")
-  [ -n "${DOCKER_CONFIG}" ] && log DEBUG "Adding options \"${DOCKER_CONFIG}\" to docker commands."
+  [ -n "${DOCKER_CONFIG}" ] && log DEBUG "Adding options \"${DOCKER_CONFIG}\" to docker commands for ${SERVICE_NAME}."
   local IMAGE_INFO=
   if ! IMAGE_INFO=$(_get_image_info "${MANIFEST_CMD}" "${IMAGE}" "${DOCKER_CONFIG}"); then
     log DEBUG "Skip updating ${SERVICE_NAME} because there is a failure to obtain the manifest from the registry of image ${IMAGE}."

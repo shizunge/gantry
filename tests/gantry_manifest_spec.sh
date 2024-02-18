@@ -50,7 +50,7 @@ Describe 'manifest-command'
       The stderr should satisfy spec_expect_no_message "${NUM_SERVICES_INSPECT_FAILURE}"
       The stderr should satisfy spec_expect_no_message "${NUM_SERVICES_NO_NEW_IMAGES}"
       The stderr should satisfy spec_expect_message    "${NUM_SERVICES_UPDATING}"
-      The stderr should satisfy spec_expect_message    "${ADDING_OPTIONS}.*--force"
+      The stderr should satisfy spec_expect_message    "${ADDING_OPTIONS}.*--force.*${SERVICE_NAME}"
       The stderr should satisfy spec_expect_no_message "${UPDATED}.*${SERVICE_NAME}"
       The stderr should satisfy spec_expect_message    "${NO_UPDATES}.*${SERVICE_NAME}"
       The stderr should satisfy spec_expect_no_message "${ROLLING_BACK}.*${SERVICE_NAME}"
@@ -130,7 +130,7 @@ Describe 'manifest-command'
       The status should be success
       The stdout should satisfy display_output
       The stderr should satisfy display_output
-      The stderr should satisfy spec_expect_message    "${ADDING_OPTIONS}.*--insecure"
+      The stderr should satisfy spec_expect_message    "${ADDING_OPTIONS}.*--insecure.*"
       The stderr should satisfy spec_expect_no_message "${SKIP_UPDATING}.*${SERVICE_NAME}"
       The stderr should satisfy spec_expect_message    "${PERFORM_UPDATING}.*${SERVICE_NAME}.*${PERFORM_REASON_HAS_NEWER_IMAGE}"
       The stderr should satisfy spec_expect_no_message "${NUM_SERVICES_SKIP_JOBS}"
@@ -173,7 +173,7 @@ Describe 'manifest-command'
       The stdout should satisfy display_output
       The stderr should satisfy display_output
       # No options are added to the unknwon command.
-      The stderr should satisfy spec_expect_no_message "${ADDING_OPTIONS}.*--insecure"
+      The stderr should satisfy spec_expect_no_message "${ADDING_OPTIONS}.*--insecure.*"
       The stderr should satisfy spec_expect_message    "Unknown MANIFEST_CMD.*unsupported_cmd"
       The stderr should satisfy spec_expect_message    "${SKIP_UPDATING}.*${SERVICE_NAME}.*${SKIP_REASON_MANIFEST_FAILURE}"
       The stderr should satisfy spec_expect_no_message "${PERFORM_UPDATING}.*${SERVICE_NAME}"

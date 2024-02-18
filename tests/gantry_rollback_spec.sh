@@ -93,7 +93,7 @@ Describe 'rollback'
       The stderr should satisfy spec_expect_message    "${NUM_SERVICES_UPDATING}"
       The stderr should satisfy spec_expect_no_message "${UPDATED}.*${SERVICE_NAME}"
       The stderr should satisfy spec_expect_no_message "${NO_UPDATES}.*${SERVICE_NAME}"
-      The stderr should satisfy spec_expect_message    "${ADDING_OPTIONS}.*--incorrect-option"
+      The stderr should satisfy spec_expect_message    "${ADDING_OPTIONS}.*--incorrect-option.*${SERVICE_NAME}"
       The stderr should satisfy spec_expect_message    "${ROLLING_BACK}.*${SERVICE_NAME}"
       The stderr should satisfy spec_expect_message    "${FAILED_TO_ROLLBACK}.*${SERVICE_NAME}"
       The stderr should satisfy spec_expect_no_message "${ROLLED_BACK}.*${SERVICE_NAME}"

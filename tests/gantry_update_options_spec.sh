@@ -108,7 +108,7 @@ Describe 'update-options'
       The stderr should satisfy spec_expect_no_message "${NUM_SERVICES_INSPECT_FAILURE}"
       The stderr should satisfy spec_expect_no_message "${NUM_SERVICES_NO_NEW_IMAGES}"
       The stderr should satisfy spec_expect_message    "${NUM_SERVICES_UPDATING}"
-      The stderr should satisfy spec_expect_message    "${ADDING_OPTIONS}.*--detach=true"
+      The stderr should satisfy spec_expect_message    "${ADDING_OPTIONS}.*--detach=true.*${SERVICE_NAME}"
       The stderr should satisfy spec_expect_message    "${UPDATED}.*${SERVICE_NAME}"
       The stderr should satisfy spec_expect_no_message "${NO_UPDATES}.*${SERVICE_NAME}"
       The stderr should satisfy spec_expect_no_message "${ROLLING_BACK}.*${SERVICE_NAME}"
@@ -148,7 +148,7 @@ Describe 'update-options'
       The status should be success
       The stdout should satisfy display_output
       The stderr should satisfy display_output
-      The stderr should satisfy spec_expect_message    "${ADDING_OPTIONS}.*--detach=true"
+      The stderr should satisfy spec_expect_message    "${ADDING_OPTIONS}.*--detach=true.*${SERVICE_NAME}"
       # Cannot add "--replicas" to replicated job
       The stderr should satisfy spec_expect_no_message "${ADDING_OPTIONS}.*--replicas=0"
       The stderr should satisfy spec_expect_no_message "${SKIP_UPDATING}.*${SERVICE_NAME}"
@@ -214,7 +214,7 @@ Describe 'update-options'
       The stderr should satisfy spec_expect_no_message "${NUM_SERVICES_INSPECT_FAILURE}"
       The stderr should satisfy spec_expect_no_message "${NUM_SERVICES_NO_NEW_IMAGES}"
       The stderr should satisfy spec_expect_message    "${NUM_SERVICES_UPDATING}"
-      The stderr should satisfy spec_expect_message    "${ADDING_OPTIONS}.*--label-add=gantry.test=${SERVICE_NAME}"
+      The stderr should satisfy spec_expect_message    "${ADDING_OPTIONS}.*--label-add=gantry.test=${SERVICE_NAME}.*${SERVICE_NAME}"
       The stderr should satisfy spec_expect_message    "${UPDATED}.*${SERVICE_NAME}"
       The stderr should satisfy spec_expect_no_message "${NO_UPDATES}.*${SERVICE_NAME}"
       The stderr should satisfy spec_expect_no_message "${ROLLING_BACK}.*${SERVICE_NAME}"
