@@ -173,7 +173,7 @@ Describe 'service-parallel'
       The stderr should satisfy spec_expect_message    "${NO_SERVICES_UPDATED}"
       The stderr should satisfy spec_expect_no_message "${NUM_SERVICES_UPDATED}"
       The stderr should satisfy spec_expect_no_message "${NUM_SERVICES_UPDATE_FAILED}"
-      The stderr should satisfy spec_expect_no_message "${NUM_SERVICES_ERRORS}"
+      The stderr should satisfy spec_expect_message    "${NUM_SERVICES_ERRORS}"
       The stderr should satisfy spec_expect_message    "${NO_IMAGES_TO_REMOVE}"
       The stderr should satisfy spec_expect_no_message "${REMOVING_NUM_IMAGES}"
       The stderr should satisfy spec_expect_no_message "${SKIP_REMOVING_IMAGES}"

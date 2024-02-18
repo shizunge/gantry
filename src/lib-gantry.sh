@@ -482,12 +482,12 @@ gantry_current_service_name() {
 _service_is_self() {
   if [ -z "${GANTRY_SERVICES_SELF}" ]; then
     # If _service_is_self is called inside a subprocess, export won't affect the parent process.
-    # We only want to log it once, thus try to read the value from a static variable firstly.
-    # The static variable should be set inside the function gantry_current_service_name. If it is set, skip logging.
-    GANTRY_SERVICES_SELF=$(_static_variable_read_list STATIC_VAR_CURRENT_SERVICE_NAME)
+    # Use a static variable to preserve the value between processes. And we only want to log the value is set once.
+    GANTRY_SERVICES_SELF=$(_static_variable_read_list STATIC_VAR_SERVICES_SELF)
     if [ -z "${GANTRY_SERVICES_SELF}" ]; then
       GANTRY_SERVICES_SELF=$(gantry_current_service_name)
       export GANTRY_SERVICES_SELF
+      _static_variable_add_unique_to_list STATIC_VAR_SERVICES_SELF "${GANTRY_SERVICES_SELF}"
       [ -n "${GANTRY_SERVICES_SELF}" ] && log INFO "Set GANTRY_SERVICES_SELF to ${GANTRY_SERVICES_SELF}."
     fi
   fi
@@ -775,13 +775,17 @@ _rollback_service() {
 # return 0 when there is no error or failure.
 # return 1 when there are error(s) or failure(s).
 _update_single_service() {
-  local INPUT_ERROR=0
   local UPDATE_TIMEOUT_SECONDS=
-  UPDATE_TIMEOUT_SECONDS=$(gantry_read_number GANTRY_UPDATE_TIMEOUT_SECONDS 300) || INPUT_ERROR=1
+  if ! UPDATE_TIMEOUT_SECONDS=$(gantry_read_number GANTRY_UPDATE_TIMEOUT_SECONDS 300); then
+    local ERROR_SERVICE="GANTRY_UPDATE_TIMEOUT_SECONDS-is-not-a-number"
+    _static_variable_add_unique_to_list STATIC_VAR_SERVICES_UPDATE_INPUT_ERROR "${ERROR_SERVICE}"
+    return 1
+  fi
   local UPDATE_OPTIONS="${GANTRY_UPDATE_OPTIONS:-""}"
   local SERVICE_NAME="${1}"
   local IMAGE="${2}"
-  [ -z "${SERVICE_NAME}" ] && log ERROR "Updating service: SERVICE_NAME must not be empty." && INPUT_ERROR=1
+  local INPUT_ERROR=0
+  [ -z "${SERVICE_NAME}" ] && log ERROR "Updating service: SERVICE_NAME must not be empty." && INPUT_ERROR=1 && SERVICE_NAME="unknown-service-name"
   [ -z "${IMAGE}" ] && log ERROR "Updating ${SERVICE_NAME}: IMAGE must not be empty." && INPUT_ERROR=1
   if [ "${INPUT_ERROR}" -ne "0" ]; then
     _static_variable_add_unique_to_list STATIC_VAR_SERVICES_UPDATE_INPUT_ERROR "${SERVICE_NAME}"
@@ -906,7 +910,11 @@ gantry_get_services_list() {
 
 gantry_update_services_list() {
   local NUM_WORKERS=
-  NUM_WORKERS=$(gantry_read_number GANTRY_UPDATE_NUM_WORKERS 1) || return 1
+  if ! NUM_WORKERS=$(gantry_read_number GANTRY_UPDATE_NUM_WORKERS 1); then
+    local ERROR_SERVICE="GANTRY_UPDATE_NUM_WORKERS-is-not-a-number"
+    _static_variable_add_unique_to_list STATIC_VAR_SERVICES_UPDATE_INPUT_ERROR "${ERROR_SERVICE}"
+    return 1
+  fi
   local LIST="${*}"
   local NUM=
   NUM=$(_get_number_of_elements "${LIST}")
