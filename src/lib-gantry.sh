@@ -388,7 +388,7 @@ _report_services() {
   NUM_UPDATED=$(_get_number_of_elements_in_static_variable STATIC_VAR_SERVICES_UPDATED)
   NUM_FAILED=$(_get_number_of_elements_in_static_variable STATIC_VAR_SERVICES_UPDATE_FAILED)
   NUM_ERRORS=$(_get_number_of_elements_in_static_variable STATIC_VAR_SERVICES_UPDATE_INPUT_ERROR)
-  if [ "${NUM_FAILED}" -eq 0 ] && [ "${NUM_ERRORS}" -eq 0 ]; then
+  if [ "${NUM_FAILED}" = "0" ] && [ "${NUM_ERRORS}" = "0" ]; then
     NUM_ERRORS="${ACCUMULATED_ERRORS}"
   fi
   local NUM_TOTAL_ERRORS=$((NUM_FAILED+NUM_ERRORS))
@@ -414,10 +414,16 @@ _in_list() {
   return 1
 }
 
+# echo the name of the current container.
+# echo nothing if unable to find the name.
+# return 1 when there is an error.
 _current_container_name() {
   local CURRENT_CONTAINER_NAME=
   CURRENT_CONTAINER_NAME=$(_static_variable_read_list STATIC_VAR_CURRENT_CONTAINER_NAME)
   [ -n "${CURRENT_CONTAINER_NAME}" ] && echo "${CURRENT_CONTAINER_NAME}" && return 0
+  local NO_CURRENT_CONTAINER_NAME=
+  NO_CURRENT_CONTAINER_NAME=$(_static_variable_read_list STATIC_VAR_NO_CURRENT_CONTAINER_NAME)
+  [ -n "${NO_CURRENT_CONTAINER_NAME}" ] && return 0
   local ALL_NETWORKS=
   ALL_NETWORKS=$(docker network ls --format '{{.ID}}') || return 1;
   [ -z "${ALL_NETWORKS}" ] && return 0;
@@ -453,6 +459,8 @@ _current_container_name() {
       done
     done
   done
+  # Explicitly set that we cannot find the name of current container.
+  _static_variable_add_unique_to_list STATIC_VAR_NO_CURRENT_CONTAINER_NAME "NO_CURRENT_CONTAINER_NAME"
   return 0;
 }
 
@@ -464,7 +472,9 @@ gantry_current_service_name() {
   CNAME=$(_current_container_name) || return 1
   [ -z "${CNAME}" ] && return 0
   local SNAME=
-  SNAME=$(docker container inspect "${CNAME}" --format '{{range $key,$value := .Config.Labels}}{{$key}}={{println $value}}{{end}}' | grep "com.docker.swarm.service.name" | sed "s/com.docker.swarm.service.name=\(.*\)$/\1/") || return 1
+  SNAME=$(docker container inspect "${CNAME}" --format '{{range $key,$value := .Config.Labels}}{{$key}}={{println $value}}{{end}}' \
+    | grep "com.docker.swarm.service.name" \
+    | sed -n "s/com.docker.swarm.service.name=\(.*\)$/\1/p") || return 1
   _static_variable_add_unique_to_list STATIC_VAR_CURRENT_SERVICE_NAME "${SNAME}"
   echo "${SNAME}"
 }
@@ -501,10 +511,15 @@ _get_service_previous_image() {
 _get_service_mode() {
   local SERVICE_NAME="${1}"
   local MODE=
-  if ! MODE=$(docker service ls --filter "name=${SERVICE_NAME}" --format '{{.Mode}}' 2>&1); then
+  if ! MODE=$(docker service ls --filter "name=${SERVICE_NAME}" --format '{{.Mode}} {{.Name}}' 2>&1); then
     log ERROR "Failed to obtain the mode of the service ${SERVICE_NAME}: ${MODE}"
     return 1
   fi
+  # For `docker service ls --filter`, the name filter matches on all or the prefix of a service's name
+  # See https://docs.docker.com/engine/reference/commandline/service_ls/#name
+  # It does not do the exact match of the name. See https://github.com/moby/moby/issues/32985
+  # We do an extra step to to perform the exact match.
+  MODE=$(echo "${MODE}" | sed -n "s/\(.*\) ${SERVICE_NAME}$/\1/p")
   echo "${MODE}"
 }
 
@@ -693,10 +708,15 @@ _inspect_service() {
 _get_number_of_running_tasks() {
   local SERVICE_NAME="${1}"
   local REPLICAS=
-  if ! REPLICAS=$(docker service ls --filter "name=${SERVICE_NAME}" --format '{{.Replicas}}' 2>&1); then
+  if ! REPLICAS=$(docker service ls --filter "name=${SERVICE_NAME}" --format '{{.Replicas}} {{.Name}}' 2>&1); then
     log ERROR "Failed to obtain task states of service ${SERVICE_NAME}: ${REPLICAS}"
     return 1
   fi
+  # For `docker service ls --filter`, the name filter matches on all or the prefix of a service's name
+  # See https://docs.docker.com/engine/reference/commandline/service_ls/#name
+  # It does not do the exact match of the name. See https://github.com/moby/moby/issues/32985
+  # We do an extra step to to perform the exact match.
+  REPLICAS=$(echo "${REPLICAS}" | sed -n "s/\(.*\) ${SERVICE_NAME}$/\1/p")
   # https://docs.docker.com/engine/reference/commandline/service_ls/#examples
   # The REPLICAS is like "5/5" or "1/1 (3/5 completed)"
   # Get the number before the first "/".
@@ -714,7 +734,7 @@ _get_service_update_additional_options() {
     return 1
   fi
   local OPTIONS=
-  if [ "${NUM_RUNS}" -eq 0 ]; then
+  if [ "${NUM_RUNS}" = "0" ]; then
     # Add "--detach=true" when there is no running tasks.
     # https://github.com/docker/cli/issues/627
     OPTIONS="${OPTIONS} --detach=true"
@@ -739,8 +759,8 @@ _rollback_service() {
     return 0
   fi
   log INFO "Rolling back ${SERVICE_NAME}."
-  [ -n "${ADDITIONAL_OPTIONS}" ] && log DEBUG "Adding options \"${ADDITIONAL_OPTIONS}\" to the command \"docker service update --rollback\"."
-  [ -n "${ROLLBACK_OPTIONS}" ] && log DEBUG "Adding options \"${ROLLBACK_OPTIONS}\" to the command \"docker service update --rollback\"."
+  [ -n "${ADDITIONAL_OPTIONS}" ] && log DEBUG "Adding options \"${ADDITIONAL_OPTIONS}\" to the command \"docker service update --rollback\" for ${SERVICE_NAME}."
+  [ -n "${ROLLBACK_OPTIONS}" ] && log DEBUG "Adding options \"${ROLLBACK_OPTIONS}\" to the command \"docker service update --rollback\" for ${SERVICE_NAME}."
   local ROLLBACK_MSG=
   # Add "-quiet" to suppress progress output.
   # SC2086: Double quote to prevent globbing and word splitting.
@@ -772,9 +792,9 @@ _update_single_service() {
   local ADDITIONAL_OPTIONS=
   DOCKER_CONFIG=$(_get_config_from_service "${SERVICE}")
   ADDITIONAL_OPTIONS=$(_get_service_update_additional_options "${SERVICE_NAME}")
-  [ -n "${DOCKER_CONFIG}" ] && log DEBUG "Adding options \"${DOCKER_CONFIG}\" to docker commands."
-  [ -n "${ADDITIONAL_OPTIONS}" ] && log DEBUG "Adding options \"${ADDITIONAL_OPTIONS}\" to the command \"docker service update\"."
-  [ -n "${UPDATE_OPTIONS}" ] && log DEBUG "Adding options \"${UPDATE_OPTIONS}\" to the command \"docker service update\"."
+  [ -n "${DOCKER_CONFIG}" ] && log DEBUG "Adding options \"${DOCKER_CONFIG}\" to docker commands for ${SERVICE_NAME}."
+  [ -n "${ADDITIONAL_OPTIONS}" ] && log DEBUG "Adding options \"${ADDITIONAL_OPTIONS}\" to the command \"docker service update\" for ${SERVICE_NAME}."
+  [ -n "${UPDATE_OPTIONS}" ] && log DEBUG "Adding options \"${UPDATE_OPTIONS}\" to the command \"docker service update\" for ${SERVICE_NAME}."
   local UPDATE_MSG=
   # Add "-quiet" to suppress progress output.
   # SC2086: Double quote to prevent globbing and word splitting.
@@ -871,8 +891,8 @@ gantry_get_services_list() {
       continue
     fi
     # Add self to the first of the list.
-    if _service_is_self "${S}"; then
-      HAS_SELF=${S}
+    if [ -z "${HAS_SELF}" ] && _service_is_self "${S}"; then
+      HAS_SELF="${S}"
       continue
     fi
     LIST="${LIST} ${S}"

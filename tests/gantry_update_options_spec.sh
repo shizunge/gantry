@@ -20,28 +20,51 @@ Describe 'update-options'
   BeforeAll "initialize_all_tests ${SUITE_NAME}"
   AfterAll "finish_all_tests ${SUITE_NAME}"
   Describe "test_update_jobs_skipping" "container_test:true"
+    # For `docker service ls --filter`, the name filter matches on all or the prefix of a service's name
+    # See https://docs.docker.com/engine/reference/commandline/service_ls/#name
+    # It does not do the exact match of the name. See https://github.com/moby/moby/issues/32985
+    # This test also checks whether we do an extra step to to perform the exact match.
     TEST_NAME="test_update_jobs_skipping"
     IMAGE_WITH_TAG=$(get_image_with_tag "${SUITE_NAME}")
     SERVICE_NAME="gantry-test-$(unique_id)"
+    SERVICE_NAME_SUFFIX="${SERVICE_NAME}-suffix"
+    test_start() {
+      local TEST_NAME="${1}"
+      local IMAGE_WITH_TAG="${2}"
+      local SERVICE_NAME="${3}"
+      local SERVICE_NAME_SUFFIX="${SERVICE_NAME}-suffix"
+      common_setup_job "${TEST_NAME}" "${IMAGE_WITH_TAG}" "${SERVICE_NAME_SUFFIX}"
+      start_replicated_service "${SERVICE_NAME}" "${IMAGE_WITH_TAG}"
+    }
     test_update_jobs_skipping() {
       local TEST_NAME=${1}
       local SERVICE_NAME=${2}
       reset_gantry_env "${SERVICE_NAME}"
       run_gantry "${TEST_NAME}"
     }
-    BeforeEach "common_setup_job ${TEST_NAME} ${IMAGE_WITH_TAG} ${SERVICE_NAME}"
-    AfterEach "common_cleanup ${TEST_NAME} ${IMAGE_WITH_TAG} ${SERVICE_NAME}"
+    test_end() {
+      local TEST_NAME="${1}"
+      local IMAGE_WITH_TAG="${2}"
+      local SERVICE_NAME="${3}"
+      local SERVICE_NAME_SUFFIX="${SERVICE_NAME}-suffix"
+      stop_service "${SERVICE_NAME}"
+      common_cleanup "${TEST_NAME}" "${IMAGE_WITH_TAG}" "${SERVICE_NAME_SUFFIX}"
+    }
+    BeforeEach "test_start ${TEST_NAME} ${IMAGE_WITH_TAG} ${SERVICE_NAME}"
+    AfterEach "test_end ${TEST_NAME} ${IMAGE_WITH_TAG} ${SERVICE_NAME}"
     It 'run_test'
       When run test_update_jobs_skipping "${TEST_NAME}" "${SERVICE_NAME}"
       The status should be success
       The stdout should satisfy display_output
       The stderr should satisfy display_output
       # Check whether it is a job before checking whether there is a new image.
-      The stderr should satisfy spec_expect_message    "${SKIP_UPDATING}.*${SERVICE_NAME}.*${SKIP_REASON_IS_JOB}"
+      The stderr should satisfy spec_expect_message    "${SKIP_UPDATING}.*${SERVICE_NAME_SUFFIX}.*${SKIP_REASON_IS_JOB}"
+      The stderr should satisfy spec_expect_no_message "${PERFORM_UPDATING}.*${SERVICE_NAME_SUFFIX}"
+      The stderr should satisfy spec_expect_message    "${SKIP_UPDATING}.*${SERVICE_NAME}.*${SKIP_REASON_CURRENT_IS_LATEST}"
       The stderr should satisfy spec_expect_no_message "${PERFORM_UPDATING}.*${SERVICE_NAME}"
       The stderr should satisfy spec_expect_message    "${NUM_SERVICES_SKIP_JOBS}"
       The stderr should satisfy spec_expect_no_message "${NUM_SERVICES_INSPECT_FAILURE}"
-      The stderr should satisfy spec_expect_no_message "${NUM_SERVICES_NO_NEW_IMAGES}"
+      The stderr should satisfy spec_expect_message    "${NUM_SERVICES_NO_NEW_IMAGES}"
       The stderr should satisfy spec_expect_no_message "${NUM_SERVICES_UPDATING}"
       The stderr should satisfy spec_expect_no_message "${UPDATED}.*${SERVICE_NAME}"
       The stderr should satisfy spec_expect_no_message "${NO_UPDATES}.*${SERVICE_NAME}"

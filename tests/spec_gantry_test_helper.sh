@@ -431,10 +431,15 @@ wait_zero_running_tasks() {
       _handle_failure "Services ${SERVICE_NAME} does not stop after ${TIMEOUT_SECONDS} seconds."
       return 1
     fi
-    if ! REPLICAS=$(docker service ls --filter "name=${SERVICE_NAME}" --format '{{.Replicas}}' 2>&1); then
+    if ! REPLICAS=$(docker service ls --filter "name=${SERVICE_NAME}" --format '{{.Replicas}} {{.Name}}' 2>&1); then
       _handle_failure "Failed to obtain task states of service ${SERVICE_NAME}: ${REPLICAS}"
       return 1
     fi
+    # For `docker service ls --filter`, the name filter matches on all or the prefix of a service's name
+    # See https://docs.docker.com/engine/reference/commandline/service_ls/#name
+    # It does not do the exact match of the name. See https://github.com/moby/moby/issues/32985
+    # We do an extra step to to perform the exact match.
+    REPLICAS=$(echo "${REPLICAS}" | sed -n "s/\(.*\) ${SERVICE_NAME}$/\1/p")
     if [ "${TRIES}" -ge "${MAX_RETRIES}" ]; then
       echo "wait_zero_running_tasks Reach MAX_RETRIES ${MAX_RETRIES}" >&2
       return 1
