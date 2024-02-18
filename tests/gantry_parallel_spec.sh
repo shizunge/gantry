@@ -82,24 +82,24 @@ Describe 'service-parallel'
       The stdout should satisfy display_output
       The stderr should satisfy display_output
       SERVICE_NAME_NUM="${SERVICE_NAME}-0"
-      The stderr should satisfy spec_expect_no_message "${SKIP_UPDATING}.*${SERVICE_NAME_NUM}"
-      The stderr should satisfy spec_expect_message    "${PERFORM_UPDATING}.*${SERVICE_NAME_NUM}.*${PERFORM_REASON_HAS_NEWER_IMAGE}"
-      The stderr should satisfy spec_expect_message    "${UPDATED}.*${SERVICE_NAME_NUM}"
+      The stderr should satisfy spec_expect_no_message "${SKIP_UPDATING}.* ${SERVICE_NAME_NUM} "
+      The stderr should satisfy spec_expect_message    "${PERFORM_UPDATING}.* ${SERVICE_NAME_NUM} .*${PERFORM_REASON_HAS_NEWER_IMAGE}"
+      The stderr should satisfy spec_expect_message    "${UPDATED}.* ${SERVICE_NAME_NUM}"
       for NUM in $(seq 1 6); do
         SERVICE_NAME_NUM="${SERVICE_NAME}-${NUM}"
-        The stderr should satisfy spec_expect_no_message "${SKIP_UPDATING}.*${SERVICE_NAME_NUM}"
-        The stderr should satisfy spec_expect_message    "${PERFORM_UPDATING}.*${SERVICE_NAME_NUM}.*${PERFORM_REASON_KNOWN_NEWER_IMAGE}"
-        The stderr should satisfy spec_expect_message    "${UPDATED}.*${SERVICE_NAME_NUM}"
+        The stderr should satisfy spec_expect_no_message "${SKIP_UPDATING}.* ${SERVICE_NAME_NUM} "
+        The stderr should satisfy spec_expect_message    "${PERFORM_UPDATING}.* ${SERVICE_NAME_NUM} .*${PERFORM_REASON_KNOWN_NEWER_IMAGE}"
+        The stderr should satisfy spec_expect_message    "${UPDATED}.* ${SERVICE_NAME_NUM}"
       done
       SERVICE_NAME_NUM="${SERVICE_NAME}-7"
-      The stderr should satisfy spec_expect_message    "${SKIP_UPDATING}.*${SERVICE_NAME_NUM}.*${SKIP_REASON_CURRENT_IS_LATEST}"
-      The stderr should satisfy spec_expect_no_message "${PERFORM_UPDATING}.*${SERVICE_NAME_NUM}"
-      The stderr should satisfy spec_expect_no_message "${UPDATED}.*${SERVICE_NAME_NUM}"
+      The stderr should satisfy spec_expect_message    "${SKIP_UPDATING}.* ${SERVICE_NAME_NUM} .*${SKIP_REASON_CURRENT_IS_LATEST}"
+      The stderr should satisfy spec_expect_no_message "${PERFORM_UPDATING}.* ${SERVICE_NAME_NUM} "
+      The stderr should satisfy spec_expect_no_message "${UPDATED}.* ${SERVICE_NAME_NUM}"
       for NUM in $(seq 8 9); do
         SERVICE_NAME_NUM="${SERVICE_NAME}-${NUM}"
-        The stderr should satisfy spec_expect_message    "${SKIP_UPDATING}.*${SERVICE_NAME_NUM}.*${SKIP_REASON_NO_KNOWN_NEWER_IMAGE}"
-        The stderr should satisfy spec_expect_no_message "${PERFORM_UPDATING}.*${SERVICE_NAME_NUM}"
-        The stderr should satisfy spec_expect_no_message "${UPDATED}.*${SERVICE_NAME_NUM}"
+        The stderr should satisfy spec_expect_message    "${SKIP_UPDATING}.* ${SERVICE_NAME_NUM} .*${SKIP_REASON_NO_KNOWN_NEWER_IMAGE}"
+        The stderr should satisfy spec_expect_no_message "${PERFORM_UPDATING}.* ${SERVICE_NAME_NUM} "
+        The stderr should satisfy spec_expect_no_message "${UPDATED}.* ${SERVICE_NAME_NUM} "
       done
       The stderr should satisfy spec_expect_no_message "${NUM_SERVICES_SKIP_JOBS}"
       The stderr should satisfy spec_expect_no_message "${NUM_SERVICES_INSPECT_FAILURE}"
@@ -128,7 +128,7 @@ Describe 'service-parallel'
       build_and_push_test_image "${IMAGE_WITH_TAG}"
       local NUM=
       local PIDS=
-      for NUM in $(seq 0 4); do
+      for NUM in $(seq 0 10); do
         local SERVICE_NAME_NUM="${SERVICE_NAME}-${NUM}"
         start_replicated_service "${SERVICE_NAME_NUM}" "${IMAGE_WITH_TAG}" &
         PIDS="${!} ${PIDS}"
@@ -137,15 +137,6 @@ Describe 'service-parallel'
       # shellcheck disable=SC2086
       wait ${PIDS}
       build_and_push_test_image "${IMAGE_WITH_TAG}"
-      PIDS=
-      for NUM in $(seq 5 8); do
-        local SERVICE_NAME_NUM="${SERVICE_NAME}-${NUM}"
-        start_replicated_service "${SERVICE_NAME_NUM}" "${IMAGE_WITH_TAG}" &
-        PIDS="${!} ${PIDS}"
-      done
-      # SC2086 (info): Double quote to prevent globbing and word splitting.
-      # shellcheck disable=SC2086
-      wait ${PIDS}
     }
     test_parallel_more_workers() {
       local TEST_NAME=${1}
@@ -160,7 +151,7 @@ Describe 'service-parallel'
       local SERVICE_NAME=${3}
       local NUM=
       local PIDS=
-      for NUM in $(seq 0 8); do
+      for NUM in $(seq 0 10); do
         local SERVICE_NAME_NUM="${SERVICE_NAME}-${NUM}"
         stop_service "${SERVICE_NAME_NUM}" &
         PIDS="${!} ${PIDS}"
@@ -179,31 +170,21 @@ Describe 'service-parallel'
       The stdout should satisfy display_output
       The stderr should satisfy display_output
       SERVICE_NAME_NUM="${SERVICE_NAME}-0"
-      The stderr should satisfy spec_expect_no_message "${SKIP_UPDATING}.*${SERVICE_NAME_NUM}"
-      The stderr should satisfy spec_expect_message    "${PERFORM_UPDATING}.*${SERVICE_NAME_NUM}.*${PERFORM_REASON_HAS_NEWER_IMAGE}"
-      The stderr should satisfy spec_expect_message    "${UPDATED}.*${SERVICE_NAME_NUM}"
-      for NUM in $(seq 1 4); do
+      The stderr should satisfy spec_expect_no_message "${SKIP_UPDATING}.* ${SERVICE_NAME_NUM} "
+      The stderr should satisfy spec_expect_message    "${PERFORM_UPDATING}.* ${SERVICE_NAME_NUM} .*${PERFORM_REASON_HAS_NEWER_IMAGE}"
+      The stderr should satisfy spec_expect_message    "${UPDATED}.* ${SERVICE_NAME_NUM}"
+      for NUM in $(seq 1 10); do
         SERVICE_NAME_NUM="${SERVICE_NAME}-${NUM}"
-        The stderr should satisfy spec_expect_no_message "${SKIP_UPDATING}.*${SERVICE_NAME_NUM}"
-        The stderr should satisfy spec_expect_message    "${PERFORM_UPDATING}.*${SERVICE_NAME_NUM}.*${PERFORM_REASON_KNOWN_NEWER_IMAGE}"
-        The stderr should satisfy spec_expect_message    "${UPDATED}.*${SERVICE_NAME_NUM}"
-      done
-      SERVICE_NAME_NUM="${SERVICE_NAME}-5"
-      The stderr should satisfy spec_expect_message    "${SKIP_UPDATING}.*${SERVICE_NAME_NUM}.*${SKIP_REASON_CURRENT_IS_LATEST}"
-      The stderr should satisfy spec_expect_no_message "${PERFORM_UPDATING}.*${SERVICE_NAME_NUM}"
-      The stderr should satisfy spec_expect_no_message "${UPDATED}.*${SERVICE_NAME_NUM}"
-      for NUM in $(seq 6 8); do
-        SERVICE_NAME_NUM="${SERVICE_NAME}-${NUM}"
-        The stderr should satisfy spec_expect_message    "${SKIP_UPDATING}.*${SERVICE_NAME_NUM}.*${SKIP_REASON_NO_KNOWN_NEWER_IMAGE}"
-        The stderr should satisfy spec_expect_no_message "${PERFORM_UPDATING}.*${SERVICE_NAME_NUM}"
-        The stderr should satisfy spec_expect_no_message "${UPDATED}.*${SERVICE_NAME_NUM}"
+        The stderr should satisfy spec_expect_no_message "${SKIP_UPDATING}.* ${SERVICE_NAME_NUM} "
+        The stderr should satisfy spec_expect_message    "${PERFORM_UPDATING}.* ${SERVICE_NAME_NUM} .*${PERFORM_REASON_KNOWN_NEWER_IMAGE}"
+        The stderr should satisfy spec_expect_message    "${UPDATED}.* ${SERVICE_NAME_NUM}"
       done
       The stderr should satisfy spec_expect_no_message "${NUM_SERVICES_SKIP_JOBS}"
       The stderr should satisfy spec_expect_no_message "${NUM_SERVICES_INSPECT_FAILURE}"
-      The stderr should satisfy spec_expect_message    "${NUM_SERVICES_NO_NEW_IMAGES}"
+      The stderr should satisfy spec_expect_no_message "${NUM_SERVICES_NO_NEW_IMAGES}"
       The stderr should satisfy spec_expect_message    "${NUM_SERVICES_UPDATING}"
       The stderr should satisfy spec_expect_no_message "${NO_SERVICES_UPDATED}"
-      The stderr should satisfy spec_expect_message    "5 ${SERVICES_UPDATED}"
+      The stderr should satisfy spec_expect_message    "11 ${SERVICES_UPDATED}"
       The stderr should satisfy spec_expect_no_message "${NUM_SERVICES_UPDATE_FAILED}"
       The stderr should satisfy spec_expect_no_message "${NUM_SERVICES_ERRORS}"
       The stderr should satisfy spec_expect_no_message "${NO_IMAGES_TO_REMOVE}"
