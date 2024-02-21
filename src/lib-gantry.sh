@@ -15,7 +15,7 @@
 # along with this program.  If not, see <https://www.gnu.org/licenses/>.
 #
 
-# Read a number from an environment variable. Log an error is it is not a number.
+# Read a number from an environment variable. Log an error when it is not a number.
 gantry_read_number() {
   local VNAME="${1}"
   local DEFAULT_VALUE="${2}"
@@ -115,18 +115,20 @@ _authenticate_to_registries() {
     log ERROR "Failed to read CONFIGS_FILE ${CONFIGS_FILE}."
     return 1
   fi
+  local LINE_NUM=0
   local LINE=
   while read -r LINE; do
+    LINE_NUM=$((LINE_NUM+1))
     # skip comments
     [ -z "${LINE}" ] && continue
     [ "${LINE:0:1}" = "#" ] && continue
     LINE=$(echo "${LINE}" | tr '\t' ' ')
     local OTHERS=
-    CONFIG=$(echo "${LINE}" | cut -d ' ' -f 1)
-    HOST=$(echo "${LINE}" | cut -d ' ' -f 2)
-    USER=$(echo "${LINE}" | cut -d ' ' -f 3)
-    PASSWORD=$(echo "${LINE}" | cut -d ' ' -f 4)
-    OTHERS=$(echo "${LINE}" | cut -d ' ' -f 5-)
+    CONFIG=$(echo "${LINE} " | cut -d ' ' -f 1)
+    HOST=$(echo "${LINE} " | cut -d ' ' -f 2)
+    USER=$(echo "${LINE} " | cut -d ' ' -f 3)
+    PASSWORD=$(echo "${LINE} " | cut -d ' ' -f 4)
+    OTHERS=$(echo "${LINE} " | cut -d ' ' -f 5-)
     local ERROR_MSG=
     if [ -n "${OTHERS}" ]; then
       ERROR_MSG="Found extra item(s)."
@@ -135,8 +137,7 @@ _authenticate_to_registries() {
       ERROR_MSG="Missing item(s)."
     fi
     if [ -n "${ERROR_MSG}" ]; then
-      log ERROR "CONFIGS_FILE ${CONFIGS_FILE} format error. ${ERROR_MSG} A line should contains exactly \"<CONFIG> <HOST> <USER> <PASSWORD>\"."
-      log DEBUG "CONFIGS_FILE ${CONFIGS_FILE} format error. Got \"${LINE}\"."
+      log ERROR "CONFIGS_FILE ${CONFIGS_FILE} line ${LINE_NUM} format error. ${ERROR_MSG} A line should contains exactly \"<CONFIG> <HOST> <USER> <PASSWORD>\"."
       ACCUMULATED_ERRORS=$((ACCUMULATED_ERRORS + 1))
       continue
     fi
@@ -393,9 +394,9 @@ _report_services() {
   fi
   local NUM_TOTAL_ERRORS=$((NUM_FAILED+NUM_ERRORS))
   local TYPE="success"
-  [ "${NUM_TOTAL_ERRORS}" -ne "0" ] && TYPE="failure"
+  [ "${NUM_TOTAL_ERRORS}" != "0" ] && TYPE="failure"
   local ERROR_STRING=
-  [ "${NUM_ERRORS}" -ne "0" ] && ERROR_STRING=" ${NUM_TOTAL_ERRORS} error(s)"
+  [ "${NUM_ERRORS}" != "0" ] && ERROR_STRING=" ${NUM_TOTAL_ERRORS} error(s)"
   local TITLE BODY
   TITLE="[${STACK}] ${NUM_UPDATED} services updated ${NUM_FAILED} failed${ERROR_STRING}"
   BODY=$(echo -e "${UPDATED_MSG}\n${FAILED_MSG}\n${ERROR_MSG}")
@@ -447,8 +448,8 @@ _current_container_name() {
       # '<container name>/<ip>/<mask>'
       # '<container name>/' (when network mode is host)
       local CNAME CIP
-      CNAME=$(echo "${NAME_AND_IP}" | cut -d/ -f1);
-      CIP=$(echo "${NAME_AND_IP}" | cut -d/ -f2);
+      CNAME=$(echo "${NAME_AND_IP}/" | cut -d/ -f1);
+      CIP=$(echo "${NAME_AND_IP}/" | cut -d/ -f2);
       # Unable to find the container IP when network mode is host.
       [ -z "${CIP}" ] && continue;
       for IP in ${IPS}; do
@@ -721,7 +722,7 @@ _get_number_of_running_tasks() {
   # The REPLICAS is like "5/5" or "1/1 (3/5 completed)"
   # Get the number before the first "/".
   local NUM_RUNS=
-  NUM_RUNS=$(echo "${REPLICAS}" | cut -d '/' -f 1)
+  NUM_RUNS=$(echo "${REPLICAS}/" | cut -d '/' -f 1)
   echo "${NUM_RUNS}"
 }
 
@@ -787,7 +788,7 @@ _update_single_service() {
   local INPUT_ERROR=0
   [ -z "${SERVICE_NAME}" ] && log ERROR "Updating service: SERVICE_NAME must not be empty." && INPUT_ERROR=1 && SERVICE_NAME="unknown-service-name"
   [ -z "${IMAGE}" ] && log ERROR "Updating ${SERVICE_NAME}: IMAGE must not be empty." && INPUT_ERROR=1
-  if [ "${INPUT_ERROR}" -ne "0" ]; then
+  if [ "${INPUT_ERROR}" != "0" ]; then
     _static_variable_add_unique_to_list STATIC_VAR_SERVICES_UPDATE_INPUT_ERROR "${SERVICE_NAME}"
     return 1;
   fi
@@ -835,8 +836,8 @@ _update_worker() {
   while true; do
     SERVICE_AND_IMAGE=$(_static_variable_pop_list "${STATIC_VAR_LIST_NAME}")
     [ -z "${SERVICE_AND_IMAGE}" ] && break;
-    SERVICE=$(echo "${SERVICE_AND_IMAGE}" | cut -d ' ' -f 1)
-    IMAGE=$(echo "${SERVICE_AND_IMAGE}" | cut -d ' ' -f 2)
+    SERVICE=$(echo "${SERVICE_AND_IMAGE} " | cut -d ' ' -f 1)
+    IMAGE=$(echo "${SERVICE_AND_IMAGE} " | cut -d ' ' -f 2)
     _update_single_service "${SERVICE}" "${IMAGE}"
   done
   export LOG_SCOPE="${OLD_LOG_SCOPE}"
@@ -947,16 +948,16 @@ gantry_update_services_list() {
   local RETURN_VALUE=0
   local FAILED_NUM=
   FAILED_NUM=$(_get_number_of_elements_in_static_variable STATIC_VAR_SERVICES_UPDATE_FAILED)
-  [ "${FAILED_NUM}" -ne 0 ] && RETURN_VALUE=1
+  [ "${FAILED_NUM}" != "0" ] && RETURN_VALUE=1
   local ERROR_NUM=
   ERROR_NUM=$(_get_number_of_elements_in_static_variable STATIC_VAR_SERVICES_UPDATE_INPUT_ERROR)
-  [ "${ERROR_NUM}" -ne 0 ] && RETURN_VALUE=1
+  [ "${ERROR_NUM}" != "0" ] && RETURN_VALUE=1
   return "${RETURN_VALUE}"
 }
 
 gantry_finalize() {
   local STACK="${1:-gantry}"
-  local NUM_ERRORS="${2}"
+  local NUM_ERRORS="${2:-0}"
   local RETURN_VALUE=0
   if ! _remove_images "${STACK}_image-remover"; then
     RETURN_VALUE=1

@@ -37,8 +37,8 @@ Describe 'update-options'
       start_replicated_service "${SERVICE_NAME}" "${IMAGE_WITH_TAG}"
     }
     test_update_jobs_skipping() {
-      local TEST_NAME=${1}
-      local SERVICE_NAME=${2}
+      local TEST_NAME="${1}"
+      local SERVICE_NAME="${2}"
       reset_gantry_env "${SERVICE_NAME}"
       run_gantry "${TEST_NAME}"
     }
@@ -87,8 +87,8 @@ Describe 'update-options'
     IMAGE_WITH_TAG=$(get_image_with_tag "${SUITE_NAME}")
     SERVICE_NAME="gantry-test-$(unique_id)"
     test_update_jobs_UPDATE_JOBS_true() {
-      local TEST_NAME=${1}
-      local SERVICE_NAME=${2}
+      local TEST_NAME="${1}"
+      local SERVICE_NAME="${2}"
       reset_gantry_env "${SERVICE_NAME}"
       export GANTRY_UPDATE_JOBS="true"
       # The job may not reach the desired "Complete" state and blocking update CLI. So add "--detach=true"
@@ -132,8 +132,8 @@ Describe 'update-options'
     SERVICE_NAME="gantry-test-$(unique_id)"
     TASK_SECONDS=15
     test_update_jobs_no_running_tasks() {
-      local TEST_NAME=${1}
-      local SERVICE_NAME=${2}
+      local TEST_NAME="${1}"
+      local SERVICE_NAME="${2}"
       # The tasks should exit after TASK_SECONDS seconds sleep. Then it will have 0 running tasks.
       wait_zero_running_tasks "${SERVICE_NAME}"
       reset_gantry_env "${SERVICE_NAME}"
@@ -183,8 +183,8 @@ Describe 'update-options'
       docker service inspect -f "{{index .Spec.Labels \"${LABEL}\"}}" "${SERVICE_NAME}"
     }
     test_update_UPDATE_OPTIONS() {
-      local TEST_NAME=${1}
-      local SERVICE_NAME=${2}
+      local TEST_NAME="${1}"
+      local SERVICE_NAME="${2}"
       local LABEL="gantry.test"
       local LABEL_VALUE=
       LABEL_VALUE=$(_read_service_label "${SERVICE_NAME}" "${LABEL}")
@@ -236,8 +236,8 @@ Describe 'update-options'
     IMAGE_WITH_TAG=$(get_image_with_tag "${SUITE_NAME}")
     SERVICE_NAME="gantry-test-$(unique_id)"
     test_update_UPDATE_TIMEOUT_SECONDS_not_a_number() {
-      local TEST_NAME=${1}
-      local SERVICE_NAME=${2}
+      local TEST_NAME="${1}"
+      local SERVICE_NAME="${2}"
       reset_gantry_env "${SERVICE_NAME}"
       export GANTRY_UPDATE_TIMEOUT_SECONDS="NotANumber"
       run_gantry "${TEST_NAME}"

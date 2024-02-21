@@ -24,8 +24,8 @@ Describe 'common-options'
     IMAGE_WITH_TAG=$(get_image_with_tag "${SUITE_NAME}")
     SERVICE_NAME="gantry-test-$(unique_id)"
     test_common_DOCKER_HOST_not_swarm_manager() {
-      local TEST_NAME=${1}
-      local SERVICE_NAME=${2}
+      local TEST_NAME="${1}"
+      local SERVICE_NAME="${2}"
       reset_gantry_env "${SERVICE_NAME}"
       export DOCKER_HOST="8.8.8.8:53"
       local RETURN_VALUE=0
@@ -70,8 +70,8 @@ Describe 'common-options'
     IMAGE_WITH_TAG=$(get_image_with_tag "${SUITE_NAME}")
     SERVICE_NAME="gantry-test-$(unique_id)"
     test_common_LOG_LEVEL_none() {
-      local TEST_NAME=${1}
-      local SERVICE_NAME=${2}
+      local TEST_NAME="${1}"
+      local SERVICE_NAME="${2}"
       reset_gantry_env "${SERVICE_NAME}"
       # Same as test_new_image_yes, except set LOG_LEVEL to NONE
       export GANTRY_LOG_LEVEL=NONE
@@ -93,8 +93,8 @@ Describe 'common-options'
     IMAGE_WITH_TAG=$(get_image_with_tag "${SUITE_NAME}")
     SERVICE_NAME="gantry-test-$(unique_id)"
     test_common_PRE_POST_RUN_CMD() {
-      local TEST_NAME=${1}
-      local SERVICE_NAME=${2}
+      local TEST_NAME="${1}"
+      local SERVICE_NAME="${2}"
       reset_gantry_env "${SERVICE_NAME}"
       export GANTRY_PRE_RUN_CMD="echo \"Pre update\""
       export GANTRY_POST_RUN_CMD="echo \"Post update\""
@@ -136,8 +136,8 @@ Describe 'common-options'
     IMAGE_WITH_TAG=$(get_image_with_tag "${SUITE_NAME}")
     SERVICE_NAME="gantry-test-$(unique_id)"
     test_common_SLEEP_SECONDS_not_a_number() {
-      local TEST_NAME=${1}
-      local SERVICE_NAME=${2}
+      local TEST_NAME="${1}"
+      local SERVICE_NAME="${2}"
       reset_gantry_env "${SERVICE_NAME}"
       export GANTRY_SLEEP_SECONDS="NotANumber"
       run_gantry "${TEST_NAME}"

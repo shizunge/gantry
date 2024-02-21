@@ -30,9 +30,9 @@ Describe 'service-multiple-services'
     SERVICE_NAME4="${SERVICE_NAME}-4"
     SERVICE_NAME5="${SERVICE_NAME}-5"
     test_start() {
-      local TEST_NAME=${1}
-      local IMAGE_WITH_TAG=${2}
-      local SERVICE_NAME=${3}
+      local TEST_NAME="${1}"
+      local IMAGE_WITH_TAG="${2}"
+      local SERVICE_NAME="${3}"
       local SERVICE_NAME0="${SERVICE_NAME}-0"
       local SERVICE_NAME1="${SERVICE_NAME}-1"
       local SERVICE_NAME2="${SERVICE_NAME}-2"
@@ -51,8 +51,8 @@ Describe 'service-multiple-services'
       start_replicated_service "${SERVICE_NAME5}" "${IMAGE_WITH_TAG}"
     }
     test_multiple_services_excluded_filters() {
-      local TEST_NAME=${1}
-      local SERVICE_NAME=${2}
+      local TEST_NAME="${1}"
+      local SERVICE_NAME="${2}"
       local SERVICE_NAME1="${SERVICE_NAME}-1"
       local SERVICE_NAME2="${SERVICE_NAME}-2"
       reset_gantry_env "${SERVICE_NAME}"
@@ -62,9 +62,9 @@ Describe 'service-multiple-services'
       run_gantry "${TEST_NAME}"
     }
     test_end() {
-      local TEST_NAME=${1}
-      local IMAGE_WITH_TAG=${2}
-      local SERVICE_NAME=${3}
+      local TEST_NAME="${1}"
+      local IMAGE_WITH_TAG="${2}"
+      local SERVICE_NAME="${3}"
       local SERVICE_NAME0="${SERVICE_NAME}-0"
       local SERVICE_NAME1="${SERVICE_NAME}-1"
       local SERVICE_NAME2="${SERVICE_NAME}-2"

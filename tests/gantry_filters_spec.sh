@@ -24,8 +24,8 @@ Describe 'filters'
     IMAGE_WITH_TAG=$(get_image_with_tag "${SUITE_NAME}")
     SERVICE_NAME="gantry-test-$(unique_id)"
     test_SERVICES_FILTERS_bad() {
-      local TEST_NAME=${1}
-      local SERVICE_NAME=${2}
+      local TEST_NAME="${1}"
+      local SERVICE_NAME="${2}"
       reset_gantry_env "${SERVICE_NAME}"
       export GANTRY_SERVICES_FILTERS="BadFilterValue"
       run_gantry "${TEST_NAME}"
@@ -67,9 +67,9 @@ Describe 'filters'
     SERVICE_NAME="gantry-test-$(unique_id)"
     MAX_SERVICES_NUM=10
     test_SERVICES_EXCLUDED_multiple_services() {
-      local TEST_NAME=${1}
-      local SERVICE_NAME=${2}
-      local MAX_SERVICES_NUM=${3}
+      local TEST_NAME="${1}"
+      local SERVICE_NAME="${2}"
+      local MAX_SERVICES_NUM="${3}"
       local NUM_SERVICES_EXCLUDED=$((MAX_SERVICES_NUM/2))
       local NUM_SERVICES_EXCLUDED_FILTER_START=$((NUM_SERVICES_EXCLUDED+1))
       reset_gantry_env "${SERVICE_NAME}"
@@ -120,8 +120,8 @@ Describe 'filters'
     IMAGE_WITH_TAG=$(get_image_with_tag "${SUITE_NAME}")
     SERVICE_NAME="gantry-test-$(unique_id)"
     test_SERVICES_EXCLUDED_FILTERS_bad() {
-      local TEST_NAME=${1}
-      local SERVICE_NAME=${2}
+      local TEST_NAME="${1}"
+      local SERVICE_NAME="${2}"
       reset_gantry_env "${SERVICE_NAME}"
       export GANTRY_SERVICES_EXCLUDED_FILTERS="BadFilterValue"
       run_gantry "${TEST_NAME}"

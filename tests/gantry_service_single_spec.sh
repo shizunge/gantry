@@ -24,8 +24,8 @@ Describe 'service-single-service'
     IMAGE_WITH_TAG=$(get_image_with_tag "${SUITE_NAME}")
     SERVICE_NAME="gantry-test-$(unique_id)"
     test_new_image_no() {
-      local TEST_NAME=${1}
-      local SERVICE_NAME=${2}
+      local TEST_NAME="${1}"
+      local SERVICE_NAME="${2}"
       reset_gantry_env "${SERVICE_NAME}"
       run_gantry "${TEST_NAME}"
     }
@@ -63,8 +63,8 @@ Describe 'service-single-service'
     IMAGE_WITH_TAG=$(get_image_with_tag "${SUITE_NAME}")
     SERVICE_NAME="gantry-test-$(unique_id)"
     test_new_image_yes() {
-      local TEST_NAME=${1}
-      local SERVICE_NAME=${2}
+      local TEST_NAME="${1}"
+      local SERVICE_NAME="${2}"
       reset_gantry_env "${SERVICE_NAME}"
       run_gantry "${TEST_NAME}"
     }
@@ -102,9 +102,9 @@ Describe 'service-single-service'
     IMAGE_WITH_TAG=$(get_image_with_tag "${SUITE_NAME}")
     SERVICE_NAME="gantry-test-$(unique_id)"
     test_start() {
-      local TEST_NAME=${1}
-      local IMAGE_WITH_TAG=${2}
-      local SERVICE_NAME=${3}
+      local TEST_NAME="${1}"
+      local IMAGE_WITH_TAG="${2}"
+      local SERVICE_NAME="${3}"
       # Start a service with image not available on the registry, the digest will not be available.
       build_test_image "${IMAGE_WITH_TAG}"
       start_replicated_service "${SERVICE_NAME}" "${IMAGE_WITH_TAG}" 2>&1
@@ -112,8 +112,8 @@ Describe 'service-single-service'
       build_and_push_test_image "${IMAGE_WITH_TAG}"
     }
     test_new_image_no_digest() {
-      local TEST_NAME=${1}
-      local SERVICE_NAME=${2}
+      local TEST_NAME="${1}"
+      local SERVICE_NAME="${2}"
       reset_gantry_env "${SERVICE_NAME}"
       run_gantry "${TEST_NAME}"
     }
