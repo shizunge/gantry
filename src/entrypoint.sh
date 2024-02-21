@@ -126,7 +126,7 @@ gantry() {
   DOCKER_HUB_RATE_USED=$(difference_between "${DOCKER_HUB_RATE_BEFORE}" "${DOCKER_HUB_RATE_AFTER}")
   log INFO "After updating, Docker Hub rate remains ${DOCKER_HUB_RATE_AFTER}. Used rate ${DOCKER_HUB_RATE_USED}."
 
-  gantry_finalize "${STACK}";
+  gantry_finalize "${STACK}" "${ACCUMULATED_ERRORS}";
   ACCUMULATED_ERRORS=$((ACCUMULATED_ERRORS + $?))
 
   eval_cmd "post-run" "${POST_RUN_CMD}"
@@ -142,7 +142,7 @@ gantry() {
     log INFO "${MESSAGE}"
     RETURN_VALUE=0
   fi
-  return ${RETURN_VALUE}
+  return "${RETURN_VALUE}"
 }
 
 main() {
@@ -172,7 +172,7 @@ main() {
       sleep "${SLEEP_SECONDS}"
     fi
   done
-  return ${RETURN_VALUE}
+  return "${RETURN_VALUE}"
 }
 
 load_libraries

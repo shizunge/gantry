@@ -487,7 +487,7 @@ wait_zero_running_tasks() {
     # https://docs.docker.com/engine/reference/commandline/service_ls/#examples
     # The REPLICAS is like "5/5" or "1/1 (3/5 completed)"
     # Get the number before the first "/".
-    NUM_RUNS=$(echo "${REPLICAS}" | cut -d '/' -f 1)
+    NUM_RUNS=$(echo "${REPLICAS}/" | cut -d '/' -f 1)
     sleep 1
     USED_SECONDS=$((USED_SECONDS+1))
   done

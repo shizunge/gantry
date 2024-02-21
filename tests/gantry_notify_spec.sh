@@ -26,8 +26,8 @@ Describe 'notify'
     IMAGE_WITH_TAG=$(get_image_with_tag "${SUITE_NAME}")
     SERVICE_NAME="gantry-test-$(unique_id)"
     test_notify_apprise() {
-      local TEST_NAME=${1}
-      local SERVICE_NAME=${2}
+      local TEST_NAME="${1}"
+      local SERVICE_NAME="${2}"
       local RETURN_VALUE=0
       local APPRISE_PORT=8000
       local SMTP_PORT=1025
@@ -98,8 +98,8 @@ Describe 'notify'
     IMAGE_WITH_TAG=$(get_image_with_tag "${SUITE_NAME}")
     SERVICE_NAME="gantry-test-$(unique_id)"
     test_notify_apprise_bad_url() {
-      local TEST_NAME=${1}
-      local SERVICE_NAME=${2}
+      local TEST_NAME="${1}"
+      local SERVICE_NAME="${2}"
       reset_gantry_env "${SERVICE_NAME}"
       export GANTRY_NOTIFICATION_APPRISE_URL="http://bad-url/notify"
       run_gantry "${TEST_NAME}"

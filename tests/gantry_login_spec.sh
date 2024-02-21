@@ -27,12 +27,12 @@ Describe 'login'
     CONFIG="C$(unique_id)"
     TEST_REGISTRY=$(load_test_registry "${SUITE_NAME}") || return 1
     test_login_config() {
-      local TEST_NAME=${1}
-      local SERVICE_NAME=${2}
-      local CONFIG=${3}
-      local REGISTRY=${4}
-      local USERNAME=${5}
-      local PASSWORD=${6}
+      local TEST_NAME="${1}"
+      local SERVICE_NAME="${2}"
+      local CONFIG="${3}"
+      local REGISTRY="${4}"
+      local USERNAME="${5}"
+      local PASSWORD="${6}"
       if [ -z "${REGISTRY}" ] || [ -z "${USERNAME}" ] || [ -z "${PASSWORD}" ]; then
         echo "No REGISTRY, USERNAME or PASSWORD provided." >&2
         return 1
@@ -95,12 +95,12 @@ Describe 'login'
     CONFIG="C$(unique_id)"
     TEST_REGISTRY=$(load_test_registry "${SUITE_NAME}") || return 1
     test_login_REGISTRY_CONFIGS_FILE() {
-      local TEST_NAME=${1}
-      local SERVICE_NAME=${2}
-      local CONFIG=${3}
-      local REGISTRY=${4}
-      local USERNAME=${5}
-      local PASSWORD=${6}
+      local TEST_NAME="${1}"
+      local SERVICE_NAME="${2}"
+      local CONFIG="${3}"
+      local REGISTRY="${4}"
+      local USERNAME="${5}"
+      local PASSWORD="${6}"
       if [ -z "${REGISTRY}" ] || [ -z "${USERNAME}" ] || [ -z "${PASSWORD}" ]; then
         echo "No REGISTRY, USERNAME or PASSWORD provided." >&2
         return 1
@@ -165,12 +165,12 @@ Describe 'login'
     CONFIG="C$(unique_id)"
     TEST_REGISTRY=$(load_test_registry "${SUITE_NAME}") || return 1
     test_login_REGISTRY_CONFIGS_FILE_bad_format() {
-      local TEST_NAME=${1}
-      local SERVICE_NAME=${2}
-      local CONFIG=${3}
-      local REGISTRY=${4}
-      local USERNAME=${5}
-      local PASSWORD=${6}
+      local TEST_NAME="${1}"
+      local SERVICE_NAME="${2}"
+      local CONFIG="${3}"
+      local REGISTRY="${4}"
+      local USERNAME="${5}"
+      local PASSWORD="${6}"
       if [ -z "${REGISTRY}" ] || [ -z "${USERNAME}" ] || [ -z "${PASSWORD}" ]; then
         echo "No REGISTRY, USERNAME or PASSWORD provided." >&2
         return 1
@@ -182,7 +182,7 @@ Describe 'login'
       # Add an extra item to the line.
       echo "${CONFIG} ${REGISTRY} ${USERNAME} ${PASSWORD} Extra" >> "${CONFIGS_FILE}"
       # Missing an item from the line.
-      echo "${REGISTRY} ${USERNAME} ${PASSWORD}" >> "${CONFIGS_FILE}"
+      echo "The-Only-Item-In-The-Line" >> "${CONFIGS_FILE}"
       reset_gantry_env "${SERVICE_NAME}"
       export GANTRY_REGISTRY_CONFIGS_FILE="${CONFIGS_FILE}"
       local RETURN_VALUE=
@@ -233,12 +233,12 @@ Describe 'login'
     CONFIG="C$(unique_id)"
     TEST_REGISTRY=$(load_test_registry "${SUITE_NAME}") || return 1
     test_login_file_not_exist() {
-      local TEST_NAME=${1}
-      local SERVICE_NAME=${2}
-      local CONFIG=${3}
-      local REGISTRY=${4}
-      local USERNAME=${5}
-      local PASSWORD=${6}
+      local TEST_NAME="${1}"
+      local SERVICE_NAME="${2}"
+      local CONFIG="${3}"
+      local REGISTRY="${4}"
+      local USERNAME="${5}"
+      local PASSWORD="${6}"
       if [ -z "${REGISTRY}" ] || [ -z "${USERNAME}" ] || [ -z "${PASSWORD}" ]; then
         echo "No REGISTRY, USERNAME or PASSWORD provided." >&2
         return 1

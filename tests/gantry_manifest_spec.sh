@@ -24,8 +24,8 @@ Describe 'manifest-command'
     IMAGE_WITH_TAG=$(get_image_with_tag "${SUITE_NAME}")
     SERVICE_NAME="gantry-test-$(unique_id)"
     test_MANIFEST_CMD_none() {
-      local TEST_NAME=${1}
-      local SERVICE_NAME=${2}
+      local TEST_NAME="${1}"
+      local SERVICE_NAME="${2}"
       reset_gantry_env "${SERVICE_NAME}"
       export GANTRY_MANIFEST_CMD="none"
       export GANTRY_UPDATE_OPTIONS="--force"
@@ -73,8 +73,8 @@ Describe 'manifest-command'
     SERVICE_NAME="gantry-test-$(unique_id)"
     test_MANIFEST_CMD_none_SERVICES_SELF() {
       # If the service is self, it will always run manifest checking. Even if the CMD is set to none
-      local TEST_NAME=${1}
-      local SERVICE_NAME=${2}
+      local TEST_NAME="${1}"
+      local SERVICE_NAME="${2}"
       reset_gantry_env "${SERVICE_NAME}"
       # Explicitly set GANTRY_SERVICES_SELF
       export GANTRY_SERVICES_SELF="${SERVICE_NAME}"
@@ -116,8 +116,8 @@ Describe 'manifest-command'
     IMAGE_WITH_TAG=$(get_image_with_tag "${SUITE_NAME}")
     SERVICE_NAME="gantry-test-$(unique_id)"
     test_MANIFEST_CMD_manifest() {
-      local TEST_NAME=${1}
-      local SERVICE_NAME=${2}
+      local TEST_NAME="${1}"
+      local SERVICE_NAME="${2}"
       reset_gantry_env "${SERVICE_NAME}"
       export GANTRY_MANIFEST_OPTIONS="--insecure"
       export GANTRY_MANIFEST_CMD="manifest"
@@ -158,8 +158,8 @@ Describe 'manifest-command'
     IMAGE_WITH_TAG=$(get_image_with_tag "${SUITE_NAME}")
     SERVICE_NAME="gantry-test-$(unique_id)"
     test_MANIFEST_CMD_unsupported_cmd() {
-      local TEST_NAME=${1}
-      local SERVICE_NAME=${2}
+      local TEST_NAME="${1}"
+      local SERVICE_NAME="${2}"
       reset_gantry_env "${SERVICE_NAME}"
       export GANTRY_MANIFEST_OPTIONS="--insecure"
       export GANTRY_MANIFEST_CMD="unsupported_cmd"
@@ -204,17 +204,17 @@ Describe 'manifest-command'
     test_start() {
       # This test assumes that the IMAGE_WITH_TAG does not exist on the registry.
       # get_image_with_tag should return an image with a unique tag.
-      local TEST_NAME=${1}
-      local IMAGE_WITH_TAG=${2}
-      local SERVICE_NAME=${3}
+      local TEST_NAME="${1}"
+      local IMAGE_WITH_TAG="${2}"
+      local SERVICE_NAME="${3}"
       initialize_test "${TEST_NAME}"
       # No push image to the registry. Checking new image would fail.
       build_test_image "${IMAGE_WITH_TAG}"
       start_replicated_service "${SERVICE_NAME}" "${IMAGE_WITH_TAG}" 2>&1
     }
     test_MANIFEST_CMD_failure() {
-      local TEST_NAME=${1}
-      local SERVICE_NAME=${2}
+      local TEST_NAME="${1}"
+      local SERVICE_NAME="${2}"
       reset_gantry_env "${SERVICE_NAME}"
       run_gantry "${TEST_NAME}"
     }

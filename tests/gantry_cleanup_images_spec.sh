@@ -25,8 +25,8 @@ Describe 'cleanup-images'
     IMAGE_WITH_TAG=$(get_image_with_tag "${SUITE_NAME}")
     SERVICE_NAME="gantry-test-$(unique_id)"
     test_CLEANUP_IMAGES_false() {
-      local TEST_NAME=${1}
-      local SERVICE_NAME=${2}
+      local TEST_NAME="${1}"
+      local SERVICE_NAME="${2}"
       reset_gantry_env "${SERVICE_NAME}"
       export GANTRY_CLEANUP_IMAGES="false"
       run_gantry "${TEST_NAME}"
@@ -65,8 +65,8 @@ Describe 'cleanup-images'
     IMAGE_WITH_TAG=$(get_image_with_tag "${SUITE_NAME}")
     SERVICE_NAME="gantry-test-$(unique_id)"
     test_CLEANUP_IMAGES_OPTIONS_bad() {
-      local TEST_NAME=${1}
-      local SERVICE_NAME=${2}
+      local TEST_NAME="${1}"
+      local SERVICE_NAME="${2}"
       reset_gantry_env "${SERVICE_NAME}"
       export GANTRY_CLEANUP_IMAGES="true"
       # Image remover would fail due to the incorrect option.
@@ -109,8 +109,8 @@ Describe 'cleanup-images'
     IMAGE_WITH_TAG=$(get_image_with_tag "${SUITE_NAME}")
     SERVICE_NAME="gantry-test-$(unique_id)"
     test_CLEANUP_IMAGES_OPTIONS_good() {
-      local TEST_NAME=${1}
-      local SERVICE_NAME=${2}
+      local TEST_NAME="${1}"
+      local SERVICE_NAME="${2}"
       reset_gantry_env "${SERVICE_NAME}"
       export GANTRY_CLEANUP_IMAGES="true"
       export GANTRY_CLEANUP_IMAGES_OPTIONS="--container-label=test"
@@ -158,9 +158,9 @@ Describe 'cleanup-images'
     SERVICE_NAME0="${SERVICE_NAME}-0"
     SERVICE_NAME1="${SERVICE_NAME}-1"
     test_start() {
-      local TEST_NAME=${1}
-      local IMAGE_WITH_TAG=${2}
-      local SERVICE_NAME=${3}
+      local TEST_NAME="${1}"
+      local IMAGE_WITH_TAG="${2}"
+      local SERVICE_NAME="${3}"
       local IMAGE_WITH_TAG0="${IMAGE_WITH_TAG}-0"
       local IMAGE_WITH_TAG1="${IMAGE_WITH_TAG}-1"
       local IMAGE_WITH_TAG2="${IMAGE_WITH_TAG}-2"
@@ -178,9 +178,9 @@ Describe 'cleanup-images'
       # Do not creat the Image IMAGE_WITH_TAG2, to run the test on a non-exist image.
     }
     test_IMAGES_TO_REMOVE_none_empty() {
-      local TEST_NAME=${1}
-      local SERVICE_NAME=${2}
-      local IMAGE_WITH_TAG=${3}
+      local TEST_NAME="${1}"
+      local SERVICE_NAME="${2}"
+      local IMAGE_WITH_TAG="${3}"
       local IMAGE_WITH_TAG0="${IMAGE_WITH_TAG}-0"
       local IMAGE_WITH_TAG1="${IMAGE_WITH_TAG}-1"
       local IMAGE_WITH_TAG2="${IMAGE_WITH_TAG}-2"
@@ -189,9 +189,9 @@ Describe 'cleanup-images'
       run_gantry "${TEST_NAME}"
     }
     test_end() {
-      local TEST_NAME=${1}
-      local IMAGE_WITH_TAG=${2}
-      local SERVICE_NAME=${3}
+      local TEST_NAME="${1}"
+      local IMAGE_WITH_TAG="${2}"
+      local SERVICE_NAME="${3}"
       local IMAGE_WITH_TAG0="${IMAGE_WITH_TAG}-0"
       local IMAGE_WITH_TAG1="${IMAGE_WITH_TAG}-1"
       local SERVICE_NAME0="${SERVICE_NAME}-0"

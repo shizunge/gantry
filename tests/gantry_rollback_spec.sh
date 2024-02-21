@@ -25,9 +25,9 @@ Describe 'rollback'
     SERVICE_NAME="gantry-test-$(unique_id)"
     TIMEOUT=3
     test_rollback_due_to_timeout() {
-      local TEST_NAME=${1}
-      local SERVICE_NAME=${2}
-      local TIMEOUT=${3}
+      local TEST_NAME="${1}"
+      local SERVICE_NAME="${2}"
+      local TIMEOUT="${3}"
       reset_gantry_env "${SERVICE_NAME}"
       # Assume service update won't be done within TIMEOUT second.
       export GANTRY_UPDATE_TIMEOUT_SECONDS="${TIMEOUT}"
@@ -68,9 +68,9 @@ Describe 'rollback'
     SERVICE_NAME="gantry-test-$(unique_id)"
     TIMEOUT=3
     test_rollback_failed() {
-      local TEST_NAME=${1}
-      local SERVICE_NAME=${2}
-      local TIMEOUT=${3}
+      local TEST_NAME="${1}"
+      local SERVICE_NAME="${2}"
+      local TIMEOUT="${3}"
       reset_gantry_env "${SERVICE_NAME}"
       # Assume service update won't be done within TIMEOUT second.
       export GANTRY_UPDATE_TIMEOUT_SECONDS="${TIMEOUT}"
@@ -114,9 +114,9 @@ Describe 'rollback'
     SERVICE_NAME="gantry-test-$(unique_id)"
     TIMEOUT=3
     test_rollback_ROLLBACK_ON_FAILURE_false() {
-      local TEST_NAME=${1}
-      local SERVICE_NAME=${2}
-      local TIMEOUT=${3}
+      local TEST_NAME="${1}"
+      local SERVICE_NAME="${2}"
+      local TIMEOUT="${3}"
       reset_gantry_env "${SERVICE_NAME}"
       # Assume service update won't be done within TIMEOUT second.
       export GANTRY_UPDATE_TIMEOUT_SECONDS="${TIMEOUT}"

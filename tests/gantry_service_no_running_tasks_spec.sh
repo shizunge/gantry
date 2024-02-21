@@ -40,8 +40,8 @@ Describe "service-no-running-tasks"
       build_and_push_test_image "${IMAGE_WITH_TAG}"
     }
     test_no_running_tasks_replicated() {
-      local TEST_NAME=${1}
-      local SERVICE_NAME=${2}
+      local TEST_NAME="${1}"
+      local SERVICE_NAME="${2}"
       local SERVICE_NAME_SUFFIX="${SERVICE_NAME}-suffix"
       # Set running tasks to 0 for SERVICE_NAME.
       # But keep tasks running for SERVICE_NAME_SUFFIX.
@@ -102,9 +102,9 @@ Describe "service-no-running-tasks"
     IMAGE_WITH_TAG=$(get_image_with_tag "${SUITE_NAME}")
     SERVICE_NAME="gantry-test-$(unique_id)"
     test_start() {
-      local TEST_NAME=${1}
-      local IMAGE_WITH_TAG=${2}
-      local SERVICE_NAME=${3}
+      local TEST_NAME="${1}"
+      local IMAGE_WITH_TAG="${2}"
+      local SERVICE_NAME="${3}"
       local TASK_SECONDS=15
       initialize_test "${TEST_NAME}"
       # The task will finish in ${TASK_SECONDS} seconds
@@ -115,8 +115,8 @@ Describe "service-no-running-tasks"
       wait_zero_running_tasks "${SERVICE_NAME}"
     }
     test_no_running_tasks_global() {
-      local TEST_NAME=${1}
-      local SERVICE_NAME=${2}
+      local TEST_NAME="${1}"
+      local SERVICE_NAME="${2}"
       reset_gantry_env "${SERVICE_NAME}"
       run_gantry "${TEST_NAME}"
     }

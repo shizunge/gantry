@@ -26,11 +26,11 @@ Describe 'service-parallel'
     MAX_SERVICES_NUM=6
     MAX_NO_NEW_IMAGE=3
     test_start() {
-      local TEST_NAME=${1}
-      local IMAGE_WITH_TAG=${2}
-      local SERVICE_NAME=${3}
-      local MAX_SERVICES_NUM=${4}
-      local MAX_NO_NEW_IMAGE=${5}
+      local TEST_NAME="${1}"
+      local IMAGE_WITH_TAG="${2}"
+      local SERVICE_NAME="${3}"
+      local MAX_SERVICES_NUM="${4}"
+      local MAX_NO_NEW_IMAGE="${5}"
       common_setup_new_image_multiple "${TEST_NAME}" "${IMAGE_WITH_TAG}" "${SERVICE_NAME}" "${MAX_SERVICES_NUM}"
       local NO_NEW_IAMGE_START=$((MAX_SERVICES_NUM+1))
       local NO_NEW_IAMGE_END=$((MAX_SERVICES_NUM+MAX_NO_NEW_IMAGE))
@@ -46,9 +46,9 @@ Describe 'service-parallel'
       wait ${PIDS}
     }
     test_parallel_less_workers() {
-      local TEST_NAME=${1}
-      local SERVICE_NAME=${2}
-      local MAX_SERVICES_NUM=${3}
+      local TEST_NAME="${1}"
+      local SERVICE_NAME="${2}"
+      local MAX_SERVICES_NUM="${3}"
       reset_gantry_env "${SERVICE_NAME}"
       export GANTRY_UPDATE_NUM_WORKERS=$((MAX_SERVICES_NUM/2+1))
       run_gantry "${TEST_NAME}"
@@ -101,9 +101,9 @@ Describe 'service-parallel'
     SERVICE_NAME="gantry-test-$(unique_id)"
     MAX_SERVICES_NUM=10
     test_parallel_more_workers() {
-      local TEST_NAME=${1}
-      local SERVICE_NAME=${2}
-      local MAX_SERVICES_NUM=${3}
+      local TEST_NAME="${1}"
+      local SERVICE_NAME="${2}"
+      local MAX_SERVICES_NUM="${3}"
       reset_gantry_env "${SERVICE_NAME}"
       export GANTRY_UPDATE_NUM_WORKERS=$((MAX_SERVICES_NUM*3))
       run_gantry "${TEST_NAME}"
@@ -145,8 +145,8 @@ Describe 'service-parallel'
     IMAGE_WITH_TAG=$(get_image_with_tag "${SUITE_NAME}")
     SERVICE_NAME="gantry-test-$(unique_id)"
     test_parallel_GANTRY_UPDATE_NUM_WORKERS_not_a_number() {
-      local TEST_NAME=${1}
-      local SERVICE_NAME=${2}
+      local TEST_NAME="${1}"
+      local SERVICE_NAME="${2}"
       reset_gantry_env "${SERVICE_NAME}"
       export GANTRY_UPDATE_NUM_WORKERS="NotANumber"
       run_gantry "${TEST_NAME}"
