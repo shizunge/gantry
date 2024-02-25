@@ -824,23 +824,38 @@ _update_single_service() {
   return 0
 }
 
-# To run update in parallel
-_update_worker() {
-  local INDEX="${1}"
-  local STATIC_VAR_LIST_NAME="${2}"
+_parallel_worker() {
+  local FUNCTION="${1}"
+  local INDEX="${2}"
+  local STATIC_VAR_LIST_NAME="${3}"
   local OLD_LOG_SCOPE="${LOG_SCOPE}"
   LOG_SCOPE=$(attach_tag_to_log_scope "worker${INDEX}")
   export LOG_SCOPE
-  local SERVICE_AND_IMAGE=
-  local SERVICE IMAGE
+  local ARGUMENTS=
   while true; do
-    SERVICE_AND_IMAGE=$(_static_variable_pop_list "${STATIC_VAR_LIST_NAME}")
-    [ -z "${SERVICE_AND_IMAGE}" ] && break;
-    SERVICE=$(echo "${SERVICE_AND_IMAGE} " | cut -d ' ' -f 1)
-    IMAGE=$(echo "${SERVICE_AND_IMAGE} " | cut -d ' ' -f 2)
-    _update_single_service "${SERVICE}" "${IMAGE}"
+    ARGUMENTS=$(_static_variable_pop_list "${STATIC_VAR_LIST_NAME}")
+    [ -z "${ARGUMENTS}" ] && break;
+    # SC2086 (info): Double quote to prevent globbing and word splitting.
+    # shellcheck disable=SC2086
+    ${FUNCTION} ${ARGUMENTS}
   done
   export LOG_SCOPE="${OLD_LOG_SCOPE}"
+}
+
+_run_parallel() {
+  local FUNCTION="${1}"
+  local NUM_WORKERS="${2}"
+  local STATIC_VAR_LIST_NAME="${3}"
+  log DEBUG "Run ${NUM_WORKERS} ${FUNCTION} in parallel."
+  local PIDS=
+  for INDEX in $(seq 0 $((NUM_WORKERS-1)) ); do
+    # All workers subscribe to the same list now.
+    _parallel_worker "${FUNCTION}" "${INDEX}" "${STATIC_VAR_LIST_NAME}" &
+    PIDS="${!} ${PIDS}"
+  done
+  # SC2086 (info): Double quote to prevent globbing and word splitting.
+  # shellcheck disable=SC2086
+  wait ${PIDS}
 }
 
 _get_services_filted() {
@@ -910,9 +925,15 @@ gantry_get_services_list() {
 }
 
 gantry_update_services_list() {
-  local NUM_WORKERS=
-  if ! NUM_WORKERS=$(gantry_read_number GANTRY_UPDATE_NUM_WORKERS 1); then
+  local UPDATE_NUM_WORKERS=
+  if ! UPDATE_NUM_WORKERS=$(gantry_read_number GANTRY_UPDATE_NUM_WORKERS 1); then
     local ERROR_SERVICE="GANTRY_UPDATE_NUM_WORKERS-is-not-a-number"
+    _static_variable_add_unique_to_list STATIC_VAR_SERVICES_UPDATE_INPUT_ERROR "${ERROR_SERVICE}"
+    return 1
+  fi
+  local MANIFEST_NUM_WORKERS=
+  if ! MANIFEST_NUM_WORKERS=$(gantry_read_number GANTRY_MANIFEST_NUM_WORKERS 1); then
+    local ERROR_SERVICE="GANTRY_MANIFEST_NUM_WORKERS-is-not-a-number"
     _static_variable_add_unique_to_list STATIC_VAR_SERVICES_UPDATE_INPUT_ERROR "${ERROR_SERVICE}"
     return 1
   fi
@@ -920,30 +941,25 @@ gantry_update_services_list() {
   local NUM=
   NUM=$(_get_number_of_elements "${LIST}")
   log INFO "Inspecting ${NUM} service(s)."
-  local RUN_UPDATE=
   for SERVICE in ${LIST}; do
-    # Immediately update self service after inspection, do not wait for other inspections to finish.
-    # This avoids running inspection on the same service twice, due to interruption from updating self, when running as a service.
-    # The self service is usually the first of the list.
-    RUN_UPDATE=$(_service_is_self "${SERVICE}" && echo "true" || echo "false")
-    _inspect_service "${SERVICE}" "${RUN_UPDATE}"
+    if _service_is_self "${SERVICE}"; then
+      # Immediately update self service after inspection, do not wait for other inspections to finish.
+      # This avoids running inspection on the same service twice, due to interruption from updating self, when running as a service.
+      # The self service is usually the first of the list.
+      local RUN_UPDATE=true
+      _inspect_service "${SERVICE}" "${RUN_UPDATE}"
+      continue
+    fi
+    _static_variable_add_unique_to_list STATIC_VAR_SERVICES_TO_INSPECT "${SERVICE}"
   done
+  _run_parallel _inspect_service "${MANIFEST_NUM_WORKERS}" STATIC_VAR_SERVICES_TO_INSPECT
 
   _report_services_from_static_variable STATIC_VAR_SERVICES_SKIP_JOB "Skip updating" "due to they are job(s)" | log_lines INFO
   _report_services_from_static_variable STATIC_VAR_SERVICES_UPDATE_FAILED "Failed to inspect" | log_lines ERROR
   _report_services_from_static_variable STATIC_VAR_SERVICES_NO_NEW_IMAGE "No new images for" | log_lines INFO
   _report_services_from_static_variable STATIC_VAR_SERVICES_TO_UPDATE "Updating" | log_lines INFO
 
-  log DEBUG "NUM_WORKERS=${NUM_WORKERS}"
-  local PIDS=
-  for INDEX in $(seq 0 $((NUM_WORKERS-1)) ); do
-    # All workers subscribe to the same list now.
-    _update_worker "${INDEX}" STATIC_VAR_SERVICES_AND_IMAGES_TO_UPDATE &
-    PIDS="${!} ${PIDS}"
-  done
-  # SC2086 (info): Double quote to prevent globbing and word splitting.
-  # shellcheck disable=SC2086
-  wait ${PIDS}
+  _run_parallel _update_single_service "${UPDATE_NUM_WORKERS}" STATIC_VAR_SERVICES_AND_IMAGES_TO_UPDATE
 
   local RETURN_VALUE=0
   local FAILED_NUM=
