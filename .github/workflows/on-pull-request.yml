@@ -43,7 +43,7 @@ jobs:
           - gantry_update_options_spec.sh
     steps:
       - name: Set up Docker Buildx
-        uses: docker/setup-buildx-action@v3.0.0
+        uses: docker/setup-buildx-action@v3.3.0
       - name: Install shellspec
         run: |
           mkdir -p ~/shellspec
