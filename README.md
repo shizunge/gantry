@@ -98,6 +98,8 @@ You can configure the most behaviors of *Gantry* via environment variables.
 | GANTRY_CLEANUP_IMAGES_OPTIONS   |       | [Options](https://docs.docker.com/engine/reference/commandline/service_create/#options) added to the `docker service create` command to create a global job for images removal. You can use this to add a label to the service or the containers. |
 | GANTRY_NOTIFICATION_APPRISE_URL |       | Enable notifications on service update with [apprise](https://github.com/caronc/apprise-api). This must point to the notification endpoint (e.g. `http://apprise:8000/notify`) |
 | GANTRY_NOTIFICATION_TITLE       |       | Add an additional message to the notification title. |
+| GANTRY_NOTIFICATION_CONDITION   | all   | Specifies the conditions under which notifications are sent.
+ Set to `all` to send notifications every run. Set to `changed-only` to send notifications only when there is a change or an error. |
 
 ## Authentication
 
