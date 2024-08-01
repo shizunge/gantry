@@ -400,7 +400,17 @@ _report_services() {
   local TITLE BODY
   TITLE="[${STACK}] ${NUM_UPDATED} services updated ${NUM_FAILED} failed${ERROR_STRING}"
   BODY=$(echo -e "${UPDATED_MSG}\n${FAILED_MSG}\n${ERROR_MSG}")
-  _send_notification "${TYPE}" "${TITLE}" "${BODY}"
+
+  case "${GANTRY_NOTIFICATION_CONDITION:-all}" in
+    changed-only)
+      if [ "${NUM_UPDATED}" -gt 0 ] || [ "${NUM_TOTAL_ERRORS}" -gt 0 ]; then
+        _send_notification "${TYPE}" "${TITLE}" "${BODY}"
+      fi
+      ;;
+    all|*)
+      _send_notification "${TYPE}" "${TITLE}" "${BODY}"
+      ;;
+  esac
 }
 
 _in_list() {
