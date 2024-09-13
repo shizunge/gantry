@@ -37,10 +37,10 @@ _level_color() {
   local ORANGE='\033[0;33m'
   local GREEN='\033[0;32m'
   local BLUE='\033[0;34m'
-  [ "${LEVEL}" = "DEBUG" ] && echo "${BLUE}" && return 0
-  [ "${LEVEL}" = "INFO"  ] && echo "${GREEN}" && return 0;
-  [ "${LEVEL}" = "WARN"  ] && echo "${ORANGE}" && return 0;
-  [ "${LEVEL}" = "ERROR" ] && echo "${RED}" && return 0;
+  echo "${LEVEL}" | grep -q -i "^DEBUG$" && echo "${BLUE}" && return 0;
+  echo "${LEVEL}" | grep -q -i "^INFO$"  && echo "${GREEN}" && return 0;
+  echo "${LEVEL}" | grep -q -i "^WARN$"  && echo "${ORANGE}" && return 0;
+  echo "${LEVEL}" | grep -q -i "^ERROR$" && echo "${RED}" && return 0;
   echo "${NO_COLOR}"
 }
 
