@@ -405,6 +405,7 @@ _report_services() {
   case "${CONDITION}" in
     "on-change")
       if [ "${NUM_UPDATED}" = "0" ] && [ "${NUM_TOTAL_ERRORS}" = "0" ]; then
+        log DEBUG "Skip sending notification because there are no updates or errors."
         SEND_NOTIFICATION="false"
       fi
       ;;
