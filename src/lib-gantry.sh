@@ -726,8 +726,17 @@ _get_number_of_running_tasks() {
   echo "${NUM_RUNS}"
 }
 
+_get_with_registry_auth() {
+  local DOCKER_CONFIG="${1}"
+  # DOCKER_CONFIG is currently only used by Authentication.
+  # When login is required, we must add `--with-registry-auth`. Otherwise the service will get an image without digest.
+  # See https://github.com/shizunge/gantry/issues/53#issuecomment-2348376336
+  [ -n "${DOCKER_CONFIG}" ] && echo "--with-registry-auth";
+}
+
 _get_service_update_additional_options() {
   local SERVICE_NAME="${1}"
+  local DOCKER_CONFIG="${2}"
   local NUM_RUNS=
   NUM_RUNS=$(_get_number_of_running_tasks "${SERVICE_NAME}")
   if ! is_number "${NUM_RUNS}"; then
@@ -745,6 +754,19 @@ _get_service_update_additional_options() {
       OPTIONS="${OPTIONS} --replicas=0"
     fi
   fi
+  local WITH_REGISTRY_AUTH=
+  WITH_REGISTRY_AUTH="$(_get_with_registry_auth "${DOCKER_CONFIG}")"
+  [ -n "${WITH_REGISTRY_AUTH}" ] && OPTIONS="${OPTIONS} ${WITH_REGISTRY_AUTH}"
+  echo "${OPTIONS}"
+}
+
+_get_service_rollback_additional_options() {
+  local SERVICE_NAME="${1}"
+  local DOCKER_CONFIG="${2}"
+  local OPTIONS=
+  local WITH_REGISTRY_AUTH=
+  WITH_REGISTRY_AUTH="$(_get_with_registry_auth "${DOCKER_CONFIG}")"
+  [ -n "${WITH_REGISTRY_AUTH}" ] && OPTIONS="${OPTIONS} ${WITH_REGISTRY_AUTH}"
   echo "${OPTIONS}"
 }
 
@@ -753,13 +775,13 @@ _rollback_service() {
   local ROLLBACK_OPTIONS="${GANTRY_ROLLBACK_OPTIONS:-""}"
   local SERVICE_NAME="${1}"
   local DOCKER_CONFIG="${2}"
-  # "service update --rollback" needs to take different options from "service update"
-  # Today no options are added based on services label/status. This is just a placeholder now.
-  local ADDITIONAL_OPTIONS=
   if ! is_true "${ROLLBACK_ON_FAILURE}"; then
     return 0
   fi
   log INFO "Rolling back ${SERVICE_NAME}."
+  # "service update --rollback" needs to take different options from "service update"
+  local ADDITIONAL_OPTIONS=
+  ADDITIONAL_OPTIONS=$(_get_service_rollback_additional_options "${SERVICE_NAME}" "${DOCKER_CONFIG}")
   [ -n "${ADDITIONAL_OPTIONS}" ] && log DEBUG "Adding options \"${ADDITIONAL_OPTIONS}\" to the command \"docker service update --rollback\" for ${SERVICE_NAME}."
   [ -n "${ROLLBACK_OPTIONS}" ] && log DEBUG "Adding options \"${ROLLBACK_OPTIONS}\" to the command \"docker service update --rollback\" for ${SERVICE_NAME}."
   local ROLLBACK_MSG=
@@ -796,7 +818,7 @@ _update_single_service() {
   local DOCKER_CONFIG=
   local ADDITIONAL_OPTIONS=
   DOCKER_CONFIG=$(_get_config_from_service "${SERVICE}")
-  ADDITIONAL_OPTIONS=$(_get_service_update_additional_options "${SERVICE_NAME}")
+  ADDITIONAL_OPTIONS=$(_get_service_update_additional_options "${SERVICE_NAME}" "${DOCKER_CONFIG}")
   [ -n "${DOCKER_CONFIG}" ] && log DEBUG "Adding options \"${DOCKER_CONFIG}\" to docker commands for ${SERVICE_NAME}."
   [ -n "${ADDITIONAL_OPTIONS}" ] && log DEBUG "Adding options \"${ADDITIONAL_OPTIONS}\" to the command \"docker service update\" for ${SERVICE_NAME}."
   [ -n "${UPDATE_OPTIONS}" ] && log DEBUG "Adding options \"${UPDATE_OPTIONS}\" to the command \"docker service update\" for ${SERVICE_NAME}."

@@ -118,7 +118,7 @@ If the images of services are hosted on multiple registries that are required au
 
 You need to tell *Gantry* to use a named config rather than the default one when updating a particular service. The named configurations are set via either `GANTRY_REGISTRY_CONFIG`, `GANTRY_REGISTRY_CONFIG_FILE` or `GANTRY_REGISTRY_CONFIGS_FILE`. This can be done by adding the following label to the service `gantry.auth.config=<config-name>`. *Gantry* creates [Docker configuration files](https://docs.docker.com/engine/reference/commandline/cli/#configuration-files) and adds `--config <config-name>` to the Docker command line for the corresponding services.
 
-> NOTE: You also want to manually add `--with-registry-auth` to `GANTRY_UPDATE_OPTIONS` and `GANTRY_ROLLBACK_OPTIONS` when you enable authentication.
+> NOTE: When `GANTRY_REGISTRY_CONFIG`, `GANTRY_REGISTRY_CONFIG_FILE` or `GANTRY_REGISTRY_CONFIGS_FILE` is used, *Gantry* automatically adds `--with-registry-auth` to `docker service update` commands. Without `--with-registry-auth`, the service will be updated to an image without digest. See this [comment](https://github.com/shizunge/gantry/issues/53#issuecomment-2348376336).
 
 > NOTE: You can use `GANTRY_REGISTRY_CONFIGS_FILE` together with other authentication environment variables.
 
