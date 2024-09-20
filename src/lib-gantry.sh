@@ -367,6 +367,7 @@ _get_number_of_elements_in_static_variable() {
 }
 
 _report_services() {
+  local CONDITION="${GANTRY_NOTIFICATION_CONDITION:-"all"}"
   local STACK="${1:-gantry}"
   # ACCUMULATED_ERRORS is the number of errors that are not caused by updating.
   local ACCUMULATED_ERRORS="${2:-0}"
@@ -397,10 +398,22 @@ _report_services() {
   [ "${NUM_TOTAL_ERRORS}" != "0" ] && TYPE="failure"
   local ERROR_STRING=
   [ "${NUM_ERRORS}" != "0" ] && ERROR_STRING=" ${NUM_TOTAL_ERRORS} error(s)"
-  local TITLE BODY
+  local TITLE BODY SEND_NOTIFICATION
   TITLE="[${STACK}] ${NUM_UPDATED} services updated ${NUM_FAILED} failed${ERROR_STRING}"
   BODY=$(echo -e "${UPDATED_MSG}\n${FAILED_MSG}\n${ERROR_MSG}")
-  _send_notification "${TYPE}" "${TITLE}" "${BODY}"
+  SEND_NOTIFICATION="true"
+  case "${CONDITION}" in
+    "on-change")
+      if [ "${NUM_UPDATED}" = "0" ] && [ "${NUM_TOTAL_ERRORS}" = "0" ]; then
+        SEND_NOTIFICATION="false"
+      fi
+      ;;
+    "all"|*)
+      ;;
+  esac
+  if is_true "${SEND_NOTIFICATION}"; then
+    _send_notification "${TYPE}" "${TITLE}" "${BODY}"
+  fi
 }
 
 _in_list() {
