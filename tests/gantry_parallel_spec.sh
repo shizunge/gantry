@@ -23,6 +23,7 @@ Describe 'service-parallel'
     TEST_NAME="test_parallel_less_workers"
     IMAGE_WITH_TAG=$(get_image_with_tag "${SUITE_NAME}")
     SERVICE_NAME="gantry-test-$(unique_id)"
+    MANIFEST_NUM_WORKERS=2
     MAX_SERVICES_NUM=6
     MAX_NO_NEW_IMAGE=3
     test_start() {
@@ -50,6 +51,7 @@ Describe 'service-parallel'
       local SERVICE_NAME="${2}"
       local MAX_SERVICES_NUM="${3}"
       reset_gantry_env "${SERVICE_NAME}"
+      export GANTRY_MANIFEST_NUM_WORKERS="${MANIFEST_NUM_WORKERS}"
       export GANTRY_UPDATE_NUM_WORKERS=$((MAX_SERVICES_NUM/2+1))
       run_gantry "${TEST_NAME}"
     }
@@ -60,23 +62,17 @@ Describe 'service-parallel'
       The status should be success
       The stdout should satisfy display_output
       The stderr should satisfy display_output
-      SERVICE_NAME_NUM="${SERVICE_NAME}-0"
-      The stderr should satisfy spec_expect_no_message "${SKIP_UPDATING}.* ${SERVICE_NAME_NUM} "
-      The stderr should satisfy spec_expect_message    "${PERFORM_UPDATING}.* ${SERVICE_NAME_NUM} .*${PERFORM_REASON_HAS_NEWER_IMAGE}"
-      The stderr should satisfy spec_expect_message    "${UPDATED}.* ${SERVICE_NAME_NUM}"
-      for NUM in $(seq 1 "${MAX_SERVICES_NUM}"); do
+      for NUM in $(seq 0 "${MAX_SERVICES_NUM}"); do
         SERVICE_NAME_NUM="${SERVICE_NAME}-${NUM}"
         The stderr should satisfy spec_expect_no_message "${SKIP_UPDATING}.* ${SERVICE_NAME_NUM} "
-        The stderr should satisfy spec_expect_message    "${PERFORM_UPDATING}.* ${SERVICE_NAME_NUM} .*${PERFORM_REASON_KNOWN_NEWER_IMAGE}"
+        # Since we set GANTRY_MANIFEST_NUM_WORKERS larger than 1, we do not check reason here.
+        The stderr should satisfy spec_expect_message    "${PERFORM_UPDATING}.* ${SERVICE_NAME_NUM}"
         The stderr should satisfy spec_expect_message    "${UPDATED}.* ${SERVICE_NAME_NUM}"
       done
-      SERVICE_NAME_NUM="${SERVICE_NAME}-$((MAX_SERVICES_NUM+1))"
-      The stderr should satisfy spec_expect_message    "${SKIP_UPDATING}.* ${SERVICE_NAME_NUM} .*${SKIP_REASON_CURRENT_IS_LATEST}"
-      The stderr should satisfy spec_expect_no_message "${PERFORM_UPDATING}.* ${SERVICE_NAME_NUM} "
-      The stderr should satisfy spec_expect_no_message "${UPDATED}.* ${SERVICE_NAME_NUM}"
-      for NUM in $(seq "$((MAX_SERVICES_NUM+2))" "$((MAX_SERVICES_NUM+MAX_NO_NEW_IMAGE))"); do
+      for NUM in $(seq "$((MAX_SERVICES_NUM+1))" "$((MAX_SERVICES_NUM+MAX_NO_NEW_IMAGE))"); do
         SERVICE_NAME_NUM="${SERVICE_NAME}-${NUM}"
-        The stderr should satisfy spec_expect_message    "${SKIP_UPDATING}.* ${SERVICE_NAME_NUM} .*${SKIP_REASON_NO_KNOWN_NEWER_IMAGE}"
+        # Since we set GANTRY_MANIFEST_NUM_WORKERS larger than 1, we do not check reason here.
+        The stderr should satisfy spec_expect_message    "${SKIP_UPDATING}.* ${SERVICE_NAME_NUM}"
         The stderr should satisfy spec_expect_no_message "${PERFORM_UPDATING}.* ${SERVICE_NAME_NUM} "
         The stderr should satisfy spec_expect_no_message "${UPDATED}.* ${SERVICE_NAME_NUM} "
       done
@@ -99,12 +95,14 @@ Describe 'service-parallel'
     TEST_NAME="test_parallel_more_workers"
     IMAGE_WITH_TAG=$(get_image_with_tag "${SUITE_NAME}")
     SERVICE_NAME="gantry-test-$(unique_id)"
+    MANIFEST_NUM_WORKERS=2
     MAX_SERVICES_NUM=10
     test_parallel_more_workers() {
       local TEST_NAME="${1}"
       local SERVICE_NAME="${2}"
       local MAX_SERVICES_NUM="${3}"
       reset_gantry_env "${SERVICE_NAME}"
+      export GANTRY_MANIFEST_NUM_WORKERS="${MANIFEST_NUM_WORKERS}"
       export GANTRY_UPDATE_NUM_WORKERS=$((MAX_SERVICES_NUM*3))
       run_gantry "${TEST_NAME}"
     }
@@ -115,14 +113,11 @@ Describe 'service-parallel'
       The status should be success
       The stdout should satisfy display_output
       The stderr should satisfy display_output
-      SERVICE_NAME_NUM="${SERVICE_NAME}-0"
-      The stderr should satisfy spec_expect_no_message "${SKIP_UPDATING}.* ${SERVICE_NAME_NUM} "
-      The stderr should satisfy spec_expect_message    "${PERFORM_UPDATING}.* ${SERVICE_NAME_NUM} .*${PERFORM_REASON_HAS_NEWER_IMAGE}"
-      The stderr should satisfy spec_expect_message    "${UPDATED}.* ${SERVICE_NAME_NUM}"
-      for NUM in $(seq 1 "${MAX_SERVICES_NUM}"); do
+      for NUM in $(seq 0 "${MAX_SERVICES_NUM}"); do
         SERVICE_NAME_NUM="${SERVICE_NAME}-${NUM}"
         The stderr should satisfy spec_expect_no_message "${SKIP_UPDATING}.* ${SERVICE_NAME_NUM} "
-        The stderr should satisfy spec_expect_message    "${PERFORM_UPDATING}.* ${SERVICE_NAME_NUM} .*${PERFORM_REASON_KNOWN_NEWER_IMAGE}"
+        # Since we set GANTRY_MANIFEST_NUM_WORKERS larger than 1, we do not check reason here.
+        The stderr should satisfy spec_expect_message    "${PERFORM_UPDATING}.* ${SERVICE_NAME_NUM}"
         The stderr should satisfy spec_expect_message    "${UPDATED}.* ${SERVICE_NAME_NUM}"
       done
       The stderr should satisfy spec_expect_no_message "${NUM_SERVICES_SKIP_JOBS}"
@@ -137,6 +132,47 @@ Describe 'service-parallel'
       The stderr should satisfy spec_expect_message    "${REMOVING_NUM_IMAGES}"
       The stderr should satisfy spec_expect_no_message "${SKIP_REMOVING_IMAGES}"
       The stderr should satisfy spec_expect_message    "${REMOVED_IMAGE}.*${IMAGE_WITH_TAG}"
+      The stderr should satisfy spec_expect_no_message "${FAILED_TO_REMOVE_IMAGE}.*${IMAGE_WITH_TAG}"
+    End
+  End
+  Describe "test_parallel_GANTRY_MANIFEST_NUM_WORKERS_not_a_number" "container_test:false"
+    TEST_NAME="test_parallel_GANTRY_MANIFEST_NUM_WORKERS_not_a_number"
+    IMAGE_WITH_TAG=$(get_image_with_tag "${SUITE_NAME}")
+    SERVICE_NAME="gantry-test-$(unique_id)"
+    test_parallel_GANTRY_MANIFEST_NUM_WORKERS_not_a_number() {
+      local TEST_NAME="${1}"
+      local SERVICE_NAME="${2}"
+      reset_gantry_env "${SERVICE_NAME}"
+      export GANTRY_MANIFEST_NUM_WORKERS="NotANumber"
+      run_gantry "${TEST_NAME}"
+    }
+    BeforeEach "common_setup_new_image ${TEST_NAME} ${IMAGE_WITH_TAG} ${SERVICE_NAME}"
+    AfterEach "common_cleanup ${TEST_NAME} ${IMAGE_WITH_TAG} ${SERVICE_NAME}"
+    It 'run_test'
+      When run test_parallel_GANTRY_MANIFEST_NUM_WORKERS_not_a_number "${TEST_NAME}" "${SERVICE_NAME}"
+      The status should be failure
+      The stdout should satisfy display_output
+      The stderr should satisfy display_output
+      The stderr should satisfy spec_expect_message    "GANTRY_MANIFEST_NUM_WORKERS ${MUST_BE_A_NUMBER}.*"
+      The stderr should satisfy spec_expect_no_message "${SKIP_UPDATING}.*${SERVICE_NAME}"
+      The stderr should satisfy spec_expect_no_message "${PERFORM_UPDATING}.*${SERVICE_NAME}.*${PERFORM_REASON_HAS_NEWER_IMAGE}"
+      The stderr should satisfy spec_expect_no_message "${NUM_SERVICES_SKIP_JOBS}"
+      The stderr should satisfy spec_expect_no_message "${NUM_SERVICES_INSPECT_FAILURE}"
+      The stderr should satisfy spec_expect_no_message "${NUM_SERVICES_NO_NEW_IMAGES}"
+      The stderr should satisfy spec_expect_no_message "${NUM_SERVICES_UPDATING}"
+      The stderr should satisfy spec_expect_no_message "${UPDATED}.*${SERVICE_NAME}"
+      The stderr should satisfy spec_expect_no_message "${NO_UPDATES}.*${SERVICE_NAME}"
+      The stderr should satisfy spec_expect_no_message "${ROLLING_BACK}.*${SERVICE_NAME}"
+      The stderr should satisfy spec_expect_no_message "${FAILED_TO_ROLLBACK}.*${SERVICE_NAME}"
+      The stderr should satisfy spec_expect_no_message "${ROLLED_BACK}.*${SERVICE_NAME}"
+      The stderr should satisfy spec_expect_message    "${NO_SERVICES_UPDATED}"
+      The stderr should satisfy spec_expect_no_message "${NUM_SERVICES_UPDATED}"
+      The stderr should satisfy spec_expect_no_message "${NUM_SERVICES_UPDATE_FAILED}"
+      The stderr should satisfy spec_expect_message    "${NUM_SERVICES_ERRORS}"
+      The stderr should satisfy spec_expect_message    "${NO_IMAGES_TO_REMOVE}"
+      The stderr should satisfy spec_expect_no_message "${REMOVING_NUM_IMAGES}"
+      The stderr should satisfy spec_expect_no_message "${SKIP_REMOVING_IMAGES}"
+      The stderr should satisfy spec_expect_no_message "${REMOVED_IMAGE}.*${IMAGE_WITH_TAG}"
       The stderr should satisfy spec_expect_no_message "${FAILED_TO_REMOVE_IMAGE}.*${IMAGE_WITH_TAG}"
     End
   End
