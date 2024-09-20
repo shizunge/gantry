@@ -54,6 +54,7 @@ The label on the services to select config to enable authentication is renamed t
 | GANTRY_LOG_LEVEL                 |
 | GANTRY_MANIFEST_CMD              |
 | GANTRY_MANIFEST_OPTIONS          |
+| GANTRY_NOTIFICATION_CONDITION    |
 | GANTRY_NOTIFICATION_TITLE        |
 | GANTRY_POST_RUN_CMD              |
 | GANTRY_PRE_RUN_CMD               |
