@@ -78,17 +78,17 @@ You can configure the most behaviors of *Gantry* via environment variables.
 |-----------------------|---------|-------------|
 | GANTRY_MANIFEST_CMD         | buildx | Valid values are `buildx`, `manifest`, and `none`.<br>Set which command for manifest inspection. Also see FAQ section [when to set `GANTRY_MANIFEST_CMD`](docs/faq.md#when-to-set-gantry_manifest_cmd).<ul><li>[`docker buildx imagetools inspect`](https://docs.docker.com/engine/reference/commandline/buildx_imagetools_inspect/)</li><li>[`docker manifest inspect`](https://docs.docker.com/engine/reference/commandline/manifest_inspect/)</li></ul>Set to `none` to skip checking the manifest. As a result of skipping, `docker service update` always runs. In case you add `--force` to `GANTRY_UPDATE_OPTIONS`, you also want to disable the inspection. |
 | GANTRY_MANIFEST_NUM_WORKERS | 1      | The maximum number of `GANTRY_MANIFEST_CMD` that can run in parallel. |
-| GANTRY_MANIFEST_OPTIONS     |        | [Options](https://docs.docker.com/engine/reference/commandline/buildx_imagetools_inspect/#options) added to the `docker buildx imagetools inspect` or [options](https://docs.docker.com/engine/reference/commandline/manifest_inspect/#options) to `docker manifest inspect`, depending on `GANTRY_MANIFEST_CMD` value. |
+| GANTRY_MANIFEST_OPTIONS     |        | [Options](https://docs.docker.com/engine/reference/commandline/buildx_imagetools_inspect/#options) added to the `docker buildx imagetools inspect` or [options](https://docs.docker.com/engine/reference/commandline/manifest_inspect/#options) to `docker manifest inspect`, depending on `GANTRY_MANIFEST_CMD` value, for all services. |
 
 ### To add options to services update
 
 | Environment Variable  | Default | Description |
 |-----------------------|---------|-------------|
 | GANTRY_ROLLBACK_ON_FAILURE    | true  | Set to `true` to enable rollback when updating fails. Set to `false` to disable the rollback. |
-| GANTRY_ROLLBACK_OPTIONS       |       | [Options](https://docs.docker.com/engine/reference/commandline/service_update/#options) added to the `docker service update --rollback` command. |
-| GANTRY_UPDATE_JOBS            | false | Set to `true` to update replicated-job or global-job. Set to `false` to disable updating jobs. |
+| GANTRY_ROLLBACK_OPTIONS       |       | [Options](https://docs.docker.com/engine/reference/commandline/service_update/#options) added to the `docker service update --rollback` command for all services. |
+| GANTRY_UPDATE_JOBS            | false | Set to `true` to update replicated-job or global-job. Set to `false` to disable updating jobs. *Gantry* adds additional options to `docker service update` when there is [no running tasks](docs/faq.md#how-to-update-services-with-no-running-tasks). |
 | GANTRY_UPDATE_NUM_WORKERS     | 1     | The maximum number of updates that can run in parallel. |
-| GANTRY_UPDATE_OPTIONS         |       | [Options](https://docs.docker.com/engine/reference/commandline/service_update/#options) added to the `docker service update` command. |
+| GANTRY_UPDATE_OPTIONS         |       | [Options](https://docs.docker.com/engine/reference/commandline/service_update/#options) added to the `docker service update` command for all services. |
 | GANTRY_UPDATE_TIMEOUT_SECONDS | 300   | Error out if updating of a single service takes longer than the given time. |
 
 ### After updating
@@ -120,7 +120,7 @@ If the images of services are hosted on multiple registries that are required au
 
 You need to tell *Gantry* to use a named config rather than the default one when updating a particular service. The named configurations are set via either `GANTRY_REGISTRY_CONFIG`, `GANTRY_REGISTRY_CONFIG_FILE` or `GANTRY_REGISTRY_CONFIGS_FILE`. This can be done by adding the following label to the service `gantry.auth.config=<config-name>`. *Gantry* creates [Docker configuration files](https://docs.docker.com/engine/reference/commandline/cli/#configuration-files) and adds `--config <config-name>` to the Docker command line for the corresponding services.
 
-> NOTE: When `GANTRY_REGISTRY_CONFIG`, `GANTRY_REGISTRY_CONFIG_FILE` or `GANTRY_REGISTRY_CONFIGS_FILE` is used, *Gantry* automatically adds `--with-registry-auth` to `docker service update` commands. Without `--with-registry-auth`, the service will be updated to an image without digest. See this [comment](https://github.com/shizunge/gantry/issues/53#issuecomment-2348376336).
+> NOTE: *Gantry* automatically adds `--with-registry-auth` to the `docker service update` command for a sevice, when it finds the label `gantry.auth.config=<config-name>` on the service. Without `--with-registry-auth`, the service will be updated to an image without digest. See this [comment](https://github.com/shizunge/gantry/issues/53#issuecomment-2348376336).
 
 > NOTE: You can use `GANTRY_REGISTRY_CONFIGS_FILE` together with other authentication environment variables.
 
