@@ -78,17 +78,17 @@ You can configure the most behaviors of *Gantry* via environment variables.
 |-----------------------|---------|-------------|
 | GANTRY_MANIFEST_CMD         | buildx | Valid values are `buildx`, `manifest`, and `none`.<br>Set which command for manifest inspection. Also see FAQ section [when to set `GANTRY_MANIFEST_CMD`](docs/faq.md#when-to-set-gantry_manifest_cmd).<ul><li>[`docker buildx imagetools inspect`](https://docs.docker.com/engine/reference/commandline/buildx_imagetools_inspect/)</li><li>[`docker manifest inspect`](https://docs.docker.com/engine/reference/commandline/manifest_inspect/)</li></ul>Set to `none` to skip checking the manifest. As a result of skipping, `docker service update` always runs. In case you add `--force` to `GANTRY_UPDATE_OPTIONS`, you also want to disable the inspection. |
 | GANTRY_MANIFEST_NUM_WORKERS | 1      | The maximum number of `GANTRY_MANIFEST_CMD` that can run in parallel. |
-| GANTRY_MANIFEST_OPTIONS     |        | [Options](https://docs.docker.com/engine/reference/commandline/buildx_imagetools_inspect/#options) added to the `docker buildx imagetools inspect` or [options](https://docs.docker.com/engine/reference/commandline/manifest_inspect/#options) to `docker manifest inspect`, depending on `GANTRY_MANIFEST_CMD` value, for all services. |
+| GANTRY_MANIFEST_OPTIONS     |        | [Options](https://docs.docker.com/engine/reference/commandline/buildx_imagetools_inspect/#options) added to the `docker buildx imagetools inspect` or [options](https://docs.docker.com/engine/reference/commandline/manifest_inspect/#options) to `docker manifest inspect`, depending on `GANTRY_MANIFEST_CMD` value, for all services. Also see [Labels](#labels) about adding options to a particular service. |
 
 ### To add options to services update
 
 | Environment Variable  | Default | Description |
 |-----------------------|---------|-------------|
 | GANTRY_ROLLBACK_ON_FAILURE    | true  | Set to `true` to enable rollback when updating fails. Set to `false` to disable the rollback. |
-| GANTRY_ROLLBACK_OPTIONS       |       | [Options](https://docs.docker.com/engine/reference/commandline/service_update/#options) added to the `docker service update --rollback` command for all services. |
+| GANTRY_ROLLBACK_OPTIONS       |       | [Options](https://docs.docker.com/engine/reference/commandline/service_update/#options) added to the `docker service update --rollback` command for all services. Also see [Labels](#labels) about adding options to a particular service. |
 | GANTRY_UPDATE_JOBS            | false | Set to `true` to update replicated-job or global-job. Set to `false` to disable updating jobs. *Gantry* adds additional options to `docker service update` when there is [no running tasks](docs/faq.md#how-to-update-services-with-no-running-tasks). |
 | GANTRY_UPDATE_NUM_WORKERS     | 1     | The maximum number of updates that can run in parallel. |
-| GANTRY_UPDATE_OPTIONS         |       | [Options](https://docs.docker.com/engine/reference/commandline/service_update/#options) added to the `docker service update` command for all services. |
+| GANTRY_UPDATE_OPTIONS         |       | [Options](https://docs.docker.com/engine/reference/commandline/service_update/#options) added to the `docker service update` command for all services. Also see [Labels](#labels) about adding options to a particular service. |
 | GANTRY_UPDATE_TIMEOUT_SECONDS | 300   | Error out if updating of a single service takes longer than the given time. |
 
 ### After updating
@@ -125,6 +125,17 @@ You need to tell *Gantry* to use a named config rather than the default one when
 > NOTE: You can use `GANTRY_REGISTRY_CONFIGS_FILE` together with other authentication environment variables.
 
 > NOTE: *Gantry* uses `GANTRY_REGISTRY_PASSWORD` and `GANTRY_REGISTRY_USER` to obtain Docker Hub rate when `GANTRY_REGISTRY_HOST` is empty or `docker.io`. You can also use their `_FILE` variants. If either password or user is empty, *Gantry* reads the Docker Hub rate for anonymous users.
+
+## Labels
+
+Labels can be added to services to modify the behavior of *Gantry* for particular services. When *Gantry* see labels on a service, it will modify the Docker command line only for that service.
+
+| Labels  | Description |
+|---------|-------------|
+| `gantry.auth.config=<config-name>`  | Add flag `--config <config-name>` to all Docker commands related to the service to specify the client config files. |
+| `gantry.manifest.options=<options>` | Add flag(s) `<options>` to `GANTRY_MANIFEST_CMD`. Different commands support different options. |
+| `gantry.rollback.options=<options>` | Add flag(s) `<options>` to `docker service update --rollback`. |
+| `gantry.update.options=<options>`   | Add flag(s) `<options>` to `docker service update`. |
 
 ## FAQ
 

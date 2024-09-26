@@ -563,14 +563,22 @@ _service_is_replicated() {
   echo "${MODE}"
 }
 
+_get_label_from_service() {
+  local SERVICE_NAME="${1}"
+  local LABEL="${2}"
+  local VALUE=
+  if ! VALUE=$(docker service inspect -f "{{index .Spec.Labels \"${LABEL}\"}}" "${SERVICE_NAME}" 2>&1); then
+    log ERROR "Failed to obtain the value of label ${LABEL} from service ${SERVICE_NAME}. ${VALUE}"
+    return 1
+  fi
+  echo "${VALUE}"
+}
+
 _get_config_from_service() {
   local SERVICE_NAME="${1}"
   local AUTH_CONFIG_LABEL="gantry.auth.config"
   local AUTH_CONFIG=
-  if ! AUTH_CONFIG=$(docker service inspect -f "{{index .Spec.Labels \"${AUTH_CONFIG_LABEL}\"}}" "${SERVICE_NAME}" 2>&1); then
-    log ERROR "Failed to obtain authentication config from service ${SERVICE_NAME}. ${AUTH_CONFIG}"
-    AUTH_CONFIG=
-  fi
+  AUTH_CONFIG=$(_get_label_from_service "${SERVICE_NAME}" "${AUTH_CONFIG_LABEL}")
   [ -z "${AUTH_CONFIG}" ] && return 0
   echo "--config ${AUTH_CONFIG}"
 }
@@ -591,11 +599,16 @@ _skip_jobs() {
 
 _get_image_info() {
   local MANIFEST_OPTIONS="${GANTRY_MANIFEST_OPTIONS:-""}"
-  local MANIFEST_CMD="${1}"
-  local IMAGE="${2}"
-  local DOCKER_CONFIG="${3}"
+  local SERVICE_NAME="${1}"
+  local MANIFEST_CMD="${2}"
+  local IMAGE="${3}"
+  local DOCKER_CONFIG="${4}"
   local MSG=
   local RETURN_VALUE=0
+  # To get options on individual services.
+  local SERVICES_OPTIONS=
+  SERVICES_OPTIONS=$(_get_label_from_service "${SERVICE_NAME}" "gantry.manifest.options")
+  [ -n "${SERVICES_OPTIONS}" ] && MANIFEST_OPTIONS="${MANIFEST_OPTIONS} ${SERVICES_OPTIONS}"
   if echo "${MANIFEST_CMD}" | grep -q -i "buildx"; then
     # https://github.com/orgs/community/discussions/45779
     [ -n "${MANIFEST_OPTIONS}" ] && log DEBUG "Adding options \"${MANIFEST_OPTIONS}\" to the command \"docker buildx imagetools inspect\"."
@@ -668,7 +681,7 @@ _inspect_image() {
   DOCKER_CONFIG=$(_get_config_from_service "${SERVICE}")
   [ -n "${DOCKER_CONFIG}" ] && log DEBUG "Adding options \"${DOCKER_CONFIG}\" to docker commands for ${SERVICE_NAME}."
   local IMAGE_INFO=
-  if ! IMAGE_INFO=$(_get_image_info "${MANIFEST_CMD}" "${IMAGE}" "${DOCKER_CONFIG}"); then
+  if ! IMAGE_INFO=$(_get_image_info "${SERVICE_NAME}" "${MANIFEST_CMD}" "${IMAGE}" "${DOCKER_CONFIG}"); then
     log DEBUG "Skip updating ${SERVICE_NAME} because there is a failure to obtain the manifest from the registry of image ${IMAGE}."
     return 1
   fi
@@ -768,9 +781,14 @@ _get_service_update_additional_options() {
       OPTIONS="${OPTIONS} --replicas=0"
     fi
   fi
+  # Add `--with-registry-auth` if needed.
   local WITH_REGISTRY_AUTH=
   WITH_REGISTRY_AUTH="$(_get_with_registry_auth "${DOCKER_CONFIG}")"
   [ -n "${WITH_REGISTRY_AUTH}" ] && OPTIONS="${OPTIONS} ${WITH_REGISTRY_AUTH}"
+  # To get options on individual services.
+  local SERVICES_OPTIONS=
+  SERVICES_OPTIONS=$(_get_label_from_service "${SERVICE_NAME}" "gantry.update.options")
+  [ -n "${SERVICES_OPTIONS}" ] && OPTIONS="${OPTIONS} ${SERVICES_OPTIONS}"
   echo "${OPTIONS}"
 }
 
@@ -778,9 +796,14 @@ _get_service_rollback_additional_options() {
   local SERVICE_NAME="${1}"
   local DOCKER_CONFIG="${2}"
   local OPTIONS=
+  # Add `--with-registry-auth` if needed.
   local WITH_REGISTRY_AUTH=
   WITH_REGISTRY_AUTH="$(_get_with_registry_auth "${DOCKER_CONFIG}")"
   [ -n "${WITH_REGISTRY_AUTH}" ] && OPTIONS="${OPTIONS} ${WITH_REGISTRY_AUTH}"
+  # To get options on individual services.
+  local SERVICES_OPTIONS=
+  SERVICES_OPTIONS=$(_get_label_from_service "${SERVICE_NAME}" "gantry.rollback.options")
+  [ -n "${SERVICES_OPTIONS}" ] && OPTIONS="${OPTIONS} ${SERVICES_OPTIONS}"
   echo "${OPTIONS}"
 }
 
