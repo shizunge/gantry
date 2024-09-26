@@ -249,7 +249,7 @@ Describe 'update-options'
       The status should be failure
       The stdout should satisfy display_output
       The stderr should satisfy display_output
-      The stderr should satisfy spec_expect_message    "GANTRY_UPDATE_TIMEOUT_SECONDS ${MUST_BE_A_NUMBER}.*"
+      The stderr should satisfy spec_expect_message    "UPDATE_TIMEOUT_SECONDS ${MUST_BE_A_NUMBER}.*"
       The stderr should satisfy spec_expect_no_message "${SKIP_UPDATING}.*${SERVICE_NAME}"
       The stderr should satisfy spec_expect_message    "${PERFORM_UPDATING}.*${SERVICE_NAME}.*${PERFORM_REASON_HAS_NEWER_IMAGE}"
       The stderr should satisfy spec_expect_no_message "${NUM_SERVICES_SKIP_JOBS}"

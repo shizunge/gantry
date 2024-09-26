@@ -128,14 +128,18 @@ You need to tell *Gantry* to use a named config rather than the default one when
 
 ## Labels
 
-Labels can be added to services to modify the behavior of *Gantry* for particular services. When *Gantry* see labels on a service, it will modify the Docker command line only for that service.
+Labels can be added to services to modify the behavior of *Gantry* for particular services. When *Gantry* sees the following labels on a service, it will modify the Docker command line only for that service. The value on the label overrides the global environment variables.
 
-| Labels  | Description |
+| Labels  | Override Env |
 |---------|-------------|
-| `gantry.auth.config=<config-name>`  | Add flag `--config <config-name>` to all Docker commands related to the service to specify the client config files. |
-| `gantry.manifest.options=<options>` | Add flag(s) `<options>` to `GANTRY_MANIFEST_CMD`. Different commands support different options. |
-| `gantry.rollback.options=<options>` | Add flag(s) `<options>` to `docker service update --rollback`. |
-| `gantry.update.options=<options>`   | Add flag(s) `<options>` to `docker service update`. |
+| `gantry.auth.config=<config-name>`       | None. See [Authentication](#authentication). |
+| `gantry.manifest.cmd=<command>`          | [`GANTRY_MANIFEST_CMD`](#to-check-if-new-images-are-available) |
+| `gantry.manifest.options=<string> `      | [`GANTRY_MANIFEST_OPTIONS`](#to-check-if-new-images-are-available) |
+| `gantry.rollback.on_failure=<boolean>`   | [`GANTRY_ROLLBACK_ON_FAILURE`](#to-add-options-to-services-update) |
+| `gantry.rollback.options=<string>`       | [`GANTRY_ROLLBACK_OPTIONS`](#to-add-options-to-services-update) |
+| `gantry.update.jobs=<boolean>`           | [`GANTRY_UPDATE_JOBS`](#to-add-options-to-services-update) |
+| `gantry.update.options=<string>`         | [`GANTRY_UPDATE_OPTIONS`](#to-add-options-to-services-update) |
+| `gantry.update.timeout_seconds=<number>` | [`GANTRY_UPDATE_TIMEOUT_SECONDS`](#to-add-options-to-services-update) |
 
 ## FAQ
 
