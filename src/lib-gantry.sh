@@ -15,24 +15,65 @@
 # along with this program.  If not, see <https://www.gnu.org/licenses/>.
 #
 
+# read_env returns empty string if ENV_VALUE is set to empty, in which case we want to use the DEFAULT_VALUE.
+_read_env_default() {
+  local ENV_NAME="${1}"
+  local DEFAULT_VALUE="${2}"
+  local READ_VALUE=
+  READ_VALUE=$(read_env "${ENV_NAME}" "${DEFAULT_VALUE}")
+  local VALUE="${READ_VALUE}"
+  [ -z "${VALUE}" ] && VALUE="${DEFAULT_VALUE}"
+  echo "${VALUE}"
+}
+
 # Read a number from an environment variable. Log an error when it is not a number.
 gantry_read_number() {
-  local VNAME="${1}"
+  local ENV_NAME="${1}"
   local DEFAULT_VALUE="${2}"
   if ! is_number "${DEFAULT_VALUE}"; then
     log ERROR "DEFAULT_VALUE must be a number. Got \"${DEFAULT_VALUE}\"."
     return 1
   fi
-  local READ_VALUE VALUE
-  READ_VALUE=$(read_env "${VNAME}" "${DEFAULT_VALUE}")
-  VALUE="${READ_VALUE}"
-  [ -z "${VALUE}" ] && VALUE="${DEFAULT_VALUE}"
+  local VALUE=
+  VALUE=$(_read_env_default "${ENV_NAME}" "${DEFAULT_VALUE}")
   if ! is_number "${VALUE}"; then
-    log ERROR "${VNAME} must be a number. Got \"${READ_VALUE}\"."
+    local READ_VALUE=
+    READ_VALUE=$(read_env "${ENV_NAME}" "${DEFAULT_VALUE}")
+    log ERROR "${ENV_NAME} must be a number. Got \"${READ_VALUE}\"."
     return 1;
   fi
   echo "${VALUE}"
 }
+
+_get_label_from_service() {
+  local SERVICE_NAME="${1}"
+  local LABEL="${2}"
+  local VALUE=
+  if ! VALUE=$(docker service inspect -f "{{index .Spec.Labels \"${LABEL}\"}}" "${SERVICE_NAME}" 2>&1); then
+    log ERROR "Failed to obtain the value of label ${LABEL} from service ${SERVICE_NAME}. ${VALUE}"
+    return 1
+  fi
+  echo "${VALUE}"
+}
+
+# Read a number from an environment variable. Log an error when it is not a number.
+_read_env_or_label() {
+  local SERVICE_NAME="${1}"
+  local ENV_NAME="${2}"
+  local LABEL="${3}"
+  local DEFAULT_VALUE="${4}"
+  local LABEL_VALUE=
+  LABEL_VALUE=$(_get_label_from_service "${SERVICE_NAME}" "${LABEL}")
+  if [ -n "${LABEL_VALUE}" ]; then
+    log DEBUG "Use value \"${LABEL_VALUE}\" from label ${LABEL} on the service ${SERVICE_NAME}."
+    echo "${LABEL_VALUE}"
+    return 0
+  fi
+  local VALUE=
+  VALUE=$(_read_env_default "${ENV_NAME}" "${DEFAULT_VALUE}")
+  echo "${VALUE}"
+}
+
 
 _login_registry() {
   local USER="${1}"
@@ -567,17 +608,15 @@ _get_config_from_service() {
   local SERVICE_NAME="${1}"
   local AUTH_CONFIG_LABEL="gantry.auth.config"
   local AUTH_CONFIG=
-  if ! AUTH_CONFIG=$(docker service inspect -f "{{index .Spec.Labels \"${AUTH_CONFIG_LABEL}\"}}" "${SERVICE_NAME}" 2>&1); then
-    log ERROR "Failed to obtain authentication config from service ${SERVICE_NAME}. ${AUTH_CONFIG}"
-    AUTH_CONFIG=
-  fi
+  AUTH_CONFIG=$(_get_label_from_service "${SERVICE_NAME}" "${AUTH_CONFIG_LABEL}")
   [ -z "${AUTH_CONFIG}" ] && return 0
   echo "--config ${AUTH_CONFIG}"
 }
 
 _skip_jobs() {
-  local UPDATE_JOBS="${GANTRY_UPDATE_JOBS:-"false"}"
   local SERVICE_NAME="${1}"
+  local UPDATE_JOBS=
+  UPDATE_JOBS=$(_read_env_or_label "${SERVICE_NAME}" "GANTRY_UPDATE_JOBS" "gantry.update.jobs" "false")
   if is_true "${UPDATE_JOBS}"; then
     return 1
   fi
@@ -590,10 +629,12 @@ _skip_jobs() {
 }
 
 _get_image_info() {
-  local MANIFEST_OPTIONS="${GANTRY_MANIFEST_OPTIONS:-""}"
-  local MANIFEST_CMD="${1}"
-  local IMAGE="${2}"
-  local DOCKER_CONFIG="${3}"
+  local SERVICE_NAME="${1}"
+  local MANIFEST_OPTIONS=
+  MANIFEST_OPTIONS=$(_read_env_or_label "${SERVICE_NAME}" "GANTRY_MANIFEST_OPTIONS" "gantry.manifest.options" "")
+  local MANIFEST_CMD="${2}"
+  local IMAGE="${3}"
+  local DOCKER_CONFIG="${4}"
   local MSG=
   local RETURN_VALUE=0
   if echo "${MANIFEST_CMD}" | grep -q -i "buildx"; then
@@ -628,8 +669,9 @@ _get_image_info() {
 # echo the image if we found a new image.
 # return the number of errors.
 _inspect_image() {
-  local MANIFEST_CMD="${GANTRY_MANIFEST_CMD:-"buildx"}"
   local SERVICE_NAME="${1}"
+  local MANIFEST_CMD=
+  MANIFEST_CMD=$(_read_env_or_label "${SERVICE_NAME}" "GANTRY_MANIFEST_CMD" "gantry.manifest.cmd" "buildx")
   local IMAGE_WITH_DIGEST=
   if ! IMAGE_WITH_DIGEST=$(_get_service_image "${SERVICE_NAME}" 2>&1); then
     log ERROR "Failed to obtain image from service ${SERVICE_NAME}. ${IMAGE_WITH_DIGEST}"
@@ -668,7 +710,7 @@ _inspect_image() {
   DOCKER_CONFIG=$(_get_config_from_service "${SERVICE}")
   [ -n "${DOCKER_CONFIG}" ] && log DEBUG "Adding options \"${DOCKER_CONFIG}\" to docker commands for ${SERVICE_NAME}."
   local IMAGE_INFO=
-  if ! IMAGE_INFO=$(_get_image_info "${MANIFEST_CMD}" "${IMAGE}" "${DOCKER_CONFIG}"); then
+  if ! IMAGE_INFO=$(_get_image_info "${SERVICE_NAME}" "${MANIFEST_CMD}" "${IMAGE}" "${DOCKER_CONFIG}"); then
     log DEBUG "Skip updating ${SERVICE_NAME} because there is a failure to obtain the manifest from the registry of image ${IMAGE}."
     return 1
   fi
@@ -768,6 +810,7 @@ _get_service_update_additional_options() {
       OPTIONS="${OPTIONS} --replicas=0"
     fi
   fi
+  # Add `--with-registry-auth` if needed.
   local WITH_REGISTRY_AUTH=
   WITH_REGISTRY_AUTH="$(_get_with_registry_auth "${DOCKER_CONFIG}")"
   [ -n "${WITH_REGISTRY_AUTH}" ] && OPTIONS="${OPTIONS} ${WITH_REGISTRY_AUTH}"
@@ -778,6 +821,7 @@ _get_service_rollback_additional_options() {
   local SERVICE_NAME="${1}"
   local DOCKER_CONFIG="${2}"
   local OPTIONS=
+  # Add `--with-registry-auth` if needed.
   local WITH_REGISTRY_AUTH=
   WITH_REGISTRY_AUTH="$(_get_with_registry_auth "${DOCKER_CONFIG}")"
   [ -n "${WITH_REGISTRY_AUTH}" ] && OPTIONS="${OPTIONS} ${WITH_REGISTRY_AUTH}"
@@ -785,9 +829,11 @@ _get_service_rollback_additional_options() {
 }
 
 _rollback_service() {
-  local ROLLBACK_ON_FAILURE="${GANTRY_ROLLBACK_ON_FAILURE:-"true"}"
-  local ROLLBACK_OPTIONS="${GANTRY_ROLLBACK_OPTIONS:-""}"
   local SERVICE_NAME="${1}"
+  local ROLLBACK_ON_FAILURE=
+  ROLLBACK_ON_FAILURE=$(_read_env_or_label "${SERVICE_NAME}" "GANTRY_ROLLBACK_ON_FAILURE" "gantry.rollback.on_failure" "true")
+  local ROLLBACK_OPTIONS=
+  ROLLBACK_OPTIONS=$(_read_env_or_label "${SERVICE_NAME}" "GANTRY_ROLLBACK_OPTIONS" "gantry.rollback.options" "")
   local DOCKER_CONFIG="${2}"
   if ! is_true "${ROLLBACK_ON_FAILURE}"; then
     return 0
@@ -812,14 +858,17 @@ _rollback_service() {
 # return 0 when there is no error or failure.
 # return 1 when there are error(s) or failure(s).
 _update_single_service() {
+  local SERVICE_NAME="${1}"
   local UPDATE_TIMEOUT_SECONDS=
-  if ! UPDATE_TIMEOUT_SECONDS=$(gantry_read_number GANTRY_UPDATE_TIMEOUT_SECONDS 300); then
+  UPDATE_TIMEOUT_SECONDS=$(_read_env_or_label "${SERVICE_NAME}" "GANTRY_UPDATE_TIMEOUT_SECONDS" "gantry.update.timeout_seconds" "300")
+  if ! is_number "${UPDATE_TIMEOUT_SECONDS}"; then
+    log ERROR "UPDATE_TIMEOUT_SECONDS must be a number. Got \"${UPDATE_TIMEOUT_SECONDS}\"."
     local ERROR_SERVICE="GANTRY_UPDATE_TIMEOUT_SECONDS-is-not-a-number"
     _static_variable_add_unique_to_list STATIC_VAR_SERVICES_UPDATE_INPUT_ERROR "${ERROR_SERVICE}"
     return 1
   fi
-  local UPDATE_OPTIONS="${GANTRY_UPDATE_OPTIONS:-""}"
-  local SERVICE_NAME="${1}"
+  local UPDATE_OPTIONS=
+  UPDATE_OPTIONS=$(_read_env_or_label "${SERVICE_NAME}" "GANTRY_UPDATE_OPTIONS" "gantry.update.options" "")
   local IMAGE="${2}"
   local INPUT_ERROR=0
   [ -z "${SERVICE_NAME}" ] && log ERROR "Updating service: SERVICE_NAME must not be empty." && INPUT_ERROR=1 && SERVICE_NAME="unknown-service-name"
@@ -927,7 +976,7 @@ gantry_initialize() {
 
 gantry_get_services_list() {
   local SERVICES_EXCLUDED="${GANTRY_SERVICES_EXCLUDED:-""}"
-  local SERVICES_EXCLUDED_FILTERS="${GANTRY_SERVICES_EXCLUDED_FILTERS:-""}"
+  local SERVICES_EXCLUDED_FILTERS="${GANTRY_SERVICES_EXCLUDED_FILTERS:-"label=gantry.services.excluded=true"}"
   local SERVICES_FILTERS="${GANTRY_SERVICES_FILTERS:-""}"
   local SERVICES=
   if ! SERVICES=$(_get_services_filted "${SERVICES_FILTERS}"); then

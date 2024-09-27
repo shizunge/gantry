@@ -48,6 +48,7 @@ Describe 'rollback'
       The stderr should satisfy spec_expect_message    "${NUM_SERVICES_UPDATING}"
       The stderr should satisfy spec_expect_no_message "${UPDATED}.*${SERVICE_NAME}"
       The stderr should satisfy spec_expect_no_message "${NO_UPDATES}.*${SERVICE_NAME}"
+      The stderr should satisfy spec_expect_no_message "${ADDING_OPTIONS}"
       The stderr should satisfy spec_expect_message    "${ROLLING_BACK}.*${SERVICE_NAME}"
       The stderr should satisfy spec_expect_no_message "${FAILED_TO_ROLLBACK}.*${SERVICE_NAME}"
       The stderr should satisfy spec_expect_message    "${ROLLED_BACK}.*${SERVICE_NAME}"
@@ -138,6 +139,154 @@ Describe 'rollback'
       The stderr should satisfy spec_expect_message    "${NUM_SERVICES_UPDATING}"
       The stderr should satisfy spec_expect_no_message "${UPDATED}.*${SERVICE_NAME}"
       The stderr should satisfy spec_expect_no_message "${NO_UPDATES}.*${SERVICE_NAME}"
+      The stderr should satisfy spec_expect_no_message "${ADDING_OPTIONS}"
+      The stderr should satisfy spec_expect_no_message "${ROLLING_BACK}.*${SERVICE_NAME}"
+      The stderr should satisfy spec_expect_no_message "${FAILED_TO_ROLLBACK}.*${SERVICE_NAME}"
+      The stderr should satisfy spec_expect_no_message "${ROLLED_BACK}.*${SERVICE_NAME}"
+      The stderr should satisfy spec_expect_message    "${NO_SERVICES_UPDATED}"
+      The stderr should satisfy spec_expect_no_message "${NUM_SERVICES_UPDATED}"
+      The stderr should satisfy spec_expect_message    "${NUM_SERVICES_UPDATE_FAILED}"
+      The stderr should satisfy spec_expect_no_message "${NUM_SERVICES_ERRORS}"
+      The stderr should satisfy spec_expect_message    "${NO_IMAGES_TO_REMOVE}"
+      The stderr should satisfy spec_expect_no_message "${REMOVING_NUM_IMAGES}"
+      The stderr should satisfy spec_expect_no_message "${SKIP_REMOVING_IMAGES}"
+      The stderr should satisfy spec_expect_no_message "${REMOVED_IMAGE}.*${IMAGE_WITH_TAG}"
+      The stderr should satisfy spec_expect_no_message "${FAILED_TO_REMOVE_IMAGE}.*${IMAGE_WITH_TAG}"
+    End
+  End
+  Describe "test_rollback_lable_due_to_timeout" "container_test:false"
+    TEST_NAME="test_rollback_lable_due_to_timeout"
+    IMAGE_WITH_TAG=$(get_image_with_tag "${SUITE_NAME}")
+    SERVICE_NAME="gantry-test-$(unique_id)"
+    TIMEOUT=3
+    test_rollback_lable_due_to_timeout() {
+      local TEST_NAME="${1}"
+      local SERVICE_NAME="${2}"
+      local TIMEOUT="${3}"
+      reset_gantry_env "${SERVICE_NAME}"
+      # label should override the global environment variable.
+      export GANTRY_UPDATE_TIMEOUT_SECONDS="NotANumber"
+      # Assume service update won't be done within TIMEOUT second.
+      local LABEL_AND_VALUE="gantry.update.timeout_seconds=${TIMEOUT}"
+      docker service update --quiet --label-add "${LABEL_AND_VALUE}" "${SERVICE_NAME}"
+      run_gantry "${TEST_NAME}"
+    }
+    BeforeEach "common_setup_timeout ${TEST_NAME} ${IMAGE_WITH_TAG} ${SERVICE_NAME} ${TIMEOUT}"
+    AfterEach "common_cleanup ${TEST_NAME} ${IMAGE_WITH_TAG} ${SERVICE_NAME}"
+    It 'run_test'
+      When run test_rollback_lable_due_to_timeout "${TEST_NAME}" "${SERVICE_NAME}" "${TIMEOUT}"
+      The status should be failure
+      The stdout should satisfy display_output
+      The stderr should satisfy display_output
+      The stderr should satisfy spec_expect_no_message "${SKIP_UPDATING}.*${SERVICE_NAME}"
+      The stderr should satisfy spec_expect_message    "${PERFORM_UPDATING}.*${SERVICE_NAME}.*${PERFORM_REASON_HAS_NEWER_IMAGE}"
+      The stderr should satisfy spec_expect_no_message "${NUM_SERVICES_SKIP_JOBS}"
+      The stderr should satisfy spec_expect_no_message "${NUM_SERVICES_INSPECT_FAILURE}"
+      The stderr should satisfy spec_expect_no_message "${NUM_SERVICES_NO_NEW_IMAGES}"
+      The stderr should satisfy spec_expect_message    "${NUM_SERVICES_UPDATING}"
+      The stderr should satisfy spec_expect_no_message "${UPDATED}.*${SERVICE_NAME}"
+      The stderr should satisfy spec_expect_no_message "${NO_UPDATES}.*${SERVICE_NAME}"
+      The stderr should satisfy spec_expect_no_message "${ADDING_OPTIONS}"
+      The stderr should satisfy spec_expect_message    "${ROLLING_BACK}.*${SERVICE_NAME}"
+      The stderr should satisfy spec_expect_no_message "${FAILED_TO_ROLLBACK}.*${SERVICE_NAME}"
+      The stderr should satisfy spec_expect_message    "${ROLLED_BACK}.*${SERVICE_NAME}"
+      The stderr should satisfy spec_expect_message    "${NO_SERVICES_UPDATED}"
+      The stderr should satisfy spec_expect_no_message "${NUM_SERVICES_UPDATED}"
+      The stderr should satisfy spec_expect_message    "${NUM_SERVICES_UPDATE_FAILED}"
+      The stderr should satisfy spec_expect_no_message "${NUM_SERVICES_ERRORS}"
+      The stderr should satisfy spec_expect_message    "${NO_IMAGES_TO_REMOVE}"
+      The stderr should satisfy spec_expect_no_message "${REMOVING_NUM_IMAGES}"
+      The stderr should satisfy spec_expect_no_message "${SKIP_REMOVING_IMAGES}"
+      The stderr should satisfy spec_expect_no_message "${REMOVED_IMAGE}.*${IMAGE_WITH_TAG}"
+      The stderr should satisfy spec_expect_no_message "${FAILED_TO_REMOVE_IMAGE}.*${IMAGE_WITH_TAG}"
+    End
+  End
+  Describe "test_rollback_label_failed" "container_test:false"
+    TEST_NAME="test_rollback_label_failed"
+    IMAGE_WITH_TAG=$(get_image_with_tag "${SUITE_NAME}")
+    SERVICE_NAME="gantry-test-$(unique_id)"
+    TIMEOUT=3
+    test_rollback_label_failed() {
+      local TEST_NAME="${1}"
+      local SERVICE_NAME="${2}"
+      local TIMEOUT="${3}"
+      reset_gantry_env "${SERVICE_NAME}"
+      # label should override the global environment variable.
+      export GANTRY_UPDATE_TIMEOUT_SECONDS="NotANumber"
+      export GANTRY_ROLLBACK_OPTIONS="--insecure"
+      # Assume service update won't be done within TIMEOUT second.
+      local LABEL_AND_VALUE="gantry.update.timeout_seconds=${TIMEOUT}"
+      docker service update --quiet --label-add "${LABEL_AND_VALUE}" "${SERVICE_NAME}"
+      # Rollback would fail due to the incorrect option.
+      LABEL_AND_VALUE="gantry.rollback.options=--incorrect-option"
+      docker service update --quiet --label-add "${LABEL_AND_VALUE}" "${SERVICE_NAME}"
+      run_gantry "${TEST_NAME}"
+    }
+    BeforeEach "common_setup_timeout ${TEST_NAME} ${IMAGE_WITH_TAG} ${SERVICE_NAME} ${TIMEOUT}"
+    AfterEach "common_cleanup ${TEST_NAME} ${IMAGE_WITH_TAG} ${SERVICE_NAME}"
+    It 'run_test'
+      When run test_rollback_label_failed "${TEST_NAME}" "${SERVICE_NAME}" "${TIMEOUT}"
+      The status should be failure
+      The stdout should satisfy display_output
+      The stderr should satisfy display_output
+      The stderr should satisfy spec_expect_no_message "${SKIP_UPDATING}.*${SERVICE_NAME}"
+      The stderr should satisfy spec_expect_message    "${PERFORM_UPDATING}.*${SERVICE_NAME}.*${PERFORM_REASON_HAS_NEWER_IMAGE}"
+      The stderr should satisfy spec_expect_no_message "${NUM_SERVICES_SKIP_JOBS}"
+      The stderr should satisfy spec_expect_no_message "${NUM_SERVICES_INSPECT_FAILURE}"
+      The stderr should satisfy spec_expect_no_message "${NUM_SERVICES_NO_NEW_IMAGES}"
+      The stderr should satisfy spec_expect_message    "${NUM_SERVICES_UPDATING}"
+      The stderr should satisfy spec_expect_no_message "${UPDATED}.*${SERVICE_NAME}"
+      The stderr should satisfy spec_expect_no_message "${NO_UPDATES}.*${SERVICE_NAME}"
+      The stderr should satisfy spec_expect_message    "${ADDING_OPTIONS}.*--incorrect-option.*${SERVICE_NAME}"
+      The stderr should satisfy spec_expect_message    "${ROLLING_BACK}.*${SERVICE_NAME}"
+      The stderr should satisfy spec_expect_message    "${FAILED_TO_ROLLBACK}.*${SERVICE_NAME}"
+      The stderr should satisfy spec_expect_no_message "${ROLLED_BACK}.*${SERVICE_NAME}"
+      The stderr should satisfy spec_expect_message    "${NO_SERVICES_UPDATED}"
+      The stderr should satisfy spec_expect_no_message "${NUM_SERVICES_UPDATED}"
+      The stderr should satisfy spec_expect_message    "${NUM_SERVICES_UPDATE_FAILED}"
+      The stderr should satisfy spec_expect_no_message "${NUM_SERVICES_ERRORS}"
+      The stderr should satisfy spec_expect_message    "${NO_IMAGES_TO_REMOVE}"
+      The stderr should satisfy spec_expect_no_message "${REMOVING_NUM_IMAGES}"
+      The stderr should satisfy spec_expect_no_message "${SKIP_REMOVING_IMAGES}"
+      The stderr should satisfy spec_expect_no_message "${REMOVED_IMAGE}.*${IMAGE_WITH_TAG}"
+      The stderr should satisfy spec_expect_no_message "${FAILED_TO_REMOVE_IMAGE}.*${IMAGE_WITH_TAG}"
+    End
+  End
+  Describe "test_rollback_label_ROLLBACK_ON_FAILURE_false" "container_test:false"
+    TEST_NAME="test_rollback_label_ROLLBACK_ON_FAILURE_false"
+    IMAGE_WITH_TAG=$(get_image_with_tag "${SUITE_NAME}")
+    SERVICE_NAME="gantry-test-$(unique_id)"
+    TIMEOUT=3
+    test_rollback_label_ROLLBACK_ON_FAILURE_false() {
+      local TEST_NAME="${1}"
+      local SERVICE_NAME="${2}"
+      local TIMEOUT="${3}"
+      reset_gantry_env "${SERVICE_NAME}"
+      # label should override the global environment variable.
+      export GANTRY_UPDATE_TIMEOUT_SECONDS="NotANumber"
+      # Assume service update won't be done within TIMEOUT second.
+      local LABEL_AND_VALUE="gantry.update.timeout_seconds=${TIMEOUT}"
+      docker service update --quiet --label-add "${LABEL_AND_VALUE}" "${SERVICE_NAME}"
+      LABEL_AND_VALUE="gantry.rollback.on_failure=false"
+      docker service update --quiet --label-add "${LABEL_AND_VALUE}" "${SERVICE_NAME}"
+      run_gantry "${TEST_NAME}"
+    }
+    BeforeEach "common_setup_timeout ${TEST_NAME} ${IMAGE_WITH_TAG} ${SERVICE_NAME} ${TIMEOUT}"
+    AfterEach "common_cleanup ${TEST_NAME} ${IMAGE_WITH_TAG} ${SERVICE_NAME}"
+    It 'run_test'
+      When run test_rollback_label_ROLLBACK_ON_FAILURE_false "${TEST_NAME}" "${SERVICE_NAME}" "${TIMEOUT}"
+      The status should be failure
+      The stdout should satisfy display_output
+      The stderr should satisfy display_output
+      The stderr should satisfy spec_expect_no_message "${SKIP_UPDATING}.*${SERVICE_NAME}"
+      The stderr should satisfy spec_expect_message    "${PERFORM_UPDATING}.*${SERVICE_NAME}.*${PERFORM_REASON_HAS_NEWER_IMAGE}"
+      The stderr should satisfy spec_expect_no_message "${NUM_SERVICES_SKIP_JOBS}"
+      The stderr should satisfy spec_expect_no_message "${NUM_SERVICES_INSPECT_FAILURE}"
+      The stderr should satisfy spec_expect_no_message "${NUM_SERVICES_NO_NEW_IMAGES}"
+      The stderr should satisfy spec_expect_message    "${NUM_SERVICES_UPDATING}"
+      The stderr should satisfy spec_expect_no_message "${UPDATED}.*${SERVICE_NAME}"
+      The stderr should satisfy spec_expect_no_message "${NO_UPDATES}.*${SERVICE_NAME}"
+      The stderr should satisfy spec_expect_no_message "${ADDING_OPTIONS}"
       The stderr should satisfy spec_expect_no_message "${ROLLING_BACK}.*${SERVICE_NAME}"
       The stderr should satisfy spec_expect_no_message "${FAILED_TO_ROLLBACK}.*${SERVICE_NAME}"
       The stderr should satisfy spec_expect_no_message "${ROLLED_BACK}.*${SERVICE_NAME}"

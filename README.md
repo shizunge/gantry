@@ -68,7 +68,7 @@ You can configure the most behaviors of *Gantry* via environment variables.
 | Environment Variable  | Default | Description |
 |-----------------------|---------|-------------|
 | GANTRY_SERVICES_EXCLUDED         | | A space separated list of services names that are excluded from updating. |
-| GANTRY_SERVICES_EXCLUDED_FILTERS | | A space separated list of [filters](https://docs.docker.com/engine/reference/commandline/service_ls/#filter), e.g. `label=project=project-a`. Exclude services which match the given filters from updating. Note that multiple filters will be logical **ANDED**. |
+| GANTRY_SERVICES_EXCLUDED_FILTERS | `label=gantry.services.excluded=true` | A space separated list of [filters](https://docs.docker.com/engine/reference/commandline/service_ls/#filter), e.g. `label=project=project-a`. Exclude services which match the given filters from updating. Note that multiple filters will be logical **ANDED**. The default value allows you to add label `gantry.services.excluded=true` to services to exclude them from updating. |
 | GANTRY_SERVICES_FILTERS          | | A space separated list of [filters](https://docs.docker.com/engine/reference/commandline/service_ls/#filter) that are accepted by `docker service ls --filter` to select services to update, e.g. `label=project=project-a`. Note that multiple filters will be logical **ANDED**. |
 | GANTRY_SERVICES_SELF             | | This is optional. When running as a docker service, *Gantry* will try to find the service name of itself automatically, and update itself firstly. The manifest inspection will be always performed on the *Gantry* service to avoid an infinity loop of updating itself. This can be used to ask *Gantry* to update another service firstly. |
 
@@ -78,17 +78,17 @@ You can configure the most behaviors of *Gantry* via environment variables.
 |-----------------------|---------|-------------|
 | GANTRY_MANIFEST_CMD         | buildx | Valid values are `buildx`, `manifest`, and `none`.<br>Set which command for manifest inspection. Also see FAQ section [when to set `GANTRY_MANIFEST_CMD`](docs/faq.md#when-to-set-gantry_manifest_cmd).<ul><li>[`docker buildx imagetools inspect`](https://docs.docker.com/engine/reference/commandline/buildx_imagetools_inspect/)</li><li>[`docker manifest inspect`](https://docs.docker.com/engine/reference/commandline/manifest_inspect/)</li></ul>Set to `none` to skip checking the manifest. As a result of skipping, `docker service update` always runs. In case you add `--force` to `GANTRY_UPDATE_OPTIONS`, you also want to disable the inspection. |
 | GANTRY_MANIFEST_NUM_WORKERS | 1      | The maximum number of `GANTRY_MANIFEST_CMD` that can run in parallel. |
-| GANTRY_MANIFEST_OPTIONS     |        | [Options](https://docs.docker.com/engine/reference/commandline/buildx_imagetools_inspect/#options) added to the `docker buildx imagetools inspect` or [options](https://docs.docker.com/engine/reference/commandline/manifest_inspect/#options) to `docker manifest inspect`, depending on `GANTRY_MANIFEST_CMD` value. |
+| GANTRY_MANIFEST_OPTIONS     |        | [Options](https://docs.docker.com/engine/reference/commandline/buildx_imagetools_inspect/#options) added to the `docker buildx imagetools inspect` or [options](https://docs.docker.com/engine/reference/commandline/manifest_inspect/#options) to `docker manifest inspect`, depending on `GANTRY_MANIFEST_CMD` value, for all services. Also see [Labels](#labels) about adding options to a particular service. |
 
 ### To add options to services update
 
 | Environment Variable  | Default | Description |
 |-----------------------|---------|-------------|
 | GANTRY_ROLLBACK_ON_FAILURE    | true  | Set to `true` to enable rollback when updating fails. Set to `false` to disable the rollback. |
-| GANTRY_ROLLBACK_OPTIONS       |       | [Options](https://docs.docker.com/engine/reference/commandline/service_update/#options) added to the `docker service update --rollback` command. |
-| GANTRY_UPDATE_JOBS            | false | Set to `true` to update replicated-job or global-job. Set to `false` to disable updating jobs. |
+| GANTRY_ROLLBACK_OPTIONS       |       | [Options](https://docs.docker.com/engine/reference/commandline/service_update/#options) added to the `docker service update --rollback` command for all services. Also see [Labels](#labels) about adding options to a particular service. |
+| GANTRY_UPDATE_JOBS            | false | Set to `true` to update replicated-job or global-job. Set to `false` to disable updating jobs. *Gantry* adds additional options to `docker service update` when there is [no running tasks](docs/faq.md#how-to-update-services-with-no-running-tasks). |
 | GANTRY_UPDATE_NUM_WORKERS     | 1     | The maximum number of updates that can run in parallel. |
-| GANTRY_UPDATE_OPTIONS         |       | [Options](https://docs.docker.com/engine/reference/commandline/service_update/#options) added to the `docker service update` command. |
+| GANTRY_UPDATE_OPTIONS         |       | [Options](https://docs.docker.com/engine/reference/commandline/service_update/#options) added to the `docker service update` command for all services. Also see [Labels](#labels) about adding options to a particular service. |
 | GANTRY_UPDATE_TIMEOUT_SECONDS | 300   | Error out if updating of a single service takes longer than the given time. |
 
 ### After updating
@@ -120,11 +120,27 @@ If the images of services are hosted on multiple registries that are required au
 
 You need to tell *Gantry* to use a named config rather than the default one when updating a particular service. The named configurations are set via either `GANTRY_REGISTRY_CONFIG`, `GANTRY_REGISTRY_CONFIG_FILE` or `GANTRY_REGISTRY_CONFIGS_FILE`. This can be done by adding the following label to the service `gantry.auth.config=<config-name>`. *Gantry* creates [Docker configuration files](https://docs.docker.com/engine/reference/commandline/cli/#configuration-files) and adds `--config <config-name>` to the Docker command line for the corresponding services.
 
-> NOTE: When `GANTRY_REGISTRY_CONFIG`, `GANTRY_REGISTRY_CONFIG_FILE` or `GANTRY_REGISTRY_CONFIGS_FILE` is used, *Gantry* automatically adds `--with-registry-auth` to `docker service update` commands. Without `--with-registry-auth`, the service will be updated to an image without digest. See this [comment](https://github.com/shizunge/gantry/issues/53#issuecomment-2348376336).
+> NOTE: *Gantry* automatically adds `--with-registry-auth` to the `docker service update` command for a sevice, when it finds the label `gantry.auth.config=<config-name>` on the service. Without `--with-registry-auth`, the service will be updated to an image without digest. See this [comment](https://github.com/shizunge/gantry/issues/53#issuecomment-2348376336).
 
 > NOTE: You can use `GANTRY_REGISTRY_CONFIGS_FILE` together with other authentication environment variables.
 
 > NOTE: *Gantry* uses `GANTRY_REGISTRY_PASSWORD` and `GANTRY_REGISTRY_USER` to obtain Docker Hub rate when `GANTRY_REGISTRY_HOST` is empty or `docker.io`. You can also use their `_FILE` variants. If either password or user is empty, *Gantry* reads the Docker Hub rate for anonymous users.
+
+## Labels
+
+Labels can be added to services to modify the behavior of *Gantry* for particular services. When *Gantry* sees the following labels on a service, it will modify the Docker command line only for that service. The value on the label overrides the global environment variables.
+
+| Labels  | Description |
+|---------|-------------|
+| `gantry.auth.config=<config-name>`       | See [Authentication](#authentication). |
+| `gantry.services.excluded=true`          | Exclude the services from updating if you are using the default [`GANTRY_SERVICES_EXCLUDED_FILTERS`](#to-select-services). |
+| `gantry.manifest.cmd=<command>`          | Override [`GANTRY_MANIFEST_CMD`](#to-check-if-new-images-are-available) |
+| `gantry.manifest.options=<string> `      | Override [`GANTRY_MANIFEST_OPTIONS`](#to-check-if-new-images-are-available) |
+| `gantry.rollback.on_failure=<boolean>`   | Override [`GANTRY_ROLLBACK_ON_FAILURE`](#to-add-options-to-services-update) |
+| `gantry.rollback.options=<string>`       | Override [`GANTRY_ROLLBACK_OPTIONS`](#to-add-options-to-services-update) |
+| `gantry.update.jobs=<boolean>`           | Override [`GANTRY_UPDATE_JOBS`](#to-add-options-to-services-update) |
+| `gantry.update.options=<string>`         | Override [`GANTRY_UPDATE_OPTIONS`](#to-add-options-to-services-update) |
+| `gantry.update.timeout_seconds=<number>` | Override [`GANTRY_UPDATE_TIMEOUT_SECONDS`](#to-add-options-to-services-update) |
 
 ## FAQ
 

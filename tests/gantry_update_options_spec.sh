@@ -126,6 +126,56 @@ Describe 'update-options'
       The stderr should satisfy spec_expect_message    "${FAILED_TO_REMOVE_IMAGE}.*${IMAGE_WITH_TAG}"
     End
   End
+  Describe "test_update_jobs_label_UPDATE_JOBS_true" "container_test:true"
+    TEST_NAME="test_update_jobs_label_UPDATE_JOBS_true"
+    IMAGE_WITH_TAG=$(get_image_with_tag "${SUITE_NAME}")
+    SERVICE_NAME="gantry-test-$(unique_id)"
+    test_update_jobs_label_UPDATE_JOBS_true() {
+      local TEST_NAME="${1}"
+      local SERVICE_NAME="${2}"
+      reset_gantry_env "${SERVICE_NAME}"
+      # label should override the global environment variable.
+      export GANTRY_UPDATE_JOBS="false"
+      local LABEL_AND_VALUE="gantry.update.jobs=true"
+      docker service update --quiet --detach=true --label-add "${LABEL_AND_VALUE}" "${SERVICE_NAME}"
+      # label should override the global environment variable.
+      export GANTRY_UPDATE_OPTIONS="--incorrect-option"
+      # The job may not reach the desired "Complete" state and blocking update CLI. So add "--detach=true"
+      LABEL_AND_VALUE="gantry.update.options=--detach=true"
+      docker service update --quiet --detach=true --label-add "${LABEL_AND_VALUE}" "${SERVICE_NAME}"
+      run_gantry "${TEST_NAME}"
+    }
+    BeforeEach "common_setup_job ${TEST_NAME} ${IMAGE_WITH_TAG} ${SERVICE_NAME}"
+    AfterEach "common_cleanup ${TEST_NAME} ${IMAGE_WITH_TAG} ${SERVICE_NAME}"
+    It 'run_test'
+      When run test_update_jobs_label_UPDATE_JOBS_true "${TEST_NAME}" "${SERVICE_NAME}"
+      The status should be success
+      The stdout should satisfy display_output
+      The stderr should satisfy display_output
+      The stderr should satisfy spec_expect_no_message "${SKIP_UPDATING}.*${SERVICE_NAME}"
+      The stderr should satisfy spec_expect_message    "${PERFORM_UPDATING}.*${SERVICE_NAME}.*${PERFORM_REASON_HAS_NEWER_IMAGE}"
+      The stderr should satisfy spec_expect_no_message "${NUM_SERVICES_SKIP_JOBS}"
+      The stderr should satisfy spec_expect_no_message "${NUM_SERVICES_INSPECT_FAILURE}"
+      The stderr should satisfy spec_expect_no_message "${NUM_SERVICES_NO_NEW_IMAGES}"
+      The stderr should satisfy spec_expect_message    "${NUM_SERVICES_UPDATING}"
+      The stderr should satisfy spec_expect_message    "${ADDING_OPTIONS}.*--detach=true.*${SERVICE_NAME}"
+      The stderr should satisfy spec_expect_message    "${UPDATED}.*${SERVICE_NAME}"
+      The stderr should satisfy spec_expect_no_message "${NO_UPDATES}.*${SERVICE_NAME}"
+      The stderr should satisfy spec_expect_no_message "${ROLLING_BACK}.*${SERVICE_NAME}"
+      The stderr should satisfy spec_expect_no_message "${FAILED_TO_ROLLBACK}.*${SERVICE_NAME}"
+      The stderr should satisfy spec_expect_no_message "${ROLLED_BACK}.*${SERVICE_NAME}"
+      The stderr should satisfy spec_expect_no_message "${NO_SERVICES_UPDATED}"
+      The stderr should satisfy spec_expect_message    "1 ${SERVICES_UPDATED}"
+      The stderr should satisfy spec_expect_no_message "${NUM_SERVICES_UPDATE_FAILED}"
+      The stderr should satisfy spec_expect_no_message "${NUM_SERVICES_ERRORS}"
+      The stderr should satisfy spec_expect_no_message "${NO_IMAGES_TO_REMOVE}"
+      The stderr should satisfy spec_expect_message    "${REMOVING_NUM_IMAGES}"
+      The stderr should satisfy spec_expect_no_message "${SKIP_REMOVING_IMAGES}"
+      # Since the job may not reach the desired state, they are still using the image. Image remover will fail.
+      The stderr should satisfy spec_expect_no_message "${REMOVED_IMAGE}.*${IMAGE_WITH_TAG}"
+      The stderr should satisfy spec_expect_message    "${FAILED_TO_REMOVE_IMAGE}.*${IMAGE_WITH_TAG}"
+    End
+  End
   Describe "test_update_jobs_no_running_tasks" "container_test:true"
     TEST_NAME="test_update_jobs_no_running_tasks"
     IMAGE_WITH_TAG=$(get_image_with_tag "${SUITE_NAME}")
@@ -231,6 +281,67 @@ Describe 'update-options'
       The stderr should satisfy spec_expect_no_message "${FAILED_TO_REMOVE_IMAGE}.*${IMAGE_WITH_TAG}"
     End
   End
+  Describe "test_update_label_UPDATE_OPTIONS" "container_test:true"
+    TEST_NAME="test_update_label_UPDATE_OPTIONS"
+    IMAGE_WITH_TAG=$(get_image_with_tag "${SUITE_NAME}")
+    SERVICE_NAME="gantry-test-$(unique_id)"
+    _read_service_label() {
+      local SERVICE_NAME="${1}"
+      local LABEL="${2}"
+      docker service inspect -f "{{index .Spec.Labels \"${LABEL}\"}}" "${SERVICE_NAME}"
+    }
+    test_update_label_UPDATE_OPTIONS() {
+      local TEST_NAME="${1}"
+      local SERVICE_NAME="${2}"
+      local LABEL="gantry.test"
+      local LABEL_VALUE=
+      LABEL_VALUE=$(_read_service_label "${SERVICE_NAME}" "${LABEL}")
+      echo "Before updating: LABEL_VALUE=${LABEL_VALUE}"
+      reset_gantry_env "${SERVICE_NAME}"
+      # label should override the global environment variable.
+      export GANTRY_UPDATE_OPTIONS="--incorrect-option"
+      local LABEL_AND_VALUE="gantry.update.options=--label-add=${LABEL}=${SERVICE_NAME}"
+      docker service update --quiet --label-add "${LABEL_AND_VALUE}" "${SERVICE_NAME}"
+      local RETURN_VALUE=
+      run_gantry "${TEST_NAME}"
+      RETURN_VALUE="${?}"
+      LABEL_VALUE=$(_read_service_label "${SERVICE_NAME}" "${LABEL}")
+      echo "After updating: LABEL_VALUE=${LABEL_VALUE}"
+      return "${RETURN_VALUE}"
+    }
+    BeforeEach "common_setup_new_image ${TEST_NAME} ${IMAGE_WITH_TAG} ${SERVICE_NAME}"
+    AfterEach "common_cleanup ${TEST_NAME} ${IMAGE_WITH_TAG} ${SERVICE_NAME}"
+    It 'run_test'
+      When run test_update_label_UPDATE_OPTIONS "${TEST_NAME}" "${SERVICE_NAME}"
+      The status should be success
+      The stdout should satisfy display_output
+      # Check an observable difference before and after applying UPDATE_OPTIONS.
+      The stdout should satisfy spec_expect_no_message "Before updating: LABEL_VALUE=.*${SERVICE_NAME}"
+      The stdout should satisfy spec_expect_message    "After updating: LABEL_VALUE=.*${SERVICE_NAME}"
+      The stderr should satisfy display_output
+      The stderr should satisfy spec_expect_no_message "${SKIP_UPDATING}.*${SERVICE_NAME}"
+      The stderr should satisfy spec_expect_message    "${PERFORM_UPDATING}.*${SERVICE_NAME}.*${PERFORM_REASON_HAS_NEWER_IMAGE}"
+      The stderr should satisfy spec_expect_no_message "${NUM_SERVICES_SKIP_JOBS}"
+      The stderr should satisfy spec_expect_no_message "${NUM_SERVICES_INSPECT_FAILURE}"
+      The stderr should satisfy spec_expect_no_message "${NUM_SERVICES_NO_NEW_IMAGES}"
+      The stderr should satisfy spec_expect_message    "${NUM_SERVICES_UPDATING}"
+      The stderr should satisfy spec_expect_message    "${ADDING_OPTIONS}.*--label-add=gantry.test=${SERVICE_NAME}.*${SERVICE_NAME}"
+      The stderr should satisfy spec_expect_message    "${UPDATED}.*${SERVICE_NAME}"
+      The stderr should satisfy spec_expect_no_message "${NO_UPDATES}.*${SERVICE_NAME}"
+      The stderr should satisfy spec_expect_no_message "${ROLLING_BACK}.*${SERVICE_NAME}"
+      The stderr should satisfy spec_expect_no_message "${FAILED_TO_ROLLBACK}.*${SERVICE_NAME}"
+      The stderr should satisfy spec_expect_no_message "${ROLLED_BACK}.*${SERVICE_NAME}"
+      The stderr should satisfy spec_expect_no_message "${NO_SERVICES_UPDATED}"
+      The stderr should satisfy spec_expect_message    "1 ${SERVICES_UPDATED}"
+      The stderr should satisfy spec_expect_no_message "${NUM_SERVICES_UPDATE_FAILED}"
+      The stderr should satisfy spec_expect_no_message "${NUM_SERVICES_ERRORS}"
+      The stderr should satisfy spec_expect_no_message "${NO_IMAGES_TO_REMOVE}"
+      The stderr should satisfy spec_expect_message    "${REMOVING_NUM_IMAGES}"
+      The stderr should satisfy spec_expect_no_message "${SKIP_REMOVING_IMAGES}"
+      The stderr should satisfy spec_expect_message    "${REMOVED_IMAGE}.*${IMAGE_WITH_TAG}"
+      The stderr should satisfy spec_expect_no_message "${FAILED_TO_REMOVE_IMAGE}.*${IMAGE_WITH_TAG}"
+    End
+  End
   Describe "test_update_UPDATE_TIMEOUT_SECONDS_not_a_number" "container_test:false"
     TEST_NAME="test_update_UPDATE_TIMEOUT_SECONDS_not_a_number"
     IMAGE_WITH_TAG=$(get_image_with_tag "${SUITE_NAME}")
@@ -249,7 +360,7 @@ Describe 'update-options'
       The status should be failure
       The stdout should satisfy display_output
       The stderr should satisfy display_output
-      The stderr should satisfy spec_expect_message    "GANTRY_UPDATE_TIMEOUT_SECONDS ${MUST_BE_A_NUMBER}.*"
+      The stderr should satisfy spec_expect_message    "UPDATE_TIMEOUT_SECONDS ${MUST_BE_A_NUMBER}.*"
       The stderr should satisfy spec_expect_no_message "${SKIP_UPDATING}.*${SERVICE_NAME}"
       The stderr should satisfy spec_expect_message    "${PERFORM_UPDATING}.*${SERVICE_NAME}.*${PERFORM_REASON_HAS_NEWER_IMAGE}"
       The stderr should satisfy spec_expect_no_message "${NUM_SERVICES_SKIP_JOBS}"

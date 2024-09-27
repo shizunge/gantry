@@ -115,6 +115,54 @@ Describe 'filters'
       The stderr should satisfy spec_expect_no_message "${FAILED_TO_REMOVE_IMAGE}.*${IMAGE_WITH_TAG}"
     End
   End
+  Describe "test_SERVICES_EXCLUDED_FILTERS_default" "container_test:true"
+    TEST_NAME="test_SERVICES_EXCLUDED_FILTERS_default"
+    IMAGE_WITH_TAG=$(get_image_with_tag "${SUITE_NAME}")
+    SERVICE_NAME="gantry-test-$(unique_id)"
+    MAX_SERVICES_NUM=10
+    test_SERVICES_EXCLUDED_FILTERS_default() {
+      local TEST_NAME="${1}"
+      local SERVICE_NAME="${2}"
+      local MAX_SERVICES_NUM="${3}"
+      reset_gantry_env "${SERVICE_NAME}"
+      local LABEL="gantry.services.excluded"
+      for NUM in $(seq 0 "${MAX_SERVICES_NUM}"); do
+        local SERVICE_NAME_NUM="${SERVICE_NAME}-${NUM}"
+        docker service update --quiet --label-add "${LABEL}=true" "${SERVICE_NAME_NUM}"
+      done
+      # Do not set GANTRY_SERVICES_EXCLUDED_FILTERS, check the default one is working.
+      run_gantry "${TEST_NAME}"
+    }
+    BeforeEach "common_setup_new_image_multiple ${TEST_NAME} ${IMAGE_WITH_TAG} ${SERVICE_NAME} ${MAX_SERVICES_NUM}"
+    AfterEach "common_cleanup_multiple ${TEST_NAME} ${IMAGE_WITH_TAG} ${SERVICE_NAME} ${MAX_SERVICES_NUM}"
+    It 'run_test'
+      When run test_SERVICES_EXCLUDED_FILTERS_default "${TEST_NAME}" "${SERVICE_NAME}" "${MAX_SERVICES_NUM}"
+      The status should be success
+      The stdout should satisfy display_output
+      The stderr should satisfy display_output
+      The stderr should satisfy spec_expect_no_message "${SKIP_UPDATING_ALL}"
+      The stderr should satisfy spec_expect_no_message "${SKIP_UPDATING}.*${SERVICE_NAME}"
+      The stderr should satisfy spec_expect_no_message "${PERFORM_UPDATING}.*${SERVICE_NAME}"
+      The stderr should satisfy spec_expect_no_message "${NUM_SERVICES_SKIP_JOBS}"
+      The stderr should satisfy spec_expect_no_message "${NUM_SERVICES_INSPECT_FAILURE}"
+      The stderr should satisfy spec_expect_no_message "${NUM_SERVICES_NO_NEW_IMAGES}"
+      The stderr should satisfy spec_expect_no_message "${NUM_SERVICES_UPDATING}"
+      The stderr should satisfy spec_expect_no_message "${UPDATED}.*${SERVICE_NAME}"
+      The stderr should satisfy spec_expect_no_message "${NO_UPDATES}.*${SERVICE_NAME}"
+      The stderr should satisfy spec_expect_no_message "${ROLLING_BACK}.*${SERVICE_NAME}"
+      The stderr should satisfy spec_expect_no_message "${FAILED_TO_ROLLBACK}.*${SERVICE_NAME}"
+      The stderr should satisfy spec_expect_no_message "${ROLLED_BACK}.*${SERVICE_NAME}"
+      The stderr should satisfy spec_expect_message    "${NO_SERVICES_UPDATED}"
+      The stderr should satisfy spec_expect_no_message "${NUM_SERVICES_UPDATED}"
+      The stderr should satisfy spec_expect_no_message "${NUM_SERVICES_UPDATE_FAILED}"
+      The stderr should satisfy spec_expect_no_message "${NUM_SERVICES_ERRORS}"
+      The stderr should satisfy spec_expect_message    "${NO_IMAGES_TO_REMOVE}"
+      The stderr should satisfy spec_expect_no_message "${REMOVING_NUM_IMAGES}"
+      The stderr should satisfy spec_expect_no_message "${SKIP_REMOVING_IMAGES}"
+      The stderr should satisfy spec_expect_no_message "${REMOVED_IMAGE}.*${IMAGE_WITH_TAG}"
+      The stderr should satisfy spec_expect_no_message "${FAILED_TO_REMOVE_IMAGE}.*${IMAGE_WITH_TAG}"
+    End
+  End
   Describe "test_SERVICES_EXCLUDED_FILTERS_bad" "container_test:false"
     TEST_NAME="test_SERVICES_EXCLUDED_FILTERS_bad"
     IMAGE_WITH_TAG=$(get_image_with_tag "${SUITE_NAME}")

@@ -89,6 +89,7 @@ Describe 'manifest-command'
       The stdout should satisfy display_output
       The stderr should satisfy display_output
       The stderr should satisfy spec_expect_no_message ".*GANTRY_SERVICES_SELF.*"
+      The stderr should satisfy spec_expect_no_message "${ADDING_OPTIONS}"
       The stderr should satisfy spec_expect_message    "${SKIP_UPDATING}.*${SERVICE_NAME}.*${SKIP_REASON_CURRENT_IS_LATEST}"
       The stderr should satisfy spec_expect_no_message "${PERFORM_UPDATING}.*${SERVICE_NAME}"
       The stderr should satisfy spec_expect_no_message "${NUM_SERVICES_SKIP_JOBS}"
@@ -153,6 +154,53 @@ Describe 'manifest-command'
       The stderr should satisfy spec_expect_no_message "${FAILED_TO_REMOVE_IMAGE}.*${IMAGE_WITH_TAG}"
     End
   End
+  Describe "test_MANIFEST_CMD_label" "container_test:true"
+    TEST_NAME="test_MANIFEST_CMD_label"
+    IMAGE_WITH_TAG=$(get_image_with_tag "${SUITE_NAME}")
+    SERVICE_NAME="gantry-test-$(unique_id)"
+    test_MANIFEST_CMD_label() {
+      local TEST_NAME="${1}"
+      local SERVICE_NAME="${2}"
+      reset_gantry_env "${SERVICE_NAME}"
+      # The label should be equivalent to
+      # export GANTRY_MANIFEST_CMD="manifest"
+      # export GANTRY_MANIFEST_OPTIONS="--insecure"
+      local LABEL_AND_VALUE="gantry.manifest.cmd=manifest"
+      docker service update --quiet --label-add "${LABEL_AND_VALUE}" "${SERVICE_NAME}"
+      LABEL_AND_VALUE="gantry.manifest.options=--insecure"
+      docker service update --quiet --label-add "${LABEL_AND_VALUE}" "${SERVICE_NAME}"
+      run_gantry "${TEST_NAME}"
+    }
+    BeforeEach "common_setup_new_image ${TEST_NAME} ${IMAGE_WITH_TAG} ${SERVICE_NAME}"
+    AfterEach "common_cleanup ${TEST_NAME} ${IMAGE_WITH_TAG} ${SERVICE_NAME}"
+    It 'run_test'
+      When run test_MANIFEST_CMD_label "${TEST_NAME}" "${SERVICE_NAME}"
+      The status should be success
+      The stdout should satisfy display_output
+      The stderr should satisfy display_output
+      The stderr should satisfy spec_expect_message    "${ADDING_OPTIONS}.*--insecure.*"
+      The stderr should satisfy spec_expect_no_message "${SKIP_UPDATING}.*${SERVICE_NAME}"
+      The stderr should satisfy spec_expect_message    "${PERFORM_UPDATING}.*${SERVICE_NAME}.*${PERFORM_REASON_HAS_NEWER_IMAGE}"
+      The stderr should satisfy spec_expect_no_message "${NUM_SERVICES_SKIP_JOBS}"
+      The stderr should satisfy spec_expect_no_message "${NUM_SERVICES_INSPECT_FAILURE}"
+      The stderr should satisfy spec_expect_no_message "${NUM_SERVICES_NO_NEW_IMAGES}"
+      The stderr should satisfy spec_expect_message    "${NUM_SERVICES_UPDATING}"
+      The stderr should satisfy spec_expect_message    "${UPDATED}.*${SERVICE_NAME}"
+      The stderr should satisfy spec_expect_no_message "${NO_UPDATES}.*${SERVICE_NAME}"
+      The stderr should satisfy spec_expect_no_message "${ROLLING_BACK}.*${SERVICE_NAME}"
+      The stderr should satisfy spec_expect_no_message "${FAILED_TO_ROLLBACK}.*${SERVICE_NAME}"
+      The stderr should satisfy spec_expect_no_message "${ROLLED_BACK}.*${SERVICE_NAME}"
+      The stderr should satisfy spec_expect_no_message "${NO_SERVICES_UPDATED}"
+      The stderr should satisfy spec_expect_message    "1 ${SERVICES_UPDATED}"
+      The stderr should satisfy spec_expect_no_message "${NUM_SERVICES_UPDATE_FAILED}"
+      The stderr should satisfy spec_expect_no_message "${NUM_SERVICES_ERRORS}"
+      The stderr should satisfy spec_expect_no_message "${NO_IMAGES_TO_REMOVE}"
+      The stderr should satisfy spec_expect_message    "${REMOVING_NUM_IMAGES}"
+      The stderr should satisfy spec_expect_no_message "${SKIP_REMOVING_IMAGES}"
+      The stderr should satisfy spec_expect_message    "${REMOVED_IMAGE}.*${IMAGE_WITH_TAG}"
+      The stderr should satisfy spec_expect_no_message "${FAILED_TO_REMOVE_IMAGE}.*${IMAGE_WITH_TAG}"
+    End
+  End
   Describe "test_MANIFEST_CMD_unsupported_cmd" "container_test:false"
     TEST_NAME="test_MANIFEST_CMD_unsupported_cmd"
     IMAGE_WITH_TAG=$(get_image_with_tag "${SUITE_NAME}")
@@ -173,7 +221,7 @@ Describe 'manifest-command'
       The stdout should satisfy display_output
       The stderr should satisfy display_output
       # No options are added to the unknwon command.
-      The stderr should satisfy spec_expect_no_message "${ADDING_OPTIONS}.*--insecure.*"
+      The stderr should satisfy spec_expect_no_message "${ADDING_OPTIONS}"
       The stderr should satisfy spec_expect_message    "Unknown MANIFEST_CMD.*unsupported_cmd"
       The stderr should satisfy spec_expect_message    "${SKIP_UPDATING}.*${SERVICE_NAME}.*${SKIP_REASON_MANIFEST_FAILURE}"
       The stderr should satisfy spec_expect_no_message "${PERFORM_UPDATING}.*${SERVICE_NAME}"
@@ -225,6 +273,7 @@ Describe 'manifest-command'
       The status should be failure
       The stdout should satisfy display_output
       The stderr should satisfy display_output
+      The stderr should satisfy spec_expect_no_message "${ADDING_OPTIONS}"
       The stderr should satisfy spec_expect_message    "Image.*${IMAGE_WITH_TAG}.*${IMAGE_NOT_EXIST}"
       The stderr should satisfy spec_expect_message    "${SKIP_UPDATING}.*${SERVICE_NAME}.*${SKIP_REASON_MANIFEST_FAILURE}"
       The stderr should satisfy spec_expect_no_message "${PERFORM_UPDATING}.*${SERVICE_NAME}"
