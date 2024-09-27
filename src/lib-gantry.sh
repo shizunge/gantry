@@ -976,7 +976,7 @@ gantry_initialize() {
 
 gantry_get_services_list() {
   local SERVICES_EXCLUDED="${GANTRY_SERVICES_EXCLUDED:-""}"
-  local SERVICES_EXCLUDED_FILTERS="${GANTRY_SERVICES_EXCLUDED_FILTERS:-""}"
+  local SERVICES_EXCLUDED_FILTERS="${GANTRY_SERVICES_EXCLUDED_FILTERS:-"label=gantry.services.excluded=true"}"
   local SERVICES_FILTERS="${GANTRY_SERVICES_FILTERS:-""}"
   local SERVICES=
   if ! SERVICES=$(_get_services_filted "${SERVICES_FILTERS}"); then

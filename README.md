@@ -68,7 +68,7 @@ You can configure the most behaviors of *Gantry* via environment variables.
 | Environment Variable  | Default | Description |
 |-----------------------|---------|-------------|
 | GANTRY_SERVICES_EXCLUDED         | | A space separated list of services names that are excluded from updating. |
-| GANTRY_SERVICES_EXCLUDED_FILTERS | | A space separated list of [filters](https://docs.docker.com/engine/reference/commandline/service_ls/#filter), e.g. `label=project=project-a`. Exclude services which match the given filters from updating. Note that multiple filters will be logical **ANDED**. |
+| GANTRY_SERVICES_EXCLUDED_FILTERS | `label=gantry.services.excluded=true` | A space separated list of [filters](https://docs.docker.com/engine/reference/commandline/service_ls/#filter), e.g. `label=project=project-a`. Exclude services which match the given filters from updating. Note that multiple filters will be logical **ANDED**. The default value allows you to add label `gantry.services.excluded=true` to services to exclude them from updating. |
 | GANTRY_SERVICES_FILTERS          | | A space separated list of [filters](https://docs.docker.com/engine/reference/commandline/service_ls/#filter) that are accepted by `docker service ls --filter` to select services to update, e.g. `label=project=project-a`. Note that multiple filters will be logical **ANDED**. |
 | GANTRY_SERVICES_SELF             | | This is optional. When running as a docker service, *Gantry* will try to find the service name of itself automatically, and update itself firstly. The manifest inspection will be always performed on the *Gantry* service to avoid an infinity loop of updating itself. This can be used to ask *Gantry* to update another service firstly. |
 
@@ -130,16 +130,17 @@ You need to tell *Gantry* to use a named config rather than the default one when
 
 Labels can be added to services to modify the behavior of *Gantry* for particular services. When *Gantry* sees the following labels on a service, it will modify the Docker command line only for that service. The value on the label overrides the global environment variables.
 
-| Labels  | Override Env |
+| Labels  | Description |
 |---------|-------------|
-| `gantry.auth.config=<config-name>`       | None. See [Authentication](#authentication). |
-| `gantry.manifest.cmd=<command>`          | [`GANTRY_MANIFEST_CMD`](#to-check-if-new-images-are-available) |
-| `gantry.manifest.options=<string> `      | [`GANTRY_MANIFEST_OPTIONS`](#to-check-if-new-images-are-available) |
-| `gantry.rollback.on_failure=<boolean>`   | [`GANTRY_ROLLBACK_ON_FAILURE`](#to-add-options-to-services-update) |
-| `gantry.rollback.options=<string>`       | [`GANTRY_ROLLBACK_OPTIONS`](#to-add-options-to-services-update) |
-| `gantry.update.jobs=<boolean>`           | [`GANTRY_UPDATE_JOBS`](#to-add-options-to-services-update) |
-| `gantry.update.options=<string>`         | [`GANTRY_UPDATE_OPTIONS`](#to-add-options-to-services-update) |
-| `gantry.update.timeout_seconds=<number>` | [`GANTRY_UPDATE_TIMEOUT_SECONDS`](#to-add-options-to-services-update) |
+| `gantry.auth.config=<config-name>`       | See [Authentication](#authentication). |
+| `gantry.services.excluded=true`          | Exclude the services from updating if you are using the default [`GANTRY_SERVICES_EXCLUDED_FILTERS`](#to-select-services). |
+| `gantry.manifest.cmd=<command>`          | Override [`GANTRY_MANIFEST_CMD`](#to-check-if-new-images-are-available) |
+| `gantry.manifest.options=<string> `      | Override [`GANTRY_MANIFEST_OPTIONS`](#to-check-if-new-images-are-available) |
+| `gantry.rollback.on_failure=<boolean>`   | Override [`GANTRY_ROLLBACK_ON_FAILURE`](#to-add-options-to-services-update) |
+| `gantry.rollback.options=<string>`       | Override [`GANTRY_ROLLBACK_OPTIONS`](#to-add-options-to-services-update) |
+| `gantry.update.jobs=<boolean>`           | Override [`GANTRY_UPDATE_JOBS`](#to-add-options-to-services-update) |
+| `gantry.update.options=<string>`         | Override [`GANTRY_UPDATE_OPTIONS`](#to-add-options-to-services-update) |
+| `gantry.update.timeout_seconds=<number>` | Override [`GANTRY_UPDATE_TIMEOUT_SECONDS`](#to-add-options-to-services-update) |
 
 ## FAQ
 
