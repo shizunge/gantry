@@ -23,7 +23,7 @@ docker service create \
   shizunge/gantry
 ```
 
-The [examples folder](examples/README.md) contains example docker compose files, and more methods to launch *Gantry*, like [at a given time](examples/cronjob).
+The [examples folder](examples/README.md) contains example docker compose files, and more methods to launch *Gantry*, like [at a specific time](examples/cronjob) and [via webhook](examples/webhook).
 
 You can also run *Gantry* as a script directly on the host outside the container
 ```
