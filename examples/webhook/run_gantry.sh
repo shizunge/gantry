@@ -16,14 +16,14 @@
 #
 
 _docker_start_replicated_job() {
-  local ARGS="${@}"
-  if [ -z "${ARGS}" ]; then
+  local args="${*}"
+  if [ -z "${args}" ]; then
     echo "No services set."
     echo "Services that are not running:"
     docker service ls | grep "0/"
     return 0
   fi
-  for S in ${ARGS}; do
+  for S in ${args}; do
     echo -n "Set replicas to 0 to ${S}: "
     docker service update --replicas=0 "${S}"
     echo -n "Set replicas to 1 to ${S}: "
@@ -32,50 +32,52 @@ _docker_start_replicated_job() {
 }
 
 _get_number_of_running_tasks() {
-  local FILTER="${1}"
-  local REPLICAS=
-  if ! REPLICAS=$(docker service ls --filter "${FILTER}" --format '{{.Replicas}}' | head -n 1); then
+  local filter="${1}"
+  local replicas=
+  if ! replicas=$(docker service ls --filter "${filter}" --format '{{.Replicas}}' | head -n 1); then
     return 1
   fi
   # https://docs.docker.com/engine/reference/commandline/service_ls/#examples
   # The REPLICAS is like "5/5" or "1/1 (3/5 completed)"
   # Get the number before the first "/".
-  local NUM_RUNS=
-  NUM_RUNS=$(echo "${REPLICAS}/" | cut -d '/' -f 1)
-  echo "${NUM_RUNS}"
+  local num_runs=
+  num_runs=$(echo "${replicas}/" | cut -d '/' -f 1)
+  echo "${num_runs}"
 }
 
 resume_gantry() {
-  local FILTER="label=webhook.run-gantry=true"
-  local SERVICE_NAME=$(docker service ls --filter "${FILTER}" --format "{{.Name}}" | head -n 1)
-  if [ -z "${SERVICE_NAME}" ]; then
-    echo "Cannot find a service from ${FILTER}."
+  local filter="label=webhook.run-gantry=true"
+  local service_name=
+  service_name=$(docker service ls --filter "${filter}" --format "{{.Name}}" | head -n 1)
+  if [ -z "${service_name}" ]; then
+    echo "Cannot find a service from ${filter}."
     return 1
   fi
   local replicas=
-  if ! replicas=$(_get_number_of_running_tasks "${FILTER}"); then
-    echo "Failed to obtain task states of service from ${FILTER}."
+  if ! replicas=$(_get_number_of_running_tasks "${filter}"); then
+    echo "Failed to obtain task states of service from ${filter}."
     return 1
   fi
   if [ "${replicas}" != "0" ]; then
-    echo "${SERVICE_NAME} is still running. There are ${replicas} running tasks."
+    echo "${service_name} is still running. There are ${replicas} running tasks."
     return 1
   fi
-  docker service update --detach --env-add "GANTRY_SERVICES_EXCLUDED=${GANTRY_SERVICES_EXCLUDED}" "${SERVICE_NAME}"
-  docker service update --detach --env-add "GANTRY_SERVICES_EXCLUDED_FILTERS=${GANTRY_SERVICES_EXCLUDED_FILTERS}" "${SERVICE_NAME}"
-  docker service update --detach --env-add "GANTRY_SERVICES_FILTERS=${GANTRY_SERVICES_FILTERS}" "${SERVICE_NAME}"
-  _docker_start_replicated_job "${SERVICE_NAME}"
+  docker service update --detach --env-add "GANTRY_SERVICES_EXCLUDED=${GANTRY_SERVICES_EXCLUDED:-}" "${service_name}"
+  docker service update --detach --env-add "GANTRY_SERVICES_EXCLUDED_FILTERS=${GANTRY_SERVICES_EXCLUDED_FILTERS:-}" "${service_name}"
+  docker service update --detach --env-add "GANTRY_SERVICES_FILTERS=${GANTRY_SERVICES_FILTERS:-}" "${service_name}"
+  _docker_start_replicated_job "${service_name}"
 }
 
 launch_new_gantry() {
-  local service_name="gantry-$(date +%s)"
+  local service_name=
+  service_name="gantry-$(date +%s)"
   docker service create \
     --name "${service_name}" \
     --mode replicated-job \
     --constraint "node.role==manager" \
-    --env "GANTRY_SERVICES_EXCLUDED=${GANTRY_SERVICES_EXCLUDED}" \
-    --env "GANTRY_SERVICES_EXCLUDED_FILTERS=${GANTRY_SERVICES_EXCLUDED_FILTERS}" \
-    --env "GANTRY_SERVICES_FILTERS=${GANTRY_SERVICES_FILTERS}" \
+    --env "GANTRY_SERVICES_EXCLUDED=${GANTRY_SERVICES_EXCLUDED:-}" \
+    --env "GANTRY_SERVICES_EXCLUDED_FILTERS=${GANTRY_SERVICES_EXCLUDED_FILTERS:-}" \
+    --env "GANTRY_SERVICES_FILTERS=${GANTRY_SERVICES_FILTERS:-}" \
     --label "from-webhook=true" \
     --mount type=bind,source=/var/run/docker.sock,target=/var/run/docker.sock \
     shizunge/gantry
@@ -86,7 +88,7 @@ launch_new_gantry() {
 }
 
 main() {
-  launch_new_gantry ${*}
+  launch_new_gantry "${@}"
 }
 
 main "${@}"
