@@ -1,0 +1,60 @@
+version: "3.8"
+
+services:
+  webhook:
+    image: lwlook/webhook:latest
+    command:
+      - -verbose
+      - -hooks=/hooks.json
+      - -hotreload
+    ports:
+      - "9000:9000"
+    configs:
+      - source: hooks_json
+        target: /hooks.json
+      - source: run_gantry
+        target: /run_gantry.sh
+        mode: 0550
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock
+    deploy:
+      placement:
+        constraints:
+          - node.role==manager
+
+  # Note: run_gantry.sh does not use this service by default.
+  # This service is left here to demonstrate a potential approach for reusing the same service
+  # by scaling its replicas instead of starting a new service each webhook request.
+  # See function resume_gantry in run_gantry.sh.
+  # Pros:
+  #   * This approach can work together with other launching methods like crazymax/swarm-cronjob.
+  # Cons:
+  #   * Concurrency Issues: Sending webhook requests too frequently can increase the chance of the
+  #     webhook failing to launch Gantry correctly for some requests due to the existing service
+  #     potentially handling a previous command.
+  gantry:
+    image: shizunge/gantry:latest
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock
+    environment:
+      - "GANTRY_NODE_NAME={{.Node.Hostname}}"
+      - "GANTRY_SLEEP_SECONDS=0"
+    deploy:
+      replicas: 0
+      placement:
+        constraints:
+          - node.role==manager
+      restart_policy:
+        condition: none
+      labels:
+        # The label can be used to find this service.
+        # This can be used together with resume_gantry function in the run_gantry.sh
+        - webhook.run-gantry=true
+
+configs:
+  hooks_json:
+    name: hooks_json
+    file: ./hooks.json
+  run_gantry:
+    name: run_gantry
+    file: ./run_gantry.sh

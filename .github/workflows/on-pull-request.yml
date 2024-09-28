@@ -4,6 +4,10 @@ on:
   pull_request:
     branches:
       - 'main'
+    paths:
+      - 'Dockerfile'
+      - 'src/*.sh'
+      - 'tests/*.sh'
   workflow_dispatch:
  
 jobs:

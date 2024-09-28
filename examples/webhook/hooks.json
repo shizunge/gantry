@@ -1,0 +1,25 @@
+[
+  {
+    "id": "run-gantry",
+    "execute-command": "/run_gantry.sh",
+    "command-working-directory": "/",
+    "pass-environment-to-command":
+    [
+      {
+        "source": "payload",
+        "name": "GANTRY_SERVICES_EXCLUDED",
+        "envname": "GANTRY_SERVICES_EXCLUDED"
+      },
+      {
+        "source": "payload",
+        "name": "GANTRY_SERVICES_EXCLUDED_FILTERS",
+        "envname": "GANTRY_SERVICES_EXCLUDED_FILTERS"
+      },
+      {
+        "source": "payload",
+        "name": "GANTRY_SERVICES_FILTERS",
+        "envname": "GANTRY_SERVICES_FILTERS"
+      }
+    ]
+  }
+]
