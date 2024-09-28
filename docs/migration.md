@@ -3,7 +3,7 @@
 *Gantry* started to fix the following problems I found in [*shepherd*](https://github.com/containrrr/shepherd), then it became refactored and totally rewritten, with [abundant tests](../tests/README.md).
 
 * `docker manifest` CLI failed to get the image meta data for some registries.
-* High usage of docker hub rate. Getting manifest and then pulling the image double the usage.
+* High usage of Docker Hub rate. Getting manifest and then pulling the image double the usage.
 * Running `docker service update` command when there is no new image slows down the overall process.
 * Removing images related
     * Failure of removing old images will exit and block subsequent updating.
@@ -40,34 +40,36 @@ The label on the services to select config to enable authentication is renamed t
 | *Shepherd* Env | Workaround |
 |----------------|------------|
 | VERBOSE                | Use `GANTRY_LOG_LEVEL` |
-| WITH_REGISTRY_AUTH     | Manually add `--with-registry-auth` to `GANTRY_UPDATE_OPTIONS` and `GANTRY_ROLLBACK_OPTIONS`. |
-| WITH_INSECURE_REGISTRY | Manually add `--insecure` to `GANTRY_MANIFEST_OPTIONS`, `GANTRY_UPDATE_OPTIONS` and `GANTRY_ROLLBACK_OPTIONS`. |
-| WITH_NO_RESOLVE_IMAGE  | Manually add `--no-resolve-image` to `GANTRY_UPDATE_OPTIONS` and `GANTRY_ROLLBACK_OPTIONS`. |
-| IMAGE_AUTOCLEAN_LIMIT  | Use `GANTRY_CLEANUP_IMAGES`. *Gantry* will only clean up the updated images. |
+| WITH_REGISTRY_AUTH     | *Gantry* automatically adds `--with-registry-auth` to the `docker service update` command for a sevice, when it finds the label `gantry.auth.config=<config-name>` on the service. Or manually add `--with-registry-auth` to `GANTRY_UPDATE_OPTIONS`. |
+| WITH_INSECURE_REGISTRY | Manually add `--insecure` to `GANTRY_MANIFEST_OPTIONS` and set `GANTRY_MANIFEST_CMD` to `manifest`. |
+| WITH_NO_RESOLVE_IMAGE  | Manually add `--no-resolve-image` to `GANTRY_UPDATE_OPTIONS`. |
+| IMAGE_AUTOCLEAN_LIMIT  | Use `GANTRY_CLEANUP_IMAGES`. *Gantry* only cleans up the images being updated, thus we no longer need a limit. |
 | RUN_ONCE_AND_EXIT      | Set `GANTRY_SLEEP_SECONDS` to 0. |
 
 ### New configurations
 
-| *Gantry* Env  |
-|---------------|
-| GANTRY_CLEANUP_IMAGES            |
-| GANTRY_LOG_LEVEL                 |
-| GANTRY_MANIFEST_CMD              |
-| GANTRY_MANIFEST_NUM_WORKERS      |
-| GANTRY_MANIFEST_OPTIONS          |
-| GANTRY_NOTIFICATION_CONDITION    |
-| GANTRY_NOTIFICATION_TITLE        |
-| GANTRY_POST_RUN_CMD              |
-| GANTRY_PRE_RUN_CMD               |
-| GANTRY_REGISTRY_CONFIG           |
-| GANTRY_REGISTRY_CONFIG_FILE      |
-| GANTRY_REGISTRY_HOST_FILE        |
-| GANTRY_REGISTRY_PASSWORD_FILE    |
-| GANTRY_REGISTRY_USER_FILE        |
-| GANTRY_SERVICES_EXCLUDED_FILTERS |
-| GANTRY_SERVICES_SELF             |
-| GANTRY_UPDATE_JOBS               |
-| GANTRY_UPDATE_NUM_WORKERS        |
+| *Gantry* Env  | Purpose |
+|---------------|----------------------|
+| GANTRY_CLEANUP_IMAGES            | To control whether *Gantry* cleans up images on all hosts. *Gantry* only cleans up the images being updated. |
+| GANTRY_LOG_LEVEL                 | To introduce more granularity on log levels. *Gantry* can go total slience by setting `GANTRY_LOG_LEVEL` to `NONE`. |
+| GANTRY_MANIFEST_CMD              | To retrieve image metadata correctly and to reduce the Docker Hub rate usage. |
+| GANTRY_MANIFEST_NUM_WORKERS      | To run multiple manifest commands in parallel to accelerate the updating process. |
+| GANTRY_MANIFEST_OPTIONS          | To customize `GANTRY_MANIFEST_CMD`. |
+| GANTRY_NOTIFICATION_CONDITION    | To control notification. *Gantry* only send a summary of updating at the end of each iteration, which includes lists of updated services and errors. |
+| GANTRY_NOTIFICATION_TITLE        | To customize notification. *Gantry* only send a summary of updating at the end of each iteration, which includes lists of updated services and errors. |
+| GANTRY_POST_RUN_CMD              | To run customized tasks together with *Gantry*. See the [example](../examples/prune-and-watchtower). |
+| GANTRY_PRE_RUN_CMD               | To run customized tasks together with *Gantry*. See the [example](../examples/prune-and-watchtower). |
+| GANTRY_REGISTRY_CONFIG           | To apply authentication to only selected services. To use simple authentication configurations together with `GANTRY_REGISTRY_CONFIGS_FILE`. |
+| GANTRY_REGISTRY_CONFIG_FILE      | To pass sensitive information via [docker secret](https://docs.docker.com/engine/swarm/secrets/). |
+| GANTRY_REGISTRY_HOST_FILE        | To pass sensitive information via [docker secret](https://docs.docker.com/engine/swarm/secrets/). |
+| GANTRY_REGISTRY_PASSWORD_FILE    | To pass sensitive information via [docker secret](https://docs.docker.com/engine/swarm/secrets/). |
+| GANTRY_REGISTRY_USER_FILE        | To pass sensitive information via [docker secret](https://docs.docker.com/engine/swarm/secrets/). |
+| GANTRY_SERVICES_EXCLUDED_FILTERS | To provide an alternative method to exclude services from being updated. |
+| GANTRY_SERVICES_SELF             | To avoid an infinity loop of updating itself. You don't need to set this, because *Gantry* should find the value automatically. |
+| GANTRY_UPDATE_JOBS               | *Gantry* can distinguish `replicated-job` and `global-job` from other services. *Gantry* automatically adds more options to [update services with no running tasks](faq.md#how-to-update-services-with-no-running-tasks) to avoid hanging. |
+| GANTRY_UPDATE_NUM_WORKERS        | To run multiple update commands in parallel to accelerate the updating process. |
+
+Besides the global configurations via environment variables, you can apply a different value to a particular service via [labels](../README.md#labels).
 
 ### License
 
