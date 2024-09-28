@@ -18,7 +18,7 @@ Use the following command to deploy the Docker Compose stack that includes the w
 docker stack deploy --detach=true --prune --with-registry-auth --compose-file ./docker-compose.yml webhook
 ```
 
-Use curl to send a POST request to the webhook endpoint. This request tells the *Gantry* to only update the service named "webhook_webhook".
+Use `curl` to send a `POST` request to the webhook endpoint. This request tells the *Gantry* to only update the service named *webhook_webhook*.
 
 ```
 curl -X POST localhost:9000/hooks/run-gantry -H "Content-Type: application/json"  -d '{"GANTRY_SERVICES_FILTERS":"name=webhook_webhook"}'
