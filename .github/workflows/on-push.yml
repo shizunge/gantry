@@ -8,6 +8,7 @@ on:
       - 'Dockerfile'
       - 'src/*.sh'
       - 'tests/*.sh'
+      - '.github/**'
   workflow_dispatch:
 
 env:
