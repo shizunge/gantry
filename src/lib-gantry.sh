@@ -821,10 +821,8 @@ _get_service_rollback_additional_options() {
   local SERVICE_NAME="${1}"
   local DOCKER_CONFIG="${2}"
   local OPTIONS=
-  # Add `--with-registry-auth` if needed.
-  local WITH_REGISTRY_AUTH=
-  WITH_REGISTRY_AUTH="$(_get_with_registry_auth "${DOCKER_CONFIG}")"
-  [ -n "${WITH_REGISTRY_AUTH}" ] && OPTIONS="${OPTIONS} ${WITH_REGISTRY_AUTH}"
+  # Place holder function. Nothing to do here yet.
+  # --with-registry-auth cannot be combined with --rollback.
   echo "${OPTIONS}"
 }
 

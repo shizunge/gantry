@@ -76,7 +76,8 @@ Describe 'rollback'
       # Assume service update won't be done within TIMEOUT second.
       export GANTRY_UPDATE_TIMEOUT_SECONDS="${TIMEOUT}"
       # Rollback would fail due to the incorrect option.
-      export GANTRY_ROLLBACK_OPTIONS="--incorrect-option"
+      # --with-registry-auth cannot be combined with --rollback.
+      export GANTRY_ROLLBACK_OPTIONS="--with-registry-auth"
       run_gantry "${TEST_NAME}"
     }
     BeforeEach "common_setup_timeout ${TEST_NAME} ${IMAGE_WITH_TAG} ${SERVICE_NAME} ${TIMEOUT}"
@@ -94,7 +95,7 @@ Describe 'rollback'
       The stderr should satisfy spec_expect_message    "${NUM_SERVICES_UPDATING}"
       The stderr should satisfy spec_expect_no_message "${UPDATED}.*${SERVICE_NAME}"
       The stderr should satisfy spec_expect_no_message "${NO_UPDATES}.*${SERVICE_NAME}"
-      The stderr should satisfy spec_expect_message    "${ADDING_OPTIONS}.*--incorrect-option.*${SERVICE_NAME}"
+      The stderr should satisfy spec_expect_message    "${ADDING_OPTIONS}.*--with-registry-auth.*${SERVICE_NAME}"
       The stderr should satisfy spec_expect_message    "${ROLLING_BACK}.*${SERVICE_NAME}"
       The stderr should satisfy spec_expect_message    "${FAILED_TO_ROLLBACK}.*${SERVICE_NAME}"
       The stderr should satisfy spec_expect_no_message "${ROLLED_BACK}.*${SERVICE_NAME}"
@@ -218,7 +219,8 @@ Describe 'rollback'
       local LABEL_AND_VALUE="gantry.update.timeout_seconds=${TIMEOUT}"
       docker service update --quiet --label-add "${LABEL_AND_VALUE}" "${SERVICE_NAME}"
       # Rollback would fail due to the incorrect option.
-      LABEL_AND_VALUE="gantry.rollback.options=--incorrect-option"
+      # --with-registry-auth cannot be combined with --rollback.
+      LABEL_AND_VALUE="gantry.rollback.options=--with-registry-auth"
       docker service update --quiet --label-add "${LABEL_AND_VALUE}" "${SERVICE_NAME}"
       run_gantry "${TEST_NAME}"
     }
@@ -237,7 +239,7 @@ Describe 'rollback'
       The stderr should satisfy spec_expect_message    "${NUM_SERVICES_UPDATING}"
       The stderr should satisfy spec_expect_no_message "${UPDATED}.*${SERVICE_NAME}"
       The stderr should satisfy spec_expect_no_message "${NO_UPDATES}.*${SERVICE_NAME}"
-      The stderr should satisfy spec_expect_message    "${ADDING_OPTIONS}.*--incorrect-option.*${SERVICE_NAME}"
+      The stderr should satisfy spec_expect_message    "${ADDING_OPTIONS}.*--with-registry-auth.*${SERVICE_NAME}"
       The stderr should satisfy spec_expect_message    "${ROLLING_BACK}.*${SERVICE_NAME}"
       The stderr should satisfy spec_expect_message    "${FAILED_TO_ROLLBACK}.*${SERVICE_NAME}"
       The stderr should satisfy spec_expect_no_message "${ROLLED_BACK}.*${SERVICE_NAME}"
