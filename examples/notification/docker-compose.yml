@@ -1,0 +1,77 @@
+version: "3.8"
+
+services:
+  gantry:
+    image: shizunge/gantry:latest
+    networks:
+      - notification
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock
+    environment:
+      - "GANTRY_NODE_NAME={{.Node.Hostname}}"
+      - "GANTRY_SLEEP_SECONDS=60"
+      # Ensure that apprise and gantry are in the same network.
+      # Port 8000 is hard coded in the Apprise container caronc/apprise.
+      - "GANTRY_NOTIFICATION_APPRISE_URL=http://apprise:8000/notify"
+    deploy:
+      replicas: 1
+      placement:
+        constraints:
+          - node.role==manager
+      restart_policy:
+        condition: any
+
+  # Refer to https://github.com/caronc/apprise-api for all configurations of the API service.
+  apprise:
+    image: caronc/apprise:latest
+    networks:
+      - notification
+    environment:
+      # Apprise supports almost all of the most popular notification services.
+      # Refer to https://github.com/caronc/apprise for all supported notification services.
+      # In this example, we send notifications to a fake SMTP server.
+      - "APPRISE_STATELESS_URLS=mailto://mailpit:1025?user=userid&pass=password"
+    volumes:
+      - "apprise_config:/config"
+      - "apprise_plugin:/plugin"
+      - "apprise_attach:/attach"
+    deploy:
+      replicas: 1
+      placement:
+        constraints:
+          - node.role==manager
+      restart_policy:
+        condition: any
+
+  # This is a fake SMTP server used in this example.
+  # Refer to https://github.com/axllent/mailpit
+  mailpit:
+    image: axllent/mailpit:latest
+    command:
+      - "--smtp=0.0.0.0:1025"
+      # You can open the GUI in the browser at this port.
+      - "--listen=0.0.0.0:8025"
+      - "--smtp-auth-accept-any"
+      - "--smtp-auth-allow-insecure"
+    networks:
+      - notification
+    ports:
+      - "8025:8025"
+    deploy:
+      replicas: 1
+      placement:
+        constraints:
+          - node.role==manager
+      restart_policy:
+        condition: any
+
+volumes:
+  apprise_config:
+  apprise_plugin:
+  apprise_attach:
+
+networks:
+  notification:
+    name: notification_network
+    driver: overlay
+    attachable: false
