@@ -199,22 +199,68 @@ _send_notification() {
   notify_summary "${TYPE}" "${TITLE}" "${BODY}"
 }
 
+# We want the static variables live longer than a function.
+# However if we call the function in a subprocess, which could be casued by
+# 1. pipe, e.g. echo "message" | my_function
+# 2. assign to a variable, e.g. MY_VAR=$(my_function)
+# and changing the static variables, the value won't go back to the parent process.
+# So here we use the file system to pass value between multiple processes.
+_get_static_variables_folder() {
+  local INDIRECT_FILE="/tmp/gantry-STATIC_VARIABLES_FOLDER"
+  if [ -z "${STATIC_VARIABLES_FOLDER}" ]; then
+    if [ -e "${INDIRECT_FILE}" ]; then
+      STATIC_VARIABLES_FOLDER=$(head -1 "${INDIRECT_FILE}")
+    fi
+  fi
+  if [ -d "${STATIC_VARIABLES_FOLDER}" ]; then
+    echo "${STATIC_VARIABLES_FOLDER}"
+    return 0
+  fi
+  while ! STATIC_VARIABLES_FOLDER=$(mktemp -d); do log ERROR "\"mktemp -d\" failed"; done
+  log DEBUG "Created STATIC_VARIABLES_FOLDER ${STATIC_VARIABLES_FOLDER}"
+  echo "${STATIC_VARIABLES_FOLDER}" > "${INDIRECT_FILE}"
+  export STATIC_VARIABLES_FOLDER
+  echo "${STATIC_VARIABLES_FOLDER}"
+}
+
+_remove_static_variables_folder() {
+  local INDIRECT_FILE="/tmp/gantry-STATIC_VARIABLES_FOLDER"
+  rm "${INDIRECT_FILE}" >/dev/null 2>&1
+  [ -z "${STATIC_VARIABLES_FOLDER}" ] && return 0
+  local TO_REMOVE_STATIC_VARIABLES_FOLDER=
+  TO_REMOVE_STATIC_VARIABLES_FOLDER="$(_get_static_variables_folder)"
+  log DEBUG "Removing STATIC_VARIABLES_FOLDER ${TO_REMOVE_STATIC_VARIABLES_FOLDER}"
+  export STATIC_VARIABLES_FOLDER=
+  rm -r "${TO_REMOVE_STATIC_VARIABLES_FOLDER}"
+}
+
+_create_static_variables_folder() {
+  # In case previous run did not finish gracefully.
+  # We need a refresh folder to store the lists of updated services and errors.
+  _remove_static_variables_folder
+  STATIC_VARIABLES_FOLDER=$(_get_static_variables_folder)
+  export STATIC_VARIABLES_FOLDER
+}
+
 _lock() {
   local NAME="${1}"
-  local LOCK_NAME="${STATIC_VARIABLES_FOLDER}/${NAME}-LOCK"
+  local LOCK_NAME=
+  LOCK_NAME="$(_get_static_variables_folder)/${NAME}-LOCK"
   while ! mkdir "${LOCK_NAME}" >/dev/null 2>&1; do sleep 0.001; done
 }
 
 _unlock() {
   local NAME="${1}"
-  local LOCK_NAME="${STATIC_VARIABLES_FOLDER}/${NAME}-LOCK"
+  local LOCK_NAME=
+  LOCK_NAME="$(_get_static_variables_folder)/${NAME}-LOCK"
   rm -r "${LOCK_NAME}" >/dev/null 2>&1
 }
 
 _static_variable_read_list_core() {
   local LIST_NAME="${1}"
   [ -z "${LIST_NAME}" ] && log ERROR "LIST_NAME is empty." && return 1
-  local FILE_NAME="${STATIC_VARIABLES_FOLDER}/${LIST_NAME}"
+  local FILE_NAME=
+  FILE_NAME="$(_get_static_variables_folder)/${LIST_NAME}"
   [ ! -e "${FILE_NAME}" ] && touch "${FILE_NAME}"
   cat "${FILE_NAME}"
 }
@@ -223,7 +269,8 @@ _static_variable_add_unique_to_list_core() {
   local LIST_NAME="${1}"
   local VALUE="${2}"
   [ -z "${LIST_NAME}" ] && log ERROR "LIST_NAME is empty." && return 1
-  local FILE_NAME="${STATIC_VARIABLES_FOLDER}/${LIST_NAME}"
+  local FILE_NAME=
+  FILE_NAME="$(_get_static_variables_folder)/${LIST_NAME}"
   local OLD_LIST NEW_LIST
   OLD_LIST=$(_static_variable_read_list_core "${LIST_NAME}")
   NEW_LIST=$(add_unique_to_list "${OLD_LIST}" "${VALUE}")
@@ -233,7 +280,8 @@ _static_variable_add_unique_to_list_core() {
 _static_variable_pop_list_core() {
   local LIST_NAME="${1}"
   [ -z "${LIST_NAME}" ] && log ERROR "LIST_NAME is empty." && return 1
-  local FILE_NAME="${STATIC_VARIABLES_FOLDER}/${LIST_NAME}"
+  local FILE_NAME=
+  FILE_NAME="$(_get_static_variables_folder)/${LIST_NAME}"
   [ ! -e "${FILE_NAME}" ] && touch "${FILE_NAME}"
   local ITEM=
   ITEM=$(head -1 "${FILE_NAME}")
@@ -960,15 +1008,7 @@ _get_services_filted() {
 
 gantry_initialize() {
   local STACK="${1:-gantry}"
-  # We want the static variables live longer than a function.
-  # However if we call the function in a subprocess, which could be casued by
-  # 1. pipe, e.g. echo "message" | my_function
-  # 2. assign to a variable, e.g. MY_VAR=$(my_function)
-  # and changing the static variables, the value won't go back to the parent process.
-  # So here we use the file system to pass value between multiple processes.
-  STATIC_VARIABLES_FOLDER=$(mktemp -d)
-  export STATIC_VARIABLES_FOLDER
-  log DEBUG "Created STATIC_VARIABLES_FOLDER ${STATIC_VARIABLES_FOLDER}"
+  _create_static_variables_folder
   _authenticate_to_registries
 }
 
@@ -1064,9 +1104,6 @@ gantry_finalize() {
   if ! _report_services "${STACK}" "${NUM_ERRORS}"; then
     RETURN_VALUE=1
   fi
-  if [ -n "${STATIC_VARIABLES_FOLDER}" ]; then
-    log DEBUG "Removing STATIC_VARIABLES_FOLDER ${STATIC_VARIABLES_FOLDER}"
-    rm -r "${STATIC_VARIABLES_FOLDER}"
-  fi
+  _remove_static_variables_folder
   return "${RETURN_VALUE}"
 }
