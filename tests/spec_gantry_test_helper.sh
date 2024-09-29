@@ -15,6 +15,8 @@
 # along with this program.  If not, see <https://www.gnu.org/licenses/>.
 #
 
+set -a
+
 # Constant strings for checks.
 export MUST_BE_A_NUMBER="must be a number"
 export SKIP_UPDATING_ALL="Skip updating all services"
@@ -51,6 +53,7 @@ export REMOVING_NUM_IMAGES="Removing [0-9]+ image\(s\)"
 export SKIP_REMOVING_IMAGES="Skip removing images"
 export REMOVED_IMAGE="Removed image"
 export FAILED_TO_REMOVE_IMAGE="Failed to remove image"
+export SCHEDULE_NEXT_UPDATE_AT="Schedule next update at"
 export SLEEP_SECONDS_BEFORE_NEXT_UPDATE="Sleep [0-9]+ seconds before next update"
 
 display_output() {
@@ -153,6 +156,10 @@ common_cleanup_multiple() {
 
 spec_expect_message() {
   _expect_message "${spec_expect_message:-""}" "${1}"
+}
+
+spec_expect_multiple_messages() {
+  _expect_multiple_messages "${spec_expect_multiple_messages:-""}" "${1}"
 }
 
 spec_expect_no_message() {
@@ -387,6 +394,24 @@ _handle_failure() {
   echo -e "${RED}ERROR${NO_COLOR} ${MESSAGE}"
 }
 
+_expect_multiple_messages() {
+  TEXT="${1}"
+  MESSAGE="${2}"
+  local GREEN='\033[0;32m'
+  local NO_COLOR='\033[0m'
+  if ! ACTUAL_MSG=$(echo "${TEXT}" | grep -Po "${MESSAGE}"); then
+    _handle_failure "Failed to find expected message \"${MESSAGE}\"."
+    return 1
+  fi
+  local COUNT=
+  COUNT=$(echo "${TEXT}" | grep -Poc "${MESSAGE}");
+  if [ "${COUNT}" -le 1 ]; then
+    _handle_failure "Failed to find multiple expected messages \"${MESSAGE}\" COUNT=${COUNT}."
+    return 1
+  fi
+  echo -e "${GREEN}EXPECTED${NO_COLOR} found ${COUNT} messages: ${ACTUAL_MSG}"
+}
+
 _expect_message() {
   TEXT="${1}"
   MESSAGE="${2}"
@@ -598,6 +623,11 @@ _get_script_dir() {
   # SC3054 (warning): In POSIX sh, array references are undefined.
   # shellcheck disable=SC3054
   SCRIPT_DIR="$( cd "$(dirname "${BASH_SOURCE[0]}")" || return 1; pwd -P )"
+  if [ -d "${SCRIPT_DIR}/.git" ]; then
+    # We may reach here if SCRIPT_DIR is "pwd -P".
+    # Assume .git is in the project root folder, but not in the tests folder.
+    SCRIPT_DIR="${SCRIPT_DIR}/tests"
+  fi
   echo "${SCRIPT_DIR}"
 }
 
@@ -707,3 +737,5 @@ run_gantry() {
   ENTRYPOINT=$(_get_entrypoint) || return 1
   ${ENTRYPOINT} "${STACK}"
 }
+
+set +a

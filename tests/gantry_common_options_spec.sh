@@ -62,6 +62,7 @@ Describe 'common-options'
       The stderr should satisfy spec_expect_no_message "${SKIP_REMOVING_IMAGES}"
       The stderr should satisfy spec_expect_no_message "${REMOVED_IMAGE}.*${IMAGE_WITH_TAG}"
       The stderr should satisfy spec_expect_no_message "${FAILED_TO_REMOVE_IMAGE}.*${IMAGE_WITH_TAG}"
+      The stderr should satisfy spec_expect_no_message "${SCHEDULE_NEXT_UPDATE_AT}"
       The stderr should satisfy spec_expect_no_message "${SLEEP_SECONDS_BEFORE_NEXT_UPDATE}"
     End
   End
@@ -129,6 +130,52 @@ Describe 'common-options'
       The stderr should satisfy spec_expect_message    "${REMOVED_IMAGE}.*${IMAGE_WITH_TAG}"
       The stderr should satisfy spec_expect_no_message "${FAILED_TO_REMOVE_IMAGE}.*${IMAGE_WITH_TAG}"
       The stderr should satisfy spec_expect_message    "Post update"
+      The stderr should satisfy spec_expect_no_message "${SCHEDULE_NEXT_UPDATE_AT}"
+      The stderr should satisfy spec_expect_no_message "${SLEEP_SECONDS_BEFORE_NEXT_UPDATE}"
+    End
+  End
+  Describe "test_common_SLEEP_SECONDS" "container_test:false"
+    TEST_NAME="test_common_SLEEP_SECONDS"
+    IMAGE_WITH_TAG=$(get_image_with_tag "${SUITE_NAME}")
+    SERVICE_NAME="gantry-test-$(unique_id)"
+    test_common_SLEEP_SECONDS() {
+      local TEST_NAME="${1}"
+      local SERVICE_NAME="${2}"
+      reset_gantry_env "${SERVICE_NAME}"
+      export GANTRY_SLEEP_SECONDS="5"
+      timeout --preserve-status 15 bash -c "run_gantry ${TEST_NAME}"
+    }
+    BeforeEach "common_setup_no_new_image ${TEST_NAME} ${IMAGE_WITH_TAG} ${SERVICE_NAME}"
+    AfterEach "common_cleanup ${TEST_NAME} ${IMAGE_WITH_TAG} ${SERVICE_NAME}"
+    It 'run_test'
+      When run test_common_SLEEP_SECONDS "${TEST_NAME}" "${SERVICE_NAME}"
+      The status should be failure
+      The stdout should satisfy display_output
+      The stderr should satisfy display_output
+      The stderr should satisfy spec_expect_multiple_messages "${SKIP_UPDATING}.*${SERVICE_NAME}.*${SKIP_REASON_CURRENT_IS_LATEST}"
+      The stderr should satisfy spec_expect_no_message        "${PERFORM_UPDATING}.*${SERVICE_NAME}"
+      The stderr should satisfy spec_expect_no_message        "${NUM_SERVICES_SKIP_JOBS}"
+      The stderr should satisfy spec_expect_no_message        "${NUM_SERVICES_INSPECT_FAILURE}"
+      The stderr should satisfy spec_expect_multiple_messages "${NUM_SERVICES_NO_NEW_IMAGES}"
+      The stderr should satisfy spec_expect_no_message        "${NUM_SERVICES_UPDATING}"
+      The stderr should satisfy spec_expect_no_message        "${ADDING_OPTIONS}"
+      The stderr should satisfy spec_expect_no_message        "${UPDATED}.*${SERVICE_NAME}"
+      The stderr should satisfy spec_expect_no_message        "${NO_UPDATES}.*${SERVICE_NAME}"
+      The stderr should satisfy spec_expect_no_message        "${ROLLING_BACK}.*${SERVICE_NAME}"
+      The stderr should satisfy spec_expect_no_message        "${FAILED_TO_ROLLBACK}.*${SERVICE_NAME}"
+      The stderr should satisfy spec_expect_no_message        "${ROLLED_BACK}.*${SERVICE_NAME}"
+      The stderr should satisfy spec_expect_multiple_messages "${NO_SERVICES_UPDATED}"
+      The stderr should satisfy spec_expect_no_message        "${NUM_SERVICES_UPDATED}"
+      The stderr should satisfy spec_expect_no_message        "${NUM_SERVICES_UPDATE_FAILED}"
+      The stderr should satisfy spec_expect_no_message        "${NUM_SERVICES_ERRORS}"
+      The stderr should satisfy spec_expect_multiple_messages "${NO_IMAGES_TO_REMOVE}"
+      The stderr should satisfy spec_expect_no_message        "${REMOVING_NUM_IMAGES}"
+      The stderr should satisfy spec_expect_no_message        "${SKIP_REMOVING_IMAGES}"
+      The stderr should satisfy spec_expect_no_message        "${REMOVED_IMAGE}.*${IMAGE_WITH_TAG}"
+      The stderr should satisfy spec_expect_no_message        "${FAILED_TO_REMOVE_IMAGE}.*${IMAGE_WITH_TAG}"
+      # Check messages between iterations.
+      The stderr should satisfy spec_expect_message           "${SCHEDULE_NEXT_UPDATE_AT}"
+      The stderr should satisfy spec_expect_message           "${SLEEP_SECONDS_BEFORE_NEXT_UPDATE}"
     End
   End
   Describe "test_common_SLEEP_SECONDS_not_a_number" "container_test:false"
@@ -171,6 +218,7 @@ Describe 'common-options'
       The stderr should satisfy spec_expect_no_message "${SKIP_REMOVING_IMAGES}"
       The stderr should satisfy spec_expect_no_message "${REMOVED_IMAGE}.*${IMAGE_WITH_TAG}"
       The stderr should satisfy spec_expect_no_message "${FAILED_TO_REMOVE_IMAGE}.*${IMAGE_WITH_TAG}"
+      The stderr should satisfy spec_expect_no_message "${SCHEDULE_NEXT_UPDATE_AT}"
       The stderr should satisfy spec_expect_no_message "${SLEEP_SECONDS_BEFORE_NEXT_UPDATE}"
     End
   End
