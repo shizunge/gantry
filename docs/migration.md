@@ -15,23 +15,25 @@ Although I have tried to keep backward compatibility, not all configurations in 
 
 This guide helps you migrate from *shepherd* to *gantry* by highlighting the difference between them. Please refer to the [README](../README.md) for the full description of the configurations.
 
-### Renamed configurations
+### Equivalent or similar configurations
 
-| *Shepherd* Env | Equivalent *Gantry* Env  |
-|----------------|---------------|
-| HOSTNAME            | GANTRY_NODE_NAME                |
-| SLEEP_TIME          | GANTRY_SLEEP_SECONDS            |
-| IGNORELIST_SERVICES | GANTRY_SERVICES_EXCLUDED        |
-| FILTER_SERVICES     | GANTRY_SERVICES_FILTERS         |
-| UPDATE_OPTIONS      | GANTRY_UPDATE_OPTIONS           |
-| TIMEOUT             | GANTRY_UPDATE_TIMEOUT_SECONDS   |
-| ROLLBACK_OPTIONS    | GANTRY_ROLLBACK_OPTIONS         |
-| ROLLBACK_ON_FAILURE | GANTRY_ROLLBACK_ON_FAILURE      |
-| APPRISE_SIDECAR_URL | GANTRY_NOTIFICATION_APPRISE_URL |
-| REGISTRY_USER       | GANTRY_REGISTRY_USER            |
-| REGISTRY_PASSWORD   | GANTRY_REGISTRY_PASSWORD        |
-| REGISTRY_HOST       | GANTRY_REGISTRY_HOST            |
-| REGISTRIES_FILE     | GANTRY_REGISTRY_CONFIGS_FILE    |
+| *Shepherd* Env | Equivalent or similar *Gantry* Env  | Enhancement |
+|----------------|-------------------------------------|-------------|
+| VERBOSE               | GANTRY_LOG_LEVEL                | To introduce more granularity on log levels. *Gantry* can go total slience by setting `GANTRY_LOG_LEVEL` to `NONE`. |
+| HOSTNAME              | GANTRY_NODE_NAME                | |
+| SLEEP_TIME            | GANTRY_SLEEP_SECONDS            | This is now the interval between two updates. The actual sleep time is this value minus time spent on updating services. |
+| IGNORELIST_SERVICES   | GANTRY_SERVICES_EXCLUDED        | |
+| FILTER_SERVICES       | GANTRY_SERVICES_FILTERS         | |
+| UPDATE_OPTIONS        | GANTRY_UPDATE_OPTIONS           | |
+| TIMEOUT               | GANTRY_UPDATE_TIMEOUT_SECONDS   | |
+| ROLLBACK_OPTIONS      | GANTRY_ROLLBACK_OPTIONS         | |
+| ROLLBACK_ON_FAILURE   | GANTRY_ROLLBACK_ON_FAILURE      | |
+| APPRISE_SIDECAR_URL   | GANTRY_NOTIFICATION_APPRISE_URL | |
+| REGISTRY_USER         | GANTRY_REGISTRY_USER            | |
+| REGISTRY_PASSWORD     | GANTRY_REGISTRY_PASSWORD        | |
+| REGISTRY_HOST         | GANTRY_REGISTRY_HOST            | |
+| REGISTRIES_FILE       | GANTRY_REGISTRY_CONFIGS_FILE    | |
+| IMAGE_AUTOCLEAN_LIMIT | GANTRY_CLEANUP_IMAGES           | *Gantry* only cleans up the images being updated, thus a limit is not used now. |
 
 The label on the services to select config to enable authentication is renamed to `gantry.auth.config`.
 
@@ -39,19 +41,15 @@ The label on the services to select config to enable authentication is renamed t
 
 | *Shepherd* Env | Workaround |
 |----------------|------------|
-| VERBOSE                | Use `GANTRY_LOG_LEVEL` |
 | WITH_REGISTRY_AUTH     | *Gantry* automatically adds `--with-registry-auth` to the `docker service update` command for a sevice, when it finds the label `gantry.auth.config=<config-name>` on the service. Or manually add `--with-registry-auth` to `GANTRY_UPDATE_OPTIONS`. |
 | WITH_INSECURE_REGISTRY | Manually add `--insecure` to `GANTRY_MANIFEST_OPTIONS` and set `GANTRY_MANIFEST_CMD` to `manifest`. |
 | WITH_NO_RESOLVE_IMAGE  | Manually add `--no-resolve-image` to `GANTRY_UPDATE_OPTIONS`. |
-| IMAGE_AUTOCLEAN_LIMIT  | Use `GANTRY_CLEANUP_IMAGES`. *Gantry* only cleans up the images being updated, thus we no longer need a limit. |
 | RUN_ONCE_AND_EXIT      | Set `GANTRY_SLEEP_SECONDS` to 0. |
 
 ### New configurations
 
 | *Gantry* Env  | Purpose |
 |---------------|----------------------|
-| GANTRY_CLEANUP_IMAGES            | To control whether *Gantry* cleans up images on all hosts. *Gantry* only cleans up the images being updated. |
-| GANTRY_LOG_LEVEL                 | To introduce more granularity on log levels. *Gantry* can go total slience by setting `GANTRY_LOG_LEVEL` to `NONE`. |
 | GANTRY_MANIFEST_CMD              | To retrieve image metadata correctly and to reduce the Docker Hub rate usage. |
 | GANTRY_MANIFEST_NUM_WORKERS      | To run multiple manifest commands in parallel to accelerate the updating process. |
 | GANTRY_MANIFEST_OPTIONS          | To customize `GANTRY_MANIFEST_CMD`. |
@@ -65,7 +63,6 @@ The label on the services to select config to enable authentication is renamed t
 | GANTRY_REGISTRY_PASSWORD_FILE    | To pass sensitive information via [docker secret](https://docs.docker.com/engine/swarm/secrets/). |
 | GANTRY_REGISTRY_USER_FILE        | To pass sensitive information via [docker secret](https://docs.docker.com/engine/swarm/secrets/). |
 | GANTRY_SERVICES_EXCLUDED_FILTERS | To provide an alternative method to exclude services from being updated. |
-| GANTRY_SERVICES_SELF             | To avoid an infinity loop of updating itself. You don't need to set this, because *Gantry* should find the value automatically. |
 | GANTRY_UPDATE_JOBS               | *Gantry* can distinguish `replicated-job` and `global-job` from other services. *Gantry* automatically adds more options to [update services with no running tasks](faq.md#how-to-update-services-with-no-running-tasks) to avoid hanging. |
 | GANTRY_UPDATE_NUM_WORKERS        | To run multiple update commands in parallel to accelerate the updating process. |
 

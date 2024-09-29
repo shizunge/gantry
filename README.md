@@ -70,7 +70,6 @@ You can configure the most behaviors of *Gantry* via environment variables.
 | GANTRY_SERVICES_EXCLUDED         | | A space separated list of services names that are excluded from updating. |
 | GANTRY_SERVICES_EXCLUDED_FILTERS | `label=gantry.services.excluded=true` | A space separated list of [filters](https://docs.docker.com/engine/reference/commandline/service_ls/#filter), e.g. `label=project=project-a`. Exclude services which match the given filters from updating. The default value allows you to add label `gantry.services.excluded=true` to services to exclude them from updating. Note that multiple filters will be logical **ANDED**. |
 | GANTRY_SERVICES_FILTERS          | | A space separated list of [filters](https://docs.docker.com/engine/reference/commandline/service_ls/#filter) that are accepted by `docker service ls --filter` to select services to update, e.g. `label=project=project-a`. Note that multiple filters will be logical **ANDED**. Also see [How to filters multiple services by name](docs/faq.md#how-to-filters-multiple-services-by-name). |
-| GANTRY_SERVICES_SELF             | | This is optional. When running as a docker service, *Gantry* will try to find the service name of itself automatically, and update itself firstly. The manifest inspection will be always performed on the *Gantry* service to avoid an infinity loop of updating itself. This can be used to ask *Gantry* to update another service firstly. |
 
 ### To check if new images are available
 
