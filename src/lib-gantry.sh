@@ -1035,6 +1035,7 @@ gantry_get_services_list() {
   local HAS_SELF=
   for S in ${SERVICES} ; do
     if _in_list "${SERVICES_EXCLUDED}" "${S}" ; then
+      log DEBUG "Exclude service ${S} from updating."
       continue
     fi
     # Add self to the first of the list.

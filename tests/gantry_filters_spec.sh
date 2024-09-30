@@ -93,6 +93,7 @@ Describe 'filters'
       The stdout should satisfy display_output
       The stderr should satisfy display_output
       The stderr should satisfy spec_expect_no_message "${SKIP_UPDATING_ALL}"
+      The stderr should satisfy spec_expect_multiple_messages "${EXCLUDE_SERVICE}.*${SERVICE_NAME}"
       The stderr should satisfy spec_expect_no_message "${SKIP_UPDATING}.*${SERVICE_NAME}"
       The stderr should satisfy spec_expect_no_message "${PERFORM_UPDATING}.*${SERVICE_NAME}"
       The stderr should satisfy spec_expect_no_message "${NUM_SERVICES_SKIP_JOBS}"
