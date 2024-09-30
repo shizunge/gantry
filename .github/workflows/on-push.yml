@@ -71,6 +71,7 @@ jobs:
   build_and_push:
     name: Build and push Docker image
     runs-on: ubuntu-latest
+    if: ${{ github.actor != 'dependabot[bot]' }}
     needs:
       - shellcheck
       - tests
@@ -132,6 +133,7 @@ jobs:
   container_tests:
     name: Test container
     runs-on: ubuntu-latest
+    if: ${{ github.actor != 'dependabot[bot]' }}
     needs:
       - build_and_push
     steps:
