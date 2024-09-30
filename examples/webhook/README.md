@@ -29,3 +29,9 @@ Check the webhook service logs to confirm if the webhook was triggered correctly
 ```
 docker service logs webhook_webhook
 ```
+
+Use the following command to stop the stack.
+
+```
+docker stack remove webhook
+```
