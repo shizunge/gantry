@@ -6,7 +6,7 @@ Run *Gantry* at a specific time.
 
 ## [notification](./notification)
 
-Demonstrate how *Gantry* sends notification via [apprise](https://github.com/caronc/apprise-api).
+Demonstrate how *Gantry* supports [notification services](https://github.com/caronc/apprise?tab=readme-ov-file#supported-notificationse) via [*Apprise*](https://github.com/caronc/apprise-api).
 
 ## [prune-and-watchtower](./prune-and-watchtower)
 
