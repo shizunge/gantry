@@ -134,6 +134,9 @@ Describe 'common-options'
       The stderr should satisfy spec_expect_no_message "${SLEEP_SECONDS_BEFORE_NEXT_UPDATE}"
     End
   End
+  # run_gantry prints logs after gantry exists, while testing a container.
+  # In thes test, gantry never exit, but will be killed, thus there is no log.
+  # Therefore we disable the container test for this test.
   Describe "test_common_SLEEP_SECONDS" "container_test:false"
     TEST_NAME="test_common_SLEEP_SECONDS"
     IMAGE_WITH_TAG=$(get_image_with_tag "${SUITE_NAME}")
@@ -143,13 +146,16 @@ Describe 'common-options'
       local SERVICE_NAME="${2}"
       reset_gantry_env "${SERVICE_NAME}"
       export GANTRY_SLEEP_SECONDS="5"
-      timeout --preserve-status 15 bash -c "run_gantry ${TEST_NAME}"
+      run_gantry ${TEST_NAME} &
+      local PID="${!}"
+      sleep 15
+      kill "${PID}"
     }
     BeforeEach "common_setup_no_new_image ${TEST_NAME} ${IMAGE_WITH_TAG} ${SERVICE_NAME}"
     AfterEach "common_cleanup ${TEST_NAME} ${IMAGE_WITH_TAG} ${SERVICE_NAME}"
     It 'run_test'
       When run test_common_SLEEP_SECONDS "${TEST_NAME}" "${SERVICE_NAME}"
-      The status should be failure
+      The status should be success
       The stdout should satisfy display_output
       The stderr should satisfy display_output
       The stderr should satisfy spec_expect_multiple_messages "${SKIP_UPDATING}.*${SERVICE_NAME}.*${SKIP_REASON_CURRENT_IS_LATEST}"
