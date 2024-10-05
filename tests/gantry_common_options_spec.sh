@@ -146,7 +146,7 @@ Describe 'common-options'
       local SERVICE_NAME="${2}"
       reset_gantry_env "${SERVICE_NAME}"
       export GANTRY_SLEEP_SECONDS="5"
-      run_gantry ${TEST_NAME} &
+      run_gantry "${TEST_NAME}" &
       local PID="${!}"
       sleep 15
       kill "${PID}"
