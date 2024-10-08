@@ -94,7 +94,7 @@ gantry() {
     log DEBUG "Set NODE_NAME=${RUN_ON_NODE}"
     export NODE_NAME="${RUN_ON_NODE}"
   fi
-  log INFO "Run on Docker host ${RUN_ON_NODE}. $(docker --version 2>&1)"
+  log INFO "Run on Docker host ${RUN_ON_NODE}. $(docker_version)"
 
   local ACCUMULATED_ERRORS=0
 

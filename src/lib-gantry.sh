@@ -344,7 +344,7 @@ _remove_container() {
 gantry_remove_images() {
   local IMAGES_TO_REMOVE="${1}"
   local IMAGE RMI_MSG
-  docker --version 2>&1 | log_lines DEBUG
+  log DEBUG "$(docker_version)"
   for IMAGE in ${IMAGES_TO_REMOVE}; do
     if ! docker image inspect "${IMAGE}" 1>/dev/null 2>&1 ; then
       log DEBUG "There is no image ${IMAGE} on the node.";

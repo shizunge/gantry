@@ -409,6 +409,15 @@ wait_service_state() {
   return "${RETURN_VALUE}"
 }
 
+docker_version() {
+  local cver capi sver sapi
+  if ! cver=$(docker version --format '{{.Client.Version}}' 2>&1);    then log ERROR "${cver}"; cver="error"; fi
+  if ! capi=$(docker version --format '{{.Client.APIVersion}}' 2>&1); then log ERROR "${capi}"; capi="error"; fi
+  if ! sver=$(docker version --format '{{.Server.Version}}' 2>&1);    then log ERROR "${sver}"; sver="error"; fi
+  if ! sapi=$(docker version --format '{{.Server.APIVersion}}' 2>&1); then log ERROR "${sapi}"; sapi="error"; fi
+  echo "Docker version client ${cver} (API ${capi}) server ${sver} (API ${sapi})"
+}
+
 docker_service_remove() {
   local SERVICE_NAME="${1}"
   if ! docker service inspect --format '{{.JobStatus}}' "${SERVICE_NAME}" >/dev/null 2>&1; then
