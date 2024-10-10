@@ -708,7 +708,7 @@ _get_image_info() {
     return 1
   fi
   if [ "${RETURN_VALUE}" != "0" ];  then
-    log ERROR "Image ${IMAGE} does not exist or it is not available. ${MSG}"
+    log ERROR "Image ${IMAGE} does not exist or it is not available. Docker ${MANIFEST_CMD} returns: ${MSG}"
     return 1
   fi
   echo "${MSG}"
