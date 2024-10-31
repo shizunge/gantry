@@ -41,7 +41,7 @@ Describe 'manifest-command'
       # Do not set GANTRY_SERVICES_SELF, it should be set autoamtically
       # If we are not testing gantry inside a container, it should failed to find the service name.
       # To test gantry container, we need to use run_gantry_container.
-      The stderr should satisfy spec_expect_no_message ".*GRANTRY_SERVICES_SELF.*"
+      The stderr should satisfy spec_expect_no_message ".*GANTRY_SERVICES_SELF.*"
       # Gantry is still trying to update the service.
       # But it will see no new images.
       The stderr should satisfy spec_expect_no_message "${SKIP_UPDATING}.*${SERVICE_NAME}"
