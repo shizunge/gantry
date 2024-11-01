@@ -97,6 +97,7 @@ Describe 'notify'
       The stdout should satisfy spec_expect_message    "Subject.*1 services updated 0 failed TEST_TITLE"
       The stdout should satisfy spec_expect_message    "${TOTAL_EMAIL_COUNT_IS_ONE}"
       The stderr should satisfy display_output
+      The stderr should satisfy spec_expect_no_message "${NOT_START_WITH_A_SQUARE_BRACKET}"
       The stderr should satisfy spec_expect_no_message "${SKIP_UPDATING}.*${SERVICE_NAME}"
       The stderr should satisfy spec_expect_message    "${PERFORM_UPDATING}.*${SERVICE_NAME}.*${PERFORM_REASON_HAS_NEWER_IMAGE}"
       The stderr should satisfy spec_expect_no_message "${NUM_SERVICES_SKIP_JOBS}"
@@ -149,6 +150,7 @@ Describe 'notify'
       The stdout should satisfy spec_expect_message    "Subject.*0 services updated 0 failed TEST_TITLE"
       The stdout should satisfy spec_expect_message    "${TOTAL_EMAIL_COUNT_IS_ONE}"
       The stderr should satisfy display_output
+      The stderr should satisfy spec_expect_no_message "${NOT_START_WITH_A_SQUARE_BRACKET}"
       The stderr should satisfy spec_expect_message    "${SKIP_UPDATING}.*${SERVICE_NAME}.*${SKIP_REASON_CURRENT_IS_LATEST}"
       The stderr should satisfy spec_expect_no_message "${PERFORM_UPDATING}.*${SERVICE_NAME}"
       The stderr should satisfy spec_expect_no_message "${NUM_SERVICES_SKIP_JOBS}"
@@ -191,7 +193,9 @@ Describe 'notify'
       When run test_notify_apprise_bad_url "${TEST_NAME}" "${SERVICE_NAME}"
       The status should be success
       The stdout should satisfy display_output
+      The stdout should satisfy spec_expect_no_message ".+"
       The stderr should satisfy display_output
+      The stderr should satisfy spec_expect_no_message "${NOT_START_WITH_A_SQUARE_BRACKET}"
       The stderr should satisfy spec_expect_no_message "${SKIP_UPDATING}.*${SERVICE_NAME}"
       The stderr should satisfy spec_expect_message    "${PERFORM_UPDATING}.*${SERVICE_NAME}.*${PERFORM_REASON_HAS_NEWER_IMAGE}"
       The stderr should satisfy spec_expect_no_message "${NUM_SERVICES_SKIP_JOBS}"
@@ -245,6 +249,7 @@ Describe 'notify'
       The stdout should satisfy spec_expect_message    "Subject.*1 services updated 0 failed TEST_TITLE"
       The stdout should satisfy spec_expect_message    "${TOTAL_EMAIL_COUNT_IS_ONE}"
       The stderr should satisfy display_output
+      The stderr should satisfy spec_expect_no_message "${NOT_START_WITH_A_SQUARE_BRACKET}"
       The stderr should satisfy spec_expect_no_message "${SKIP_UPDATING}.*${SERVICE_NAME}"
       The stderr should satisfy spec_expect_message    "${PERFORM_UPDATING}.*${SERVICE_NAME}.*${PERFORM_REASON_HAS_NEWER_IMAGE}"
       The stderr should satisfy spec_expect_no_message "${NUM_SERVICES_SKIP_JOBS}"
@@ -290,8 +295,10 @@ Describe 'notify'
       When run test_notify_on_change_no_updates "${TEST_NAME}" "${SERVICE_NAME}"
       The status should be success
       The stdout should satisfy display_output
+      The stdout should satisfy spec_expect_no_message ".+"
       The stdout should satisfy spec_expect_no_message "TEST_TITLE"
       The stderr should satisfy display_output
+      The stderr should satisfy spec_expect_no_message "${NOT_START_WITH_A_SQUARE_BRACKET}"
       The stderr should satisfy spec_expect_message    "${SKIP_UPDATING}.*${SERVICE_NAME}.*${SKIP_REASON_CURRENT_IS_LATEST}"
       The stderr should satisfy spec_expect_no_message "${PERFORM_UPDATING}.*${SERVICE_NAME}"
       The stderr should satisfy spec_expect_no_message "${NUM_SERVICES_SKIP_JOBS}"
@@ -346,6 +353,7 @@ Describe 'notify'
       The stdout should satisfy spec_expect_message    "Subject.*0 services updated 1 failed TEST_TITLE"
       The stdout should satisfy spec_expect_message    "${TOTAL_EMAIL_COUNT_IS_ONE}"
       The stderr should satisfy display_output
+      The stderr should satisfy spec_expect_no_message "${NOT_START_WITH_A_SQUARE_BRACKET}"
       The stderr should satisfy spec_expect_no_message "${SKIP_UPDATING}.*${SERVICE_NAME}"
       The stderr should satisfy spec_expect_message    "${PERFORM_UPDATING}.*${SERVICE_NAME}.*${PERFORM_REASON_HAS_NEWER_IMAGE}"
       The stderr should satisfy spec_expect_no_message "${NUM_SERVICES_SKIP_JOBS}"

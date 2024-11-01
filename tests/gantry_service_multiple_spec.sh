@@ -86,7 +86,9 @@ Describe 'service-multiple-services'
       When run test_multiple_services_excluded_filters "${TEST_NAME}" "${SERVICE_NAME}"
       The status should be success
       The stdout should satisfy display_output
+      The stdout should satisfy spec_expect_no_message ".+"
       The stderr should satisfy display_output
+      The stderr should satisfy spec_expect_no_message "${NOT_START_WITH_A_SQUARE_BRACKET}"
       # Service 0 and 3 should get updated.
       # Service 1 and 2 should be excluded.
       # Service 4 and 5 created with new image, no update.

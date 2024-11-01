@@ -31,7 +31,7 @@ load_libraries() {
   fi
   # log function is not available before loading the library.
   if ! echo "${LOCAL_LOG_LEVEL}" | grep -q -i "NONE"; then
-    echo "Loading libraries from ${LIB_DIR}"
+    echo "[$(date -Iseconds)] Loading libraries from ${LIB_DIR}" >&2
   fi
   . "${LIB_DIR}/notification.sh"
   . "${LIB_DIR}/docker_hub_rate.sh"

@@ -18,6 +18,8 @@
 set -a
 
 # Constant strings for checks.
+# NOT_START_WITH_A_SQUARE_BRACKET ignores color codes.
+export NOT_START_WITH_A_SQUARE_BRACKET="^(?!(?:\x1b\[[0-9;]*[mG])?\[)"
 export MUST_BE_A_NUMBER="must be a number"
 export SKIP_UPDATING_ALL="Skip updating all services"
 export SKIP_REASON_NOT_SWARM_MANAGER="is not a swarm manager"
@@ -474,14 +476,18 @@ build_and_push_test_image() {
   local TASK_SECONDS="${2}"
   local EXIT_SECONDS="${3}"
   build_test_image "${IMAGE_WITH_TAG}" "${TASK_SECONDS}" "${EXIT_SECONDS}"
-  echo "Pushing image "
+  echo -n "Pushing image "
   docker push --quiet "${IMAGE_WITH_TAG}"
 }
 
 prune_local_test_image() {
   local IMAGE_WITH_TAG="${1}"
-  echo "Removing image ${IMAGE_WITH_TAG} "
+  echo -n "Removing image ${IMAGE_WITH_TAG} "
   docker image rm "${IMAGE_WITH_TAG}" --force
+}
+
+docker_service_update() {
+  docker service update --quiet "${@}" >/dev/null
 }
 
 wait_zero_running_tasks() {
@@ -492,7 +498,7 @@ wait_zero_running_tasks() {
   local USED_SECONDS=0
   local TRIES=0
   local MAX_RETRIES=120
-  echo "Wait until ${SERVICE_NAME} has zero running tasks."
+  # echo "Wait until ${SERVICE_NAME} has zero running tasks."
   while [ "${NUM_RUNS}" -ne 0 ]; do
     if [ -n "${TIMEOUT_SECONDS}" ] && [ "${USED_SECONDS}" -ge "${TIMEOUT_SECONDS}" ]; then
       _handle_failure "Services ${SERVICE_NAME} does not stop after ${TIMEOUT_SECONDS} seconds."
@@ -607,7 +613,7 @@ _start_replicated_job() {
 
 stop_service() {
   local SERVICE_NAME="${1}"
-  echo "Removing service "
+  echo -n "Removing service "
   docker service rm "${SERVICE_NAME}"
 }
 

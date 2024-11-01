@@ -41,7 +41,7 @@ Describe 'login'
       local USER_FILE PASS_FILE
       USER_FILE=$(mktemp)
       PASS_FILE=$(mktemp)
-      docker service update --quiet --label-add "${LABEL}=${CONFIG}" "${SERVICE_NAME}"
+      docker_service_update --label-add "${LABEL}=${CONFIG}" "${SERVICE_NAME}"
       echo "${USERNAME}" > "${USER_FILE}"
       echo "${PASSWORD}" > "${PASS_FILE}"
       reset_gantry_env "${SERVICE_NAME}"
@@ -63,7 +63,9 @@ Describe 'login'
       When run test_login_config "${TEST_NAME}" "${SERVICE_NAME}" "${CONFIG}" "${TEST_REGISTRY}" "${TEST_USERNAME}" "${TEST_PASSWORD}"
       The status should be success
       The stdout should satisfy display_output
+      The stdout should satisfy spec_expect_no_message ".+"
       The stderr should satisfy display_output
+      The stderr should satisfy spec_expect_no_message "${NOT_START_WITH_A_SQUARE_BRACKET}"
       The stderr should satisfy spec_expect_message    "Logged into registry *${TEST_REGISTRY} for config ${CONFIG}"
       The stderr should satisfy spec_expect_no_message "${SKIP_UPDATING}.*${SERVICE_NAME}"
       The stderr should satisfy spec_expect_message    "${PERFORM_UPDATING}.*${SERVICE_NAME}.*${PERFORM_REASON_HAS_NEWER_IMAGE}"
@@ -109,7 +111,7 @@ Describe 'login'
       local LABEL="gantry.auth.config"
       local CONFIGS_FILE=
       CONFIGS_FILE=$(mktemp)
-      docker service update --quiet --label-add "${LABEL}=${CONFIG}" "${SERVICE_NAME}"
+      docker_service_update --label-add "${LABEL}=${CONFIG}" "${SERVICE_NAME}"
       echo "# Test comments: CONFIG REGISTRY USERNAME PASSWORD" >> "${CONFIGS_FILE}"
       echo "${CONFIG} ${REGISTRY} ${USERNAME} ${PASSWORD}" >> "${CONFIGS_FILE}"
       reset_gantry_env "${SERVICE_NAME}"
@@ -134,7 +136,9 @@ Describe 'login'
       When run test_login_REGISTRY_CONFIGS_FILE "${TEST_NAME}" "${SERVICE_NAME}" "${CONFIG}" "${TEST_REGISTRY}" "${TEST_USERNAME}" "${TEST_PASSWORD}"
       The status should be success
       The stdout should satisfy display_output
+      The stdout should satisfy spec_expect_no_message ".+"
       The stderr should satisfy display_output
+      The stderr should satisfy spec_expect_no_message "${NOT_START_WITH_A_SQUARE_BRACKET}"
       The stderr should satisfy spec_expect_message    "Logged into registry *${TEST_REGISTRY} for config ${CONFIG}"
       The stderr should satisfy spec_expect_no_message "${SKIP_UPDATING}.*${SERVICE_NAME}"
       The stderr should satisfy spec_expect_message    "${PERFORM_UPDATING}.*${SERVICE_NAME}.*${PERFORM_REASON_HAS_NEWER_IMAGE}"
@@ -180,7 +184,7 @@ Describe 'login'
       local LABEL="gantry.auth.config"
       local CONFIGS_FILE=
       CONFIGS_FILE=$(mktemp)
-      docker service update --quiet --label-add "${LABEL}=${CONFIG}" "${SERVICE_NAME}"
+      docker_service_update --label-add "${LABEL}=${CONFIG}" "${SERVICE_NAME}"
       # Add an extra item to the line.
       echo "${CONFIG} ${REGISTRY} ${USERNAME} ${PASSWORD} Extra" >> "${CONFIGS_FILE}"
       # Missing an item from the line.
@@ -200,7 +204,9 @@ Describe 'login'
       When run test_login_REGISTRY_CONFIGS_FILE_bad_format "${TEST_NAME}" "${SERVICE_NAME}" "${CONFIG}" "${TEST_REGISTRY}" "${TEST_USERNAME}" "${TEST_PASSWORD}"
       The status should be failure
       The stdout should satisfy display_output
+      The stdout should satisfy spec_expect_no_message ".+"
       The stderr should satisfy display_output
+      The stderr should satisfy spec_expect_no_message "${NOT_START_WITH_A_SQUARE_BRACKET}"
       The stderr should satisfy spec_expect_message    "format error.*Found extra item\(s\)"
       The stderr should satisfy spec_expect_message    "format error.*Missing item\(s\)"
       The stderr should satisfy spec_expect_no_message "Logged into registry *${TEST_REGISTRY} for config ${CONFIG}"
@@ -246,7 +252,7 @@ Describe 'login'
         return 1
       fi
       local LABEL="gantry.auth.config"
-      docker service update --quiet --label-add "${LABEL}=${CONFIG}" "${SERVICE_NAME}"
+      docker_service_update --label-add "${LABEL}=${CONFIG}" "${SERVICE_NAME}"
       local FILE_NOT_EXIST="/tmp/${CONFIG}"
       reset_gantry_env "${SERVICE_NAME}"
       export GANTRY_REGISTRY_CONFIG_FILE="${FILE_NOT_EXIST}"
@@ -266,7 +272,9 @@ Describe 'login'
       When run test_login_file_not_exist "${TEST_NAME}" "${SERVICE_NAME}" "${CONFIG}" "${TEST_REGISTRY}" "${TEST_USERNAME}" "${TEST_PASSWORD}"
       The status should be failure
       The stdout should satisfy display_output
+      The stdout should satisfy spec_expect_no_message ".+"
       The stderr should satisfy display_output
+      The stderr should satisfy spec_expect_no_message "${NOT_START_WITH_A_SQUARE_BRACKET}"
       The stderr should satisfy spec_expect_no_message "Logged into registry *${TEST_REGISTRY} for config ${CONFIG}"
       The stderr should satisfy spec_expect_message    "${SKIP_UPDATING_ALL}.*${SKIP_REASON_PREVIOUS_ERRORS}"
       The stderr should satisfy spec_expect_no_message "${SKIP_UPDATING}.*${SERVICE_NAME}"

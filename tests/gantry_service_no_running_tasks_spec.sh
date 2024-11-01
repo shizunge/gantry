@@ -45,7 +45,7 @@ Describe "service-no-running-tasks"
       local SERVICE_NAME_SUFFIX="${SERVICE_NAME}-suffix"
       # Set running tasks to 0 for SERVICE_NAME.
       # But keep tasks running for SERVICE_NAME_SUFFIX.
-      docker service update --quiet --replicas=0 "${SERVICE_NAME}"
+      docker_service_update --replicas=0 "${SERVICE_NAME}"
       wait_zero_running_tasks "${SERVICE_NAME}"
       reset_gantry_env "${SERVICE_NAME}"
       run_gantry "${TEST_NAME}"
@@ -66,7 +66,9 @@ Describe "service-no-running-tasks"
       When run test_no_running_tasks_replicated "${TEST_NAME}" "${SERVICE_NAME}"
       The status should be success
       The stdout should satisfy display_output
+      The stdout should satisfy spec_expect_no_message ".+"
       The stderr should satisfy display_output
+      The stderr should satisfy spec_expect_no_message "${NOT_START_WITH_A_SQUARE_BRACKET}"
       # Add "--detach=true" when there is no running tasks.
       # https://github.com/docker/cli/issues/627
       The stderr should satisfy spec_expect_message    "${ADDING_OPTIONS}.*--detach=true.*${SERVICE_NAME}\."
@@ -126,7 +128,9 @@ Describe "service-no-running-tasks"
       When run test_no_running_tasks_global "${TEST_NAME}" "${SERVICE_NAME}"
       The status should be success
       The stdout should satisfy display_output
+      The stdout should satisfy spec_expect_no_message ".+"
       The stderr should satisfy display_output
+      The stderr should satisfy spec_expect_no_message "${NOT_START_WITH_A_SQUARE_BRACKET}"
       # Add "--detach=true" when there is no running tasks.
       # https://github.com/docker/cli/issues/627
       The stderr should satisfy spec_expect_message    "${ADDING_OPTIONS}.*--detach=true.*${SERVICE_NAME}"
