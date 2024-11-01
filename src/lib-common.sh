@@ -228,10 +228,15 @@ read_config() {
 read_env() {
   local VNAME="${1}"; shift
   [ -z "${VNAME}" ] && return 1
-  if env | grep -q "${VNAME}="; then
-    eval "echo \"\${${VNAME}}\""
-  else
+  # "grep -q" will exit immediately when the first line of data matches, and leading to broken pipe errors.
+  # Add "cat > /dev/null" to avoid broken pipe errors.
+  local GREP_RETURN=
+  env | (grep -q "^${VNAME}="; local R=$?; cat >/dev/null; test "${R}" == "0";);
+  GREP_RETURN=$?
+  if [ "${GREP_RETURN}" != "0" ]; then
     echo "${@}"
+  else
+    eval "echo \"\${${VNAME}}\""
   fi
   return 0
 }
