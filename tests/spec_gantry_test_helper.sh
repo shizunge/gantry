@@ -18,7 +18,7 @@
 set -a
 
 # Constant strings for checks.
-# NOT_START_WITH_A_SQUARE_BRACKET ignores color codes.
+# NOT_START_WITH_A_SQUARE_BRACKET ignores color codes. Use test_log not to trigger this check.
 export NOT_START_WITH_A_SQUARE_BRACKET="^(?!(?:\x1b\[[0-9;]*[mG])?\[)"
 export MUST_BE_A_NUMBER="must be a number"
 export SKIP_UPDATING_ALL="Skip updating all services"
@@ -58,6 +58,11 @@ export REMOVED_IMAGE="Removed image"
 export FAILED_TO_REMOVE_IMAGE="Failed to remove image"
 export SCHEDULE_NEXT_UPDATE_AT="Schedule next update at"
 export SLEEP_SECONDS_BEFORE_NEXT_UPDATE="Sleep [0-9]+ seconds before next update"
+
+test_log() {
+  echo "${GANTRY_LOG_LEVEL}" | grep -q -i "^NONE$"  && return 0;
+  echo "[$(date -Iseconds)] Test: ${*}" >&2
+}
 
 display_output() {
   echo "${display_output:-""}"
@@ -498,7 +503,7 @@ wait_zero_running_tasks() {
   local USED_SECONDS=0
   local TRIES=0
   local MAX_RETRIES=120
-  # echo "Wait until ${SERVICE_NAME} has zero running tasks."
+  echo "Wait until ${SERVICE_NAME} has zero running tasks."
   while [ "${NUM_RUNS}" -ne 0 ]; do
     if [ -n "${TIMEOUT_SECONDS}" ] && [ "${USED_SECONDS}" -ge "${TIMEOUT_SECONDS}" ]; then
       _handle_failure "Services ${SERVICE_NAME} does not stop after ${TIMEOUT_SECONDS} seconds."
@@ -674,9 +679,7 @@ _run_gantry_container() {
   MOUNT_OPTIONS=$(_add_file_to_mount_options "${MOUNT_OPTIONS}" "${GANTRY_REGISTRY_HOST_FILE}")
   MOUNT_OPTIONS=$(_add_file_to_mount_options "${MOUNT_OPTIONS}" "${GANTRY_REGISTRY_PASSWORD_FILE}")
   MOUNT_OPTIONS=$(_add_file_to_mount_options "${MOUNT_OPTIONS}" "${GANTRY_REGISTRY_USER_FILE}")
-  if [ "${GANTRY_LOG_LEVEL}" != "NONE" ]; then
-    echo "Starting SUT service ${SERVICE_NAME} with image ${SUT_REPO_TAG}."
-  fi
+  test_log "Starting SUT service ${SERVICE_NAME} with image ${SUT_REPO_TAG}."
   local RETURN_VALUE=0
   local CMD_OUTPUT=
   # SC2086 (info): Double quote to prevent globbing and word splitting.

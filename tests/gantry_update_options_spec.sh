@@ -187,17 +187,24 @@ Describe 'update-options'
     IMAGE_WITH_TAG=$(get_image_with_tag "${SUITE_NAME}")
     SERVICE_NAME="gantry-test-$(unique_id)"
     TASK_SECONDS=15
+    test_start() {
+      local TEST_NAME="${1}"
+      local IMAGE_WITH_TAG="${2}"
+      local SERVICE_NAME="${3}"
+      local TASK_SECONDS="${4}"
+      common_setup_job "${TEST_NAME}" "${IMAGE_WITH_TAG}" "${SERVICE_NAME}" "${TASK_SECONDS}"
+      # The tasks should exit after TASK_SECONDS seconds sleep. Then it will have 0 running tasks.
+      wait_zero_running_tasks "${SERVICE_NAME}"
+    }
     test_update_jobs_no_running_tasks() {
       local TEST_NAME="${1}"
       local SERVICE_NAME="${2}"
-      # The tasks should exit after TASK_SECONDS seconds sleep. Then it will have 0 running tasks.
-      wait_zero_running_tasks "${SERVICE_NAME}"
       reset_gantry_env "${SERVICE_NAME}"
       export GANTRY_UPDATE_JOBS="true"
       run_gantry "${TEST_NAME}"
     }
     # The task will finish in ${TASK_SECONDS} seconds
-    BeforeEach "common_setup_job ${TEST_NAME} ${IMAGE_WITH_TAG} ${SERVICE_NAME} ${TASK_SECONDS}"
+    BeforeEach "test_start ${TEST_NAME} ${IMAGE_WITH_TAG} ${SERVICE_NAME} ${TASK_SECONDS}"
     AfterEach "common_cleanup ${TEST_NAME} ${IMAGE_WITH_TAG} ${SERVICE_NAME}"
     It 'run_test'
       When run test_update_jobs_no_running_tasks "${TEST_NAME}" "${SERVICE_NAME}"

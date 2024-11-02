@@ -38,15 +38,14 @@ Describe "service-no-running-tasks"
       start_replicated_service "${SERVICE_NAME}" "${IMAGE_WITH_TAG}"
       start_replicated_service "${SERVICE_NAME_SUFFIX}" "${IMAGE_WITH_TAG}"
       build_and_push_test_image "${IMAGE_WITH_TAG}"
-    }
-    test_no_running_tasks_replicated() {
-      local TEST_NAME="${1}"
-      local SERVICE_NAME="${2}"
-      local SERVICE_NAME_SUFFIX="${SERVICE_NAME}-suffix"
       # Set running tasks to 0 for SERVICE_NAME.
       # But keep tasks running for SERVICE_NAME_SUFFIX.
       docker_service_update --replicas=0 "${SERVICE_NAME}"
       wait_zero_running_tasks "${SERVICE_NAME}"
+    }
+    test_no_running_tasks_replicated() {
+      local TEST_NAME="${1}"
+      local SERVICE_NAME="${2}"
       reset_gantry_env "${SERVICE_NAME}"
       run_gantry "${TEST_NAME}"
     }
