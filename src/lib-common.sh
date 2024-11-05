@@ -539,14 +539,14 @@ docker_run() {
   local MAX_RETRIES=5
   local SLEEP_SECONDS=10
   local MSG=
-  while ! MSG=$(docker run "${@}"); do
+  while ! MSG=$(docker run "${@}" 2>&1); do
     if [ ${RETRIES} -ge ${MAX_RETRIES} ]; then
-      echo "Failed to run docker. Reached the max retries ${MAX_RETRIES}." >&2
+      log ERROR "Failed to run docker. Reached the max retries ${MAX_RETRIES}. ${MSG}"
       return 1
     fi
     RETRIES=$((RETRIES + 1))
     sleep ${SLEEP_SECONDS}
-    echo "Retry docker run (${RETRIES})." >&2
+    log WARN "Retry docker run (${RETRIES}). ${MSG}"
   done
   echo "${MSG}"
 }

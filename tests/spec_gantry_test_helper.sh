@@ -39,6 +39,7 @@ export PERFORM_REASON_KNOWN_NEWER_IMAGE="because there is a known newer version 
 export PERFORM_REASON_DIGEST_IS_EMPTY="because DIGEST is empty"
 export PERFORM_REASON_HAS_NEWER_IMAGE="because there is a newer version"
 export IMAGE_NOT_EXIST="does not exist or it is not available"
+export CONFIG_IS_NOT_A_DIRECTORY="is not a directory that contains Docker configuration files"
 export ADDING_OPTIONS="Adding options"
 export NUM_SERVICES_SKIP_JOBS="Skip updating [0-9]+ service\(s\) due to they are job\(s\)"
 export NUM_SERVICES_INSPECT_FAILURE="Failed to inspect [0-9]+ service\(s\)"
@@ -69,6 +70,17 @@ test_log() {
 
 display_output() {
   echo "${display_output:-""}"
+}
+
+check_login_input() {
+  local REGISTRY="${1}"
+  local USERNAME="${2}"
+  local PASSWORD="${3}"
+  if [ -z "${REGISTRY}" ] || [ -z "${USERNAME}" ] || [ -z "${PASSWORD}" ]; then
+    echo "No REGISTRY, USERNAME or PASSWORD provided." >&2
+    return 1
+  fi
+  return 0
 }
 
 common_setup_new_image() {

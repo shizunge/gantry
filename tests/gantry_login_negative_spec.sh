@@ -15,17 +15,6 @@
 # along with this program.  If not, see <https://www.gnu.org/licenses/>.
 #
 
-check_login_input() {
-  local REGISTRY="${1}"
-  local USERNAME="${2}"
-  local PASSWORD="${3}"
-  if [ -z "${REGISTRY}" ] || [ -z "${USERNAME}" ] || [ -z "${PASSWORD}" ]; then
-    echo "No REGISTRY, USERNAME or PASSWORD provided." >&2
-    return 1
-  fi
-  return 0
-}
-
 Describe 'login_negative'
   SUITE_NAME="login_negative"
   BeforeAll "initialize_all_tests ${SUITE_NAME} ENFORCE_LOGIN"
@@ -52,6 +41,8 @@ Describe 'login_negative'
       The stderr should satisfy display_output
       The stderr should satisfy spec_expect_no_message "${NOT_START_WITH_A_SQUARE_BRACKET}"
       The stderr should satisfy spec_expect_no_message "${LOGGED_INTO_REGISTRY}"
+      The stderr should satisfy spec_expect_no_message "${FAILED_TO_LOGIN_TO_REGISTRY}"
+      The stderr should satisfy spec_expect_no_message "${CONFIG_IS_NOT_A_DIRECTORY}"
       The stderr should satisfy spec_expect_no_message "${ADDING_OPTIONS}.*--config ${CONFIG}.*${SERVICE_NAME}"
       The stderr should satisfy spec_expect_message    "${SKIP_UPDATING}.*${SERVICE_NAME}.*${SKIP_REASON_MANIFEST_FAILURE}"
       The stderr should satisfy spec_expect_no_message "${PERFORM_UPDATING}.*${SERVICE_NAME}"
@@ -88,14 +79,12 @@ Describe 'login_negative'
       local CONFIG="${3}"
       local REGISTRY="${4}"
       local USERNAME="${5}"
-      local PASSWORD="${6}-incorrect-password"
+      local PASSWORD="${6}"
       check_login_input "${REGISTRY}" "${USERNAME}" "${PASSWORD}" || return 1;
-      local USER_FILE PASS_FILE
-      USER_FILE=$(mktemp)
-      PASS_FILE=$(mktemp)
+      local INCORRECT_PASSWORD="${PASSWORD}-incorrect-password"
+      local USER_FILE=; USER_FILE=$(mktemp); echo "${USERNAME}" > "${USER_FILE}";
+      local PASS_FILE=; PASS_FILE=$(mktemp); echo "${INCORRECT_PASSWORD}" > "${PASS_FILE}";
       docker_service_update --label-add "${GANTRY_AUTH_CONFIG_LABEL}=${CONFIG}" "${SERVICE_NAME}"
-      echo "${USERNAME}" > "${USER_FILE}"
-      echo "${PASSWORD}" > "${PASS_FILE}"
       reset_gantry_env "${SERVICE_NAME}"
       export GANTRY_REGISTRY_CONFIG="${CONFIG}"
       export GANTRY_REGISTRY_HOST="${REGISTRY}"
@@ -118,7 +107,9 @@ Describe 'login_negative'
       The stdout should satisfy spec_expect_no_message ".+"
       The stderr should satisfy display_output
       The stderr should satisfy spec_expect_no_message "${NOT_START_WITH_A_SQUARE_BRACKET}"
-      The stderr should satisfy spec_expect_message    "${FAILED_TO_LOGIN_TO_REGISTRY}.*${TEST_REGISTRY} for config ${CONFIG}"
+      The stderr should satisfy spec_expect_no_message "${LOGGED_INTO_REGISTRY}"
+      The stderr should satisfy spec_expect_message    "${FAILED_TO_LOGIN_TO_REGISTRY}.*${TEST_REGISTRY}.*${CONFIG}"
+      The stderr should satisfy spec_expect_no_message "${CONFIG_IS_NOT_A_DIRECTORY}"
       The stderr should satisfy spec_expect_message    "${SKIP_UPDATING_ALL}.*${SKIP_REASON_PREVIOUS_ERRORS}"
       The stderr should satisfy spec_expect_no_message "${SKIP_UPDATING}.*${SERVICE_NAME}"
       The stderr should satisfy spec_expect_no_message "${PERFORM_UPDATING}.*${SERVICE_NAME}"
@@ -160,12 +151,9 @@ Describe 'login_negative'
       # Set the config folder to read only. (It won't work for container_test)
       mkdir -p "${CONFIG}"
       chmod 444 "${CONFIG}"
-      local USER_FILE PASS_FILE
-      USER_FILE=$(mktemp)
-      PASS_FILE=$(mktemp)
+      local USER_FILE=; USER_FILE=$(mktemp); echo "${USERNAME}" > "${USER_FILE}";
+      local PASS_FILE=; PASS_FILE=$(mktemp); echo "${PASSWORD}" > "${PASS_FILE}";
       docker_service_update --label-add "${GANTRY_AUTH_CONFIG_LABEL}=${CONFIG}" "${SERVICE_NAME}"
-      echo "${USERNAME}" > "${USER_FILE}"
-      echo "${PASSWORD}" > "${PASS_FILE}"
       reset_gantry_env "${SERVICE_NAME}"
       export GANTRY_REGISTRY_CONFIG="${CONFIG}"
       export GANTRY_REGISTRY_HOST="${REGISTRY}"
@@ -188,7 +176,9 @@ Describe 'login_negative'
       The stdout should satisfy spec_expect_no_message ".+"
       The stderr should satisfy display_output
       The stderr should satisfy spec_expect_no_message "${NOT_START_WITH_A_SQUARE_BRACKET}"
-      The stderr should satisfy spec_expect_message    "${FAILED_TO_LOGIN_TO_REGISTRY}.*${TEST_REGISTRY} for config ${CONFIG}"
+      The stderr should satisfy spec_expect_no_message "${LOGGED_INTO_REGISTRY}"
+      The stderr should satisfy spec_expect_message    "${FAILED_TO_LOGIN_TO_REGISTRY}.*${TEST_REGISTRY}.*${CONFIG}"
+      The stderr should satisfy spec_expect_no_message "${CONFIG_IS_NOT_A_DIRECTORY}"
       The stderr should satisfy spec_expect_message    "${SKIP_UPDATING_ALL}.*${SKIP_REASON_PREVIOUS_ERRORS}"
       The stderr should satisfy spec_expect_no_message "${SKIP_UPDATING}.*${SERVICE_NAME}"
       The stderr should satisfy spec_expect_no_message "${PERFORM_UPDATING}.*${SERVICE_NAME}"
@@ -226,15 +216,12 @@ Describe 'login_negative'
       local REGISTRY="${4}"
       local USERNAME="${5}"
       local PASSWORD="${6}"
-      local INCORRECT_CONFIG="${CONFIG}-incorrect"
       check_login_input "${REGISTRY}" "${USERNAME}" "${PASSWORD}" || return 1;
-      local USER_FILE PASS_FILE
-      USER_FILE=$(mktemp)
-      PASS_FILE=$(mktemp)
+      local INCORRECT_CONFIG="${CONFIG}-incorrect"
+      local USER_FILE=; USER_FILE=$(mktemp); echo "${USERNAME}" > "${USER_FILE}";
+      local PASS_FILE=; PASS_FILE=$(mktemp); echo "${PASSWORD}" > "${PASS_FILE}";
       # The config name on the service is different from the config name used in GANTRY_REGISTRY_CONFIG
       docker_service_update --label-add "${GANTRY_AUTH_CONFIG_LABEL}=${INCORRECT_CONFIG}" "${SERVICE_NAME}"
-      echo "${USERNAME}" > "${USER_FILE}"
-      echo "${PASSWORD}" > "${PASS_FILE}"
       reset_gantry_env "${SERVICE_NAME}"
       export GANTRY_REGISTRY_CONFIG="${CONFIG}"
       export GANTRY_REGISTRY_HOST="${REGISTRY}"
@@ -258,7 +245,9 @@ Describe 'login_negative'
       The stdout should satisfy spec_expect_no_message ".+"
       The stderr should satisfy display_output
       The stderr should satisfy spec_expect_no_message "${NOT_START_WITH_A_SQUARE_BRACKET}"
-      The stderr should satisfy spec_expect_message    "${LOGGED_INTO_REGISTRY}.*${TEST_REGISTRY} for config ${CONFIG}"
+      The stderr should satisfy spec_expect_message    "${LOGGED_INTO_REGISTRY}.*${TEST_REGISTRY}.*${CONFIG}"
+      The stderr should satisfy spec_expect_no_message "${FAILED_TO_LOGIN_TO_REGISTRY}"
+      The stderr should satisfy spec_expect_message    "${CONFIG_IS_NOT_A_DIRECTORY}"
       The stderr should satisfy spec_expect_no_message "${ADDING_OPTIONS}.*\"--config ${CONFIG}\".*${SERVICE_NAME}"
       The stderr should satisfy spec_expect_message    "${ADDING_OPTIONS}.*\"--config ${CONFIG}-incorrect\".*${SERVICE_NAME}"
       The stderr should satisfy spec_expect_message    "${SKIP_UPDATING}.*${SERVICE_NAME}.*${SKIP_REASON_MANIFEST_FAILURE}"
@@ -300,11 +289,11 @@ Describe 'login_negative'
       check_login_input "${REGISTRY}" "${USERNAME}" "${PASSWORD}" || return 1;
       local CONFIGS_FILE=
       CONFIGS_FILE=$(mktemp)
-      docker_service_update --label-add "${GANTRY_AUTH_CONFIG_LABEL}=${CONFIG}" "${SERVICE_NAME}"
       # Add an extra item to the line.
       echo "${CONFIG} ${REGISTRY} ${USERNAME} ${PASSWORD} Extra" >> "${CONFIGS_FILE}"
       # Missing an item from the line.
       echo "The-Only-Item-In-The-Line" >> "${CONFIGS_FILE}"
+      docker_service_update --label-add "${GANTRY_AUTH_CONFIG_LABEL}=${CONFIG}" "${SERVICE_NAME}"
       reset_gantry_env "${SERVICE_NAME}"
       export GANTRY_REGISTRY_CONFIGS_FILE="${CONFIGS_FILE}"
       local RETURN_VALUE=
@@ -325,7 +314,9 @@ Describe 'login_negative'
       The stderr should satisfy spec_expect_no_message "${NOT_START_WITH_A_SQUARE_BRACKET}"
       The stderr should satisfy spec_expect_message    "format error.*Found extra item\(s\)"
       The stderr should satisfy spec_expect_message    "format error.*Missing item\(s\)"
-      The stderr should satisfy spec_expect_no_message "${LOGGED_INTO_REGISTRY}.*${TEST_REGISTRY} for config ${CONFIG}"
+      The stderr should satisfy spec_expect_no_message "${LOGGED_INTO_REGISTRY}.*${TEST_REGISTRY}.*${CONFIG}"
+      The stderr should satisfy spec_expect_no_message "${FAILED_TO_LOGIN_TO_REGISTRY}"
+      The stderr should satisfy spec_expect_no_message "${CONFIG_IS_NOT_A_DIRECTORY}"
       The stderr should satisfy spec_expect_message    "${SKIP_UPDATING_ALL}.*${SKIP_REASON_PREVIOUS_ERRORS}"
       The stderr should satisfy spec_expect_no_message "${SKIP_UPDATING}.*${SERVICE_NAME}"
       The stderr should satisfy spec_expect_no_message "${PERFORM_UPDATING}.*${SERVICE_NAME}"
@@ -387,7 +378,9 @@ Describe 'login_negative'
       The stdout should satisfy spec_expect_no_message ".+"
       The stderr should satisfy display_output
       The stderr should satisfy spec_expect_no_message "${NOT_START_WITH_A_SQUARE_BRACKET}"
-      The stderr should satisfy spec_expect_no_message "${LOGGED_INTO_REGISTRY}.*${TEST_REGISTRY} for config ${CONFIG}"
+      The stderr should satisfy spec_expect_no_message "${LOGGED_INTO_REGISTRY}.*${TEST_REGISTRY}.*${CONFIG}"
+      The stderr should satisfy spec_expect_no_message "${FAILED_TO_LOGIN_TO_REGISTRY}"
+      The stderr should satisfy spec_expect_no_message "${CONFIG_IS_NOT_A_DIRECTORY}"
       The stderr should satisfy spec_expect_message    "${SKIP_UPDATING_ALL}.*${SKIP_REASON_PREVIOUS_ERRORS}"
       The stderr should satisfy spec_expect_no_message "${SKIP_UPDATING}.*${SERVICE_NAME}"
       The stderr should satisfy spec_expect_no_message "${PERFORM_UPDATING}.*${SERVICE_NAME}"

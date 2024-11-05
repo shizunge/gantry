@@ -74,7 +74,6 @@ _read_env_or_label() {
   echo "${VALUE}"
 }
 
-
 _login_registry() {
   local USER="${1}"
   local PASSWORD="${2}"
@@ -85,24 +84,30 @@ _login_registry() {
   fi
   [ -z "${USER}" ] && log ERROR "USER is empty." && return 1
   [ -z "${PASSWORD}" ] && log ERROR "PASSWORD is empty." && return 1
-  local DOCKER_CONFIG=
-  local CONFIG_MESSAGE=" ${HOST}"
+  local REGISTRY_MESSAGE="registry ${HOST}"
   if [ -z "${HOST}" ]; then
    log WARN "HOST is empty. Will login to the default registry."
-   CONFIG_MESSAGE=""
+   REGISTRY_MESSAGE="default registry"
   fi
+  local DOCKER_CONFIG=
+  local CONFIG_TO_REPORT=
+  CONFIG_TO_REPORT=$(readlink -f ~/.docker)
+  local CONFIG_MESSAGE="with default configuration"
   if [ -n "${CONFIG}" ]; then
     DOCKER_CONFIG="--config ${CONFIG}"
-    CONFIG_MESSAGE="${CONFIG_MESSAGE} for config ${CONFIG}"
+    CONFIG_TO_REPORT="${CONFIG}"
+    CONFIG_MESSAGE="with configuration ${CONFIG}"
   fi
+  local REGISTRY_CONFIG_MESSAGE="${REGISTRY_MESSAGE} ${CONFIG_MESSAGE}"
   local LOGIN_MSG=
   # SC2086: Double quote to prevent globbing and word splitting.
   # shellcheck disable=SC2086
   if ! LOGIN_MSG=$(echo "${PASSWORD}" | docker ${DOCKER_CONFIG} login --username="${USER}" --password-stdin "${HOST}" 2>&1); then
-    log ERROR "Failed to login to registry${CONFIG_MESSAGE}. ${LOGIN_MSG}"
+    log ERROR "Failed to login to ${REGISTRY_CONFIG_MESSAGE}. ${LOGIN_MSG}"
     return 1
   fi
-  log INFO "Logged into registry${CONFIG_MESSAGE}. ${LOGIN_MSG}"
+  log INFO "Logged into ${REGISTRY_CONFIG_MESSAGE}. ${LOGIN_MSG}"
+  _static_variable_add_unique_to_list STATIC_VAR_SERVICES_DOCKER_CONFIGS "${CONFIG_TO_REPORT}"
   return 0
 }
 
@@ -407,7 +412,7 @@ _remove_images() {
   docker_service_remove "${SERVICE_NAME}"
 }
 
-_report_services_list() {
+_report_list() {
   local PRE="${1}"; shift
   local POST="${1}"; shift
   local LIST="${*}"
@@ -415,7 +420,7 @@ _report_services_list() {
   NUM=$(_get_number_of_elements "${LIST}")
   local TITLE=
   [ -n "${PRE}" ] && TITLE="${PRE} "
-  TITLE="${TITLE}${NUM} service(s)"
+  TITLE="${TITLE}${NUM}"
   [ -n "${POST}" ] && TITLE="${TITLE} ${POST}"
   echo "${TITLE}:"
   local ITEM=
@@ -424,7 +429,7 @@ _report_services_list() {
   done
 }
 
-_report_services_from_static_variable() {
+_report_from_static_variable() {
   local VARIABLE_NAME="${1}"
   local PRE="${2}"
   local POST="${3}"
@@ -435,7 +440,20 @@ _report_services_from_static_variable() {
     echo "${EMPTY}"
     return 0
   fi
-  _report_services_list "${PRE}" "${POST}" "${LIST}"
+  _report_list "${PRE}" "${POST}" "${LIST}"
+}
+
+_report_services_from_static_variable() {
+  local VARIABLE_NAME="${1}"
+  local PRE="${2}"
+  local POST="${3}"
+  local EMPTY="${4}"
+  if [ -z "${POST}" ]; then
+    POST="service(s)"
+  else
+    POST="service(s) ${POST}"
+  fi
+  _report_from_static_variable "${VARIABLE_NAME}" "${PRE}" "${POST}" "${EMPTY}"
 }
 
 _get_number_of_elements() {
@@ -631,6 +649,11 @@ _get_config_from_service() {
   local AUTH_CONFIG=
   AUTH_CONFIG=$(_get_label_from_service "${SERVICE_NAME}" "${AUTH_CONFIG_LABEL}")
   [ -z "${AUTH_CONFIG}" ] && return 0
+  if [ ! -d "${AUTH_CONFIG}" ]; then
+    log WARN "${AUTH_CONFIG} is not a directory that contains Docker configuration files."
+    local MSG="configuration(s) set via GANTRY_REGISTRY_CONFIG* or GANTRY_REGISTRY_CONFIGS_FILE"
+    _report_from_static_variable STATIC_VAR_SERVICES_DOCKER_CONFIGS "There are" "${MSG}" "There are no ${MSG}." | log_lines WARN
+  fi
   echo "--config ${AUTH_CONFIG}"
 }
 
