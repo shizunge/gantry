@@ -65,6 +65,7 @@ export SLEEP_SECONDS_BEFORE_NEXT_UPDATE="Sleep [0-9]+ seconds before next update
 
 test_log() {
   echo "${GANTRY_LOG_LEVEL}" | grep -q -i "^NONE$"  && return 0;
+  [ -n "${GANTRY_IMAGES_TO_REMOVE}" ] && echo "${*}" >&2 && return 0;
   echo "[$(date -Iseconds)] Test: ${*}" >&2
 }
 

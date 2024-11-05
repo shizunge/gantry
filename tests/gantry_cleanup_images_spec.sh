@@ -215,12 +215,14 @@ Describe 'cleanup-images'
       When run test_IMAGES_TO_REMOVE_none_empty "${TEST_NAME}" "${SERVICE_NAME}" "${IMAGE_WITH_TAG}"
       The status should be success
       The stdout should satisfy display_output
-      The stdout should satisfy spec_expect_message    "Removed exited container.*${SERVICE_NAME0}.*${IMAGE_WITH_TAG0}"
-      The stdout should satisfy spec_expect_message    "${REMOVED_IMAGE}.*${IMAGE_WITH_TAG0}"
-      The stdout should satisfy spec_expect_message    "${FAILED_TO_REMOVE_IMAGE}.*${IMAGE_WITH_TAG1}"
-      The stdout should satisfy spec_expect_message    "There is no image.*${IMAGE_WITH_TAG2}"
+      The stdout should satisfy spec_expect_no_message ".+"
       The stderr should satisfy display_output
-      The stderr should satisfy spec_expect_no_message "${NOT_START_WITH_A_SQUARE_BRACKET}"
+      # It should not use the log function from the lib-common, the messages do not start with "[".
+      The stderr should satisfy spec_expect_no_message "^((?:\x1b\[[0-9;]*[mG])?\[)"
+      The stderr should satisfy spec_expect_message    "Removed exited container.*${SERVICE_NAME0}.*${IMAGE_WITH_TAG0}"
+      The stderr should satisfy spec_expect_message    "${REMOVED_IMAGE}.*${IMAGE_WITH_TAG0}"
+      The stderr should satisfy spec_expect_message    "${FAILED_TO_REMOVE_IMAGE}.*${IMAGE_WITH_TAG1}"
+      The stderr should satisfy spec_expect_message    "There is no image.*${IMAGE_WITH_TAG2}"
     End
   End
 End # Describe 'Single service'
