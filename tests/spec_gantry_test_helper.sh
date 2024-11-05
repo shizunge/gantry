@@ -20,7 +20,10 @@ set -a
 # Constant strings for checks.
 # NOT_START_WITH_A_SQUARE_BRACKET ignores color codes. Use test_log not to trigger this check.
 export NOT_START_WITH_A_SQUARE_BRACKET="^(?!(?:\x1b\[[0-9;]*[mG])?\[)"
+export GANTRY_AUTH_CONFIG_LABEL="gantry.auth.config"
 export MUST_BE_A_NUMBER="must be a number"
+export LOGGED_INTO_REGISTRY="Logged into registry"
+export FAILED_TO_LOGIN_TO_REGISTRY="Failed to login to registry"
 export SKIP_UPDATING_ALL="Skip updating all services"
 export SKIP_REASON_NOT_SWARM_MANAGER="is not a swarm manager"
 export SKIP_REASON_PREVIOUS_ERRORS="due to previous error\(s\)"
