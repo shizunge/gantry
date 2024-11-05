@@ -17,8 +17,8 @@
 
 Describe 'login'
   SUITE_NAME="login"
-  BeforeAll "initialize_all_tests ${SUITE_NAME}"
-  AfterAll "finish_all_tests ${SUITE_NAME}"
+  BeforeAll "initialize_all_tests ${SUITE_NAME} ENFORCE_LOGIN"
+  AfterAll "finish_all_tests ${SUITE_NAME} ENFORCE_LOGIN"
   # Here are just simple login tests.
   Describe "test_login_config" "container_test:true"
     TEST_NAME="test_login_config"
