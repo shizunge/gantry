@@ -56,7 +56,9 @@ Describe 'update-options'
       When run test_update_jobs_skipping "${TEST_NAME}" "${SERVICE_NAME}"
       The status should be success
       The stdout should satisfy display_output
+      The stdout should satisfy spec_expect_no_message ".+"
       The stderr should satisfy display_output
+      The stderr should satisfy spec_expect_no_message "${NOT_START_WITH_A_SQUARE_BRACKET}"
       # Check whether it is a job before checking whether there is a new image.
       The stderr should satisfy spec_expect_message    "${SKIP_UPDATING}.*${SERVICE_NAME_SUFFIX}.*${SKIP_REASON_IS_JOB}"
       The stderr should satisfy spec_expect_no_message "${PERFORM_UPDATING}.*${SERVICE_NAME_SUFFIX}"
@@ -101,7 +103,9 @@ Describe 'update-options'
       When run test_update_jobs_UPDATE_JOBS_true "${TEST_NAME}" "${SERVICE_NAME}"
       The status should be success
       The stdout should satisfy display_output
+      The stdout should satisfy spec_expect_no_message ".+"
       The stderr should satisfy display_output
+      The stderr should satisfy spec_expect_no_message "${NOT_START_WITH_A_SQUARE_BRACKET}"
       The stderr should satisfy spec_expect_no_message "${SKIP_UPDATING}.*${SERVICE_NAME}"
       The stderr should satisfy spec_expect_message    "${PERFORM_UPDATING}.*${SERVICE_NAME}.*${PERFORM_REASON_HAS_NEWER_IMAGE}"
       The stderr should satisfy spec_expect_no_message "${NUM_SERVICES_SKIP_JOBS}"
@@ -137,12 +141,12 @@ Describe 'update-options'
       # label should override the global environment variable.
       export GANTRY_UPDATE_JOBS="false"
       local LABEL_AND_VALUE="gantry.update.jobs=true"
-      docker service update --quiet --detach=true --label-add "${LABEL_AND_VALUE}" "${SERVICE_NAME}"
+      docker_service_update --detach=true --label-add "${LABEL_AND_VALUE}" "${SERVICE_NAME}"
       # label should override the global environment variable.
       export GANTRY_UPDATE_OPTIONS="--incorrect-option"
       # The job may not reach the desired "Complete" state and blocking update CLI. So add "--detach=true"
       LABEL_AND_VALUE="gantry.update.options=--detach=true"
-      docker service update --quiet --detach=true --label-add "${LABEL_AND_VALUE}" "${SERVICE_NAME}"
+      docker_service_update --detach=true --label-add "${LABEL_AND_VALUE}" "${SERVICE_NAME}"
       run_gantry "${TEST_NAME}"
     }
     BeforeEach "common_setup_job ${TEST_NAME} ${IMAGE_WITH_TAG} ${SERVICE_NAME}"
@@ -151,7 +155,9 @@ Describe 'update-options'
       When run test_update_jobs_label_UPDATE_JOBS_true "${TEST_NAME}" "${SERVICE_NAME}"
       The status should be success
       The stdout should satisfy display_output
+      The stdout should satisfy spec_expect_no_message ".+"
       The stderr should satisfy display_output
+      The stderr should satisfy spec_expect_no_message "${NOT_START_WITH_A_SQUARE_BRACKET}"
       The stderr should satisfy spec_expect_no_message "${SKIP_UPDATING}.*${SERVICE_NAME}"
       The stderr should satisfy spec_expect_message    "${PERFORM_UPDATING}.*${SERVICE_NAME}.*${PERFORM_REASON_HAS_NEWER_IMAGE}"
       The stderr should satisfy spec_expect_no_message "${NUM_SERVICES_SKIP_JOBS}"
@@ -181,23 +187,32 @@ Describe 'update-options'
     IMAGE_WITH_TAG=$(get_image_with_tag "${SUITE_NAME}")
     SERVICE_NAME="gantry-test-$(unique_id)"
     TASK_SECONDS=15
+    test_start() {
+      local TEST_NAME="${1}"
+      local IMAGE_WITH_TAG="${2}"
+      local SERVICE_NAME="${3}"
+      local TASK_SECONDS="${4}"
+      common_setup_job "${TEST_NAME}" "${IMAGE_WITH_TAG}" "${SERVICE_NAME}" "${TASK_SECONDS}"
+      # The tasks should exit after TASK_SECONDS seconds sleep. Then it will have 0 running tasks.
+      wait_zero_running_tasks "${SERVICE_NAME}"
+    }
     test_update_jobs_no_running_tasks() {
       local TEST_NAME="${1}"
       local SERVICE_NAME="${2}"
-      # The tasks should exit after TASK_SECONDS seconds sleep. Then it will have 0 running tasks.
-      wait_zero_running_tasks "${SERVICE_NAME}"
       reset_gantry_env "${SERVICE_NAME}"
       export GANTRY_UPDATE_JOBS="true"
       run_gantry "${TEST_NAME}"
     }
     # The task will finish in ${TASK_SECONDS} seconds
-    BeforeEach "common_setup_job ${TEST_NAME} ${IMAGE_WITH_TAG} ${SERVICE_NAME} ${TASK_SECONDS}"
+    BeforeEach "test_start ${TEST_NAME} ${IMAGE_WITH_TAG} ${SERVICE_NAME} ${TASK_SECONDS}"
     AfterEach "common_cleanup ${TEST_NAME} ${IMAGE_WITH_TAG} ${SERVICE_NAME}"
     It 'run_test'
       When run test_update_jobs_no_running_tasks "${TEST_NAME}" "${SERVICE_NAME}"
       The status should be success
       The stdout should satisfy display_output
+      The stdout should satisfy spec_expect_no_message ".+"
       The stderr should satisfy display_output
+      The stderr should satisfy spec_expect_no_message "${NOT_START_WITH_A_SQUARE_BRACKET}"
       The stderr should satisfy spec_expect_message    "${ADDING_OPTIONS}.*--detach=true.*${SERVICE_NAME}"
       # Cannot add "--replicas" to replicated job
       The stderr should satisfy spec_expect_no_message "${ADDING_OPTIONS}.*--replicas=0"
@@ -258,6 +273,7 @@ Describe 'update-options'
       The stdout should satisfy spec_expect_no_message "Before updating: LABEL_VALUE=.*${SERVICE_NAME}"
       The stdout should satisfy spec_expect_message    "After updating: LABEL_VALUE=.*${SERVICE_NAME}"
       The stderr should satisfy display_output
+      The stderr should satisfy spec_expect_no_message "${NOT_START_WITH_A_SQUARE_BRACKET}"
       The stderr should satisfy spec_expect_no_message "${SKIP_UPDATING}.*${SERVICE_NAME}"
       The stderr should satisfy spec_expect_message    "${PERFORM_UPDATING}.*${SERVICE_NAME}.*${PERFORM_REASON_HAS_NEWER_IMAGE}"
       The stderr should satisfy spec_expect_no_message "${NUM_SERVICES_SKIP_JOBS}"
@@ -301,7 +317,7 @@ Describe 'update-options'
       # label should override the global environment variable.
       export GANTRY_UPDATE_OPTIONS="--incorrect-option"
       local LABEL_AND_VALUE="gantry.update.options=--label-add=${LABEL}=${SERVICE_NAME}"
-      docker service update --quiet --label-add "${LABEL_AND_VALUE}" "${SERVICE_NAME}"
+      docker_service_update --label-add "${LABEL_AND_VALUE}" "${SERVICE_NAME}"
       local RETURN_VALUE=
       run_gantry "${TEST_NAME}"
       RETURN_VALUE="${?}"
@@ -319,6 +335,7 @@ Describe 'update-options'
       The stdout should satisfy spec_expect_no_message "Before updating: LABEL_VALUE=.*${SERVICE_NAME}"
       The stdout should satisfy spec_expect_message    "After updating: LABEL_VALUE=.*${SERVICE_NAME}"
       The stderr should satisfy display_output
+      The stderr should satisfy spec_expect_no_message "${NOT_START_WITH_A_SQUARE_BRACKET}"
       The stderr should satisfy spec_expect_no_message "${SKIP_UPDATING}.*${SERVICE_NAME}"
       The stderr should satisfy spec_expect_message    "${PERFORM_UPDATING}.*${SERVICE_NAME}.*${PERFORM_REASON_HAS_NEWER_IMAGE}"
       The stderr should satisfy spec_expect_no_message "${NUM_SERVICES_SKIP_JOBS}"
@@ -359,7 +376,9 @@ Describe 'update-options'
       When run test_update_UPDATE_TIMEOUT_SECONDS_not_a_number "${TEST_NAME}" "${SERVICE_NAME}"
       The status should be failure
       The stdout should satisfy display_output
+      The stdout should satisfy spec_expect_no_message ".+"
       The stderr should satisfy display_output
+      The stderr should satisfy spec_expect_no_message "${NOT_START_WITH_A_SQUARE_BRACKET}"
       The stderr should satisfy spec_expect_message    "UPDATE_TIMEOUT_SECONDS ${MUST_BE_A_NUMBER}.*"
       The stderr should satisfy spec_expect_no_message "${SKIP_UPDATING}.*${SERVICE_NAME}"
       The stderr should satisfy spec_expect_message    "${PERFORM_UPDATING}.*${SERVICE_NAME}.*${PERFORM_REASON_HAS_NEWER_IMAGE}"

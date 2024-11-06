@@ -36,7 +36,9 @@ Describe 'filters'
       When run test_SERVICES_FILTERS_bad "${TEST_NAME}" "${SERVICE_NAME}"
       The status should be failure
       The stdout should satisfy display_output
+      The stdout should satisfy spec_expect_no_message ".+"
       The stderr should satisfy display_output
+      The stderr should satisfy spec_expect_no_message "${NOT_START_WITH_A_SQUARE_BRACKET}"
       The stderr should satisfy spec_expect_message    "Failed to obtain services list.*"
       The stderr should satisfy spec_expect_message    "${SKIP_UPDATING_ALL}.*${SKIP_REASON_PREVIOUS_ERRORS}"
       The stderr should satisfy spec_expect_no_message "${SKIP_UPDATING}.*${SERVICE_NAME}"
@@ -80,7 +82,7 @@ Describe 'filters'
       local LABEL="gantry.test"
       for NUM in $(seq "${NUM_SERVICES_EXCLUDED_FILTER_START}" "${MAX_SERVICES_NUM}"); do
         local SERVICE_NAME_NUM="${SERVICE_NAME}-${NUM}"
-        docker service update --quiet --label-add "${LABEL}=true" "${SERVICE_NAME_NUM}"
+        docker_service_update --label-add "${LABEL}=true" "${SERVICE_NAME_NUM}"
       done
       export GANTRY_SERVICES_EXCLUDED_FILTERS="label=${LABEL}=true"
       run_gantry "${TEST_NAME}"
@@ -91,7 +93,9 @@ Describe 'filters'
       When run test_SERVICES_EXCLUDED_multiple_services "${TEST_NAME}" "${SERVICE_NAME}" "${MAX_SERVICES_NUM}"
       The status should be success
       The stdout should satisfy display_output
+      The stdout should satisfy spec_expect_no_message ".+"
       The stderr should satisfy display_output
+      The stderr should satisfy spec_expect_no_message "${NOT_START_WITH_A_SQUARE_BRACKET}"
       The stderr should satisfy spec_expect_no_message "${SKIP_UPDATING_ALL}"
       The stderr should satisfy spec_expect_multiple_messages "${EXCLUDE_SERVICE}.*${SERVICE_NAME}"
       The stderr should satisfy spec_expect_no_message "${SKIP_UPDATING}.*${SERVICE_NAME}"
@@ -129,7 +133,7 @@ Describe 'filters'
       local LABEL="gantry.services.excluded"
       for NUM in $(seq 0 "${MAX_SERVICES_NUM}"); do
         local SERVICE_NAME_NUM="${SERVICE_NAME}-${NUM}"
-        docker service update --quiet --label-add "${LABEL}=true" "${SERVICE_NAME_NUM}"
+        docker_service_update --label-add "${LABEL}=true" "${SERVICE_NAME_NUM}"
       done
       # Do not set GANTRY_SERVICES_EXCLUDED_FILTERS, check the default one is working.
       run_gantry "${TEST_NAME}"
@@ -140,7 +144,9 @@ Describe 'filters'
       When run test_SERVICES_EXCLUDED_FILTERS_default "${TEST_NAME}" "${SERVICE_NAME}" "${MAX_SERVICES_NUM}"
       The status should be success
       The stdout should satisfy display_output
+      The stdout should satisfy spec_expect_no_message ".+"
       The stderr should satisfy display_output
+      The stderr should satisfy spec_expect_no_message "${NOT_START_WITH_A_SQUARE_BRACKET}"
       The stderr should satisfy spec_expect_no_message "${SKIP_UPDATING_ALL}"
       The stderr should satisfy spec_expect_no_message "${SKIP_UPDATING}.*${SERVICE_NAME}"
       The stderr should satisfy spec_expect_no_message "${PERFORM_UPDATING}.*${SERVICE_NAME}"
@@ -181,7 +187,9 @@ Describe 'filters'
       When run test_SERVICES_EXCLUDED_FILTERS_bad "${TEST_NAME}" "${SERVICE_NAME}"
       The status should be failure
       The stdout should satisfy display_output
+      The stdout should satisfy spec_expect_no_message ".+"
       The stderr should satisfy display_output
+      The stderr should satisfy spec_expect_no_message "${NOT_START_WITH_A_SQUARE_BRACKET}"
       The stderr should satisfy spec_expect_message    "Failed to obtain services list.*"
       The stderr should satisfy spec_expect_message    "${SKIP_UPDATING_ALL}.*${SKIP_REASON_PREVIOUS_ERRORS}"
       The stderr should satisfy spec_expect_no_message "${SKIP_UPDATING}.*${SERVICE_NAME}"

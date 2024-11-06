@@ -37,11 +37,13 @@ Describe 'manifest-command'
       When run test_MANIFEST_CMD_none "${TEST_NAME}" "${SERVICE_NAME}"
       The status should be success
       The stdout should satisfy display_output
+      The stdout should satisfy spec_expect_no_message ".+"
       The stderr should satisfy display_output
+      The stderr should satisfy spec_expect_no_message "${NOT_START_WITH_A_SQUARE_BRACKET}"
       # Do not set GANTRY_SERVICES_SELF, it should be set autoamtically
       # If we are not testing gantry inside a container, it should failed to find the service name.
       # To test gantry container, we need to use run_gantry_container.
-      The stderr should satisfy spec_expect_no_message ".*GRANTRY_SERVICES_SELF.*"
+      The stderr should satisfy spec_expect_no_message ".*GANTRY_SERVICES_SELF.*"
       # Gantry is still trying to update the service.
       # But it will see no new images.
       The stderr should satisfy spec_expect_no_message "${SKIP_UPDATING}.*${SERVICE_NAME}"
@@ -87,7 +89,9 @@ Describe 'manifest-command'
       When run test_MANIFEST_CMD_none_SERVICES_SELF "${TEST_NAME}" "${SERVICE_NAME}"
       The status should be success
       The stdout should satisfy display_output
+      The stdout should satisfy spec_expect_no_message ".+"
       The stderr should satisfy display_output
+      The stderr should satisfy spec_expect_no_message "${NOT_START_WITH_A_SQUARE_BRACKET}"
       The stderr should satisfy spec_expect_no_message ".*GANTRY_SERVICES_SELF.*"
       The stderr should satisfy spec_expect_no_message "${ADDING_OPTIONS}"
       The stderr should satisfy spec_expect_message    "${SKIP_UPDATING}.*${SERVICE_NAME}.*${SKIP_REASON_CURRENT_IS_LATEST}"
@@ -130,7 +134,9 @@ Describe 'manifest-command'
       When run test_MANIFEST_CMD_manifest "${TEST_NAME}" "${SERVICE_NAME}"
       The status should be success
       The stdout should satisfy display_output
+      The stdout should satisfy spec_expect_no_message ".+"
       The stderr should satisfy display_output
+      The stderr should satisfy spec_expect_no_message "${NOT_START_WITH_A_SQUARE_BRACKET}"
       The stderr should satisfy spec_expect_message    "${ADDING_OPTIONS}.*--insecure.*"
       The stderr should satisfy spec_expect_no_message "${SKIP_UPDATING}.*${SERVICE_NAME}"
       The stderr should satisfy spec_expect_message    "${PERFORM_UPDATING}.*${SERVICE_NAME}.*${PERFORM_REASON_HAS_NEWER_IMAGE}"
@@ -166,9 +172,9 @@ Describe 'manifest-command'
       # export GANTRY_MANIFEST_CMD="manifest"
       # export GANTRY_MANIFEST_OPTIONS="--insecure"
       local LABEL_AND_VALUE="gantry.manifest.cmd=manifest"
-      docker service update --quiet --label-add "${LABEL_AND_VALUE}" "${SERVICE_NAME}"
+      docker_service_update --label-add "${LABEL_AND_VALUE}" "${SERVICE_NAME}"
       LABEL_AND_VALUE="gantry.manifest.options=--insecure"
-      docker service update --quiet --label-add "${LABEL_AND_VALUE}" "${SERVICE_NAME}"
+      docker_service_update --label-add "${LABEL_AND_VALUE}" "${SERVICE_NAME}"
       run_gantry "${TEST_NAME}"
     }
     BeforeEach "common_setup_new_image ${TEST_NAME} ${IMAGE_WITH_TAG} ${SERVICE_NAME}"
@@ -177,7 +183,9 @@ Describe 'manifest-command'
       When run test_MANIFEST_CMD_label "${TEST_NAME}" "${SERVICE_NAME}"
       The status should be success
       The stdout should satisfy display_output
+      The stdout should satisfy spec_expect_no_message ".+"
       The stderr should satisfy display_output
+      The stderr should satisfy spec_expect_no_message "${NOT_START_WITH_A_SQUARE_BRACKET}"
       The stderr should satisfy spec_expect_message    "${ADDING_OPTIONS}.*--insecure.*"
       The stderr should satisfy spec_expect_no_message "${SKIP_UPDATING}.*${SERVICE_NAME}"
       The stderr should satisfy spec_expect_message    "${PERFORM_UPDATING}.*${SERVICE_NAME}.*${PERFORM_REASON_HAS_NEWER_IMAGE}"
@@ -219,7 +227,9 @@ Describe 'manifest-command'
       When run test_MANIFEST_CMD_unsupported_cmd "${TEST_NAME}" "${SERVICE_NAME}"
       The status should be failure
       The stdout should satisfy display_output
+      The stdout should satisfy spec_expect_no_message ".+"
       The stderr should satisfy display_output
+      The stderr should satisfy spec_expect_no_message "${NOT_START_WITH_A_SQUARE_BRACKET}"
       # No options are added to the unknwon command.
       The stderr should satisfy spec_expect_no_message "${ADDING_OPTIONS}"
       The stderr should satisfy spec_expect_message    "Unknown MANIFEST_CMD.*unsupported_cmd"
@@ -272,7 +282,9 @@ Describe 'manifest-command'
       When run test_MANIFEST_CMD_failure "${TEST_NAME}" "${SERVICE_NAME}"
       The status should be failure
       The stdout should satisfy display_output
+      The stdout should satisfy spec_expect_no_message ".+"
       The stderr should satisfy display_output
+      The stderr should satisfy spec_expect_no_message "${NOT_START_WITH_A_SQUARE_BRACKET}"
       The stderr should satisfy spec_expect_no_message "${ADDING_OPTIONS}"
       The stderr should satisfy spec_expect_message    "Image.*${IMAGE_WITH_TAG}.*${IMAGE_NOT_EXIST}"
       The stderr should satisfy spec_expect_message    "${SKIP_UPDATING}.*${SERVICE_NAME}.*${SKIP_REASON_MANIFEST_FAILURE}"

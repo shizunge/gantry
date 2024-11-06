@@ -39,7 +39,9 @@ Describe 'rollback'
       When run test_rollback_due_to_timeout "${TEST_NAME}" "${SERVICE_NAME}" "${TIMEOUT}"
       The status should be failure
       The stdout should satisfy display_output
+      The stdout should satisfy spec_expect_no_message ".+"
       The stderr should satisfy display_output
+      The stderr should satisfy spec_expect_no_message "${NOT_START_WITH_A_SQUARE_BRACKET}"
       The stderr should satisfy spec_expect_no_message "${SKIP_UPDATING}.*${SERVICE_NAME}"
       The stderr should satisfy spec_expect_message    "${PERFORM_UPDATING}.*${SERVICE_NAME}.*${PERFORM_REASON_HAS_NEWER_IMAGE}"
       The stderr should satisfy spec_expect_no_message "${NUM_SERVICES_SKIP_JOBS}"
@@ -86,7 +88,9 @@ Describe 'rollback'
       When run test_rollback_failed "${TEST_NAME}" "${SERVICE_NAME}" "${TIMEOUT}"
       The status should be failure
       The stdout should satisfy display_output
+      The stdout should satisfy spec_expect_no_message ".+"
       The stderr should satisfy display_output
+      The stderr should satisfy spec_expect_no_message "${NOT_START_WITH_A_SQUARE_BRACKET}"
       The stderr should satisfy spec_expect_no_message "${SKIP_UPDATING}.*${SERVICE_NAME}"
       The stderr should satisfy spec_expect_message    "${PERFORM_UPDATING}.*${SERVICE_NAME}.*${PERFORM_REASON_HAS_NEWER_IMAGE}"
       The stderr should satisfy spec_expect_no_message "${NUM_SERVICES_SKIP_JOBS}"
@@ -131,7 +135,9 @@ Describe 'rollback'
       When run test_rollback_ROLLBACK_ON_FAILURE_false "${TEST_NAME}" "${SERVICE_NAME}" "${TIMEOUT}"
       The status should be failure
       The stdout should satisfy display_output
+      The stdout should satisfy spec_expect_no_message ".+"
       The stderr should satisfy display_output
+      The stderr should satisfy spec_expect_no_message "${NOT_START_WITH_A_SQUARE_BRACKET}"
       The stderr should satisfy spec_expect_no_message "${SKIP_UPDATING}.*${SERVICE_NAME}"
       The stderr should satisfy spec_expect_message    "${PERFORM_UPDATING}.*${SERVICE_NAME}.*${PERFORM_REASON_HAS_NEWER_IMAGE}"
       The stderr should satisfy spec_expect_no_message "${NUM_SERVICES_SKIP_JOBS}"
@@ -169,7 +175,7 @@ Describe 'rollback'
       export GANTRY_UPDATE_TIMEOUT_SECONDS="NotANumber"
       # Assume service update won't be done within TIMEOUT second.
       local LABEL_AND_VALUE="gantry.update.timeout_seconds=${TIMEOUT}"
-      docker service update --quiet --label-add "${LABEL_AND_VALUE}" "${SERVICE_NAME}"
+      docker_service_update --label-add "${LABEL_AND_VALUE}" "${SERVICE_NAME}"
       run_gantry "${TEST_NAME}"
     }
     BeforeEach "common_setup_timeout ${TEST_NAME} ${IMAGE_WITH_TAG} ${SERVICE_NAME} ${TIMEOUT}"
@@ -178,7 +184,9 @@ Describe 'rollback'
       When run test_rollback_lable_due_to_timeout "${TEST_NAME}" "${SERVICE_NAME}" "${TIMEOUT}"
       The status should be failure
       The stdout should satisfy display_output
+      The stdout should satisfy spec_expect_no_message ".+"
       The stderr should satisfy display_output
+      The stderr should satisfy spec_expect_no_message "${NOT_START_WITH_A_SQUARE_BRACKET}"
       The stderr should satisfy spec_expect_no_message "${SKIP_UPDATING}.*${SERVICE_NAME}"
       The stderr should satisfy spec_expect_message    "${PERFORM_UPDATING}.*${SERVICE_NAME}.*${PERFORM_REASON_HAS_NEWER_IMAGE}"
       The stderr should satisfy spec_expect_no_message "${NUM_SERVICES_SKIP_JOBS}"
@@ -217,11 +225,11 @@ Describe 'rollback'
       export GANTRY_ROLLBACK_OPTIONS="--insecure"
       # Assume service update won't be done within TIMEOUT second.
       local LABEL_AND_VALUE="gantry.update.timeout_seconds=${TIMEOUT}"
-      docker service update --quiet --label-add "${LABEL_AND_VALUE}" "${SERVICE_NAME}"
+      docker_service_update --label-add "${LABEL_AND_VALUE}" "${SERVICE_NAME}"
       # Rollback would fail due to the incorrect option.
       # --with-registry-auth cannot be combined with --rollback.
       LABEL_AND_VALUE="gantry.rollback.options=--with-registry-auth"
-      docker service update --quiet --label-add "${LABEL_AND_VALUE}" "${SERVICE_NAME}"
+      docker_service_update --label-add "${LABEL_AND_VALUE}" "${SERVICE_NAME}"
       run_gantry "${TEST_NAME}"
     }
     BeforeEach "common_setup_timeout ${TEST_NAME} ${IMAGE_WITH_TAG} ${SERVICE_NAME} ${TIMEOUT}"
@@ -230,7 +238,9 @@ Describe 'rollback'
       When run test_rollback_label_failed "${TEST_NAME}" "${SERVICE_NAME}" "${TIMEOUT}"
       The status should be failure
       The stdout should satisfy display_output
+      The stdout should satisfy spec_expect_no_message ".+"
       The stderr should satisfy display_output
+      The stderr should satisfy spec_expect_no_message "${NOT_START_WITH_A_SQUARE_BRACKET}"
       The stderr should satisfy spec_expect_no_message "${SKIP_UPDATING}.*${SERVICE_NAME}"
       The stderr should satisfy spec_expect_message    "${PERFORM_UPDATING}.*${SERVICE_NAME}.*${PERFORM_REASON_HAS_NEWER_IMAGE}"
       The stderr should satisfy spec_expect_no_message "${NUM_SERVICES_SKIP_JOBS}"
@@ -268,9 +278,9 @@ Describe 'rollback'
       export GANTRY_UPDATE_TIMEOUT_SECONDS="NotANumber"
       # Assume service update won't be done within TIMEOUT second.
       local LABEL_AND_VALUE="gantry.update.timeout_seconds=${TIMEOUT}"
-      docker service update --quiet --label-add "${LABEL_AND_VALUE}" "${SERVICE_NAME}"
+      docker_service_update --label-add "${LABEL_AND_VALUE}" "${SERVICE_NAME}"
       LABEL_AND_VALUE="gantry.rollback.on_failure=false"
-      docker service update --quiet --label-add "${LABEL_AND_VALUE}" "${SERVICE_NAME}"
+      docker_service_update --label-add "${LABEL_AND_VALUE}" "${SERVICE_NAME}"
       run_gantry "${TEST_NAME}"
     }
     BeforeEach "common_setup_timeout ${TEST_NAME} ${IMAGE_WITH_TAG} ${SERVICE_NAME} ${TIMEOUT}"
@@ -279,7 +289,9 @@ Describe 'rollback'
       When run test_rollback_label_ROLLBACK_ON_FAILURE_false "${TEST_NAME}" "${SERVICE_NAME}" "${TIMEOUT}"
       The status should be failure
       The stdout should satisfy display_output
+      The stdout should satisfy spec_expect_no_message ".+"
       The stderr should satisfy display_output
+      The stderr should satisfy spec_expect_no_message "${NOT_START_WITH_A_SQUARE_BRACKET}"
       The stderr should satisfy spec_expect_no_message "${SKIP_UPDATING}.*${SERVICE_NAME}"
       The stderr should satisfy spec_expect_message    "${PERFORM_UPDATING}.*${SERVICE_NAME}.*${PERFORM_REASON_HAS_NEWER_IMAGE}"
       The stderr should satisfy spec_expect_no_message "${NUM_SERVICES_SKIP_JOBS}"

@@ -228,10 +228,15 @@ read_config() {
 read_env() {
   local VNAME="${1}"; shift
   [ -z "${VNAME}" ] && return 1
-  if env | grep -q "${VNAME}="; then
-    eval "echo \"\${${VNAME}}\""
-  else
+  # "grep -q" will exit immediately when the first line of data matches, and leading to broken pipe errors.
+  # Add "cat > /dev/null" to avoid broken pipe errors.
+  local GREP_RETURN=
+  env | (grep -q "^${VNAME}="; local R=$?; cat >/dev/null; test "${R}" == "0";);
+  GREP_RETURN=$?
+  if [ "${GREP_RETURN}" != "0" ]; then
     echo "${@}"
+  else
+    eval "echo \"\${${VNAME}}\""
   fi
   return 0
 }
@@ -418,6 +423,46 @@ docker_version() {
   echo "Docker version client ${cver} (API ${capi}) server ${sver} (API ${sapi})"
 }
 
+# echo the name of the current container.
+# echo nothing if unable to find the name.
+# return 1 when there is an error.
+docker_current_container_name() {
+  local ALL_NETWORKS=
+  ALL_NETWORKS=$(docker network ls --format '{{.ID}}') || return 1;
+  [ -z "${ALL_NETWORKS}" ] && return 0;
+  local IPS=;
+  IPS=$(ip route | grep src | sed -n "s/.* src \(\S*\).*$/\1/p");
+  [ -z "${IPS}" ] && return 0;
+  local GWBRIDGE_NETWORK HOST_NETWORK;
+  GWBRIDGE_NETWORK=$(docker network ls --format '{{.ID}}' --filter 'name=^docker_gwbridge$') || return 1;
+  HOST_NETWORK=$(docker network ls --format '{{.ID}}' --filter 'name=^host$') || return 1;
+  local NID=;
+  for NID in ${ALL_NETWORKS}; do
+    # The output of gwbridge does not contain the container name. It looks like gateway_8f55496ce4f1/172.18.0.5/16.
+    [ "${NID}" = "${GWBRIDGE_NETWORK}" ] && continue;
+    # The output of host does not contain an IP.
+    [ "${NID}" = "${HOST_NETWORK}" ] && continue;
+    local ALL_LOCAL_NAME_AND_IP=;
+    ALL_LOCAL_NAME_AND_IP=$(docker network inspect "${NID}" --format "{{range .Containers}}{{.Name}}/{{println .IPv4Address}}{{end}}") || return 1;
+    for NAME_AND_IP in ${ALL_LOCAL_NAME_AND_IP}; do
+      [ -z "${NAME_AND_IP}" ] && continue;
+      # NAME_AND_IP will be in one of the following formats:
+      # '<container name>/<ip>/<mask>'
+      # '<container name>/' (when network mode is host)
+      local CNAME CIP
+      CNAME=$(echo "${NAME_AND_IP}/" | cut -d/ -f1);
+      CIP=$(echo "${NAME_AND_IP}/" | cut -d/ -f2);
+      # Unable to find the container IP when network mode is host.
+      [ -z "${CIP}" ] && continue;
+      for IP in ${IPS}; do
+        [ "${IP}" != "${CIP}" ] && continue;
+        echo "${CNAME}";
+        return 0;
+      done
+    done
+  done
+}
+
 docker_service_remove() {
   local SERVICE_NAME="${1}"
   if ! docker service inspect --format '{{.JobStatus}}' "${SERVICE_NAME}" >/dev/null 2>&1; then
@@ -493,13 +538,15 @@ docker_run() {
   local RETRIES=0
   local MAX_RETRIES=5
   local SLEEP_SECONDS=10
-  while ! docker run "${@}" >/dev/null; do
+  local MSG=
+  while ! MSG=$(docker run "${@}" 2>&1); do
     if [ ${RETRIES} -ge ${MAX_RETRIES} ]; then
-      echo "Failed to run docker. Reached the max retries ${MAX_RETRIES}." >&2
+      log ERROR "Failed to run docker. Reached the max retries ${MAX_RETRIES}. ${MSG}"
       return 1
     fi
     RETRIES=$((RETRIES + 1))
     sleep ${SLEEP_SECONDS}
-    echo "Retry docker run (${RETRIES})."
+    log WARN "Retry docker run (${RETRIES}). ${MSG}"
   done
+  echo "${MSG}"
 }

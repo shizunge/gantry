@@ -37,6 +37,7 @@ jobs:
           - gantry_cleanup_images_spec.sh
           - gantry_common_options_spec.sh
           - gantry_filters_spec.sh
+          - gantry_login_negative_spec.sh
           - gantry_login_spec.sh
           - gantry_manifest_spec.sh
           - gantry_notify_spec.sh

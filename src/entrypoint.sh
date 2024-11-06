@@ -15,8 +15,7 @@
 # along with this program.  If not, see <https://www.gnu.org/licenses/>.
 #
 
-load_libraries() {
-  local LOCAL_LOG_LEVEL="${GANTRY_LOG_LEVEL:-""}"
+_get_lib_dir() {
   local LIB_DIR=
   if [ -n "${GANTRY_LIB_DIR:-""}" ]; then
     LIB_DIR="${GANTRY_LIB_DIR}"
@@ -29,10 +28,28 @@ load_libraries() {
   elif [ -r "./lib-gantry.sh" ]; then
     LIB_DIR="."
   fi
+  echo "${LIB_DIR}"
+}
+
+_log_load_libraries() {
+  local LOG_LEVEL="${GANTRY_LOG_LEVEL:-""}"
+  local IMAGES_TO_REMOVE="${GANTRY_IMAGES_TO_REMOVE:-""}"
+  local LIB_DIR="${1}"
   # log function is not available before loading the library.
-  if ! echo "${LOCAL_LOG_LEVEL}" | grep -q -i "NONE"; then
-    echo "Loading libraries from ${LIB_DIR}"
+  if echo "${LOG_LEVEL}" | grep -q -i "NONE"; then
+    return 0
   fi
+  local TIMESTAMP=
+  if [ -z "${IMAGES_TO_REMOVE}" ]; then
+    TIMESTAMP="[$(date -Iseconds)] "
+  fi
+  echo "${TIMESTAMP}Loading libraries from ${LIB_DIR}" >&2
+}
+
+load_libraries() {
+  local LIB_DIR=
+  LIB_DIR=$(_get_lib_dir)
+  _log_load_libraries "${LIB_DIR}"
   . "${LIB_DIR}/notification.sh"
   . "${LIB_DIR}/docker_hub_rate.sh"
   . "${LIB_DIR}/lib-common.sh"
@@ -155,7 +172,7 @@ main() {
   if [ -n "${IMAGES_TO_REMOVE}" ]; then
     # Image remover runs as a global job. The log will be collected via docker commands then formatted.
     # Redefine the log function for the formater.
-    log() { echo "${@}"; }
+    log() { echo "${@}" >&2; }
     gantry_remove_images "${IMAGES_TO_REMOVE}"
     return $?
   fi

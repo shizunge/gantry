@@ -18,7 +18,12 @@
 set -a
 
 # Constant strings for checks.
+# NOT_START_WITH_A_SQUARE_BRACKET ignores color codes. Use test_log not to trigger this check.
+export NOT_START_WITH_A_SQUARE_BRACKET="^(?!(?:\x1b\[[0-9;]*[mG])?\[)"
+export GANTRY_AUTH_CONFIG_LABEL="gantry.auth.config"
 export MUST_BE_A_NUMBER="must be a number"
+export LOGGED_INTO_REGISTRY="Logged into registry"
+export FAILED_TO_LOGIN_TO_REGISTRY="Failed to login to registry"
 export SKIP_UPDATING_ALL="Skip updating all services"
 export SKIP_REASON_NOT_SWARM_MANAGER="is not a swarm manager"
 export SKIP_REASON_PREVIOUS_ERRORS="due to previous error\(s\)"
@@ -34,6 +39,7 @@ export PERFORM_REASON_KNOWN_NEWER_IMAGE="because there is a known newer version 
 export PERFORM_REASON_DIGEST_IS_EMPTY="because DIGEST is empty"
 export PERFORM_REASON_HAS_NEWER_IMAGE="because there is a newer version"
 export IMAGE_NOT_EXIST="does not exist or it is not available"
+export CONFIG_IS_NOT_A_DIRECTORY="is not a directory that contains Docker configuration files"
 export ADDING_OPTIONS="Adding options"
 export NUM_SERVICES_SKIP_JOBS="Skip updating [0-9]+ service\(s\) due to they are job\(s\)"
 export NUM_SERVICES_INSPECT_FAILURE="Failed to inspect [0-9]+ service\(s\)"
@@ -57,8 +63,25 @@ export FAILED_TO_REMOVE_IMAGE="Failed to remove image"
 export SCHEDULE_NEXT_UPDATE_AT="Schedule next update at"
 export SLEEP_SECONDS_BEFORE_NEXT_UPDATE="Sleep [0-9]+ seconds before next update"
 
+test_log() {
+  echo "${GANTRY_LOG_LEVEL}" | grep -q -i "^NONE$"  && return 0;
+  [ -n "${GANTRY_IMAGES_TO_REMOVE}" ] && echo "${*}" >&2 && return 0;
+  echo "[$(date -Iseconds)] Test: ${*}" >&2
+}
+
 display_output() {
   echo "${display_output:-""}"
+}
+
+check_login_input() {
+  local REGISTRY="${1}"
+  local USERNAME="${2}"
+  local PASSWORD="${3}"
+  if [ -z "${REGISTRY}" ] || [ -z "${USERNAME}" ] || [ -z "${PASSWORD}" ]; then
+    echo "No REGISTRY, USERNAME or PASSWORD provided." >&2
+    return 1
+  fi
+  return 0
 }
 
 common_setup_new_image() {
@@ -200,10 +223,71 @@ _next_available_port() {
   echo "${PORT}"
 }
 
+_get_docker_config_file() {
+  local REGISTRY="${1:?}"
+  REGISTRY=$(echo "${REGISTRY}" | tr ':' '-')
+  echo "/tmp/TEST_DOCKER_CONFIG-${REGISTRY}"
+}
+
+_get_docker_config_argument() {
+  local IMAGE_WITH_TAG="${1:?}"
+  local REGISTRY=
+  REGISTRY=$(echo "${IMAGE_WITH_TAG}" | cut -d '/' -f 1)
+  local CONFIG=
+  CONFIG=$(_get_docker_config_file "${REGISTRY}") || return 1
+  [ -d "${CONFIG}" ] && echo "--config ${CONFIG}"
+}
+
+_login_test_registry() {
+  local ENFORCE_LOGIN="${1}"
+  local REGISTRY="${2}"
+  local USERNAME="${3}"
+  local PASSWORD="${4}"
+  if ! _enforce_login_enabled "${ENFORCE_LOGIN}"; then
+    return 0
+  fi
+  echo "Logging in ${REGISTRY}."
+  local CONFIG=
+  CONFIG=$(_get_docker_config_file "${REGISTRY}") || return 1
+  echo "${PASSWORD}" | docker --config "${CONFIG}" login --username="${USERNAME}" --password-stdin "${REGISTRY}" 2>&1
+}
+
+_logout_test_registry() {
+  local ENFORCE_LOGIN="${1}"
+  local REGISTRY="${2}"
+  if ! _enforce_login_enabled "${ENFORCE_LOGIN}"; then
+    return 0
+  fi
+  echo "Logging out ${REGISTRY}."
+  local CONFIG=
+  CONFIG=$(_get_docker_config_file "${REGISTRY}") || return 1
+  docker --config "${CONFIG}" logout
+  [ -d "${CONFIG}" ] && rm -r "${CONFIG}"
+}
+
 _get_test_registry_file() {
   local SUITE_NAME="${1:?}"
   SUITE_NAME=$(echo "${SUITE_NAME}" | tr ' ' '-')
   echo "/tmp/TEST_REGISTRY-${SUITE_NAME}"
+}
+
+_remove_test_registry_file() {
+  local SUITE_NAME="${1:?}"
+  local REGISTRY_FILE=
+  REGISTRY_FILE=$(_get_test_registry_file "${SUITE_NAME}") || return 1
+  rm "${REGISTRY_FILE}"
+}
+
+_store_test_registry() {
+  local SUITE_NAME="${1:?}"
+  local TEST_REGISTRY="${2}"
+  local REGISTRY_FILE=
+  if ! REGISTRY_FILE=$(_get_test_registry_file "${SUITE_NAME}" 2>&1); then
+    echo "_store_test_registry error: ${REGISTRY_FILE}" >&2
+    return 1
+  fi
+  echo "Suite \"${SUITE_NAME}\" uses registry ${TEST_REGISTRY}."
+  echo "${TEST_REGISTRY}" > "${REGISTRY_FILE}"
 }
 
 load_test_registry() {
@@ -216,6 +300,7 @@ load_test_registry() {
 
 _start_registry() {
   local SUITE_NAME="${1:?}"
+  local ENFORCE_LOGIN="${2}"
   SUITE_NAME=$(echo "${SUITE_NAME}" | tr ' ' '-')
   local SUITE_NAME_LENGTH="${#SUITE_NAME}"
   local REGISTRY_SERVICE_NAME="gantry-test-registry-${SUITE_NAME}"
@@ -239,9 +324,10 @@ _start_registry() {
     fi
     stop_service "${REGISTRY_SERVICE_NAME}" 1>/dev/null 2>&1
     TEST_REGISTRY="${REGISTRY_BASE}:${REGISTRY_PORT}"
-    echo "${SUITE_NAME} starting registry ${TEST_REGISTRY} "
+    echo "Suite \"${SUITE_NAME}\" starts registry ${TEST_REGISTRY} "
     # SC2046 (warning): Quote this to prevent word splitting.
-    # shellcheck disable=SC2046
+    # SC2086 (info): Double quote to prevent globbing and word splitting.
+    # shellcheck disable=SC2046,SC2086
     if docker service create --quiet \
       --name "${REGISTRY_SERVICE_NAME}" \
       --restart-condition "on-failure" \
@@ -249,6 +335,7 @@ _start_registry() {
       $(_location_constraints) \
       --mode=replicated \
       -p "${REGISTRY_PORT}:5000" \
+      $(_add_htpasswd "${ENFORCE_LOGIN}" "${TEST_USERNAME}" "${TEST_PASSWORD}") \
       "${REGISTRY_IMAGE}" 2>&1; then
       break;
     fi
@@ -260,31 +347,27 @@ _start_registry() {
     REGISTRY_PORT=$((REGISTRY_PORT+1))
     sleep 1
   done
-  local REGISTRY_FILE=
-  if ! REGISTRY_FILE=$(_get_test_registry_file "${SUITE_NAME}" 2>&1); then
-    echo "_start_registry _get_test_registry_file error: ${REGISTRY_FILE}" >&2
-    return 1
-  fi
-  echo "${SUITE_NAME} uses registry ${TEST_REGISTRY}."
-  echo "${TEST_REGISTRY}" > "${REGISTRY_FILE}"
+  _store_test_registry "${SUITE_NAME}" "${TEST_REGISTRY}" || return 1;
+  _login_test_registry "${ENFORCE_LOGIN}" "${TEST_REGISTRY}" "${TEST_USERNAME}" "${TEST_PASSWORD}" || return 1;
 }
 
 _stop_registry() {
   local SUITE_NAME="${1:?}"
+  local ENFORCE_LOGIN="${2}"
   SUITE_NAME=$(echo "${SUITE_NAME}" | tr ' ' '-')
   local REGISTRY_SERVICE_NAME="gantry-test-registry-${SUITE_NAME}"
   local REGISTRY=
   REGISTRY=$(load_test_registry "${SUITE_NAME}") || return 1
   echo "Removing registry ${REGISTRY} "
   stop_service "${REGISTRY_SERVICE_NAME}"
-  local REGISTRY_FILE=
-  REGISTRY_FILE=$(_get_test_registry_file "${SUITE_NAME}") || return 1
-  rm "${REGISTRY_FILE}"
+  _logout_test_registry "${ENFORCE_LOGIN}" "${REGISTRY}" || return 1
+  _remove_test_registry_file "${SUITE_NAME}" || return 1
   return 0
 }
 
 initialize_all_tests() {
   local SUITE_NAME="${1:-"gantry"}"
+  local ENFORCE_LOGIN="${2}"
   SUITE_NAME=$(echo "${SUITE_NAME}" | tr ' ' '-')
   local SCRIPT_DIR=
   SCRIPT_DIR="$(_get_script_dir)" || return 1
@@ -293,14 +376,15 @@ initialize_all_tests() {
   echo "== Starting suite ${SUITE_NAME}"
   echo "=============================="
   _init_swarm
-  _start_registry "${SUITE_NAME}"
+  _start_registry "${SUITE_NAME}" "${ENFORCE_LOGIN}"
 }
 
 # finish_all_tests should return non zero when there are errors.
 finish_all_tests() {
   local SUITE_NAME="${1:-"gantry"}"
+  local ENFORCE_LOGIN="${2}"
   SUITE_NAME=$(echo "${SUITE_NAME}" | tr ' ' '-')
-  _stop_registry "${SUITE_NAME}"
+  _stop_registry "${SUITE_NAME}" "${ENFORCE_LOGIN}"
   echo "=============================="
   echo "== Finished all tests in ${SUITE_NAME}"
   echo "=============================="
@@ -442,7 +526,8 @@ unique_id() {
   # To reduce the possibility that tests run in parallel on the same machine affect each other.
   local PID="$$"
   local RANDOM_STR=
-  RANDOM_STR=$(head /dev/urandom | LANG=C tr -dc 'A-Za-z0-9' | head -c 8)
+  # repository name must be lowercase
+  RANDOM_STR=$(head /dev/urandom | LANG=C tr -dc 'a-z0-9' | head -c 8)
   echo "$(date +%s)-${PID}-${RANDOM_STR}"
 }
 
@@ -474,14 +559,20 @@ build_and_push_test_image() {
   local TASK_SECONDS="${2}"
   local EXIT_SECONDS="${3}"
   build_test_image "${IMAGE_WITH_TAG}" "${TASK_SECONDS}" "${EXIT_SECONDS}"
-  echo "Pushing image "
-  docker push --quiet "${IMAGE_WITH_TAG}"
+  echo -n "Pushing image "
+  # SC2046 (warning): Quote this to prevent word splitting.
+  # shellcheck disable=SC2046
+  docker $(_get_docker_config_argument "${IMAGE_WITH_TAG}") push --quiet "${IMAGE_WITH_TAG}"
 }
 
 prune_local_test_image() {
   local IMAGE_WITH_TAG="${1}"
-  echo "Removing image ${IMAGE_WITH_TAG} "
+  echo -n "Removing image ${IMAGE_WITH_TAG} "
   docker image rm "${IMAGE_WITH_TAG}" --force
+}
+
+docker_service_update() {
+  docker service update --quiet "${@}" >/dev/null
 }
 
 wait_zero_running_tasks() {
@@ -540,6 +631,32 @@ _location_constraints() {
   echo "${ARGS}"
 }
 
+_enforce_login_enabled() {
+  local ENFORCE_LOGIN="${1}"
+  test "${ENFORCE_LOGIN}" == "ENFORCE_LOGIN"
+}
+
+_add_htpasswd() {
+  local ENFORCE_LOGIN="${1}"
+  local USER="${2}"
+  local PASS="${3}"
+  if ! _enforce_login_enabled "${ENFORCE_LOGIN}"; then
+    return 0
+  fi
+  local HTTPD_IMAGE="httpd:2"
+  # https://distribution.github.io/distribution/about/deploying/#native-basic-auth
+  local PASSWD=
+  PASSWD="$(mktemp)"
+  if ! docker image inspect "${HTTPD_IMAGE}" > /dev/null 2>&1; then
+    docker pull "${HTTPD_IMAGE}" > /dev/null
+  fi
+  docker_run --entrypoint htpasswd "${HTTPD_IMAGE}" -Bbn "${USER}" "${PASS}" > "${PASSWD}"
+  echo "--mount type=bind,source=${PASSWD},target=${PASSWD} \
+        -e REGISTRY_AUTH=htpasswd \
+        -e REGISTRY_AUTH_HTPASSWD_REALM=RegistryRealm \
+        -e REGISTRY_AUTH_HTPASSWD_PATH=${PASSWD} "
+}
+
 _wait_service_state() {
   local SERVICE_NAME="${1}"
   local STATE="${2}"
@@ -562,10 +679,11 @@ start_replicated_service() {
   echo "Creating service ${SERVICE_NAME} in replicated mode "
   # SC2046 (warning): Quote this to prevent word splitting.
   # shellcheck disable=SC2046
-  timeout 120 docker service create --quiet \
+  timeout 120 docker $(_get_docker_config_argument "${IMAGE_WITH_TAG}") service create --quiet \
     --name "${SERVICE_NAME}" \
     --restart-condition "on-failure" \
     --restart-max-attempts 5 \
+    --with-registry-auth \
     $(_location_constraints) \
     --mode=replicated \
     "${IMAGE_WITH_TAG}"
@@ -578,10 +696,11 @@ start_global_service() {
   echo "Creating service ${SERVICE_NAME} in global mode "
   # SC2046 (warning): Quote this to prevent word splitting.
   # shellcheck disable=SC2046
-  timeout 120 docker service create --quiet \
+  timeout 120 docker $(_get_docker_config_argument "${IMAGE_WITH_TAG}") service create --quiet \
     --name "${SERVICE_NAME}" \
     --restart-condition "on-failure" \
     --restart-max-attempts 5 \
+    --with-registry-auth \
     $(_location_constraints) \
     --mode=global \
     "${IMAGE_WITH_TAG}"
@@ -594,10 +713,11 @@ _start_replicated_job() {
   echo "Creating service ${SERVICE_NAME} in replicated job mode "
   # SC2046 (warning): Quote this to prevent word splitting.
   # shellcheck disable=SC2046
-  timeout 120 docker service create --quiet \
+  timeout 120 docker $(_get_docker_config_argument "${IMAGE_WITH_TAG}") service create --quiet \
     --name "${SERVICE_NAME}" \
     --restart-condition "on-failure" \
     --restart-max-attempts 5 \
+    --with-registry-auth \
     $(_location_constraints) \
     --mode=replicated-job --detach=true \
     "${IMAGE_WITH_TAG}"
@@ -607,7 +727,7 @@ _start_replicated_job() {
 
 stop_service() {
   local SERVICE_NAME="${1}"
-  echo "Removing service "
+  echo -n "Removing service "
   docker service rm "${SERVICE_NAME}"
 }
 
@@ -668,9 +788,7 @@ _run_gantry_container() {
   MOUNT_OPTIONS=$(_add_file_to_mount_options "${MOUNT_OPTIONS}" "${GANTRY_REGISTRY_HOST_FILE}")
   MOUNT_OPTIONS=$(_add_file_to_mount_options "${MOUNT_OPTIONS}" "${GANTRY_REGISTRY_PASSWORD_FILE}")
   MOUNT_OPTIONS=$(_add_file_to_mount_options "${MOUNT_OPTIONS}" "${GANTRY_REGISTRY_USER_FILE}")
-  if [ "${GANTRY_LOG_LEVEL}" != "NONE" ]; then
-    echo "Starting SUT service ${SERVICE_NAME} with image ${SUT_REPO_TAG}."
-  fi
+  test_log "Starting SUT service ${SERVICE_NAME} with image ${SUT_REPO_TAG}."
   local RETURN_VALUE=0
   local CMD_OUTPUT=
   # SC2086 (info): Double quote to prevent globbing and word splitting.
