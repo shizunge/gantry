@@ -43,14 +43,14 @@ Describe 'login_negative'
       The stderr should satisfy spec_expect_no_message "${LOGGED_INTO_REGISTRY}"
       The stderr should satisfy spec_expect_no_message "${FAILED_TO_LOGIN_TO_REGISTRY}"
       The stderr should satisfy spec_expect_no_message "${CONFIG_IS_NOT_A_DIRECTORY}"
-      The stderr should satisfy spec_expect_no_message "${ADDING_OPTIONS}.*--config ${CONFIG}.*${SERVICE_NAME}"
+      The stderr should satisfy spec_expect_no_message "${ADDING_OPTIONS}.*--config.*"
       The stderr should satisfy spec_expect_message    "${SKIP_UPDATING}.*${SERVICE_NAME}.*${SKIP_REASON_MANIFEST_FAILURE}"
       The stderr should satisfy spec_expect_no_message "${PERFORM_UPDATING}.*${SERVICE_NAME}"
       The stderr should satisfy spec_expect_no_message "${NUM_SERVICES_SKIP_JOBS}"
       The stderr should satisfy spec_expect_message    "${NUM_SERVICES_INSPECT_FAILURE}"
       The stderr should satisfy spec_expect_no_message "${NUM_SERVICES_NO_NEW_IMAGES}"
       The stderr should satisfy spec_expect_no_message "${NUM_SERVICES_UPDATING}"
-      The stderr should satisfy spec_expect_no_message "${ADDING_OPTIONS}.*--with-registry-auth.*${SERVICE_NAME}"
+      The stderr should satisfy spec_expect_no_message "${ADDING_OPTIONS_WITH_REGISTRY_AUTH}.*${SERVICE_NAME}"
       The stderr should satisfy spec_expect_no_message "${UPDATED}.*${SERVICE_NAME}"
       The stderr should satisfy spec_expect_no_message "${NO_UPDATES}.*${SERVICE_NAME}"
       The stderr should satisfy spec_expect_no_message "${ROLLING_BACK}.*${SERVICE_NAME}"
@@ -220,18 +220,25 @@ Describe 'login_negative'
       local INCORRECT_CONFIG="${CONFIG}-incorrect"
       local USER_FILE=; USER_FILE=$(mktemp); echo "${USERNAME}" > "${USER_FILE}";
       local PASS_FILE=; PASS_FILE=$(mktemp); echo "${PASSWORD}" > "${PASS_FILE}";
+      # Also use CONFIGS_FILE to test a explicitly-set config.
+      local CONFIGS_FILE=
+      CONFIGS_FILE=$(mktemp)
+      echo "${CONFIG} ${REGISTRY} ${USERNAME} ${PASSWORD}" >> "${CONFIGS_FILE}"
       # The config name on the service is different from the config name used in GANTRY_REGISTRY_CONFIG
       docker_service_update --label-add "${GANTRY_AUTH_CONFIG_LABEL}=${INCORRECT_CONFIG}" "${SERVICE_NAME}"
       reset_gantry_env "${SERVICE_NAME}"
-      export GANTRY_REGISTRY_CONFIG="${CONFIG}"
+      # Do not set GANTRY_REGISTRY_CONFIG, login to the default config.
+      # export GANTRY_REGISTRY_CONFIG="${CONFIG}"
       export GANTRY_REGISTRY_HOST="${REGISTRY}"
       export GANTRY_REGISTRY_PASSWORD_FILE="${PASS_FILE}"
       export GANTRY_REGISTRY_USER_FILE="${USER_FILE}"
+      export GANTRY_REGISTRY_CONFIGS_FILE="${CONFIGS_FILE}"
       local RETURN_VALUE=
       run_gantry "${TEST_NAME}"
       RETURN_VALUE="${?}"
       rm "${USER_FILE}"
       rm "${PASS_FILE}"
+      rm "${CONFIGS_FILE}"
       [ -d "${CONFIG}" ] && rm -r "${CONFIG}"
       [ -d "${INCORRECT_CONFIG}" ] && rm -r "${INCORRECT_CONFIG}"
       return "${RETURN_VALUE}"
@@ -245,9 +252,13 @@ Describe 'login_negative'
       The stdout should satisfy spec_expect_no_message ".+"
       The stderr should satisfy display_output
       The stderr should satisfy spec_expect_no_message "${NOT_START_WITH_A_SQUARE_BRACKET}"
+      The stderr should satisfy spec_expect_message    "${LOGGED_INTO_REGISTRY}.*${TEST_REGISTRY}.*${DEFAULT_CONFIGURATION}"
       The stderr should satisfy spec_expect_message    "${LOGGED_INTO_REGISTRY}.*${TEST_REGISTRY}.*${CONFIG}"
       The stderr should satisfy spec_expect_no_message "${FAILED_TO_LOGIN_TO_REGISTRY}"
       The stderr should satisfy spec_expect_message    "${CONFIG_IS_NOT_A_DIRECTORY}"
+      # Check warnings
+      The stderr should satisfy spec_expect_message    "There are 1 configuration\(s\).*"
+      The stderr should satisfy spec_expect_message    "User logged into the default Docker config.*"
       The stderr should satisfy spec_expect_no_message "${ADDING_OPTIONS}.*\"--config ${CONFIG}\".*${SERVICE_NAME}"
       The stderr should satisfy spec_expect_message    "${ADDING_OPTIONS}.*\"--config ${CONFIG}-incorrect\".*${SERVICE_NAME}"
       The stderr should satisfy spec_expect_message    "${SKIP_UPDATING}.*${SERVICE_NAME}.*${SKIP_REASON_MANIFEST_FAILURE}"
@@ -256,7 +267,7 @@ Describe 'login_negative'
       The stderr should satisfy spec_expect_message    "${NUM_SERVICES_INSPECT_FAILURE}"
       The stderr should satisfy spec_expect_no_message "${NUM_SERVICES_NO_NEW_IMAGES}"
       The stderr should satisfy spec_expect_no_message "${NUM_SERVICES_UPDATING}"
-      The stderr should satisfy spec_expect_no_message "${ADDING_OPTIONS}.*--with-registry-auth.*${SERVICE_NAME}"
+      The stderr should satisfy spec_expect_no_message "${ADDING_OPTIONS_WITH_REGISTRY_AUTH}.*${SERVICE_NAME}"
       The stderr should satisfy spec_expect_no_message "${UPDATED}.*${SERVICE_NAME}"
       The stderr should satisfy spec_expect_no_message "${NO_UPDATES}.*${SERVICE_NAME}"
       The stderr should satisfy spec_expect_no_message "${ROLLING_BACK}.*${SERVICE_NAME}"

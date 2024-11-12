@@ -74,6 +74,21 @@ _read_env_or_label() {
   echo "${VALUE}"
 }
 
+# Record that the default config is used.
+_use_docker_default_config() {
+  local CONFIG_TO_REPORT=
+  CONFIG_TO_REPORT=$(readlink -f ~/.docker)
+  _static_variable_add_unique_to_list STATIC_VAR_DOCKER_CONFIG_DEFAULT "${CONFIG_TO_REPORT}"
+}
+
+# Return 0 when the default config is used
+# Return 1 when the default config is not used
+_docker_default_config_is_used() {
+  local DOCKER_CONFIG_DEFAULT=
+  DOCKER_CONFIG_DEFAULT=$(_static_variable_read_list STATIC_VAR_DOCKER_CONFIG_DEFAULT)
+  test -n "${DOCKER_CONFIG_DEFAULT}"
+}
+
 _login_registry() {
   local USER="${1}"
   local PASSWORD="${2}"
@@ -90,12 +105,9 @@ _login_registry() {
    REGISTRY_MESSAGE="default registry"
   fi
   local DOCKER_CONFIG=
-  local CONFIG_TO_REPORT=
-  CONFIG_TO_REPORT=$(readlink -f ~/.docker)
   local CONFIG_MESSAGE="with default configuration"
   if [ -n "${CONFIG}" ]; then
     DOCKER_CONFIG="--config ${CONFIG}"
-    CONFIG_TO_REPORT="${CONFIG}"
     CONFIG_MESSAGE="with configuration ${CONFIG}"
   fi
   local REGISTRY_CONFIG_MESSAGE="${REGISTRY_MESSAGE} ${CONFIG_MESSAGE}"
@@ -107,7 +119,11 @@ _login_registry() {
     return 1
   fi
   log INFO "Logged into ${REGISTRY_CONFIG_MESSAGE}. ${LOGIN_MSG}"
-  _static_variable_add_unique_to_list STATIC_VAR_SERVICES_DOCKER_CONFIGS "${CONFIG_TO_REPORT}"
+  if [ -n "${CONFIG}" ]; then
+    _static_variable_add_unique_to_list STATIC_VAR_DOCKER_CONFIGS "${CONFIG}"
+  else
+    _use_docker_default_config
+  fi
   return 0
 }
 
@@ -652,7 +668,10 @@ _get_config_from_service() {
   if [ ! -d "${AUTH_CONFIG}" ]; then
     log WARN "${AUTH_CONFIG} is not a directory that contains Docker configuration files."
     local MSG="configuration(s) set via GANTRY_REGISTRY_CONFIG* or GANTRY_REGISTRY_CONFIGS_FILE"
-    _report_from_static_variable STATIC_VAR_SERVICES_DOCKER_CONFIGS "There are" "${MSG}" "There are no ${MSG}." | log_lines WARN
+    _report_from_static_variable STATIC_VAR_DOCKER_CONFIGS "There are" "${MSG}" "There are no ${MSG}." | log_lines WARN
+    if _docker_default_config_is_used; then
+      log WARN "User logged into the default Docker config."
+    fi
   fi
   echo "--config ${AUTH_CONFIG}"
 }
@@ -828,10 +847,14 @@ _get_number_of_running_tasks() {
 
 _get_with_registry_auth() {
   local DOCKER_CONFIG="${1}"
+  local ARGUMENTS=""
   # DOCKER_CONFIG is currently only used by Authentication.
   # When login is required, we must add `--with-registry-auth`. Otherwise the service will get an image without digest.
   # See https://github.com/shizunge/gantry/issues/53#issuecomment-2348376336
-  [ -n "${DOCKER_CONFIG}" ] && echo "--with-registry-auth";
+  if [ -n "${DOCKER_CONFIG}" ] || _docker_default_config_is_used; then
+    ARGUMENTS="--with-registry-auth";
+  fi
+  echo "${ARGUMENTS}"
 }
 
 _get_service_update_additional_options() {
