@@ -366,6 +366,7 @@ gantry_remove_images() {
   local IMAGES_TO_REMOVE="${1}"
   local IMAGE RMI_MSG
   log DEBUG "$(docker_version)"
+  local IMAGE=
   for IMAGE in ${IMAGES_TO_REMOVE}; do
     if ! docker image inspect "${IMAGE}" 1>/dev/null 2>&1 ; then
       log DEBUG "There is no image ${IMAGE} on the node.";
@@ -404,6 +405,7 @@ _remove_images() {
   local IMAGE_NUM=
   IMAGE_NUM=$(_get_number_of_elements "${IMAGES_TO_REMOVE}")
   log INFO "Removing ${IMAGE_NUM} image(s):"
+  local I=
   for I in $(echo "${IMAGES_TO_REMOVE}" | tr '\n' ' '); do
     log INFO "- ${I}"
   done
@@ -541,10 +543,13 @@ _report_services() {
   fi
 }
 
+# Return 0 if the item is in the list.
+# Return 1 if the item is not in the list.
 _in_list() {
   local LIST="${1}"
   local SEARCHED_ITEM="${2}"
   [ -z "${SEARCHED_ITEM}" ] && return 1
+  local ITEM=
   for ITEM in ${LIST}; do
     if [ "${ITEM}" = "${SEARCHED_ITEM}" ]; then
       return 0
@@ -659,20 +664,30 @@ _service_is_replicated() {
   echo "${MODE}"
 }
 
+# Return 0 if AUTH_CONFIG is a directory that contains Docker configuration files
+# Return 1 if AUTH_CONFIG is not a directory that contains Docker configuration files
+_check_docker_config_folder() {
+  local AUTH_CONFIG="${1}"
+  # This is not a complete check.
+  if [ -d "${AUTH_CONFIG}" ]; then
+    return 0
+  fi
+  log WARN "${AUTH_CONFIG} is not a directory that contains Docker configuration files."
+  local MSG="configuration(s) set via GANTRY_REGISTRY_CONFIG* or GANTRY_REGISTRY_CONFIGS_FILE"
+  _report_from_static_variable STATIC_VAR_DOCKER_CONFIGS "There are" "${MSG}" "There are no ${MSG}." | log_lines WARN
+  if _docker_default_config_is_used; then
+    log WARN "User logged into the default Docker configuration."
+  fi
+  return 1
+}
+
 _get_config_from_service() {
   local SERVICE_NAME="${1}"
   local AUTH_CONFIG_LABEL="gantry.auth.config"
   local AUTH_CONFIG=
   AUTH_CONFIG=$(_get_label_from_service "${SERVICE_NAME}" "${AUTH_CONFIG_LABEL}")
   [ -z "${AUTH_CONFIG}" ] && return 0
-  if [ ! -d "${AUTH_CONFIG}" ]; then
-    log WARN "${AUTH_CONFIG} is not a directory that contains Docker configuration files."
-    local MSG="configuration(s) set via GANTRY_REGISTRY_CONFIG* or GANTRY_REGISTRY_CONFIGS_FILE"
-    _report_from_static_variable STATIC_VAR_DOCKER_CONFIGS "There are" "${MSG}" "There are no ${MSG}." | log_lines WARN
-    if _docker_default_config_is_used; then
-      log WARN "User logged into the default Docker config."
-    fi
-  fi
+  _check_docker_config_folder "${AUTH_CONFIG}"
   echo "--config ${AUTH_CONFIG}"
 }
 
@@ -770,7 +785,7 @@ _inspect_image() {
     return 0
   fi
   local DOCKER_CONFIG=
-  DOCKER_CONFIG=$(_get_config_from_service "${SERVICE}")
+  DOCKER_CONFIG=$(_get_config_from_service "${SERVICE_NAME}")
   [ -n "${DOCKER_CONFIG}" ] && log DEBUG "Adding options \"${DOCKER_CONFIG}\" to docker commands for ${SERVICE_NAME}."
   local IMAGE_INFO=
   if ! IMAGE_INFO=$(_get_image_info "${SERVICE_NAME}" "${MANIFEST_CMD}" "${IMAGE}" "${DOCKER_CONFIG}"); then
@@ -956,7 +971,7 @@ _update_single_service() {
   log INFO "Updating ${SERVICE_NAME} with image ${IMAGE}"
   local DOCKER_CONFIG=
   local ADDITIONAL_OPTIONS=
-  DOCKER_CONFIG=$(_get_config_from_service "${SERVICE}")
+  DOCKER_CONFIG=$(_get_config_from_service "${SERVICE_NAME}")
   ADDITIONAL_OPTIONS=$(_get_service_update_additional_options "${SERVICE_NAME}" "${DOCKER_CONFIG}")
   [ -n "${DOCKER_CONFIG}" ] && log DEBUG "Adding options \"${DOCKER_CONFIG}\" to docker commands for ${SERVICE_NAME}."
   [ -n "${ADDITIONAL_OPTIONS}" ] && log DEBUG "Adding options \"${ADDITIONAL_OPTIONS}\" to the command \"docker service update\" for ${SERVICE_NAME}."
@@ -975,10 +990,10 @@ _update_single_service() {
     # https://git.savannah.gnu.org/cgit/coreutils.git/tree/src/timeout.c
     local TIMEOUT_RETURN_CODE=124
     local TIMEOUT_MSG=""
-    if [ -n "${TIMEOUT_COMMAND}" ] && [ "${UPDATE_RETURN_VALUE}" == "${TIMEOUT_RETURN_CODE}" ]; then
+    if [ -n "${TIMEOUT_COMMAND}" ] && [ "${UPDATE_RETURN_VALUE}" = "${TIMEOUT_RETURN_CODE}" ]; then
       TIMEOUT_MSG="The return value ${UPDATE_RETURN_VALUE} indicates the job timed out."
     fi
-    log ERROR "Command \"${UPDATE_COMMAND} \" returns ${UPDATE_RETURN_VALUE}. ${TIMEOUT_MSG}"
+    log ERROR "Command \"${UPDATE_COMMAND}\" returns ${UPDATE_RETURN_VALUE}. ${TIMEOUT_MSG}"
     log ERROR "docker service update failed. ${UPDATE_MSG}"
     _rollback_service "${SERVICE_NAME}" "${DOCKER_CONFIG}"
     _static_variable_add_unique_to_list STATIC_VAR_SERVICES_UPDATE_FAILED "${SERVICE_NAME}"
@@ -1022,6 +1037,7 @@ _run_parallel() {
   local STATIC_VAR_LIST_NAME="${3}"
   log DEBUG "Run ${NUM_WORKERS} ${FUNCTION} in parallel."
   local PIDS=
+  local INDEX=
   for INDEX in $(seq 0 $((NUM_WORKERS-1)) ); do
     # All workers subscribe to the same list now.
     _parallel_worker "${FUNCTION}" "${INDEX}" "${STATIC_VAR_LIST_NAME}" &
@@ -1036,6 +1052,7 @@ _get_services_filted() {
   local SERVICES_FILTERS="${1}"
   local SERVICES=
   local FILTERS=
+  local F=
   for F in ${SERVICES_FILTERS}; do
     FILTERS="${FILTERS} --filter ${F}"
   done
@@ -1075,6 +1092,7 @@ gantry_get_services_list() {
   fi
   local LIST=
   local HAS_SELF=
+  local S=
   for S in ${SERVICES} ; do
     if _in_list "${SERVICES_EXCLUDED}" "${S}" ; then
       log DEBUG "Exclude service ${S} from updating."
@@ -1111,16 +1129,17 @@ gantry_update_services_list() {
   local NUM=
   NUM=$(_get_number_of_elements "${LIST}")
   log INFO "Inspecting ${NUM} service(s)."
-  for SERVICE in ${LIST}; do
-    if _service_is_self "${SERVICE}"; then
+  local S=
+  for S in ${LIST}; do
+    if _service_is_self "${S}"; then
       # Immediately update self service after inspection, do not wait for other inspections to finish.
       # This avoids running inspection on the same service twice, due to interruption from updating self, when running as a service.
       # The self service is usually the first of the list.
       local RUN_UPDATE=true
-      _inspect_service "${SERVICE}" "${RUN_UPDATE}"
+      _inspect_service "${S}" "${RUN_UPDATE}"
       continue
     fi
-    _static_variable_add_unique_to_list STATIC_VAR_SERVICES_TO_INSPECT "${SERVICE}"
+    _static_variable_add_unique_to_list STATIC_VAR_SERVICES_TO_INSPECT "${S}"
   done
   _run_parallel _inspect_service "${MANIFEST_NUM_WORKERS}" STATIC_VAR_SERVICES_TO_INSPECT
 
