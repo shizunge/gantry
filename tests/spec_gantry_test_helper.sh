@@ -44,6 +44,7 @@ export CONFIG_IS_NOT_A_DIRECTORY="is not a directory that contains Docker config
 export ADDING_OPTIONS="Adding options"
 export ADDING_OPTIONS_WITH_REGISTRY_AUTH="Adding options.*--with-registry-auth"
 export SET_TIMEOUT_TO="Set timeout to"
+export RETURN_VALUE_INDICATES_TIMEOUT="The return value 124 indicates the job timed out."
 export NUM_SERVICES_SKIP_JOBS="Skip updating [0-9]+ service\(s\) due to they are job\(s\)"
 export NUM_SERVICES_INSPECT_FAILURE="Failed to inspect [0-9]+ service\(s\)"
 export NUM_SERVICES_NO_NEW_IMAGES="No new images for [0-9]+ service\(s\)"

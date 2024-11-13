@@ -922,7 +922,7 @@ _rollback_service() {
 
 # return 0 when there is no error or failure.
 # return 1 when there are error(s) or failure(s).
-_update_single_service() {
+_get_timeout_command() {
   local SERVICE_NAME="${1}"
   local UPDATE_TIMEOUT_SECONDS=
   UPDATE_TIMEOUT_SECONDS=$(_read_env_or_label "${SERVICE_NAME}" "GANTRY_UPDATE_TIMEOUT_SECONDS" "gantry.update.timeout_seconds" "0")
@@ -931,6 +931,18 @@ _update_single_service() {
     _static_variable_add_unique_to_list STATIC_VAR_SERVICES_UPDATE_INPUT_ERROR "${SERVICE_NAME}"
     return 1
   fi
+  local TIMEOUT_COMMAND=""
+  if [ "${UPDATE_TIMEOUT_SECONDS}" != "0" ]; then
+    TIMEOUT_COMMAND="timeout ${UPDATE_TIMEOUT_SECONDS}"
+    log DEBUG "Set timeout to ${UPDATE_TIMEOUT_SECONDS} for updating ${SERVICE_NAME}."
+  fi
+  echo "${TIMEOUT_COMMAND}"
+}
+
+# return 0 when there is no error or failure.
+# return 1 when there are error(s) or failure(s).
+_update_single_service() {
+  local SERVICE_NAME="${1}"
   local UPDATE_OPTIONS=
   UPDATE_OPTIONS=$(_read_env_or_label "${SERVICE_NAME}" "GANTRY_UPDATE_OPTIONS" "gantry.update.options" "")
   local IMAGE="${2}"
@@ -950,16 +962,24 @@ _update_single_service() {
   [ -n "${ADDITIONAL_OPTIONS}" ] && log DEBUG "Adding options \"${ADDITIONAL_OPTIONS}\" to the command \"docker service update\" for ${SERVICE_NAME}."
   [ -n "${UPDATE_OPTIONS}" ] && log DEBUG "Adding options \"${UPDATE_OPTIONS}\" to the command \"docker service update\" for ${SERVICE_NAME}."
   local TIMEOUT_COMMAND=""
-  if [ "${UPDATE_TIMEOUT_SECONDS}" != "0" ]; then
-    TIMEOUT_COMMAND="timeout ${UPDATE_TIMEOUT_SECONDS}"
-    log DEBUG "Set timeout to ${UPDATE_TIMEOUT_SECONDS} for updating ${SERVICE_NAME}."
-  fi
+  TIMEOUT_COMMAND=$(_get_timeout_command "${SERVICE_NAME}") || return 1
+  local UPDATE_COMMAND="${TIMEOUT_COMMAND} docker ${DOCKER_CONFIG} service update"
+  local UPDATE_RETURN_VALUE=0
   local UPDATE_MSG=
   # Add "-quiet" to suppress progress output.
   # SC2086: Double quote to prevent globbing and word splitting.
   # shellcheck disable=SC2086
-  if ! UPDATE_MSG=$(${TIMEOUT_COMMAND} docker ${DOCKER_CONFIG} service update --quiet ${ADDITIONAL_OPTIONS} ${UPDATE_OPTIONS} --image="${IMAGE}" "${SERVICE_NAME}" 2>&1); then
-    log ERROR "docker service update failed or timeout. ${UPDATE_MSG}"
+  UPDATE_MSG=$(${UPDATE_COMMAND} --quiet ${ADDITIONAL_OPTIONS} ${UPDATE_OPTIONS} --image="${IMAGE}" "${SERVICE_NAME}" 2>&1);
+  UPDATE_RETURN_VALUE=$?
+  if [ "${UPDATE_RETURN_VALUE}" != 0 ]; then
+    # https://git.savannah.gnu.org/cgit/coreutils.git/tree/src/timeout.c
+    local TIMEOUT_RETURN_CODE=124
+    local TIMEOUT_MSG=""
+    if [ -n "${TIMEOUT_COMMAND}" ] && [ "${UPDATE_RETURN_VALUE}" == "${TIMEOUT_RETURN_CODE}" ]; then
+      TIMEOUT_MSG="The return value ${UPDATE_RETURN_VALUE} indicates the job timed out."
+    fi
+    log ERROR "Command \"${UPDATE_COMMAND} \" returns ${UPDATE_RETURN_VALUE}. ${TIMEOUT_MSG}"
+    log ERROR "docker service update failed. ${UPDATE_MSG}"
     _rollback_service "${SERVICE_NAME}" "${DOCKER_CONFIG}"
     _static_variable_add_unique_to_list STATIC_VAR_SERVICES_UPDATE_FAILED "${SERVICE_NAME}"
     return 1
