@@ -925,11 +925,10 @@ _rollback_service() {
 _update_single_service() {
   local SERVICE_NAME="${1}"
   local UPDATE_TIMEOUT_SECONDS=
-  UPDATE_TIMEOUT_SECONDS=$(_read_env_or_label "${SERVICE_NAME}" "GANTRY_UPDATE_TIMEOUT_SECONDS" "gantry.update.timeout_seconds" "300")
+  UPDATE_TIMEOUT_SECONDS=$(_read_env_or_label "${SERVICE_NAME}" "GANTRY_UPDATE_TIMEOUT_SECONDS" "gantry.update.timeout_seconds" "0")
   if ! is_number "${UPDATE_TIMEOUT_SECONDS}"; then
-    log ERROR "UPDATE_TIMEOUT_SECONDS must be a number. Got \"${UPDATE_TIMEOUT_SECONDS}\"."
-    local ERROR_SERVICE="GANTRY_UPDATE_TIMEOUT_SECONDS-is-not-a-number"
-    _static_variable_add_unique_to_list STATIC_VAR_SERVICES_UPDATE_INPUT_ERROR "${ERROR_SERVICE}"
+    log ERROR "Updating ${SERVICE_NAME}: UPDATE_TIMEOUT_SECONDS must be a number. Got \"${UPDATE_TIMEOUT_SECONDS}\"."
+    _static_variable_add_unique_to_list STATIC_VAR_SERVICES_UPDATE_INPUT_ERROR "${SERVICE_NAME}"
     return 1
   fi
   local UPDATE_OPTIONS=
@@ -950,11 +949,16 @@ _update_single_service() {
   [ -n "${DOCKER_CONFIG}" ] && log DEBUG "Adding options \"${DOCKER_CONFIG}\" to docker commands for ${SERVICE_NAME}."
   [ -n "${ADDITIONAL_OPTIONS}" ] && log DEBUG "Adding options \"${ADDITIONAL_OPTIONS}\" to the command \"docker service update\" for ${SERVICE_NAME}."
   [ -n "${UPDATE_OPTIONS}" ] && log DEBUG "Adding options \"${UPDATE_OPTIONS}\" to the command \"docker service update\" for ${SERVICE_NAME}."
+  local TIMEOUT_COMMAND=""
+  if [ "${UPDATE_TIMEOUT_SECONDS}" != "0" ]; then
+    TIMEOUT_COMMAND="timeout ${UPDATE_TIMEOUT_SECONDS}"
+    log DEBUG "Set timeout to ${UPDATE_TIMEOUT_SECONDS} for updating ${SERVICE_NAME}."
+  fi
   local UPDATE_MSG=
   # Add "-quiet" to suppress progress output.
   # SC2086: Double quote to prevent globbing and word splitting.
   # shellcheck disable=SC2086
-  if ! UPDATE_MSG=$(timeout "${UPDATE_TIMEOUT_SECONDS}" docker ${DOCKER_CONFIG} service update --quiet ${ADDITIONAL_OPTIONS} ${UPDATE_OPTIONS} --image="${IMAGE}" "${SERVICE_NAME}" 2>&1); then
+  if ! UPDATE_MSG=$(${TIMEOUT_COMMAND} docker ${DOCKER_CONFIG} service update --quiet ${ADDITIONAL_OPTIONS} ${UPDATE_OPTIONS} --image="${IMAGE}" "${SERVICE_NAME}" 2>&1); then
     log ERROR "docker service update failed or timeout. ${UPDATE_MSG}"
     _rollback_service "${SERVICE_NAME}" "${DOCKER_CONFIG}"
     _static_variable_add_unique_to_list STATIC_VAR_SERVICES_UPDATE_FAILED "${SERVICE_NAME}"

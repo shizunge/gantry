@@ -88,7 +88,7 @@ You can configure the most behaviors of *Gantry* via environment variables.
 | GANTRY_UPDATE_JOBS            | false | Set to `true` to update replicated-job or global-job. Set to `false` to disable updating jobs. *Gantry* adds additional options to `docker service update` when there is [no running tasks](docs/faq.md#how-to-update-services-with-no-running-tasks). You can apply a different value to a particular service via [labels](#labels). |
 | GANTRY_UPDATE_NUM_WORKERS     | 1     | The maximum number of updates that can run in parallel. |
 | GANTRY_UPDATE_OPTIONS         |       | [Options](https://docs.docker.com/engine/reference/commandline/service_update/#options) added to the `docker service update` command for all services. You can apply a different value to a particular service via [labels](#labels). |
-| GANTRY_UPDATE_TIMEOUT_SECONDS | 300   | Error out if updating of a single service takes longer than the given time. You can apply a different value to a particular service via [labels](#labels). |
+| GANTRY_UPDATE_TIMEOUT_SECONDS | 0     | Error out if updating of a single service takes longer than the given time. Set to `0` to disable timeout. You can apply a different value to a particular service via [labels](#labels). |
 
 ### After updating
 
