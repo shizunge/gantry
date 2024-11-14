@@ -108,18 +108,18 @@ If the images of services are hosted on multiple registries that are required au
 
 * Each line should contain 4 columns, which are either `<TAB>` or `<SPACE>` separated. The columns are 
 ```
-<config name> <host> <user> <password>
+<configuration> <host> <user> <password>
 ```
-> * config name: an identifier for the account.
+> * configuration: an identifier for the account. This is used as a path to [Docker configuration files](https://docs.docker.com/engine/reference/commandline/cli/#configuration-files), which could be either a relative path or an absolute path.
 > * host: the registry to authenticate against, e.g. docker.io.
 > * user: the user name to authenticate as.
 > * password: the password to authenticate with.
 * Lines starting with  `#` are comments.
 * Empty lines, comment lines and invalid lines are ignored.
 
-You need to tell *Gantry* to use a named config rather than the default one when updating a particular service. The named configurations are set via either `GANTRY_REGISTRY_CONFIG`, `GANTRY_REGISTRY_CONFIG_FILE` or `GANTRY_REGISTRY_CONFIGS_FILE`. This can be done by adding the following label to the service `gantry.auth.config=<config-name>`. *Gantry* creates [Docker configuration files](https://docs.docker.com/engine/reference/commandline/cli/#configuration-files) and adds `--config <config-name>` to the Docker command line for the corresponding services.
+You need to tell *Gantry* to use a named configuration rather than the default one when updating a particular service. The named configurations are set via either `GANTRY_REGISTRY_CONFIG`, `GANTRY_REGISTRY_CONFIG_FILE` or `GANTRY_REGISTRY_CONFIGS_FILE`. This can be done by adding the following label to the service `gantry.auth.config=<configuration>`. *Gantry* creates [Docker configuration files](https://docs.docker.com/engine/reference/commandline/cli/#configuration-files) and adds `--config <configuration>` to the Docker command line for the corresponding services.
 
-> NOTE: *Gantry* automatically adds `--with-registry-auth` to the `docker service update` command for a sevice, when it finds the label `gantry.auth.config=<config-name>` on the service. Without `--with-registry-auth`, the service will be updated to an image without digest. See this [comment](https://github.com/shizunge/gantry/issues/53#issuecomment-2348376336).
+> NOTE: *Gantry* automatically adds `--with-registry-auth` to the `docker service update` command for a service, when it finds the label `gantry.auth.config=<configuration>` on the service, or when it logs in with the default Docker configuration. Without `--with-registry-auth`, the service will be updated to an image without digest. See this [comment](https://github.com/shizunge/gantry/issues/53#issuecomment-2348376336).
 
 > NOTE: You can use `GANTRY_REGISTRY_CONFIGS_FILE` together with other authentication environment variables.
 
@@ -131,7 +131,7 @@ Labels can be added to services to modify the behavior of *Gantry* for particula
 
 | Label  | Description |
 |--------|-------------|
-| `gantry.auth.config=<config-name>`       | See [Authentication](#authentication). |
+| `gantry.auth.config=<configuration>`     | See [Authentication](#authentication). |
 | `gantry.services.excluded=true`          | Exclude the services from updating if you are using the default [`GANTRY_SERVICES_EXCLUDED_FILTERS`](#to-select-services). |
 | `gantry.manifest.cmd=<command>`          | Override [`GANTRY_MANIFEST_CMD`](#to-check-if-new-images-are-available) |
 | `gantry.manifest.options=<string> `      | Override [`GANTRY_MANIFEST_OPTIONS`](#to-check-if-new-images-are-available) |
