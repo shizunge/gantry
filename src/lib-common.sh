@@ -15,17 +15,36 @@
 # along with this program.  If not, see <https://www.gnu.org/licenses/>.
 #
 
+# Run "grep -q" and avoid broken pipe errors.
+grep_q() {
+  # "grep -q" will exit immediately when the first line of data matches, and leading to broken pipe errors.
+  grep -q -- "${@}";
+  local GREP_RETURN=$?;
+  # Add "cat > /dev/null" to avoid broken pipe errors.
+  cat >/dev/null;
+  return "${GREP_RETURN}"
+}
+
+# Similar to grep_q.
+# grep case insensitively.
+grep_q_i() {
+  grep -q -i -- "${@}";
+  local GREP_RETURN=$?;
+  cat >/dev/null;
+  return "${GREP_RETURN}"
+}
+
 # echo the number of the log level.
 # return 0 if LEVEL is supported.
 # return 1 if LEVLE is unsupported.
 _log_level() {
   local LEVEL="${1}";
   [ -z "${LEVEL}" ] && _log_level "INFO" && return 1;
-  echo "${LEVEL}" | grep -q -i "^DEBUG$" && echo 0 && return 0;
-  echo "${LEVEL}" | grep -q -i "^INFO$"  && echo 1 && return 0;
-  echo "${LEVEL}" | grep -q -i "^WARN$"  && echo 2 && return 0;
-  echo "${LEVEL}" | grep -q -i "^ERROR$" && echo 3 && return 0;
-  echo "${LEVEL}" | grep -q -i "^NONE$"  && echo 4 && return 0;
+  echo "${LEVEL}" | grep_q_i "^DEBUG$" && echo 0 && return 0;
+  echo "${LEVEL}" | grep_q_i "^INFO$"  && echo 1 && return 0;
+  echo "${LEVEL}" | grep_q_i "^WARN$"  && echo 2 && return 0;
+  echo "${LEVEL}" | grep_q_i "^ERROR$" && echo 3 && return 0;
+  echo "${LEVEL}" | grep_q_i "^NONE$"  && echo 4 && return 0;
   _log_level "NONE";
   return 1;
 }
@@ -37,10 +56,10 @@ _level_color() {
   local ORANGE='\033[0;33m'
   local GREEN='\033[0;32m'
   local BLUE='\033[0;34m'
-  echo "${LEVEL}" | grep -q -i "^DEBUG$" && echo "${BLUE}" && return 0;
-  echo "${LEVEL}" | grep -q -i "^INFO$"  && echo "${GREEN}" && return 0;
-  echo "${LEVEL}" | grep -q -i "^WARN$"  && echo "${ORANGE}" && return 0;
-  echo "${LEVEL}" | grep -q -i "^ERROR$" && echo "${RED}" && return 0;
+  echo "${LEVEL}" | grep_q_i "^DEBUG$" && echo "${BLUE}" && return 0;
+  echo "${LEVEL}" | grep_q_i "^INFO$"  && echo "${GREEN}" && return 0;
+  echo "${LEVEL}" | grep_q_i "^WARN$"  && echo "${ORANGE}" && return 0;
+  echo "${LEVEL}" | grep_q_i "^ERROR$" && echo "${RED}" && return 0;
   echo "${NO_COLOR}"
 }
 
@@ -164,7 +183,7 @@ is_number() {
 is_true() {
   local CONFIG="${1}"
   CONFIG=$(echo "${CONFIG} " | cut -d ' ' -f 1)
-  echo "${CONFIG}" | grep -q -i "true"
+  echo "${CONFIG}" | grep_q_i "true"
 }
 
 difference_between() {
@@ -228,15 +247,10 @@ read_config() {
 read_env() {
   local VNAME="${1}"; shift
   [ -z "${VNAME}" ] && return 1
-  # "grep -q" will exit immediately when the first line of data matches, and leading to broken pipe errors.
-  # Add "cat > /dev/null" to avoid broken pipe errors.
-  local GREP_RETURN=
-  env | (grep -q "^${VNAME}="; local R=$?; cat >/dev/null; test "${R}" == "0";);
-  GREP_RETURN=$?
-  if [ "${GREP_RETURN}" != "0" ]; then
-    echo "${@}"
-  else
+  if env | grep_q "^${VNAME}="; then
     eval "echo \"\${${VNAME}}\""
+  else
+    echo "${@}"
   fi
   return 0
 }
@@ -299,7 +313,7 @@ _get_docker_command_name_arg() {
 }
 
 _get_docker_command_detach() {
-  if echo "${@}" | grep -q -- "--detach"; then
+  if echo "${@}" | grep_q "--detach"; then
     echo "true"
     return 0
   fi
@@ -344,7 +358,7 @@ _docker_service_task_states() {
     NAME=$(echo "${LINE}" | cut -d ']' -f 1 | cut -d '[' -f 2)
     NODE_STATE_AND_ERROR=$(echo "${LINE}" | cut -d ']' -f 2-)
     # We assume that the first State of each task is the latest one that we want to report.
-    if ! echo "${NAME_LIST}" | grep -q "${NAME}"; then
+    if ! echo "${NAME_LIST}" | grep_q "${NAME}"; then
       echo "${NODE_STATE_AND_ERROR}"
     fi
     NAME_LIST=$(echo -e "${NAME_LIST}\n${NAME}" | sort | uniq)
@@ -358,8 +372,8 @@ _docker_service_task_states() {
 wait_service_state() {
   local SERVICE_NAME="${1}"; shift;
   local WAIT_RUNNING WAIT_COMPLETE;
-  WAIT_RUNNING=$(echo "${@}" | grep -q -- "--running" && echo "true" || echo "false")
-  WAIT_COMPLETE=$(echo "${@}" | grep -q -- "--complete" && echo "true" || echo "false")
+  WAIT_RUNNING=$(echo "${@}" | grep_q "--running" && echo "true" || echo "false")
+  WAIT_COMPLETE=$(echo "${@}" | grep_q "--complete" && echo "true" || echo "false")
   local RETURN_VALUE=0
   local DOCKER_CMD_ERROR=1
   local SLEEP_SECONDS=1
@@ -377,9 +391,9 @@ wait_service_state() {
     while read -r LINE; do
       [ -z "${LINE}" ] && continue;
       NUM_LINES=$((NUM_LINES+1));
-      echo "${LINE}" | grep -q "Running" && NUM_RUNS=$((NUM_RUNS+1));
-      echo "${LINE}" | grep -q "Complete" && NUM_DONES=$((NUM_DONES+1));
-      echo "${LINE}" | grep -q "Failed" && NUM_FAILS=$((NUM_FAILS+1));
+      echo "${LINE}" | grep_q "Running" && NUM_RUNS=$((NUM_RUNS+1));
+      echo "${LINE}" | grep_q "Complete" && NUM_DONES=$((NUM_DONES+1));
+      echo "${LINE}" | grep_q "Failed" && NUM_FAILS=$((NUM_FAILS+1));
     done < <(echo "${STATES}")
     if [ "${NUM_LINES}" -gt 0 ]; then
       if "${WAIT_RUNNING}" && [ "${NUM_RUNS}" -eq "${NUM_LINES}" ]; then

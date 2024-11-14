@@ -15,7 +15,9 @@
 # along with this program.  If not, see <https://www.gnu.org/licenses/>.
 #
 
-# read_env returns empty string if ENV_VALUE is set to empty, in which case we want to use the DEFAULT_VALUE.
+# This function calls read_env() underneath.
+# read_env() returns an empty string if ENV_VALUE is set to empty,
+# in which case we want to use the DEFAULT_VALUE.
 _read_env_default() {
   local ENV_NAME="${1}"
   local DEFAULT_VALUE="${2}"
@@ -26,7 +28,8 @@ _read_env_default() {
   echo "${VALUE}"
 }
 
-# Read a number from an environment variable. Log an error when it is not a number.
+# Read a number from an environment variable.
+# Log an error when it is not a number.
 gantry_read_number() {
   local ENV_NAME="${1}"
   local DEFAULT_VALUE="${2}"
@@ -56,7 +59,8 @@ _get_label_from_service() {
   echo "${VALUE}"
 }
 
-# Read a number from an environment variable. Log an error when it is not a number.
+# Read a value from label on the service firstly.
+# Read the value from the environment varible, if the label is not set.
 _read_env_or_label() {
   local SERVICE_NAME="${1}"
   local ENV_NAME="${2}"
@@ -712,23 +716,25 @@ _get_image_info() {
   MANIFEST_OPTIONS=$(_read_env_or_label "${SERVICE_NAME}" "GANTRY_MANIFEST_OPTIONS" "gantry.manifest.options" "")
   local MANIFEST_CMD="${2}"
   local IMAGE="${3}"
-  local DOCKER_CONFIG="${4}"
+  local DOCKER_CONFIG=
+  DOCKER_CONFIG=$(_get_config_from_service "${SERVICE_NAME}")
+  [ -n "${DOCKER_CONFIG}" ] && log DEBUG "Adding options \"${DOCKER_CONFIG}\" to docker commands for ${SERVICE_NAME}."
   local MSG=
   local RETURN_VALUE=0
-  if echo "${MANIFEST_CMD}" | grep -q -i "buildx"; then
+  if echo "${MANIFEST_CMD}" | grep_q_i "buildx"; then
     # https://github.com/orgs/community/discussions/45779
     [ -n "${MANIFEST_OPTIONS}" ] && log DEBUG "Adding options \"${MANIFEST_OPTIONS}\" to the command \"docker buildx imagetools inspect\"."
     # SC2086: Double quote to prevent globbing and word splitting.
     # shellcheck disable=SC2086
     MSG=$(docker ${DOCKER_CONFIG} buildx imagetools inspect ${MANIFEST_OPTIONS} "${IMAGE}" 2>&1);
     RETURN_VALUE=$?
-  elif echo "${MANIFEST_CMD}" | grep -q -i "manifest"; then
+  elif echo "${MANIFEST_CMD}" | grep_q_i "manifest"; then
     [ -n "${MANIFEST_OPTIONS}" ] && log DEBUG "Adding options \"${MANIFEST_OPTIONS}\" to the command \"docker manifest inspect\"."
     # SC2086: Double quote to prevent globbing and word splitting.
     # shellcheck disable=SC2086
     MSG=$(docker ${DOCKER_CONFIG} manifest inspect ${MANIFEST_OPTIONS} "${IMAGE}" 2>&1);
     RETURN_VALUE=$?
-  elif echo "${MANIFEST_CMD}" | grep -q -i "none"; then
+  elif echo "${MANIFEST_CMD}" | grep_q_i "none"; then
     # We should never reach here, the "none" command is already checked inside the function _inspect_image.
     log DEBUG "MANIFEST_CMD is \"none\"."
     return 0
@@ -761,7 +767,7 @@ _inspect_image() {
   # Adding a "@" to ensure the string contains at least one "@". Thus DIGEST will be empty when original IMAGE_WITH_DIGEST contains no "@"
   IMAGE=$(echo "${IMAGE_WITH_DIGEST}@" | cut -d@ -f1)
   DIGEST=$(echo "${IMAGE_WITH_DIGEST}@" | cut -d@ -f2)
-  if echo "${MANIFEST_CMD}" | grep -q -i "none"; then
+  if echo "${MANIFEST_CMD}" | grep_q_i "none"; then
     if _service_is_self "${SERVICE_NAME}"; then
       # Always inspecting self, never skipping.
       MANIFEST_CMD="buildx"
@@ -784,11 +790,8 @@ _inspect_image() {
     echo "${IMAGE}"
     return 0
   fi
-  local DOCKER_CONFIG=
-  DOCKER_CONFIG=$(_get_config_from_service "${SERVICE_NAME}")
-  [ -n "${DOCKER_CONFIG}" ] && log DEBUG "Adding options \"${DOCKER_CONFIG}\" to docker commands for ${SERVICE_NAME}."
   local IMAGE_INFO=
-  if ! IMAGE_INFO=$(_get_image_info "${SERVICE_NAME}" "${MANIFEST_CMD}" "${IMAGE}" "${DOCKER_CONFIG}"); then
+  if ! IMAGE_INFO=$(_get_image_info "${SERVICE_NAME}" "${MANIFEST_CMD}" "${IMAGE}"); then
     log DEBUG "Skip updating ${SERVICE_NAME} because there is a failure to obtain the manifest from the registry of image ${IMAGE}."
     return 1
   fi
@@ -802,7 +805,7 @@ _inspect_image() {
     echo "${IMAGE}"
     return 0
   fi
-  if [ -n "${DIGEST}" ] && echo "${IMAGE_INFO}" | grep -q "${DIGEST}"; then
+  if [ -n "${DIGEST}" ] && echo "${IMAGE_INFO}" | grep_q "${DIGEST}"; then
     _static_variable_add_unique_to_list STATIC_VAR_NO_NEW_IMAGES "${DIGEST}"
     log DEBUG "Skip updating ${SERVICE_NAME} because the current version is the latest of image ${IMAGE_WITH_DIGEST}."
     return 0
