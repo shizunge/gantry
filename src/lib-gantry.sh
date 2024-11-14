@@ -935,6 +935,8 @@ _rollback_service() {
     log ERROR "Failed to roll back ${SERVICE_NAME}. ${ROLLBACK_MSG}"
     return 1
   fi
+  # Usually the ROLLBACK_MSG is same as the SERVICE_NAME.
+  [ "${ROLLBACK_MSG}" != "${SERVICE_NAME}" ] && log WARN "There are additional messages from rolling back ${SERVICE_NAME}: ${ROLLBACK_MSG}"
   log INFO "Rolled back ${SERVICE_NAME}."
 }
 
@@ -1004,6 +1006,8 @@ _update_single_service() {
     _static_variable_add_unique_to_list STATIC_VAR_SERVICES_UPDATE_FAILED "${SERVICE_NAME}"
     return 1
   fi
+  # Usually the UPDATE_MSG is same as the SERVICE_NAME.
+  [ "${UPDATE_MSG}" != "${SERVICE_NAME}" ] && log WARN "There are additional messages from updating ${SERVICE_NAME}: ${UPDATE_MSG}"
   local TIME_ELAPSED=
   TIME_ELAPSED=$(time_elapsed_since "${START_TIME}")
   local PREVIOUS_IMAGE=
