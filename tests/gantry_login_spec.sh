@@ -111,6 +111,7 @@ Describe 'login'
       local RETURN_VALUE=
       run_gantry "${TEST_NAME}"
       RETURN_VALUE="${?}"
+      docker logout "${REGISTRY}" > /dev/null
       rm "${USER_FILE}"
       rm "${PASS_FILE}"
       [ -d "${CONFIG}" ] && rm -r "${CONFIG}" && echo "${CONFIG} should not exist." >&2 && return 1
