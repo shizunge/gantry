@@ -968,6 +968,8 @@ _update_single_service() {
     _static_variable_add_unique_to_list STATIC_VAR_SERVICES_UPDATE_INPUT_ERROR "${SERVICE_NAME}"
     return 1;
   fi
+  local START_TIME=
+  START_TIME=$(date +%s)
   log INFO "Updating ${SERVICE_NAME} with image ${IMAGE}"
   local DOCKER_CONFIG=
   local ADDITIONAL_OPTIONS=
@@ -999,17 +1001,19 @@ _update_single_service() {
     _static_variable_add_unique_to_list STATIC_VAR_SERVICES_UPDATE_FAILED "${SERVICE_NAME}"
     return 1
   fi
+  local TIME_ELAPSED=
+  TIME_ELAPSED=$(time_elapsed_since "${START_TIME}")
   local PREVIOUS_IMAGE=
   local CURRENT_IMAGE=
   PREVIOUS_IMAGE=$(_get_service_previous_image "${SERVICE_NAME}")
   CURRENT_IMAGE=$(_get_service_image "${SERVICE_NAME}")
   if [ "${PREVIOUS_IMAGE}" = "${CURRENT_IMAGE}" ]; then
-    log INFO "No updates for ${SERVICE_NAME}."
+    log INFO "No updates for ${SERVICE_NAME}. Use ${TIME_ELAPSED}."
     return 0
   fi
   _static_variable_add_unique_to_list STATIC_VAR_SERVICES_UPDATED "${SERVICE_NAME}"
   _static_variable_add_unique_to_list STATIC_VAR_IMAGES_TO_REMOVE "${PREVIOUS_IMAGE}"
-  log INFO "UPDATED ${SERVICE_NAME}."
+  log INFO "UPDATED ${SERVICE_NAME}. Use ${TIME_ELAPSED}."
   return 0
 }
 
