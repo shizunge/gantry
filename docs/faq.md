@@ -16,17 +16,7 @@ At the end of updating, *Gantry* optionally removes the old images.
 
 It will not work by setting multiple filters with different names, because filters are logical **ANDED**.
 
-To filter multiple services, you can set a label on each service then let *Gantry* filter on that label. Or you can run multiple *Gantry* instances.
-
-Advanced user can also create their own entrypoint using functions in [lib-gantry.sh](../src/lib-gantry.sh).
-```
-# notification.sh is optional.
-source ./src/lib-common.sh;
-source ./src/lib-gantry.sh;
-gantry_initialize;
-gantry_update_services_list "${LIST_OF_SERVICES_TO_UPDATE}";
-gantry_finalize;
-```
+To filter multiple services, you can set a label on each service then let *Gantry* filter on that label via `GANTRY_SERVICES_FILTERS`. Or you can run multiple *Gantry* instances.
 
 ### How to run *Gantry* on a cron schedule?
 
@@ -38,13 +28,15 @@ As discussed [here](https://github.com/docker/cli/issues/627), the CLI will hang
 
 *Gantry* will check whether there are running tasks in a service. If there is no running task, *Gantry* automatically adds the option `--detach=true`. In addition to the detach option, *Gantry* also adds `--replicas=0` for services in replicated mode. You don't need to add these options manually.
 
-### When to set `GANTRY_MANIFEST_CMD`?
+### What `GANTRY_MANIFEST_CMD` to use?
 
-Before updating a service, *Gantry* will try to obtain the image's meta data to decide whether there is a new image. If there is no new image, *Gantry* skips calling `docker service update`.
+Before updating a service, *Gantry* will try to obtain the image's meta data to decide whether there is a new image. If there is no new image, *Gantry* skips calling `docker service update`, leading to a speedup of the overall process.
 
-`docker buildx imagetools inspect` is selected as the default, because `docker manifest inspect` could [fail on some registries](https://github.com/orgs/community/discussions/45779). Additionally, `docker buildx imagetools` can obtain the digest of multi-arch images, which could help not to run the `docker service update` CLI when there is no new images.
+In most cases, the default value `buildx` of `GANTRY_MANIFEST_CMD` should work. `docker buildx imagetools inspect` is selected as the default, because `docker manifest inspect` could [fail on some registries](https://github.com/orgs/community/discussions/45779). Additionally, `docker buildx imagetools` can obtain the digest of multi-arch images, which could help reduce the number of calling the `docker service update` CLI when there is no new images.
 
-You can switch back to use [`docker manifest inspect`](https://docs.docker.com/engine/reference/commandline/manifest_inspect/) for the features that are not supported by [`docker buildx imagetools inspect`](https://docs.docker.com/engine/reference/commandline/buildx_imagetools_inspect/).
+We keep [`docker manifest inspect`](https://docs.docker.com/engine/reference/commandline/manifest_inspect/) for debugging purpose. There is no known advantage to use `manifest`.
+
+You can disable the image inspection by setting `GANTRY_MANIFEST_CMD` to `none` in case there is a bug. Please report the bug through a [GitHub issue](https://github.com/shizunge/gantry/issues). Another use case of `none` is that you want to add `--force` to the `docker service update` command via `GANTRY_UPDATE_OPTIONS`, which updates the services even if there is nothing changed.
 
 ### I logged in my Docker Hub account, but the Docker Hub rate reported seems incorrect.
 
