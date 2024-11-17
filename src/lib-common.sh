@@ -34,6 +34,30 @@ grep_q_i() {
   return "${GREP_RETURN}"
 }
 
+# Extract ${POSITION}th part of the string from a single line ${SINGLE_LINE}, separated by ${DELIMITER}.
+extract_string() {
+  local SINGLE_LINE="${1}"
+  local DELIMITER="${2}"
+  local POSITION="${3}"
+  # When the input contains no ${DELIMITER}, there are the expect outputs
+  # * ${POSITION} is 1 -> the ${SINGLE_LINE}
+  # * Other ${POSITION} -> an empty string
+  # The following command(s) won't work if we do not add the ${DELIMITER} to the end of ${SINGLE_LINE}
+  # * `echo "${SINGLE_LINE}" | cut -s -d "${DELIMITER}" -f 1`: actually return an empty string.
+  # * `echo "${SINGLE_LINE}" | cut -d "${DELIMITER}" -f 2`: actually returns the any line that contains no delimiter.
+  # We add a ${DELIMITER} to the echo command to ensure the string contains at least one ${DELIMITER},
+  # to help us get the expected output above.
+  # When the input contains a ${DELIMITER}, for the following command(s)
+  # * `echo "${SINGLE_LINE}${DELIMITER}" | cut -d "${DELIMITER}" -f 2-`
+  # we do not want to see a ${DELIMITER} at the end of the ouput,
+  # therefore we do not always add the ${DELIMITER} to the end of ${SINGLE_LINE}.
+  local ECHO_STRING="${SINGLE_LINE}"
+  if ! echo "${SINGLE_LINE}" | grep_q "${DELIMITER}"; then
+    ECHO_STRING="${SINGLE_LINE}${DELIMITER}"
+  fi
+  echo "${ECHO_STRING}" | cut -d "${DELIMITER}" -f "${POSITION}"
+}
+
 # echo the number of the log level.
 # return 0 if LEVEL is supported.
 # return 1 if LEVLE is unsupported.
@@ -150,19 +174,19 @@ _log_docker_node() {
 _log_docker_line() {
   local LEVEL="INFO";
   local TIME_DOCKER TIME TASK_NODE SCOPE NODE MESSAGE SPACE FIRST_WORD
-  TIME_DOCKER=$(echo "${*} " | cut -d ' ' -f 1);
+  TIME_DOCKER=$(extract_string "${*}" ' ' 1)
   TIME=$(_log_docker_time "${TIME_DOCKER}")
-  TASK_NODE=$(echo "${*} " | cut -d ' ' -f 2)
+  TASK_NODE=$(extract_string "${*}" ' ' 2)
   SCOPE=$(_log_docker_scope "${TASK_NODE}");
   NODE=$(_log_docker_node "${TASK_NODE}");
-  MESSAGE=$(echo "${*}" | cut -d '|' -f 2-);
+  MESSAGE=$(extract_string "${*}" '|' 2-);
   # Remove the leading space.
-  SPACE=$(echo "${MESSAGE} " | cut -d ' ' -f 1)
-  [ -z "${SPACE}" ] && MESSAGE=$(echo "${MESSAGE} " | cut -d ' ' -f 2-)
-  FIRST_WORD=$(echo "${MESSAGE} " | cut -d ' ' -f 1);
+  SPACE=$(extract_string "${MESSAGE}" ' ' 1)
+  [ -z "${SPACE}" ] && MESSAGE=$(extract_string "${MESSAGE}" ' ' 2-)
+  FIRST_WORD=$(extract_string "${MESSAGE}" ' ' 1);
   if _log_level "${FIRST_WORD}" >/dev/null; then
     LEVEL=${FIRST_WORD};
-    MESSAGE=$(echo "${MESSAGE} " | cut -d ' ' -f 2-);
+    MESSAGE=$(extract_string "${MESSAGE}" ' ' 2-);
   fi
   _log_formatter "${LEVEL}" "${TIME}" "${NODE}" "${SCOPE}" "${MESSAGE}";
 }
@@ -182,7 +206,7 @@ is_number() {
 
 is_true() {
   local CONFIG="${1}"
-  CONFIG=$(echo "${CONFIG} " | cut -d ' ' -f 1)
+  CONFIG=$(extract_string "${CONFIG}" ' ' 1)
   echo "${CONFIG}" | grep_q_i "true"
 }
 
@@ -411,7 +435,7 @@ wait_service_state() {
         local TASK_RETURN_VALUE=
         TASK_RETURN_VALUE=$(echo "${STATES}" | grep "Failed" | sed -n 's/.*task: non-zero exit (\([0-9]\+\)).*/\1/p')
         # Get the first error code.
-        RETURN_VALUE=$(echo "${TASK_RETURN_VALUE:-1} " | cut -d ' ' -f 1)
+        RETURN_VALUE=$(extract_string "${TASK_RETURN_VALUE:-1}" ' ' 1)
         DOCKER_CMD_ERROR=0
         break
       fi
@@ -464,8 +488,8 @@ docker_current_container_name() {
       # '<container name>/<ip>/<mask>'
       # '<container name>/' (when network mode is host)
       local CNAME CIP
-      CNAME=$(echo "${NAME_AND_IP}/" | cut -d/ -f1);
-      CIP=$(echo "${NAME_AND_IP}/" | cut -d/ -f2);
+      CNAME=$(extract_string "${NAME_AND_IP}" '/' 1);
+      CIP=$(extract_string "${NAME_AND_IP}" '/' 2);
       # Unable to find the container IP when network mode is host.
       [ -z "${CIP}" ] && continue;
       for IP in ${IPS}; do

@@ -190,11 +190,11 @@ _authenticate_to_registries() {
     [ "${LINE:0:1}" = "#" ] && continue
     LINE=$(echo "${LINE}" | tr '\t' ' ')
     local OTHERS=
-    CONFIG=$(echo "${LINE} " | cut -d ' ' -f 1)
-    HOST=$(echo "${LINE} " | cut -d ' ' -f 2)
-    USER=$(echo "${LINE} " | cut -d ' ' -f 3)
-    PASSWORD=$(echo "${LINE} " | cut -d ' ' -f 4)
-    OTHERS=$(echo "${LINE} " | cut -d ' ' -f 5-)
+    CONFIG=$(extract_string "${LINE}" ' ' 1)
+    HOST=$(extract_string "${LINE}" ' ' 2)
+    USER=$(extract_string "${LINE}" ' ' 3)
+    PASSWORD=$(extract_string "${LINE}" ' ' 4)
+    OTHERS=$(extract_string "${LINE}" ' ' 5-)
     local ERROR_MSG=
     if [ -n "${OTHERS}" ]; then
       ERROR_MSG="Found extra item(s)."
@@ -763,10 +763,8 @@ _inspect_image() {
   fi
   local IMAGE=
   local DIGEST=
-  # If IMAGE_WITH_DIGEST contains no "@", then "cut -d@ -f2" will also return the entire string.
-  # Adding a "@" to ensure the string contains at least one "@". Thus DIGEST will be empty when original IMAGE_WITH_DIGEST contains no "@"
-  IMAGE=$(echo "${IMAGE_WITH_DIGEST}@" | cut -d@ -f1)
-  DIGEST=$(echo "${IMAGE_WITH_DIGEST}@" | cut -d@ -f2)
+  IMAGE=$(extract_string "${IMAGE_WITH_DIGEST}" '@' 1)
+  DIGEST=$(extract_string "${IMAGE_WITH_DIGEST}" '@' 2)
   if echo "${MANIFEST_CMD}" | grep_q_i "none"; then
     if _service_is_self "${SERVICE_NAME}"; then
       # Always inspecting self, never skipping.
@@ -859,7 +857,7 @@ _get_number_of_running_tasks() {
   # The REPLICAS is like "5/5" or "1/1 (3/5 completed)"
   # Get the number before the first "/".
   local NUM_RUNS=
-  NUM_RUNS=$(echo "${REPLICAS}/" | cut -d '/' -f 1)
+  NUM_RUNS=$(extract_string "${REPLICAS}" '/' 1)
   echo "${NUM_RUNS}"
 }
 
