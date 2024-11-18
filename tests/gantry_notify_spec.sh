@@ -18,7 +18,8 @@
 export TOTAL_EMAIL_COUNT_IS_ONE="\"total\": *1,"
 export SEND_NOTIFY_APPRISE="Sent notification via Apprise"
 export SKIP_NOTIFY_APPRISE="Skip sending notification via Apprise"
-export SKIP_NO_UPDATES="Skip sending notification because there are no updates or errors"
+export NO_UPDATES_OR_ERRORS_FOR_NOTIFICATION="There are no updates or errors for notification."
+export SKIP_SENDING_NOTIFICATION="Skip sending notification."
 
 UINQUE_ID="$(unique_id)"
 export SERVICE_NAME_APPRISE="gantry-test-${UINQUE_ID}-apprise"
@@ -320,7 +321,8 @@ Describe 'notify'
       The stderr should satisfy spec_expect_no_message "${SKIP_REMOVING_IMAGES}"
       The stderr should satisfy spec_expect_no_message "${REMOVED_IMAGE}.*${IMAGE_WITH_TAG}"
       The stderr should satisfy spec_expect_no_message "${FAILED_TO_REMOVE_IMAGE}.*${IMAGE_WITH_TAG}"
-      The stderr should satisfy spec_expect_message    "${SKIP_NO_UPDATES}"
+      The stderr should satisfy spec_expect_message    "${NO_UPDATES_OR_ERRORS_FOR_NOTIFICATION}"
+      The stderr should satisfy spec_expect_message    "${SKIP_SENDING_NOTIFICATION}"
     End
   End
   Describe "test_notify_on_change_errors" "container_test:false"

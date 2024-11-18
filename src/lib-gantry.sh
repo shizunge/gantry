@@ -108,17 +108,17 @@ _login_registry() {
    log WARN "HOST is empty. Will login to the default registry."
    REGISTRY_MESSAGE="default registry"
   fi
-  local DOCKER_CONFIG=
+  local AUTH_CONFIG=
   local CONFIG_MESSAGE="with default configuration"
   if [ -n "${CONFIG}" ]; then
-    DOCKER_CONFIG="--config ${CONFIG}"
+    AUTH_CONFIG="--config ${CONFIG}"
     CONFIG_MESSAGE="with configuration ${CONFIG}"
   fi
   local REGISTRY_CONFIG_MESSAGE="${REGISTRY_MESSAGE} ${CONFIG_MESSAGE}"
   local LOGIN_MSG=
   # SC2086: Double quote to prevent globbing and word splitting.
   # shellcheck disable=SC2086
-  if ! LOGIN_MSG=$(echo "${PASSWORD}" | docker ${DOCKER_CONFIG} login --username="${USER}" --password-stdin "${HOST}" 2>&1); then
+  if ! LOGIN_MSG=$(echo "${PASSWORD}" | docker ${AUTH_CONFIG} login --username="${USER}" --password-stdin "${HOST}" 2>&1); then
     log ERROR "Failed to login to ${REGISTRY_CONFIG_MESSAGE}. ${LOGIN_MSG}"
     return 1
   fi
@@ -523,28 +523,30 @@ _report_services() {
   if [ "${NUM_FAILED}" = "0" ] && [ "${NUM_ERRORS}" = "0" ]; then
     NUM_ERRORS="${ACCUMULATED_ERRORS}"
   fi
-  local NUM_TOTAL_ERRORS=$((NUM_FAILED+NUM_ERRORS))
-  local TYPE="success"
-  [ "${NUM_TOTAL_ERRORS}" != "0" ] && TYPE="failure"
-  local ERROR_STRING=
-  [ "${NUM_ERRORS}" != "0" ] && ERROR_STRING=" ${NUM_TOTAL_ERRORS} error(s)"
-  local TITLE BODY SEND_NOTIFICATION
-  TITLE="[${STACK}] ${NUM_UPDATED} services updated ${NUM_FAILED} failed${ERROR_STRING}"
-  BODY=$(echo -e "${UPDATED_MSG}\n${FAILED_MSG}\n${ERROR_MSG}")
-  SEND_NOTIFICATION="true"
+  local NUM_FAILED_PLUS_ERRORS=$((NUM_FAILED+NUM_ERRORS))
+  local SEND_NOTIFICATION="true"
   case "${CONDITION}" in
     "on-change")
-      if [ "${NUM_UPDATED}" = "0" ] && [ "${NUM_TOTAL_ERRORS}" = "0" ]; then
-        log DEBUG "Skip sending notification because there are no updates or errors."
+      if [ "${NUM_UPDATED}" = "0" ] && [ "${NUM_FAILED_PLUS_ERRORS}" = "0" ]; then
+        log DEBUG "There are no updates or errors for notification."
         SEND_NOTIFICATION="false"
       fi
       ;;
     "all"|*)
       ;;
   esac
-  if is_true "${SEND_NOTIFICATION}"; then
-    _send_notification "${TYPE}" "${TITLE}" "${BODY}"
+  if ! is_true "${SEND_NOTIFICATION}"; then
+    log DEBUG "Skip sending notification."
+    return 0
   fi
+  local TYPE="success"
+  [ "${NUM_FAILED_PLUS_ERRORS}" != "0" ] && TYPE="failure"
+  local ERROR_STRING=
+  [ "${NUM_ERRORS}" != "0" ] && ERROR_STRING=" ${NUM_ERRORS} error(s)"
+  local TITLE BODY
+  TITLE="[${STACK}] ${NUM_UPDATED} services updated ${NUM_FAILED} failed${ERROR_STRING}"
+  BODY=$(echo -e "${UPDATED_MSG}\n${FAILED_MSG}\n${ERROR_MSG}")
+  _send_notification "${TYPE}" "${TITLE}" "${BODY}"
 }
 
 # Return 0 if the item is in the list.
@@ -670,9 +672,9 @@ _service_is_replicated() {
 
 # Return 0 if AUTH_CONFIG is a directory that contains Docker configuration files
 # Return 1 if AUTH_CONFIG is not a directory that contains Docker configuration files
-_check_docker_config_folder() {
+_check_auth_config_folder() {
   local AUTH_CONFIG="${1}"
-  # This is not a complete check.
+  # We only check whether it is a folder, thus it is not a complete check whether the folder contains valid Docker configuration files.
   if [ -d "${AUTH_CONFIG}" ]; then
     return 0
   fi
@@ -685,13 +687,13 @@ _check_docker_config_folder() {
   return 1
 }
 
-_get_config_from_service() {
+_get_auth_config_from_service() {
   local SERVICE_NAME="${1}"
   local AUTH_CONFIG_LABEL="gantry.auth.config"
   local AUTH_CONFIG=
   AUTH_CONFIG=$(_get_label_from_service "${SERVICE_NAME}" "${AUTH_CONFIG_LABEL}")
   [ -z "${AUTH_CONFIG}" ] && return 0
-  _check_docker_config_folder "${AUTH_CONFIG}"
+  _check_auth_config_folder "${AUTH_CONFIG}"
   echo "--config ${AUTH_CONFIG}"
 }
 
@@ -716,9 +718,9 @@ _get_image_info() {
   MANIFEST_OPTIONS=$(_read_env_or_label "${SERVICE_NAME}" "GANTRY_MANIFEST_OPTIONS" "gantry.manifest.options" "")
   local MANIFEST_CMD="${2}"
   local IMAGE="${3}"
-  local DOCKER_CONFIG=
-  DOCKER_CONFIG=$(_get_config_from_service "${SERVICE_NAME}")
-  [ -n "${DOCKER_CONFIG}" ] && log DEBUG "Adding options \"${DOCKER_CONFIG}\" to docker commands for ${SERVICE_NAME}."
+  local AUTH_CONFIG=
+  AUTH_CONFIG=$(_get_auth_config_from_service "${SERVICE_NAME}")
+  [ -n "${AUTH_CONFIG}" ] && log DEBUG "Adding options \"${AUTH_CONFIG}\" to docker commands for ${SERVICE_NAME}."
   local MSG=
   local RETURN_VALUE=0
   if echo "${MANIFEST_CMD}" | grep_q_i "buildx"; then
@@ -726,13 +728,13 @@ _get_image_info() {
     [ -n "${MANIFEST_OPTIONS}" ] && log DEBUG "Adding options \"${MANIFEST_OPTIONS}\" to the command \"docker buildx imagetools inspect\"."
     # SC2086: Double quote to prevent globbing and word splitting.
     # shellcheck disable=SC2086
-    MSG=$(docker ${DOCKER_CONFIG} buildx imagetools inspect ${MANIFEST_OPTIONS} "${IMAGE}" 2>&1);
+    MSG=$(docker ${AUTH_CONFIG} buildx imagetools inspect ${MANIFEST_OPTIONS} "${IMAGE}" 2>&1);
     RETURN_VALUE=$?
   elif echo "${MANIFEST_CMD}" | grep_q_i "manifest"; then
     [ -n "${MANIFEST_OPTIONS}" ] && log DEBUG "Adding options \"${MANIFEST_OPTIONS}\" to the command \"docker manifest inspect\"."
     # SC2086: Double quote to prevent globbing and word splitting.
     # shellcheck disable=SC2086
-    MSG=$(docker ${DOCKER_CONFIG} manifest inspect ${MANIFEST_OPTIONS} "${IMAGE}" 2>&1);
+    MSG=$(docker ${AUTH_CONFIG} manifest inspect ${MANIFEST_OPTIONS} "${IMAGE}" 2>&1);
     RETURN_VALUE=$?
   elif echo "${MANIFEST_CMD}" | grep_q_i "none"; then
     # We should never reach here, the "none" command is already checked inside the function _inspect_image.
@@ -862,12 +864,12 @@ _get_number_of_running_tasks() {
 }
 
 _get_with_registry_auth() {
-  local DOCKER_CONFIG="${1}"
+  local AUTH_CONFIG="${1}"
   local ARGUMENTS=""
-  # DOCKER_CONFIG is currently only used by Authentication.
+  # AUTH_CONFIG is currently (2024.11) only used by Authentication.
   # When login is required, we must add `--with-registry-auth`. Otherwise the service will get an image without digest.
   # See https://github.com/shizunge/gantry/issues/53#issuecomment-2348376336
-  if [ -n "${DOCKER_CONFIG}" ] || _docker_default_config_is_used; then
+  if [ -n "${AUTH_CONFIG}" ] || _docker_default_config_is_used; then
     ARGUMENTS="--with-registry-auth";
   fi
   echo "${ARGUMENTS}"
@@ -875,7 +877,7 @@ _get_with_registry_auth() {
 
 _get_service_update_additional_options() {
   local SERVICE_NAME="${1}"
-  local DOCKER_CONFIG="${2}"
+  local AUTH_CONFIG="${2}"
   local NUM_RUNS=
   NUM_RUNS=$(_get_number_of_running_tasks "${SERVICE_NAME}")
   if ! is_number "${NUM_RUNS}"; then
@@ -895,14 +897,14 @@ _get_service_update_additional_options() {
   fi
   # Add `--with-registry-auth` if needed.
   local WITH_REGISTRY_AUTH=
-  WITH_REGISTRY_AUTH="$(_get_with_registry_auth "${DOCKER_CONFIG}")"
+  WITH_REGISTRY_AUTH="$(_get_with_registry_auth "${AUTH_CONFIG}")"
   [ -n "${WITH_REGISTRY_AUTH}" ] && OPTIONS="${OPTIONS} ${WITH_REGISTRY_AUTH}"
   echo "${OPTIONS}"
 }
 
 _get_service_rollback_additional_options() {
   local SERVICE_NAME="${1}"
-  local DOCKER_CONFIG="${2}"
+  local AUTH_CONFIG="${2}"
   local OPTIONS=
   # Place holder function. Nothing to do here yet.
   # --with-registry-auth cannot be combined with --rollback.
@@ -915,21 +917,21 @@ _rollback_service() {
   ROLLBACK_ON_FAILURE=$(_read_env_or_label "${SERVICE_NAME}" "GANTRY_ROLLBACK_ON_FAILURE" "gantry.rollback.on_failure" "true")
   local ROLLBACK_OPTIONS=
   ROLLBACK_OPTIONS=$(_read_env_or_label "${SERVICE_NAME}" "GANTRY_ROLLBACK_OPTIONS" "gantry.rollback.options" "")
-  local DOCKER_CONFIG="${2}"
+  local AUTH_CONFIG="${2}"
   if ! is_true "${ROLLBACK_ON_FAILURE}"; then
     return 0
   fi
   log INFO "Rolling back ${SERVICE_NAME}."
   # "service update --rollback" needs to take different options from "service update"
   local ADDITIONAL_OPTIONS=
-  ADDITIONAL_OPTIONS=$(_get_service_rollback_additional_options "${SERVICE_NAME}" "${DOCKER_CONFIG}")
+  ADDITIONAL_OPTIONS=$(_get_service_rollback_additional_options "${SERVICE_NAME}" "${AUTH_CONFIG}")
   [ -n "${ADDITIONAL_OPTIONS}" ] && log DEBUG "Adding options \"${ADDITIONAL_OPTIONS}\" to the command \"docker service update --rollback\" for ${SERVICE_NAME}."
   [ -n "${ROLLBACK_OPTIONS}" ] && log DEBUG "Adding options \"${ROLLBACK_OPTIONS}\" to the command \"docker service update --rollback\" for ${SERVICE_NAME}."
   local ROLLBACK_MSG=
   # Add "-quiet" to suppress progress output.
   # SC2086: Double quote to prevent globbing and word splitting.
   # shellcheck disable=SC2086
-  if ! ROLLBACK_MSG=$(docker ${DOCKER_CONFIG} service update --quiet ${ADDITIONAL_OPTIONS} ${ROLLBACK_OPTIONS} --rollback "${SERVICE_NAME}" 2>&1); then
+  if ! ROLLBACK_MSG=$(docker ${AUTH_CONFIG} service update --quiet ${ADDITIONAL_OPTIONS} ${ROLLBACK_OPTIONS} --rollback "${SERVICE_NAME}" 2>&1); then
     log ERROR "Failed to roll back ${SERVICE_NAME}. ${ROLLBACK_MSG}"
     return 1
   fi
@@ -974,16 +976,16 @@ _update_single_service() {
   local START_TIME=
   START_TIME=$(date +%s)
   log INFO "Updating ${SERVICE_NAME} with image ${IMAGE}"
-  local DOCKER_CONFIG=
+  local AUTH_CONFIG=
   local ADDITIONAL_OPTIONS=
-  DOCKER_CONFIG=$(_get_config_from_service "${SERVICE_NAME}")
-  ADDITIONAL_OPTIONS=$(_get_service_update_additional_options "${SERVICE_NAME}" "${DOCKER_CONFIG}")
-  [ -n "${DOCKER_CONFIG}" ] && log DEBUG "Adding options \"${DOCKER_CONFIG}\" to docker commands for ${SERVICE_NAME}."
+  AUTH_CONFIG=$(_get_auth_config_from_service "${SERVICE_NAME}")
+  ADDITIONAL_OPTIONS=$(_get_service_update_additional_options "${SERVICE_NAME}" "${AUTH_CONFIG}")
+  [ -n "${AUTH_CONFIG}" ] && log DEBUG "Adding options \"${AUTH_CONFIG}\" to docker commands for ${SERVICE_NAME}."
   [ -n "${ADDITIONAL_OPTIONS}" ] && log DEBUG "Adding options \"${ADDITIONAL_OPTIONS}\" to the command \"docker service update\" for ${SERVICE_NAME}."
   [ -n "${UPDATE_OPTIONS}" ] && log DEBUG "Adding options \"${UPDATE_OPTIONS}\" to the command \"docker service update\" for ${SERVICE_NAME}."
   local TIMEOUT_COMMAND=""
   TIMEOUT_COMMAND=$(_get_timeout_command "${SERVICE_NAME}") || return 1
-  local UPDATE_COMMAND="${TIMEOUT_COMMAND} docker ${DOCKER_CONFIG} service update"
+  local UPDATE_COMMAND="${TIMEOUT_COMMAND} docker ${AUTH_CONFIG} service update"
   local UPDATE_RETURN_VALUE=0
   local UPDATE_MSG=
   # Add "-quiet" to suppress progress output.
@@ -1000,7 +1002,7 @@ _update_single_service() {
     fi
     log ERROR "Command \"${UPDATE_COMMAND}\" returns ${UPDATE_RETURN_VALUE}. ${TIMEOUT_MSG}"
     log ERROR "docker service update failed. ${UPDATE_MSG}"
-    _rollback_service "${SERVICE_NAME}" "${DOCKER_CONFIG}"
+    _rollback_service "${SERVICE_NAME}" "${AUTH_CONFIG}"
     _static_variable_add_unique_to_list STATIC_VAR_SERVICES_UPDATE_FAILED "${SERVICE_NAME}"
     return 1
   fi
