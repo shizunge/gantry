@@ -194,6 +194,7 @@ _log_docker_line() {
 # Usage: echo "${LOGS}" | log_lines INFO
 log_lines() {
   local LEVEL="${1}";
+  local LINE=;
   while read -r LINE; do
     [ -z "${LINE}" ] && continue;
     log "${LEVEL}" "${LINE}";
@@ -412,6 +413,7 @@ wait_service_state() {
     local NUM_RUNS=0
     local NUM_DONES=0
     local NUM_FAILS=0
+    local LINE=
     while read -r LINE; do
       [ -z "${LINE}" ] && continue;
       NUM_LINES=$((NUM_LINES+1));
@@ -446,6 +448,7 @@ wait_service_state() {
     log ERROR "Failed to obtain task states of service ${SERVICE_NAME}: ${STATES}"
     return 1
   fi
+  local LINE=
   while read -r LINE; do
     log INFO "Service ${SERVICE_NAME}: ${LINE}."
   done < <(echo "${STATES}")
@@ -482,6 +485,7 @@ docker_current_container_name() {
     [ "${NID}" = "${HOST_NETWORK}" ] && continue;
     local ALL_LOCAL_NAME_AND_IP=;
     ALL_LOCAL_NAME_AND_IP=$(docker network inspect "${NID}" --format "{{range .Containers}}{{.Name}}/{{println .IPv4Address}}{{end}}") || return 1;
+    local NAME_AND_IP=;
     for NAME_AND_IP in ${ALL_LOCAL_NAME_AND_IP}; do
       [ -z "${NAME_AND_IP}" ] && continue;
       # NAME_AND_IP will be in one of the following formats:
@@ -492,6 +496,7 @@ docker_current_container_name() {
       CIP=$(extract_string "${NAME_AND_IP}" '/' 2);
       # Unable to find the container IP when network mode is host.
       [ -z "${CIP}" ] && continue;
+      local IP=;
       for IP in ${IPS}; do
         [ "${IP}" != "${CIP}" ] && continue;
         echo "${CNAME}";

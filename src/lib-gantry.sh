@@ -256,6 +256,7 @@ _remove_static_variables_folder() {
   TO_REMOVE_STATIC_VARIABLES_FOLDER="$(_get_static_variables_folder)"
   log DEBUG "Removing STATIC_VARIABLES_FOLDER ${TO_REMOVE_STATIC_VARIABLES_FOLDER}"
   export STATIC_VARIABLES_FOLDER=
+  unset STATIC_VARIABLES_FOLDER
   rm -r "${TO_REMOVE_STATIC_VARIABLES_FOLDER}"
 }
 

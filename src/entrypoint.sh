@@ -28,7 +28,7 @@ _get_lib_dir() {
   elif [ -r "./lib-gantry.sh" ]; then
     LIB_DIR="."
   fi
-  echo "${LIB_DIR}"
+  readlink -f "${LIB_DIR}"
 }
 
 _log_load_libraries() {
@@ -36,14 +36,19 @@ _log_load_libraries() {
   local IMAGES_TO_REMOVE="${GANTRY_IMAGES_TO_REMOVE:-""}"
   local LIB_DIR="${1}"
   # log function is not available before loading the library.
-  if echo "${LOG_LEVEL}" | grep -q -i "NONE"; then
+  local LOADING_MSG="Loading libraries from ${LIB_DIR}"
+  if [ -n "${IMAGES_TO_REMOVE}" ]; then
+    echo "DEBUG ${LOADING_MSG}" >&2
+    return 0;
+  fi
+  # DEBUG should be the lowest level.
+  if ! echo "${LOG_LEVEL}" | grep -q -i "^DEBUG$"; then
     return 0
   fi
   local TIMESTAMP=
-  if [ -z "${IMAGES_TO_REMOVE}" ]; then
-    TIMESTAMP="[$(date -Iseconds)] "
-  fi
-  echo "${TIMESTAMP}Loading libraries from ${LIB_DIR}" >&2
+  TIMESTAMP="[$(date -Iseconds)]"
+  local LEVEL="[DEBUG]"
+  echo "${TIMESTAMP}${LEVEL} ${LOADING_MSG}" >&2
 }
 
 load_libraries() {

@@ -91,6 +91,49 @@ Describe 'common-options'
       The stderr should satisfy spec_expect_no_message ".+"
     End
   End
+  Describe "test_common_no_new_env" "container_test:false"
+    # Check there is no new variable set,
+    # to avoid errors like https://github.com/shizunge/gantry/issues/64#issuecomment-2475499085
+    # We don't need to run this test using containers because we check env on the host, while the container test set env inside the container.
+    TEST_NAME="test_common_no_new_env"
+    IMAGE_WITH_TAG=$(get_image_with_tag "${SUITE_NAME}")
+    SERVICE_NAME="gantry-test-$(unique_id)"
+    test_common_no_new_env() {
+      local TEST_NAME="${1}"
+      local SERVICE_NAME="${2}"
+      local ENV_BEFORE_RUN=
+      ENV_BEFORE_RUN=$(mktemp)
+      local ENV_AFTER_RUN=
+      ENV_AFTER_RUN=$(mktemp)
+
+      reset_gantry_env "${SERVICE_NAME}"
+      # There should be no warnings or errors. So it should work the same as LOG_LEVLE=NONE.
+      export GANTRY_LOG_LEVEL=WARN
+
+      # _ contains the last command. declare is a bash builtin.
+      unset _; declare -p > "${ENV_BEFORE_RUN}"
+      run_gantry "${TEST_NAME}"
+
+      # Allow the following 3 mismatches used in log() function.
+      unset LOG_LEVEL
+      unset NODE_NAME
+      unset LOG_SCOPE
+      unset _; declare -p > "${ENV_AFTER_RUN}"
+      diff <(cat "${ENV_BEFORE_RUN}") <(cat "${ENV_AFTER_RUN}")
+      rm "${ENV_BEFORE_RUN}"
+      rm "${ENV_AFTER_RUN}"
+    }
+    BeforeEach "common_setup_new_image ${TEST_NAME} ${IMAGE_WITH_TAG} ${SERVICE_NAME}"
+    AfterEach "common_cleanup ${TEST_NAME} ${IMAGE_WITH_TAG} ${SERVICE_NAME}"
+    It 'run_test'
+      When run test_common_no_new_env "${TEST_NAME}" "${SERVICE_NAME}"
+      The status should be success
+      The stdout should satisfy display_output
+      The stdout should satisfy spec_expect_no_message ".+"
+      The stderr should satisfy display_output
+      The stderr should satisfy spec_expect_no_message ".+"
+    End
+  End
   Describe "test_common_PRE_POST_RUN_CMD" "container_test:true"
     TEST_NAME="test_common_PRE_POST_RUN_CMD"
     IMAGE_WITH_TAG=$(get_image_with_tag "${SUITE_NAME}")
