@@ -68,6 +68,7 @@ _print_and_cleanup_emails() {
 
 Describe 'notify'
   SUITE_NAME="notify"
+  export GANTRY_TEST_UPDATE_OPTIONS="--update-monitor=1s"
   BeforeAll "_notify_before_all ${SUITE_NAME}"
   AfterAll "_notify_after_all ${SUITE_NAME}"
   Describe "test_notify_apprise" "container_test:true" "coverage:true"

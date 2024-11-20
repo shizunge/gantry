@@ -18,6 +18,7 @@
 # Test cleanup images related options.
 Describe 'cleanup-images'
   SUITE_NAME="cleanup-images"
+  export GANTRY_TEST_UPDATE_OPTIONS="--update-monitor=1s"
   BeforeAll "initialize_all_tests ${SUITE_NAME}"
   AfterAll "finish_all_tests ${SUITE_NAME}"
   Describe "test_CLEANUP_IMAGES_false" "container_test:true" "coverage:true"

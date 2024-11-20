@@ -20,6 +20,7 @@ export IMAGE_DIGEST_WARNING="image .* could not be accessed on a registry to rec
 
 Describe 'login'
   SUITE_NAME="login"
+  export GANTRY_TEST_UPDATE_OPTIONS="--update-monitor=1s"
   BeforeAll "initialize_all_tests ${SUITE_NAME} ENFORCE_LOGIN"
   AfterAll "finish_all_tests ${SUITE_NAME} ENFORCE_LOGIN"
   Describe "test_login_config" "container_test:true" "coverage:true"

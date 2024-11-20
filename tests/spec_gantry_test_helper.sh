@@ -419,7 +419,13 @@ reset_gantry_env() {
   export GANTRY_ROLLBACK_OPTIONS=
   export GANTRY_UPDATE_JOBS=
   export GANTRY_UPDATE_NUM_WORKERS=
-  export GANTRY_UPDATE_OPTIONS=
+  # Add --update-monitor to reduce the monitoring time to speedup tests. We could save about 4s on each service.
+  # Add --detach save more time, but we might hit problems about removing images.
+  if [ -n "${GANTRY_TEST_UPDATE_OPTIONS}" ]; then
+    export GANTRY_UPDATE_OPTIONS="${GANTRY_TEST_UPDATE_OPTIONS}"
+  else
+    export GANTRY_UPDATE_OPTIONS=
+  fi
   export GANTRY_UPDATE_TIMEOUT_SECONDS=
   export GANTRY_CLEANUP_IMAGES=
   export GANTRY_CLEANUP_IMAGES_OPTIONS=

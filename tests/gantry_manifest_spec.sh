@@ -17,6 +17,7 @@
 
 Describe 'manifest-command'
   SUITE_NAME="manifest-command"
+  export GANTRY_TEST_UPDATE_OPTIONS="--update-monitor=1s"
   BeforeAll "initialize_all_tests ${SUITE_NAME}"
   AfterAll "finish_all_tests ${SUITE_NAME}"
   Describe "test_MANIFEST_CMD_none" "container_test:true" "coverage:true"

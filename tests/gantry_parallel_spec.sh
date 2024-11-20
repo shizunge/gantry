@@ -17,6 +17,7 @@
 
 Describe 'service-parallel'
   SUITE_NAME="service-parallel"
+  export GANTRY_TEST_UPDATE_OPTIONS="--update-monitor=1s"
   BeforeAll "initialize_all_tests ${SUITE_NAME}"
   AfterAll "finish_all_tests ${SUITE_NAME}"
   Describe "test_parallel_less_workers" "container_test:true" "coverage:true"

@@ -17,6 +17,7 @@
 
 Describe "service-no-running-tasks"
   SUITE_NAME="service-no-running-tasks"
+  export GANTRY_TEST_UPDATE_OPTIONS="--update-monitor=1s"
   BeforeAll "initialize_all_tests ${SUITE_NAME}"
   AfterAll "finish_all_tests ${SUITE_NAME}"
   Describe "test_no_running_tasks_replicated" "container_test:true" "coverage:true"

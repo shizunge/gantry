@@ -17,6 +17,7 @@
 
 Describe 'service-multiple-services'
   SUITE_NAME="service-multiple-services"
+  export GANTRY_TEST_UPDATE_OPTIONS="--update-monitor=1s"
   BeforeAll "initialize_all_tests ${SUITE_NAME}"
   AfterAll "finish_all_tests ${SUITE_NAME}"
   Describe "test_multiple_services_excluded_filters" "container_test:true" "coverage:true"

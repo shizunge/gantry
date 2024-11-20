@@ -17,6 +17,7 @@
 
 Describe 'filters'
   SUITE_NAME="filters"
+  export GANTRY_TEST_UPDATE_OPTIONS="--update-monitor=1s"
   BeforeAll "initialize_all_tests ${SUITE_NAME}"
   AfterAll "finish_all_tests ${SUITE_NAME}"
   Describe "test_SERVICES_FILTERS_bad" "container_test:false" "coverage:true"

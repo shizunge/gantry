@@ -203,6 +203,7 @@ Describe 'update-options'
       local TEST_NAME="${1}"
       local SERVICE_NAME="${2}"
       reset_gantry_env "${SERVICE_NAME}"
+      export GANTRY_UPDATE_OPTIONS=
       export GANTRY_UPDATE_JOBS="true"
       run_gantry "${TEST_NAME}"
     }

@@ -33,6 +33,7 @@
 
 Describe 'login_docker_config'
   SUITE_NAME="login_docker_config"
+  export GANTRY_TEST_UPDATE_OPTIONS="--update-monitor=1s"
   BeforeAll "initialize_all_tests ${SUITE_NAME} ENFORCE_LOGIN"
   AfterAll "finish_all_tests ${SUITE_NAME} ENFORCE_LOGIN"
   Describe "test_login_docker_config_no_label" "container_test:true" "coverage:true"

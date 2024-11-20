@@ -17,6 +17,7 @@
 
 Describe 'common-options'
   SUITE_NAME="common-options"
+  export GANTRY_TEST_UPDATE_OPTIONS="--update-monitor=1s"
   BeforeAll "initialize_all_tests ${SUITE_NAME}"
   AfterAll "finish_all_tests ${SUITE_NAME}"
   Describe "test_common_DOCKER_HOST_not_swarm_manager" "container_test:false" "coverage:true"

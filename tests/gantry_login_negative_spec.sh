@@ -17,6 +17,7 @@
 
 Describe 'login_negative'
   SUITE_NAME="login_negative"
+  export GANTRY_TEST_UPDATE_OPTIONS="--update-monitor=1s"
   BeforeAll "initialize_all_tests ${SUITE_NAME} ENFORCE_LOGIN"
   AfterAll "finish_all_tests ${SUITE_NAME} ENFORCE_LOGIN"
   Describe "test_login_no_login" "container_test:false" "coverage:true"
