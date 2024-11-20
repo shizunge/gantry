@@ -35,16 +35,7 @@ Describe 'service-parallel'
       common_setup_new_image_multiple "${TEST_NAME}" "${IMAGE_WITH_TAG}" "${SERVICE_NAME}" "${MAX_SERVICES_NUM}"
       local NO_NEW_IAMGE_START=$((MAX_SERVICES_NUM+1))
       local NO_NEW_IAMGE_END=$((MAX_SERVICES_NUM+MAX_NO_NEW_IMAGE))
-      local NUM=
-      local PIDS=
-      for NUM in $(seq "${NO_NEW_IAMGE_START}" "${NO_NEW_IAMGE_END}"); do
-        local SERVICE_NAME_NUM="${SERVICE_NAME}-${NUM}"
-        start_replicated_service "${SERVICE_NAME_NUM}" "${IMAGE_WITH_TAG}" &
-        PIDS="${!} ${PIDS}"
-      done
-      # SC2086 (info): Double quote to prevent globbing and word splitting.
-      # shellcheck disable=SC2086
-      wait ${PIDS}
+      start_multiple_replicated_services "${SERVICE_NAME}" "${IMAGE_WITH_TAG}" "${NO_NEW_IAMGE_START}" "${NO_NEW_IAMGE_END}"
     }
     test_parallel_less_workers() {
       local TEST_NAME="${1}"

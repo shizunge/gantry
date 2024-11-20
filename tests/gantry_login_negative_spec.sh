@@ -433,10 +433,7 @@ Describe 'login_negative'
       local SERVICE_NAME="${3}"
       local IMAGE_WITH_TAG0="${IMAGE_WITH_TAG}-0"
       local IMAGE_WITH_TAG1="${IMAGE_WITH_TAG}-1"
-      local SERVICE_NAME0="${SERVICE_NAME}-0"
-      local SERVICE_NAME1="${SERVICE_NAME}-1"
-      stop_service "${SERVICE_NAME0}"
-      stop_service "${SERVICE_NAME1}"
+      stop_multiple_services "${SERVICE_NAME}" 0 1
       prune_local_test_image "${IMAGE_WITH_TAG0}"
       prune_local_test_image "${IMAGE_WITH_TAG1}"
       finalize_test "${TEST_NAME}"

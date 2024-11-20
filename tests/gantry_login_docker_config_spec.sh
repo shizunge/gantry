@@ -188,14 +188,9 @@ Describe 'login_docker_config'
       local TEST_NAME="${1}"
       local IMAGE_WITH_TAG="${2}"
       local SERVICE_NAME="${3}"
-      local SERVICE_NAME0="${SERVICE_NAME}-0"
-      local SERVICE_NAME1="${SERVICE_NAME}-1"
-      local SERVICE_NAME2="${SERVICE_NAME}-2"
       initialize_test "${TEST_NAME}"
       build_and_push_test_image "${IMAGE_WITH_TAG}"
-      start_replicated_service "${SERVICE_NAME0}" "${IMAGE_WITH_TAG}"
-      start_replicated_service "${SERVICE_NAME1}" "${IMAGE_WITH_TAG}"
-      start_replicated_service "${SERVICE_NAME2}" "${IMAGE_WITH_TAG}"
+      start_multiple_replicated_services "${SERVICE_NAME}" "${IMAGE_WITH_TAG}" 0 2
       build_and_push_test_image "${IMAGE_WITH_TAG}"
     }
     test_login_docker_config_label_override() {
@@ -237,12 +232,7 @@ Describe 'login_docker_config'
       local TEST_NAME="${1}"
       local IMAGE_WITH_TAG="${2}"
       local SERVICE_NAME="${3}"
-      local SERVICE_NAME0="${SERVICE_NAME}-0"
-      local SERVICE_NAME1="${SERVICE_NAME}-1"
-      local SERVICE_NAME2="${SERVICE_NAME}-2"
-      stop_service "${SERVICE_NAME0}"
-      stop_service "${SERVICE_NAME1}"
-      stop_service "${SERVICE_NAME2}"
+      stop_multiple_services "${SERVICE_NAME}" 0 2
       prune_local_test_image "${IMAGE_WITH_TAG}"
       finalize_test "${TEST_NAME}"
     }

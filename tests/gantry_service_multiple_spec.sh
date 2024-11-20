@@ -33,22 +33,12 @@ Describe 'service-multiple-services'
       local TEST_NAME="${1}"
       local IMAGE_WITH_TAG="${2}"
       local SERVICE_NAME="${3}"
-      local SERVICE_NAME0="${SERVICE_NAME}-0"
-      local SERVICE_NAME1="${SERVICE_NAME}-1"
-      local SERVICE_NAME2="${SERVICE_NAME}-2"
-      local SERVICE_NAME3="${SERVICE_NAME}-3"
-      local SERVICE_NAME4="${SERVICE_NAME}-4"
-      local SERVICE_NAME5="${SERVICE_NAME}-5"
 
       initialize_test "${TEST_NAME}"
       build_and_push_test_image "${IMAGE_WITH_TAG}"
-      start_replicated_service "${SERVICE_NAME0}" "${IMAGE_WITH_TAG}"
-      start_replicated_service "${SERVICE_NAME1}" "${IMAGE_WITH_TAG}"
-      start_replicated_service "${SERVICE_NAME2}" "${IMAGE_WITH_TAG}"
-      start_replicated_service "${SERVICE_NAME3}" "${IMAGE_WITH_TAG}"
+      start_multiple_replicated_services "${SERVICE_NAME}" "${IMAGE_WITH_TAG}" 0 3
       build_and_push_test_image "${IMAGE_WITH_TAG}"
-      start_replicated_service "${SERVICE_NAME4}" "${IMAGE_WITH_TAG}"
-      start_replicated_service "${SERVICE_NAME5}" "${IMAGE_WITH_TAG}"
+      start_multiple_replicated_services "${SERVICE_NAME}" "${IMAGE_WITH_TAG}" 4 5
     }
     test_multiple_services_excluded_filters() {
       local TEST_NAME="${1}"
@@ -65,18 +55,7 @@ Describe 'service-multiple-services'
       local TEST_NAME="${1}"
       local IMAGE_WITH_TAG="${2}"
       local SERVICE_NAME="${3}"
-      local SERVICE_NAME0="${SERVICE_NAME}-0"
-      local SERVICE_NAME1="${SERVICE_NAME}-1"
-      local SERVICE_NAME2="${SERVICE_NAME}-2"
-      local SERVICE_NAME3="${SERVICE_NAME}-3"
-      local SERVICE_NAME4="${SERVICE_NAME}-4"
-      local SERVICE_NAME5="${SERVICE_NAME}-5"
-      stop_service "${SERVICE_NAME5}"
-      stop_service "${SERVICE_NAME4}"
-      stop_service "${SERVICE_NAME3}"
-      stop_service "${SERVICE_NAME2}"
-      stop_service "${SERVICE_NAME1}"
-      stop_service "${SERVICE_NAME0}"
+      stop_multiple_services "${SERVICE_NAME}" 0 5
       prune_local_test_image "${IMAGE_WITH_TAG}"
       finalize_test "${TEST_NAME}"
     }

@@ -108,16 +108,7 @@ common_setup_new_image_multiple() {
   local MAX_SERVICES_NUM="${4}"
   initialize_test "${TEST_NAME}"
   build_and_push_test_image "${IMAGE_WITH_TAG}"
-  local NUM=
-  local PIDS=
-  for NUM in $(seq 0 "${MAX_SERVICES_NUM}"); do
-    local SERVICE_NAME_NUM="${SERVICE_NAME}-${NUM}"
-    start_replicated_service "${SERVICE_NAME_NUM}" "${IMAGE_WITH_TAG}" &
-    PIDS="${!} ${PIDS}"
-  done
-  # SC2086 (info): Double quote to prevent globbing and word splitting.
-  # shellcheck disable=SC2086
-  wait ${PIDS}
+  start_multiple_replicated_services "${SERVICE_NAME}" "${IMAGE_WITH_TAG}" 0 "${MAX_SERVICES_NUM}"
   build_and_push_test_image "${IMAGE_WITH_TAG}"
 }
 
@@ -171,16 +162,7 @@ common_cleanup_multiple() {
   local IMAGE_WITH_TAG="${2}"
   local SERVICE_NAME="${3}"
   local MAX_SERVICES_NUM="${4}"
-  local NUM=
-  local PIDS=
-  for NUM in $(seq 0 "${MAX_SERVICES_NUM}"); do
-    local SERVICE_NAME_NUM="${SERVICE_NAME}-${NUM}"
-    stop_service "${SERVICE_NAME_NUM}" &
-    PIDS="${!} ${PIDS}"
-  done
-  # SC2086 (info): Double quote to prevent globbing and word splitting.
-  # shellcheck disable=SC2086
-  wait ${PIDS}
+  stop_multiple_services "${SERVICE_NAME}" 0 "${MAX_SERVICES_NUM}"
   prune_local_test_image "${IMAGE_WITH_TAG}"
   finalize_test "${TEST_NAME}"
 }
@@ -699,6 +681,23 @@ start_replicated_service() {
     "${IMAGE_WITH_TAG}"
 }
 
+start_multiple_replicated_services() {
+  local SERVICE_NAME="${1}"
+  local IMAGE_WITH_TAG="${2}"
+  local START_NUM="${3}"
+  local END_NUM="${4}"
+  local NUM=
+  local PIDS=
+  for NUM in $(seq "${START_NUM}" "${END_NUM}"); do
+    local SERVICE_NAME_NUM="${SERVICE_NAME}-${NUM}"
+    start_replicated_service "${SERVICE_NAME_NUM}" "${IMAGE_WITH_TAG}" &
+    PIDS="${!} ${PIDS}"
+  done
+  # SC2086 (info): Double quote to prevent globbing and word splitting.
+  # shellcheck disable=SC2086
+  wait ${PIDS}
+}
+
 start_global_service() {
   local SERVICE_NAME="${1}"
   local IMAGE_WITH_TAG="${2}"
@@ -742,6 +741,22 @@ stop_service() {
   local SERVICE_NAME="${1}"
   echo -n "Removing service "
   docker service rm "${SERVICE_NAME}" &
+}
+
+stop_multiple_services() {
+  local SERVICE_NAME="${1}"
+  local START_NUM="${2}"
+  local END_NUM="${3}"
+  local NUM=
+  local PIDS=
+  for NUM in $(seq "${START_NUM}" "${END_NUM}"); do
+    local SERVICE_NAME_NUM="${SERVICE_NAME}-${NUM}"
+    stop_service "${SERVICE_NAME_NUM}" &
+    PIDS="${!} ${PIDS}"
+  done
+  # SC2086 (info): Double quote to prevent globbing and word splitting.
+  # shellcheck disable=SC2086
+  wait ${PIDS}
 }
 
 _get_script_dir() {
