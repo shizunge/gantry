@@ -112,16 +112,15 @@ Describe 'common-options'
       # There should be no warnings or errors. So it should work the same as LOG_LEVLE=NONE.
       export GANTRY_LOG_LEVEL=WARN
 
+      # Allow the following 3 mismatches used in log() function.
+      unset LOG_LEVEL NODE_NAME LOG_SCOPE
       # _ contains the last command. declare is a bash builtin.
       unset _; declare -p > "${ENV_BEFORE_RUN}"
       run_gantry "${TEST_NAME}"
-
       # Allow the following 3 mismatches used in log() function.
-      unset LOG_LEVEL
-      unset NODE_NAME
-      unset LOG_SCOPE
+      unset LOG_LEVEL NODE_NAME LOG_SCOPE
       unset _; declare -p > "${ENV_AFTER_RUN}"
-      diff <(cat "${ENV_BEFORE_RUN}") <(cat "${ENV_AFTER_RUN}")
+      diff "${ENV_BEFORE_RUN}" "${ENV_AFTER_RUN}"
       rm "${ENV_BEFORE_RUN}"
       rm "${ENV_AFTER_RUN}"
     }
@@ -144,8 +143,12 @@ Describe 'common-options'
       local TEST_NAME="${1}"
       local SERVICE_NAME="${2}"
       reset_gantry_env "${SERVICE_NAME}"
-      export GANTRY_PRE_RUN_CMD="echo \"Pre update\""
-      export GANTRY_POST_RUN_CMD="echo \"Post update\""
+      export GANTRY_UPDATE_OPTIONS=
+      export GANTRY_CLEANUP_IMAGES=
+      # Test that pre-run command can change the global configurations.
+      export GANTRY_PRE_RUN_CMD="echo \"Pre update\"; GANTRY_UPDATE_OPTIONS=--detach=true; GANTRY_CLEANUP_IMAGES=false;"
+      # Test that the command returns a non-zero value.
+      export GANTRY_POST_RUN_CMD="echo \"Post update\"; false;"
       run_gantry "${TEST_NAME}"
     }
     BeforeEach "common_setup_new_image ${TEST_NAME} ${IMAGE_WITH_TAG} ${SERVICE_NAME}"
@@ -158,12 +161,14 @@ Describe 'common-options'
       The stderr should satisfy display_output
       The stderr should satisfy spec_expect_no_message "${NOT_START_WITH_A_SQUARE_BRACKET}"
       The stderr should satisfy spec_expect_message    "Pre update"
+      The stderr should satisfy spec_expect_no_message "pre-run command returned a non-zero value"
       The stderr should satisfy spec_expect_no_message "${SKIP_UPDATING}.*${SERVICE_NAME}"
       The stderr should satisfy spec_expect_message    "${PERFORM_UPDATING}.*${SERVICE_NAME}.*${PERFORM_REASON_HAS_NEWER_IMAGE}"
       The stderr should satisfy spec_expect_no_message "${NUM_SERVICES_SKIP_JOBS}"
       The stderr should satisfy spec_expect_no_message "${NUM_SERVICES_INSPECT_FAILURE}"
       The stderr should satisfy spec_expect_no_message "${NUM_SERVICES_NO_NEW_IMAGES}"
       The stderr should satisfy spec_expect_message    "${NUM_SERVICES_UPDATING}"
+      The stderr should satisfy spec_expect_message    "${ADDING_OPTIONS}.*--detach=true.*${SERVICE_NAME}"
       The stderr should satisfy spec_expect_message    "${UPDATED}.*${SERVICE_NAME}"
       The stderr should satisfy spec_expect_no_message "${NO_UPDATES}.*${SERVICE_NAME}"
       The stderr should satisfy spec_expect_no_message "${ROLLING_BACK}.*${SERVICE_NAME}"
@@ -174,11 +179,12 @@ Describe 'common-options'
       The stderr should satisfy spec_expect_no_message "${NUM_SERVICES_UPDATE_FAILED}"
       The stderr should satisfy spec_expect_no_message "${NUM_SERVICES_ERRORS}"
       The stderr should satisfy spec_expect_no_message "${NO_IMAGES_TO_REMOVE}"
-      The stderr should satisfy spec_expect_message    "${REMOVING_NUM_IMAGES}"
-      The stderr should satisfy spec_expect_no_message "${SKIP_REMOVING_IMAGES}"
-      The stderr should satisfy spec_expect_message    "${REMOVED_IMAGE}.*${IMAGE_WITH_TAG}"
-      The stderr should satisfy spec_expect_no_message "${FAILED_TO_REMOVE_IMAGE}.*${IMAGE_WITH_TAG}"
+      The stderr should satisfy spec_expect_no_message "${REMOVING_NUM_IMAGES}"
+      The stderr should satisfy spec_expect_message    "${SKIP_REMOVING_IMAGES}"
+      The stderr should satisfy spec_expect_no_message "${REMOVED_IMAGE}.*"
+      The stderr should satisfy spec_expect_no_message "${FAILED_TO_REMOVE_IMAGE}.*"
       The stderr should satisfy spec_expect_message    "Post update"
+      The stderr should satisfy spec_expect_message    "post-run command returned a non-zero value"
       The stderr should satisfy spec_expect_no_message "${SCHEDULE_NEXT_UPDATE_AT}"
       The stderr should satisfy spec_expect_no_message "${SLEEP_SECONDS_BEFORE_NEXT_UPDATE}"
     End

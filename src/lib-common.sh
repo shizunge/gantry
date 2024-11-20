@@ -295,19 +295,22 @@ eval_cmd() {
   local OLD_LOG_SCOPE="${LOG_SCOPE}"
   LOG_SCOPE=$(attach_tag_to_log_scope "${TAG}")
   export LOG_SCOPE
-  local LOG=
-  local RETURN_VALUE=0
   log INFO "Run ${TAG} command: ${CMD}"
-  if LOG=$(eval "${CMD}"); then
-    echo "${LOG}" | log_lines INFO
+  local EVAL_OUTPUT=
+  local EVAL_RETURN=
+  EVAL_OUTPUT=$(mktemp)
+  eval "${CMD}" > "${EVAL_OUTPUT}"
+  EVAL_RETURN=$?
+  if [ "${EVAL_RETURN}" = "0" ]; then
+    log_lines INFO < "${EVAL_OUTPUT}"
   else
-    RETURN_VALUE=$?
-    echo "${LOG}" | log_lines WARN
-    log WARN "${TAG} command returned a non-zero value ${RETURN_VALUE}."
+    log_lines WARN < "${EVAL_OUTPUT}"
+    log WARN "${TAG} command returned a non-zero value ${EVAL_RETURN}."
   fi
+  rm "${EVAL_OUTPUT}"
   log INFO "Finish ${TAG} command."
   export LOG_SCOPE="${OLD_LOG_SCOPE}"
-  return "${RETURN_VALUE}"
+  return "${EVAL_RETURN}"
 }
 
 swarm_network_arguments() {
