@@ -33,7 +33,6 @@
 
 Describe 'login_docker_config'
   SUITE_NAME="login_docker_config"
-  export GANTRY_TEST_UPDATE_OPTIONS="--update-monitor=1s"
   BeforeAll "initialize_all_tests ${SUITE_NAME} ENFORCE_LOGIN"
   AfterAll "finish_all_tests ${SUITE_NAME} ENFORCE_LOGIN"
   Describe "test_login_docker_config_no_label" "container_test:true" "coverage:true"
@@ -74,7 +73,7 @@ Describe 'login_docker_config'
       The stdout should satisfy display_output
       The stdout should satisfy spec_expect_no_message ".+"
       The stderr should satisfy display_output
-      The stderr should satisfy spec_expect_no_message "${NOT_START_WITH_A_SQUARE_BRACKET}"
+      The stderr should satisfy spec_expect_no_message "${START_WITHOUT_A_SQUARE_BRACKET}"
       The stderr should satisfy spec_expect_no_message "${LOGGED_INTO_REGISTRY}.*${DEFAULT_CONFIGURATION}"
       The stderr should satisfy spec_expect_message    "${LOGGED_INTO_REGISTRY}.*${TEST_REGISTRY}.*${CONFIG}"
       The stderr should satisfy spec_expect_no_message "${FAILED_TO_LOGIN_TO_REGISTRY}"
@@ -146,7 +145,7 @@ Describe 'login_docker_config'
       The stdout should satisfy display_output
       The stdout should satisfy spec_expect_no_message ".+"
       The stderr should satisfy display_output
-      The stderr should satisfy spec_expect_no_message "${NOT_START_WITH_A_SQUARE_BRACKET}"
+      The stderr should satisfy spec_expect_no_message "${START_WITHOUT_A_SQUARE_BRACKET}"
       The stderr should satisfy spec_expect_message    "${LOGGED_INTO_REGISTRY}.*${TEST_REGISTRY}.*${DEFAULT_CONFIGURATION}"
       The stderr should satisfy spec_expect_no_message "${FAILED_TO_LOGIN_TO_REGISTRY}"
       The stderr should satisfy spec_expect_no_message "${CONFIG_IS_NOT_A_DIRECTORY}"
@@ -245,7 +244,7 @@ Describe 'login_docker_config'
       The stdout should satisfy display_output
       The stdout should satisfy spec_expect_no_message ".+"
       The stderr should satisfy display_output
-      The stderr should satisfy spec_expect_no_message "${NOT_START_WITH_A_SQUARE_BRACKET}"
+      The stderr should satisfy spec_expect_no_message "${START_WITHOUT_A_SQUARE_BRACKET}"
       The stderr should satisfy spec_expect_message    "${LOGGED_INTO_REGISTRY}.*${TEST_REGISTRY}.*${CONFIG}"
       The stderr should satisfy spec_expect_no_message "${FAILED_TO_LOGIN_TO_REGISTRY}"
       The stderr should satisfy spec_expect_message    "incorrect-${CONFIG}.*${CONFIG_IS_NOT_A_DIRECTORY}"

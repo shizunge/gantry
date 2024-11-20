@@ -18,7 +18,6 @@
 # Test cleanup images related options.
 Describe 'cleanup-images'
   SUITE_NAME="cleanup-images"
-  export GANTRY_TEST_UPDATE_OPTIONS="--update-monitor=1s"
   BeforeAll "initialize_all_tests ${SUITE_NAME}"
   AfterAll "finish_all_tests ${SUITE_NAME}"
   Describe "test_CLEANUP_IMAGES_false" "container_test:true" "coverage:true"
@@ -40,7 +39,7 @@ Describe 'cleanup-images'
       The stdout should satisfy display_output
       The stdout should satisfy spec_expect_no_message ".+"
       The stderr should satisfy display_output
-      The stderr should satisfy spec_expect_no_message "${NOT_START_WITH_A_SQUARE_BRACKET}"
+      The stderr should satisfy spec_expect_no_message "${START_WITHOUT_A_SQUARE_BRACKET}"
       The stderr should satisfy spec_expect_no_message "${SKIP_UPDATING}.*${SERVICE_NAME}"
       The stderr should satisfy spec_expect_message    "${PERFORM_UPDATING}.*${SERVICE_NAME}.*${PERFORM_REASON_HAS_NEWER_IMAGE}"
       The stderr should satisfy spec_expect_no_message "${NUM_SERVICES_SKIP_JOBS}"
@@ -84,7 +83,7 @@ Describe 'cleanup-images'
       The stdout should satisfy display_output
       The stdout should satisfy spec_expect_no_message ".+"
       The stderr should satisfy display_output
-      The stderr should satisfy spec_expect_no_message "${NOT_START_WITH_A_SQUARE_BRACKET}"
+      The stderr should satisfy spec_expect_no_message "${START_WITHOUT_A_SQUARE_BRACKET}"
       The stderr should satisfy spec_expect_no_message "${SKIP_UPDATING}.*${SERVICE_NAME}"
       The stderr should satisfy spec_expect_message    "${PERFORM_UPDATING}.*${SERVICE_NAME}.*${PERFORM_REASON_HAS_NEWER_IMAGE}"
       The stderr should satisfy spec_expect_no_message "${NUM_SERVICES_SKIP_JOBS}"
@@ -129,7 +128,7 @@ Describe 'cleanup-images'
       The stdout should satisfy display_output
       The stdout should satisfy spec_expect_no_message ".+"
       The stderr should satisfy display_output
-      The stderr should satisfy spec_expect_no_message "${NOT_START_WITH_A_SQUARE_BRACKET}"
+      The stderr should satisfy spec_expect_no_message "${START_WITHOUT_A_SQUARE_BRACKET}"
       The stderr should satisfy spec_expect_no_message "${SKIP_UPDATING}.*${SERVICE_NAME}"
       The stderr should satisfy spec_expect_message    "${PERFORM_UPDATING}.*${SERVICE_NAME}.*${PERFORM_REASON_HAS_NEWER_IMAGE}"
       The stderr should satisfy spec_expect_no_message "${NUM_SERVICES_SKIP_JOBS}"

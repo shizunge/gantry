@@ -17,7 +17,6 @@
 
 Describe 'service-multiple-services'
   SUITE_NAME="service-multiple-services"
-  export GANTRY_TEST_UPDATE_OPTIONS="--update-monitor=1s"
   BeforeAll "initialize_all_tests ${SUITE_NAME}"
   AfterAll "finish_all_tests ${SUITE_NAME}"
   Describe "test_multiple_services_excluded_filters" "container_test:true" "coverage:true"
@@ -68,7 +67,7 @@ Describe 'service-multiple-services'
       The stdout should satisfy display_output
       The stdout should satisfy spec_expect_no_message ".+"
       The stderr should satisfy display_output
-      The stderr should satisfy spec_expect_no_message "${NOT_START_WITH_A_SQUARE_BRACKET}"
+      The stderr should satisfy spec_expect_no_message "${START_WITHOUT_A_SQUARE_BRACKET}"
       # Service 0 and 3 should get updated.
       # Service 1 and 2 should be excluded.
       # Service 4 and 5 created with new image, no update.

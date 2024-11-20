@@ -211,15 +211,11 @@ is_true() {
   echo "${CONFIG}" | grep_q_i "true"
 }
 
-difference_between() {
+first_minus_second() {
   local NUM0="${1}"
   local NUM1="${2}"
   if is_number "${NUM0}" && is_number "${NUM1}"; then
-    if [ "${NUM0}" -gt "${NUM1}" ]; then
-      echo "$((NUM0 - NUM1))"
-    else
-      echo "$((NUM1 - NUM0))"
-    fi
+    echo "$((NUM0 - NUM1))"
     return 0
   fi
   echo "NaN"
@@ -230,11 +226,14 @@ _time_elapsed_between() {
   local TIME0="${1}"
   local TIME1="${2}"
   local SECONDS_ELAPSED=
-  if ! SECONDS_ELAPSED=$(difference_between "${TIME0}" "${TIME1}"); then
+  if ! SECONDS_ELAPSED=$(first_minus_second "${TIME0}" "${TIME1}"); then
     echo "NaN"
     return 1
   fi
-  date -u -d "@${SECONDS_ELAPSED}" +'%-Mm %-Ss'
+  local FORMAT="%-Ss"
+  [ "${SECONDS_ELAPSED}" -ge 60 ] && FORMAT="%-Mm %-Ss"
+  [ "${SECONDS_ELAPSED}" -ge 3600 ] && FORMAT="%-Hh %-Mm %-Ss"
+  date -u -d "@${SECONDS_ELAPSED}" +"${FORMAT}"
 }
 
 time_elapsed_since() {

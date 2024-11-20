@@ -33,10 +33,7 @@ _read_env_default() {
 gantry_read_number() {
   local ENV_NAME="${1}"
   local DEFAULT_VALUE="${2}"
-  if ! is_number "${DEFAULT_VALUE}"; then
-    log ERROR "DEFAULT_VALUE must be a number. Got \"${DEFAULT_VALUE}\"."
-    return 1
-  fi
+  ! is_number "${DEFAULT_VALUE}" && log ERROR "DEFAULT_VALUE must be a number. Got \"${DEFAULT_VALUE}\"." && return 1
   local VALUE=
   VALUE=$(_read_env_default "${ENV_NAME}" "${DEFAULT_VALUE}")
   if ! is_number "${VALUE}"; then
@@ -85,19 +82,31 @@ _get_docker_default_config() {
   readlink -f "${DEFAULT_LOCATION}"
 }
 
-# Record that the default config is used.
-_use_docker_default_config() {
-  local CONFIG_TO_REPORT=
-  CONFIG_TO_REPORT=$(_get_docker_default_config)
-  _static_variable_add_unique_to_list STATIC_VAR_DOCKER_CONFIG_DEFAULT "${CONFIG_TO_REPORT}"
+# Record that the default config is used when the input is either
+# 1. an empty string.
+# 2. same as _get_docker_default_config().
+_check_if_it_is_docker_default_config() {
+  local CONFIG_TO_CHECK="${1}"
+  local DEFAULT_LOCATION=
+  DEFAULT_LOCATION=$(_get_docker_default_config)
+  if [ -z "${CONFIG_TO_CHECK}" ]; then
+    CONFIG_TO_CHECK="${DEFAULT_LOCATION}"
+  else
+    CONFIG_TO_CHECK="$(readlink -f "${CONFIG_TO_CHECK}")"
+  fi
+  if [ "${CONFIG_TO_CHECK}" = "${DEFAULT_LOCATION}" ]; then
+    _static_variable_add_unique_to_list STATIC_VAR_DOCKER_CONFIG_DEFAULT "${DEFAULT_LOCATION}"
+  fi
 }
 
+# Echo the default docker config if it is used.
 # Return 0 when the default config is used
 # Return 1 when the default config is not used
 _docker_default_config_is_used() {
   local DOCKER_CONFIG_DEFAULT=
   DOCKER_CONFIG_DEFAULT=$(_static_variable_read_list STATIC_VAR_DOCKER_CONFIG_DEFAULT)
-  test -n "${DOCKER_CONFIG_DEFAULT}"
+  [ -z "${DOCKER_CONFIG_DEFAULT}" ] && return 1
+  echo "${DOCKER_CONFIG_DEFAULT}"
 }
 
 _login_registry() {
@@ -133,11 +142,7 @@ _login_registry() {
   if [ -n "${CONFIG}" ]; then
     _static_variable_add_unique_to_list STATIC_VAR_DOCKER_CONFIGS "${CONFIG}"
   fi
-  local DEFAULT_LOCATION=
-  DEFAULT_LOCATION=$(_get_docker_default_config)
-  if [ -z "${CONFIG}" ] || [ "$(readlink -f "${CONFIG}")" = "${DEFAULT_LOCATION}" ]; then
-    _use_docker_default_config
-  fi
+  _check_if_it_is_docker_default_config "${CONFIG}"
   return 0
 }
 
@@ -220,8 +225,8 @@ _authenticate_to_registries() {
     _login_registry "${USER}" "${PASSWORD}" "${HOST}" "${CONFIG}"
     ACCUMULATED_ERRORS=$((ACCUMULATED_ERRORS + $?))
   done < <(cat "${CONFIGS_FILE}"; echo;)
-  [ "${ACCUMULATED_ERRORS}" -gt 0 ] && return 1
-  return 0
+  # Do not simple return ACCUMULATED_ERRORS, in case it is larger than 255.
+  test "${ACCUMULATED_ERRORS}" = "0"
 }
 
 _send_notification() {
@@ -265,7 +270,6 @@ _remove_static_variables_folder() {
   local TO_REMOVE_STATIC_VARIABLES_FOLDER=
   TO_REMOVE_STATIC_VARIABLES_FOLDER="$(_get_static_variables_folder)"
   log DEBUG "Removing STATIC_VARIABLES_FOLDER ${TO_REMOVE_STATIC_VARIABLES_FOLDER}"
-  export STATIC_VARIABLES_FOLDER=
   unset STATIC_VARIABLES_FOLDER
   rm -r "${TO_REMOVE_STATIC_VARIABLES_FOLDER}"
 }
@@ -512,7 +516,7 @@ _report_services() {
   local STACK="${1:-gantry}"
   # ACCUMULATED_ERRORS is the number of errors that are not caused by updating.
   local ACCUMULATED_ERRORS="${2:-0}"
-  if ! is_number "${ACCUMULATED_ERRORS}"; then log WARN "ACCUMULATED_ERRORS \"${ACCUMULATED_ERRORS}\" is not a number." && ACCUMULATED_ERRORS=0; fi
+  ! is_number "${ACCUMULATED_ERRORS}" && log WARN "ACCUMULATED_ERRORS \"${ACCUMULATED_ERRORS}\" is not a number." && ACCUMULATED_ERRORS=0;
 
   local UPDATED_MSG=
   UPDATED_MSG=$(_report_services_from_static_variable STATIC_VAR_SERVICES_UPDATED "" "updated" "No services updated.")
@@ -692,8 +696,9 @@ _check_auth_config_folder() {
   log WARN "${AUTH_CONFIG} is not a directory that contains Docker configuration files."
   local MSG="configuration(s) set via GANTRY_REGISTRY_CONFIG or GANTRY_REGISTRY_CONFIGS_FILE"
   _report_from_static_variable STATIC_VAR_DOCKER_CONFIGS "There are" "${MSG}" "There are no ${MSG}." | log_lines WARN
-  if _docker_default_config_is_used; then
-    log WARN "User logged in using the default Docker configuration $(_get_docker_default_config)."
+  local DOCKER_CONFIG_DEFAULT=
+  if DOCKER_CONFIG_DEFAULT=$(_docker_default_config_is_used); then
+    log WARN "User logged in using the default Docker configuration ${DOCKER_CONFIG_DEFAULT}."
   fi
   return 1
 }
@@ -876,14 +881,13 @@ _get_number_of_running_tasks() {
 
 _get_with_registry_auth() {
   local AUTH_CONFIG="${1}"
-  local ARGUMENTS=""
   # AUTH_CONFIG is currently (2024.11) only used by Authentication.
   # When login is required, we must add `--with-registry-auth`. Otherwise the service will get an image without digest.
   # See https://github.com/shizunge/gantry/issues/53#issuecomment-2348376336
-  if [ -n "${AUTH_CONFIG}" ] || _docker_default_config_is_used; then
-    ARGUMENTS="--with-registry-auth";
+  local DOCKER_CONFIG_DEFAULT=
+  if [ -n "${AUTH_CONFIG}" ] || DOCKER_CONFIG_DEFAULT=$(_docker_default_config_is_used); then
+    echo "--with-registry-auth";
   fi
-  echo "${ARGUMENTS}"
 }
 
 _get_service_update_additional_options() {
@@ -891,27 +895,28 @@ _get_service_update_additional_options() {
   local AUTH_CONFIG="${2}"
   local NUM_RUNS=
   NUM_RUNS=$(_get_number_of_running_tasks "${SERVICE_NAME}")
-  if ! is_number "${NUM_RUNS}"; then
-    log WARN "NUM_RUNS \"${NUM_RUNS}\" is not a number."
-    return 1
-  fi
-  local OPTIONS=
+  ! is_number "${NUM_RUNS}" && log WARN "NUM_RUNS \"${NUM_RUNS}\" is not a number." && return 1
+  local OPTIONS=""
+  local SPACE=""
   if [ "${NUM_RUNS}" = "0" ]; then
     # Add "--detach=true" when there is no running tasks.
     # https://github.com/docker/cli/issues/627
-    OPTIONS="${OPTIONS} --detach=true"
+    OPTIONS="${OPTIONS}${SPACE}--detach=true"
+    SPACE=" "
     local MODE=
     # Do not start a new task. Only works for replicated, not global.
     if MODE=$(_service_is_replicated "${SERVICE_NAME}"); then
-      OPTIONS="${OPTIONS} --replicas=0"
+      OPTIONS="${OPTIONS}${SPACE}--replicas=0"
+      SPACE=" "
     fi
   fi
   # Add `--with-registry-auth` if needed.
   local WITH_REGISTRY_AUTH=
   WITH_REGISTRY_AUTH="$(_get_with_registry_auth "${AUTH_CONFIG}")"
-  local SPACE=" "
-  [ -z "${OPTIONS}" ] && SPACE=""
-  [ -n "${WITH_REGISTRY_AUTH}" ] && OPTIONS="${OPTIONS}${SPACE}${WITH_REGISTRY_AUTH}"
+  if [ -n "${WITH_REGISTRY_AUTH}" ]; then
+    OPTIONS="${OPTIONS}${SPACE}${WITH_REGISTRY_AUTH}"
+    SPACE=" "
+  fi
   echo "${OPTIONS}"
 }
 
@@ -936,15 +941,15 @@ _rollback_service() {
   fi
   log INFO "Rolling back ${SERVICE_NAME}."
   # "service update --rollback" needs to take different options from "service update"
-  local ADDITIONAL_OPTIONS=
-  ADDITIONAL_OPTIONS=$(_get_service_rollback_additional_options "${SERVICE_NAME}" "${AUTH_CONFIG}")
-  [ -n "${ADDITIONAL_OPTIONS}" ] && log DEBUG "Adding options \"${ADDITIONAL_OPTIONS}\" to the command \"docker service update --rollback\" for ${SERVICE_NAME}."
-  [ -n "${ROLLBACK_OPTIONS}" ] && log DEBUG "Adding options \"${ROLLBACK_OPTIONS}\" to the command \"docker service update --rollback\" for ${SERVICE_NAME}."
+  local AUTOMATIC_OPTIONS=
+  AUTOMATIC_OPTIONS=$(_get_service_rollback_additional_options "${SERVICE_NAME}" "${AUTH_CONFIG}")
+  [ -n "${AUTOMATIC_OPTIONS}" ] && log DEBUG "Adding options \"${AUTOMATIC_OPTIONS}\" automatically to the command \"docker service update --rollback\" for ${SERVICE_NAME}."
+  [ -n "${ROLLBACK_OPTIONS}" ] && log DEBUG "Adding options \"${ROLLBACK_OPTIONS}\" specified by user to the command \"docker service update --rollback\" for ${SERVICE_NAME}."
   local ROLLBACK_MSG=
   # Add "-quiet" to suppress progress output.
   # SC2086: Double quote to prevent globbing and word splitting.
   # shellcheck disable=SC2086
-  if ! ROLLBACK_MSG=$(docker ${AUTH_CONFIG} service update --quiet ${ADDITIONAL_OPTIONS} ${ROLLBACK_OPTIONS} --rollback "${SERVICE_NAME}" 2>&1); then
+  if ! ROLLBACK_MSG=$(docker ${AUTH_CONFIG} service update --quiet ${AUTOMATIC_OPTIONS} ${ROLLBACK_OPTIONS} --rollback "${SERVICE_NAME}" 2>&1); then
     log ERROR "Failed to roll back ${SERVICE_NAME}. ${ROLLBACK_MSG}"
     return 1
   fi
@@ -990,12 +995,12 @@ _update_single_service() {
   START_TIME=$(date +%s)
   log INFO "Updating ${SERVICE_NAME} with image ${IMAGE}"
   local AUTH_CONFIG=
-  local ADDITIONAL_OPTIONS=
+  local AUTOMATIC_OPTIONS=
   AUTH_CONFIG=$(_get_auth_config_from_service "${SERVICE_NAME}")
-  ADDITIONAL_OPTIONS=$(_get_service_update_additional_options "${SERVICE_NAME}" "${AUTH_CONFIG}")
+  AUTOMATIC_OPTIONS=$(_get_service_update_additional_options "${SERVICE_NAME}" "${AUTH_CONFIG}")
   [ -n "${AUTH_CONFIG}" ] && log DEBUG "Adding options \"${AUTH_CONFIG}\" to docker commands for ${SERVICE_NAME}."
-  [ -n "${ADDITIONAL_OPTIONS}" ] && log DEBUG "Adding options \"${ADDITIONAL_OPTIONS}\" to the command \"docker service update\" for ${SERVICE_NAME}."
-  [ -n "${UPDATE_OPTIONS}" ] && log DEBUG "Adding options \"${UPDATE_OPTIONS}\" to the command \"docker service update\" for ${SERVICE_NAME}."
+  [ -n "${AUTOMATIC_OPTIONS}" ] && log DEBUG "Adding options \"${AUTOMATIC_OPTIONS}\" automatically to the command \"docker service update\" for ${SERVICE_NAME}."
+  [ -n "${UPDATE_OPTIONS}" ] && log DEBUG "Adding options \"${UPDATE_OPTIONS}\" specified by user to the command \"docker service update\" for ${SERVICE_NAME}."
   local TIMEOUT_COMMAND=""
   TIMEOUT_COMMAND=$(_get_timeout_command "${SERVICE_NAME}") || return 1
   local UPDATE_COMMAND="${TIMEOUT_COMMAND} docker ${AUTH_CONFIG} service update"
@@ -1004,7 +1009,7 @@ _update_single_service() {
   # Add "-quiet" to suppress progress output.
   # SC2086: Double quote to prevent globbing and word splitting.
   # shellcheck disable=SC2086
-  UPDATE_MSG=$(${UPDATE_COMMAND} --quiet ${ADDITIONAL_OPTIONS} ${UPDATE_OPTIONS} --image="${IMAGE}" "${SERVICE_NAME}" 2>&1);
+  UPDATE_MSG=$(${UPDATE_COMMAND} --quiet ${AUTOMATIC_OPTIONS} ${UPDATE_OPTIONS} --image="${IMAGE}" "${SERVICE_NAME}" 2>&1);
   UPDATE_RETURN_VALUE=$?
   if [ "${UPDATE_RETURN_VALUE}" != 0 ]; then
     # https://git.savannah.gnu.org/cgit/coreutils.git/tree/src/timeout.c
@@ -1188,12 +1193,8 @@ gantry_finalize() {
   local STACK="${1:-gantry}"
   local NUM_ERRORS="${2:-0}"
   local RETURN_VALUE=0
-  if ! _remove_images "${STACK}_image-remover"; then
-    RETURN_VALUE=1
-  fi
-  if ! _report_services "${STACK}" "${NUM_ERRORS}"; then
-    RETURN_VALUE=1
-  fi
+  ! _remove_images "${STACK}_image-remover" && RETURN_VALUE=1
+  ! _report_services "${STACK}" "${NUM_ERRORS}" && RETURN_VALUE=1
   _remove_static_variables_folder
   return "${RETURN_VALUE}"
 }

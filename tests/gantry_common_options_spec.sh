@@ -17,7 +17,6 @@
 
 Describe 'common-options'
   SUITE_NAME="common-options"
-  export GANTRY_TEST_UPDATE_OPTIONS="--update-monitor=1s"
   BeforeAll "initialize_all_tests ${SUITE_NAME}"
   AfterAll "finish_all_tests ${SUITE_NAME}"
   Describe "test_common_DOCKER_HOST_not_swarm_manager" "container_test:false" "coverage:true"
@@ -43,7 +42,7 @@ Describe 'common-options'
       The stdout should satisfy display_output
       The stdout should satisfy spec_expect_no_message ".+"
       The stderr should satisfy display_output
-      The stderr should satisfy spec_expect_no_message "${NOT_START_WITH_A_SQUARE_BRACKET}"
+      The stderr should satisfy spec_expect_no_message "${START_WITHOUT_A_SQUARE_BRACKET}"
       The stderr should satisfy spec_expect_message    "${SKIP_UPDATING_ALL}.*${SKIP_REASON_NOT_SWARM_MANAGER}"
       The stderr should satisfy spec_expect_no_message "${SKIP_UPDATING}.*${SERVICE_NAME}"
       The stderr should satisfy spec_expect_no_message "${PERFORM_UPDATING}.*${SERVICE_NAME}"
@@ -159,7 +158,7 @@ Describe 'common-options'
       The stdout should satisfy display_output
       The stdout should satisfy spec_expect_no_message ".+"
       The stderr should satisfy display_output
-      The stderr should satisfy spec_expect_no_message "${NOT_START_WITH_A_SQUARE_BRACKET}"
+      The stderr should satisfy spec_expect_no_message "${START_WITHOUT_A_SQUARE_BRACKET}"
       The stderr should satisfy spec_expect_message    "Pre update"
       The stderr should satisfy spec_expect_no_message "pre-run command returned a non-zero value"
       The stderr should satisfy spec_expect_no_message "${SKIP_UPDATING}.*${SERVICE_NAME}"
@@ -214,7 +213,8 @@ Describe 'common-options'
       The stdout should satisfy display_output
       The stdout should satisfy spec_expect_no_message ".+"
       The stderr should satisfy display_output
-      The stderr should satisfy spec_expect_no_message "${NOT_START_WITH_A_SQUARE_BRACKET}"
+      # Do not check START_WITHOUT_A_SQUARE_BRACKET because the kill command could cause a "Broken pipe" error.
+      # The stderr should satisfy spec_expect_no_message "${START_WITHOUT_A_SQUARE_BRACKET}"
       The stderr should satisfy spec_expect_multiple_messages "${SKIP_UPDATING}.*${SERVICE_NAME}.*${SKIP_REASON_CURRENT_IS_LATEST}"
       The stderr should satisfy spec_expect_no_message        "${PERFORM_UPDATING}.*${SERVICE_NAME}"
       The stderr should satisfy spec_expect_no_message        "${NUM_SERVICES_SKIP_JOBS}"
@@ -260,7 +260,7 @@ Describe 'common-options'
       The stdout should satisfy display_output
       The stdout should satisfy spec_expect_no_message ".+"
       The stderr should satisfy display_output
-      The stderr should satisfy spec_expect_no_message "${NOT_START_WITH_A_SQUARE_BRACKET}"
+      The stderr should satisfy spec_expect_no_message "${START_WITHOUT_A_SQUARE_BRACKET}"
       The stderr should satisfy spec_expect_message    "GANTRY_SLEEP_SECONDS ${MUST_BE_A_NUMBER}.*"
       The stderr should satisfy spec_expect_no_message "${SKIP_UPDATING_ALL}"
       The stderr should satisfy spec_expect_no_message "${SKIP_UPDATING}.*${SERVICE_NAME}"

@@ -17,7 +17,6 @@
 
 Describe 'service-parallel'
   SUITE_NAME="service-parallel"
-  export GANTRY_TEST_UPDATE_OPTIONS="--update-monitor=1s"
   BeforeAll "initialize_all_tests ${SUITE_NAME}"
   AfterAll "finish_all_tests ${SUITE_NAME}"
   Describe "test_parallel_less_workers" "container_test:true" "coverage:true"
@@ -55,7 +54,7 @@ Describe 'service-parallel'
       The stdout should satisfy display_output
       The stdout should satisfy spec_expect_no_message ".+"
       The stderr should satisfy display_output
-      The stderr should satisfy spec_expect_no_message "${NOT_START_WITH_A_SQUARE_BRACKET}"
+      The stderr should satisfy spec_expect_no_message "${START_WITHOUT_A_SQUARE_BRACKET}"
       for NUM in $(seq 0 "${MAX_SERVICES_NUM}"); do
         SERVICE_NAME_NUM="${SERVICE_NAME}-${NUM}"
         The stderr should satisfy spec_expect_no_message "${SKIP_UPDATING}.* ${SERVICE_NAME_NUM} "
@@ -108,7 +107,7 @@ Describe 'service-parallel'
       The stdout should satisfy display_output
       The stdout should satisfy spec_expect_no_message ".+"
       The stderr should satisfy display_output
-      The stderr should satisfy spec_expect_no_message "${NOT_START_WITH_A_SQUARE_BRACKET}"
+      The stderr should satisfy spec_expect_no_message "${START_WITHOUT_A_SQUARE_BRACKET}"
       for NUM in $(seq 0 "${MAX_SERVICES_NUM}"); do
         SERVICE_NAME_NUM="${SERVICE_NAME}-${NUM}"
         The stderr should satisfy spec_expect_no_message "${SKIP_UPDATING}.* ${SERVICE_NAME_NUM} "
@@ -150,7 +149,7 @@ Describe 'service-parallel'
       The stdout should satisfy display_output
       The stdout should satisfy spec_expect_no_message ".+"
       The stderr should satisfy display_output
-      The stderr should satisfy spec_expect_no_message "${NOT_START_WITH_A_SQUARE_BRACKET}"
+      The stderr should satisfy spec_expect_no_message "${START_WITHOUT_A_SQUARE_BRACKET}"
       The stderr should satisfy spec_expect_message    "GANTRY_MANIFEST_NUM_WORKERS ${MUST_BE_A_NUMBER}.*"
       The stderr should satisfy spec_expect_no_message "${SKIP_UPDATING}.*${SERVICE_NAME}"
       The stderr should satisfy spec_expect_no_message "${PERFORM_UPDATING}.*${SERVICE_NAME}.*${PERFORM_REASON_HAS_NEWER_IMAGE}"
@@ -193,7 +192,7 @@ Describe 'service-parallel'
       The stdout should satisfy display_output
       The stdout should satisfy spec_expect_no_message ".+"
       The stderr should satisfy display_output
-      The stderr should satisfy spec_expect_no_message "${NOT_START_WITH_A_SQUARE_BRACKET}"
+      The stderr should satisfy spec_expect_no_message "${START_WITHOUT_A_SQUARE_BRACKET}"
       The stderr should satisfy spec_expect_message    "GANTRY_UPDATE_NUM_WORKERS ${MUST_BE_A_NUMBER}.*"
       The stderr should satisfy spec_expect_no_message "${SKIP_UPDATING}.*${SERVICE_NAME}"
       The stderr should satisfy spec_expect_no_message "${PERFORM_UPDATING}.*${SERVICE_NAME}.*${PERFORM_REASON_HAS_NEWER_IMAGE}"

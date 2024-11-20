@@ -145,7 +145,7 @@ gantry() {
   local DOCKER_HUB_RATE_AFTER=
   local DOCKER_HUB_RATE_USED=
   DOCKER_HUB_RATE_AFTER=$(_read_docker_hub_rate)
-  DOCKER_HUB_RATE_USED=$(difference_between "${DOCKER_HUB_RATE_BEFORE}" "${DOCKER_HUB_RATE_AFTER}")
+  DOCKER_HUB_RATE_USED=$(first_minus_second "${DOCKER_HUB_RATE_BEFORE}" "${DOCKER_HUB_RATE_AFTER}")
   log INFO "After updating, Docker Hub rate remains ${DOCKER_HUB_RATE_AFTER}. Used rate ${DOCKER_HUB_RATE_USED}."
 
   gantry_finalize "${STACK}" "${ACCUMULATED_ERRORS}";

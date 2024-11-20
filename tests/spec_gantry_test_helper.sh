@@ -18,8 +18,8 @@
 set -a
 
 # Constant strings for checks.
-# NOT_START_WITH_A_SQUARE_BRACKET ignores color codes. Use test_log not to trigger this check.
-export NOT_START_WITH_A_SQUARE_BRACKET="^(?!(?:\x1b\[[0-9;]*[mG])?\[)"
+# START_WITHOUT_A_SQUARE_BRACKET ignores color codes. Use test_log not to trigger this check.
+export START_WITHOUT_A_SQUARE_BRACKET="^(?!(?:\x1b\[[0-9;]*[mG])?\[)"
 export GANTRY_AUTH_CONFIG_LABEL="gantry.auth.config"
 export MUST_BE_A_NUMBER="must be a number"
 export LOGGED_INTO_REGISTRY="Logged into registry"
@@ -407,9 +407,8 @@ reset_gantry_env() {
   export GANTRY_REGISTRY_USER_FILE=
   export GANTRY_SERVICES_EXCLUDED=
   export GANTRY_SERVICES_EXCLUDED_FILTERS=
-  if [ -z "${SERVICE_NAME}" ]; then
-    export GANTRY_SERVICES_FILTERS=
-  else
+  export GANTRY_SERVICES_FILTERS=
+  if [ -n "${SERVICE_NAME}" ]; then
     export GANTRY_SERVICES_FILTERS="name=${SERVICE_NAME}"
   fi
   export GANTRY_SERVICES_SELF=
@@ -419,13 +418,7 @@ reset_gantry_env() {
   export GANTRY_ROLLBACK_OPTIONS=
   export GANTRY_UPDATE_JOBS=
   export GANTRY_UPDATE_NUM_WORKERS=
-  # Add --update-monitor to reduce the monitoring time to speedup tests. We could save about 4s on each service.
-  # Add --detach save more time, but we might hit problems about removing images.
-  if [ -n "${GANTRY_TEST_UPDATE_OPTIONS}" ]; then
-    export GANTRY_UPDATE_OPTIONS="${GANTRY_TEST_UPDATE_OPTIONS}"
-  else
-    export GANTRY_UPDATE_OPTIONS=
-  fi
+  export GANTRY_UPDATE_OPTIONS=
   export GANTRY_UPDATE_TIMEOUT_SECONDS=
   export GANTRY_CLEANUP_IMAGES=
   export GANTRY_CLEANUP_IMAGES_OPTIONS=
@@ -627,6 +620,13 @@ _location_constraints() {
   echo "${ARGS}"
 }
 
+pull_image_if_not_exist() {
+  local IMAGE="${1}"
+  if ! docker image inspect "${IMAGE}" > /dev/null 2>&1; then
+    docker pull "${IMAGE}" > /dev/null
+  fi
+}
+
 _enforce_login_enabled() {
   local ENFORCE_LOGIN="${1}"
   test "${ENFORCE_LOGIN}" == "ENFORCE_LOGIN"
@@ -643,9 +643,7 @@ _add_htpasswd() {
   # https://distribution.github.io/distribution/about/deploying/#native-basic-auth
   local PASSWD=
   PASSWD="$(mktemp)"
-  if ! docker image inspect "${HTTPD_IMAGE}" > /dev/null 2>&1; then
-    docker pull "${HTTPD_IMAGE}" > /dev/null
-  fi
+  pull_image_if_not_exist "${HTTPD_IMAGE}"
   docker_run --entrypoint htpasswd "${HTTPD_IMAGE}" -Bbn "${USER}" "${PASS}" > "${PASSWD}"
   echo "--mount type=bind,source=${PASSWD},target=${PASSWD} \
         -e REGISTRY_AUTH=htpasswd \
@@ -673,7 +671,13 @@ start_replicated_service() {
   local IMAGE_WITH_TAG="${2}"
   [ "${#SERVICE_NAME}" -gt 63 ] && SERVICE_NAME=${SERVICE_NAME:0:63}
   echo "Creating service ${SERVICE_NAME} in replicated mode "
-  # Add --detach to reduce the test runtime.
+  # During creation:
+  # * Add --detach to reduce the test runtime.
+  # For updating:
+  # * Add --update-monitor=1s to save about 4s for each service update.
+  # * Add --stop-grace-period=1s to save about 4s for each service update.
+  # For rolling back:
+  # * Add --rollback-monitor=1s: needs to exam the effect.
   # SC2046 (warning): Quote this to prevent word splitting.
   # shellcheck disable=SC2046
   timeout 120 docker $(_get_docker_config_argument "${IMAGE_WITH_TAG}") service create --quiet \
@@ -681,6 +685,9 @@ start_replicated_service() {
     --restart-condition "on-failure" \
     --restart-max-attempts 5 \
     --with-registry-auth \
+    --update-monitor=1s \
+    --stop-grace-period=1s \
+    --rollback-monitor=1s \
     $(_location_constraints) \
     --mode=replicated \
     --detach=true \
@@ -717,6 +724,9 @@ start_global_service() {
     --restart-condition "on-failure" \
     --restart-max-attempts 5 \
     --with-registry-auth \
+    --update-monitor=1s \
+    --stop-grace-period=1s \
+    --rollback-monitor=1s \
     $(_location_constraints) \
     --mode=global \
     "${IMAGE_WITH_TAG}"

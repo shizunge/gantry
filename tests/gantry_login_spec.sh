@@ -20,7 +20,6 @@ export IMAGE_DIGEST_WARNING="image .* could not be accessed on a registry to rec
 
 Describe 'login'
   SUITE_NAME="login"
-  export GANTRY_TEST_UPDATE_OPTIONS="--update-monitor=1s"
   BeforeAll "initialize_all_tests ${SUITE_NAME} ENFORCE_LOGIN"
   AfterAll "finish_all_tests ${SUITE_NAME} ENFORCE_LOGIN"
   Describe "test_login_config" "container_test:true" "coverage:true"
@@ -64,7 +63,7 @@ Describe 'login'
       The stdout should satisfy display_output
       The stdout should satisfy spec_expect_no_message ".+"
       The stderr should satisfy display_output
-      The stderr should satisfy spec_expect_no_message "${NOT_START_WITH_A_SQUARE_BRACKET}"
+      The stderr should satisfy spec_expect_no_message "${START_WITHOUT_A_SQUARE_BRACKET}"
       The stderr should satisfy spec_expect_no_message "${LOGGED_INTO_REGISTRY}.*${DEFAULT_CONFIGURATION}"
       The stderr should satisfy spec_expect_message    "${LOGGED_INTO_REGISTRY}.*${TEST_REGISTRY}.*${CONFIG}"
       The stderr should satisfy spec_expect_no_message "${FAILED_TO_LOGIN_TO_REGISTRY}"
@@ -77,7 +76,8 @@ Describe 'login'
       The stderr should satisfy spec_expect_message    "${NUM_SERVICES_UPDATING}"
       The stderr should satisfy spec_expect_message    "${ADDING_OPTIONS}.*--config ${CONFIG}.*${SERVICE_NAME}"
       # 2 "--with-registry-auth" for SERVICE_NAME. One is automatically added. The other is from user.
-      The stderr should satisfy spec_expect_multiple_messages "${ADDING_OPTIONS_WITH_REGISTRY_AUTH}.*${SERVICE_NAME}"
+      The stderr should satisfy spec_expect_message    "${ADDING_OPTIONS_WITH_REGISTRY_AUTH}.*automatically.*${SERVICE_NAME}"
+      The stderr should satisfy spec_expect_message    "${ADDING_OPTIONS_WITH_REGISTRY_AUTH}.*specified by user.*${SERVICE_NAME}"
       The stderr should satisfy spec_expect_no_message "${THERE_ARE_ADDITIONAL_MESSAGES}.*${SERVICE_NAME}.*"
       The stderr should satisfy spec_expect_message    "${UPDATED}.*${SERVICE_NAME}"
       The stderr should satisfy spec_expect_no_message "${NO_UPDATES}.*${SERVICE_NAME}"
@@ -134,7 +134,7 @@ Describe 'login'
       The stdout should satisfy display_output
       The stdout should satisfy spec_expect_no_message ".+"
       The stderr should satisfy display_output
-      The stderr should satisfy spec_expect_no_message "${NOT_START_WITH_A_SQUARE_BRACKET}"
+      The stderr should satisfy spec_expect_no_message "${START_WITHOUT_A_SQUARE_BRACKET}"
       The stderr should satisfy spec_expect_message    "${LOGGED_INTO_REGISTRY}.*${TEST_REGISTRY}.*${DEFAULT_CONFIGURATION}"
       The stderr should satisfy spec_expect_no_message "${FAILED_TO_LOGIN_TO_REGISTRY}"
       The stderr should satisfy spec_expect_no_message "${CONFIG_IS_NOT_A_DIRECTORY}"
@@ -207,7 +207,7 @@ Describe 'login'
       The stdout should satisfy display_output
       The stdout should satisfy spec_expect_no_message ".+"
       The stderr should satisfy display_output
-      The stderr should satisfy spec_expect_no_message "${NOT_START_WITH_A_SQUARE_BRACKET}"
+      The stderr should satisfy spec_expect_no_message "${START_WITHOUT_A_SQUARE_BRACKET}"
       The stderr should satisfy spec_expect_no_message "${LOGGED_INTO_REGISTRY}.*${DEFAULT_CONFIGURATION}"
       The stderr should satisfy spec_expect_message    "${LOGGED_INTO_REGISTRY}.*${TEST_REGISTRY}.*${CONFIG}"
       The stderr should satisfy spec_expect_no_message "${FAILED_TO_LOGIN_TO_REGISTRY}"
@@ -278,7 +278,7 @@ Describe 'login'
       The stdout should satisfy display_output
       The stdout should satisfy spec_expect_no_message ".+"
       The stderr should satisfy display_output
-      The stderr should satisfy spec_expect_no_message "${NOT_START_WITH_A_SQUARE_BRACKET}"
+      The stderr should satisfy spec_expect_no_message "${START_WITHOUT_A_SQUARE_BRACKET}"
       The stderr should satisfy spec_expect_no_message "${LOGGED_INTO_REGISTRY}.*"
       The stderr should satisfy spec_expect_no_message "${FAILED_TO_LOGIN_TO_REGISTRY}"
       The stderr should satisfy spec_expect_no_message "${CONFIG_IS_NOT_A_DIRECTORY}"

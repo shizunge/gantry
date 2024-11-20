@@ -17,7 +17,6 @@
 
 Describe "service-no-running-tasks"
   SUITE_NAME="service-no-running-tasks"
-  export GANTRY_TEST_UPDATE_OPTIONS="--update-monitor=1s"
   BeforeAll "initialize_all_tests ${SUITE_NAME}"
   AfterAll "finish_all_tests ${SUITE_NAME}"
   Describe "test_no_running_tasks_replicated" "container_test:true" "coverage:true"
@@ -68,7 +67,7 @@ Describe "service-no-running-tasks"
       The stdout should satisfy display_output
       The stdout should satisfy spec_expect_no_message ".+"
       The stderr should satisfy display_output
-      The stderr should satisfy spec_expect_no_message "${NOT_START_WITH_A_SQUARE_BRACKET}"
+      The stderr should satisfy spec_expect_no_message "${START_WITHOUT_A_SQUARE_BRACKET}"
       # Add "--detach=true" when there is no running tasks.
       # https://github.com/docker/cli/issues/627
       The stderr should satisfy spec_expect_message    "${ADDING_OPTIONS}.*--detach=true.*${SERVICE_NAME}\."
@@ -130,7 +129,7 @@ Describe "service-no-running-tasks"
       The stdout should satisfy display_output
       The stdout should satisfy spec_expect_no_message ".+"
       The stderr should satisfy display_output
-      The stderr should satisfy spec_expect_no_message "${NOT_START_WITH_A_SQUARE_BRACKET}"
+      The stderr should satisfy spec_expect_no_message "${START_WITHOUT_A_SQUARE_BRACKET}"
       # Add "--detach=true" when there is no running tasks.
       # https://github.com/docker/cli/issues/627
       The stderr should satisfy spec_expect_message    "${ADDING_OPTIONS}.*--detach=true.*${SERVICE_NAME}"

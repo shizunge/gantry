@@ -58,7 +58,7 @@ Describe 'update-options'
       The stdout should satisfy display_output
       The stdout should satisfy spec_expect_no_message ".+"
       The stderr should satisfy display_output
-      The stderr should satisfy spec_expect_no_message "${NOT_START_WITH_A_SQUARE_BRACKET}"
+      The stderr should satisfy spec_expect_no_message "${START_WITHOUT_A_SQUARE_BRACKET}"
       # Check whether it is a job before checking whether there is a new image.
       The stderr should satisfy spec_expect_message    "${SKIP_UPDATING}.*${SERVICE_NAME_SUFFIX}.*${SKIP_REASON_IS_JOB}"
       The stderr should satisfy spec_expect_no_message "${PERFORM_UPDATING}.*${SERVICE_NAME_SUFFIX}"
@@ -106,7 +106,7 @@ Describe 'update-options'
       The stdout should satisfy display_output
       The stdout should satisfy spec_expect_no_message ".+"
       The stderr should satisfy display_output
-      The stderr should satisfy spec_expect_no_message "${NOT_START_WITH_A_SQUARE_BRACKET}"
+      The stderr should satisfy spec_expect_no_message "${START_WITHOUT_A_SQUARE_BRACKET}"
       The stderr should satisfy spec_expect_no_message "${SKIP_UPDATING}.*${SERVICE_NAME}"
       The stderr should satisfy spec_expect_message    "${PERFORM_UPDATING}.*${SERVICE_NAME}.*${PERFORM_REASON_HAS_NEWER_IMAGE}"
       The stderr should satisfy spec_expect_no_message "${SET_TIMEOUT_TO}"
@@ -159,7 +159,7 @@ Describe 'update-options'
       The stdout should satisfy display_output
       The stdout should satisfy spec_expect_no_message ".+"
       The stderr should satisfy display_output
-      The stderr should satisfy spec_expect_no_message "${NOT_START_WITH_A_SQUARE_BRACKET}"
+      The stderr should satisfy spec_expect_no_message "${START_WITHOUT_A_SQUARE_BRACKET}"
       The stderr should satisfy spec_expect_no_message "${SKIP_UPDATING}.*${SERVICE_NAME}"
       The stderr should satisfy spec_expect_message    "${PERFORM_UPDATING}.*${SERVICE_NAME}.*${PERFORM_REASON_HAS_NEWER_IMAGE}"
       The stderr should satisfy spec_expect_no_message "${SET_TIMEOUT_TO}"
@@ -203,7 +203,6 @@ Describe 'update-options'
       local TEST_NAME="${1}"
       local SERVICE_NAME="${2}"
       reset_gantry_env "${SERVICE_NAME}"
-      export GANTRY_UPDATE_OPTIONS=
       export GANTRY_UPDATE_JOBS="true"
       run_gantry "${TEST_NAME}"
     }
@@ -216,7 +215,7 @@ Describe 'update-options'
       The stdout should satisfy display_output
       The stdout should satisfy spec_expect_no_message ".+"
       The stderr should satisfy display_output
-      The stderr should satisfy spec_expect_no_message "${NOT_START_WITH_A_SQUARE_BRACKET}"
+      The stderr should satisfy spec_expect_no_message "${START_WITHOUT_A_SQUARE_BRACKET}"
       The stderr should satisfy spec_expect_message    "${ADDING_OPTIONS}.*--detach=true.*${SERVICE_NAME}"
       # Cannot add "--replicas" to replicated job
       The stderr should satisfy spec_expect_no_message "${ADDING_OPTIONS}.*--replicas=0"
@@ -278,7 +277,7 @@ Describe 'update-options'
       The stdout should satisfy spec_expect_no_message "Before updating: LABEL_VALUE=.*${SERVICE_NAME}"
       The stdout should satisfy spec_expect_message    "After updating: LABEL_VALUE=.*${SERVICE_NAME}"
       The stderr should satisfy display_output
-      The stderr should satisfy spec_expect_no_message "${NOT_START_WITH_A_SQUARE_BRACKET}"
+      The stderr should satisfy spec_expect_no_message "${START_WITHOUT_A_SQUARE_BRACKET}"
       The stderr should satisfy spec_expect_no_message "${SKIP_UPDATING}.*${SERVICE_NAME}"
       The stderr should satisfy spec_expect_message    "${PERFORM_UPDATING}.*${SERVICE_NAME}.*${PERFORM_REASON_HAS_NEWER_IMAGE}"
       The stderr should satisfy spec_expect_no_message "${SET_TIMEOUT_TO}"
@@ -341,7 +340,7 @@ Describe 'update-options'
       The stdout should satisfy spec_expect_no_message "Before updating: LABEL_VALUE=.*${SERVICE_NAME}"
       The stdout should satisfy spec_expect_message    "After updating: LABEL_VALUE=.*${SERVICE_NAME}"
       The stderr should satisfy display_output
-      The stderr should satisfy spec_expect_no_message "${NOT_START_WITH_A_SQUARE_BRACKET}"
+      The stderr should satisfy spec_expect_no_message "${START_WITHOUT_A_SQUARE_BRACKET}"
       The stderr should satisfy spec_expect_no_message "${SKIP_UPDATING}.*${SERVICE_NAME}"
       The stderr should satisfy spec_expect_message    "${PERFORM_UPDATING}.*${SERVICE_NAME}.*${PERFORM_REASON_HAS_NEWER_IMAGE}"
       The stderr should satisfy spec_expect_no_message "${SET_TIMEOUT_TO}"
@@ -385,7 +384,7 @@ Describe 'update-options'
       The stdout should satisfy display_output
       The stdout should satisfy spec_expect_no_message ".+"
       The stderr should satisfy display_output
-      The stderr should satisfy spec_expect_no_message "${NOT_START_WITH_A_SQUARE_BRACKET}"
+      The stderr should satisfy spec_expect_no_message "${START_WITHOUT_A_SQUARE_BRACKET}"
       The stderr should satisfy spec_expect_message    "UPDATE_TIMEOUT_SECONDS ${MUST_BE_A_NUMBER}.*"
       The stderr should satisfy spec_expect_no_message "${SKIP_UPDATING}.*${SERVICE_NAME}"
       The stderr should satisfy spec_expect_message    "${PERFORM_UPDATING}.*${SERVICE_NAME}.*${PERFORM_REASON_HAS_NEWER_IMAGE}"
