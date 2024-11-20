@@ -41,10 +41,13 @@ export PERFORM_REASON_DIGEST_IS_EMPTY="because DIGEST is empty"
 export PERFORM_REASON_HAS_NEWER_IMAGE="because there is a newer version"
 export IMAGE_NOT_EXIST="does not exist or it is not available"
 export CONFIG_IS_NOT_A_DIRECTORY="is not a directory that contains Docker configuration files"
+export THERE_ARE_NUM_CONFIGURATIONS="There are [0-9]+ configuration\(s\)"
+export USER_LOGGED_INTO_DEFAULT="User logged in using the default Docker configuration"
 export ADDING_OPTIONS="Adding options"
 export ADDING_OPTIONS_WITH_REGISTRY_AUTH="Adding options.*--with-registry-auth"
 export SET_TIMEOUT_TO="Set timeout to"
 export RETURN_VALUE_INDICATES_TIMEOUT="The return value 124 indicates the job timed out."
+export THERE_ARE_ADDITIONAL_MESSAGES="There are additional messages from updating"
 export NUM_SERVICES_SKIP_JOBS="Skip updating [0-9]+ service\(s\) due to they are job\(s\)"
 export NUM_SERVICES_INSPECT_FAILURE="Failed to inspect [0-9]+ service\(s\)"
 export NUM_SERVICES_NO_NEW_IMAGES="No new images for [0-9]+ service\(s\)"
@@ -403,6 +406,7 @@ initialize_test() {
 
 reset_gantry_env() {
   local SERVICE_NAME="${1}"
+  export DOCKER_CONFIG=
   export DOCKER_HOST=
   export GANTRY_LOG_LEVEL="DEBUG"
   export GANTRY_NODE_NAME=
@@ -572,7 +576,7 @@ build_and_push_test_image() {
 prune_local_test_image() {
   local IMAGE_WITH_TAG="${1}"
   echo -n "Removing image ${IMAGE_WITH_TAG} "
-  docker image rm "${IMAGE_WITH_TAG}" --force
+  docker image rm "${IMAGE_WITH_TAG}" --force &
 }
 
 docker_service_update() {
@@ -681,6 +685,7 @@ start_replicated_service() {
   local IMAGE_WITH_TAG="${2}"
   [ "${#SERVICE_NAME}" -gt 63 ] && SERVICE_NAME=${SERVICE_NAME:0:63}
   echo "Creating service ${SERVICE_NAME} in replicated mode "
+  # Add --detach to reduce the test runtime.
   # SC2046 (warning): Quote this to prevent word splitting.
   # shellcheck disable=SC2046
   timeout 120 docker $(_get_docker_config_argument "${IMAGE_WITH_TAG}") service create --quiet \
@@ -690,6 +695,7 @@ start_replicated_service() {
     --with-registry-auth \
     $(_location_constraints) \
     --mode=replicated \
+    --detach=true \
     "${IMAGE_WITH_TAG}"
 }
 
@@ -698,6 +704,7 @@ start_global_service() {
   local IMAGE_WITH_TAG="${2}"
   [ "${#SERVICE_NAME}" -gt 63 ] && SERVICE_NAME=${SERVICE_NAME:0:63}
   echo "Creating service ${SERVICE_NAME} in global mode "
+  # Do not add --detach, because we want to wait for the job finishes.
   # SC2046 (warning): Quote this to prevent word splitting.
   # shellcheck disable=SC2046
   timeout 120 docker $(_get_docker_config_argument "${IMAGE_WITH_TAG}") service create --quiet \
@@ -715,6 +722,7 @@ _start_replicated_job() {
   local IMAGE_WITH_TAG="${2}"
   [ "${#SERVICE_NAME}" -gt 63 ] && SERVICE_NAME=${SERVICE_NAME:0:63}
   echo "Creating service ${SERVICE_NAME} in replicated job mode "
+  # Always add --detach=true, do not wait for the job finishes.
   # SC2046 (warning): Quote this to prevent word splitting.
   # shellcheck disable=SC2046
   timeout 120 docker $(_get_docker_config_argument "${IMAGE_WITH_TAG}") service create --quiet \
@@ -723,7 +731,8 @@ _start_replicated_job() {
     --restart-max-attempts 5 \
     --with-registry-auth \
     $(_location_constraints) \
-    --mode=replicated-job --detach=true \
+    --mode=replicated-job \
+    --detach=true \
     "${IMAGE_WITH_TAG}"
   # wait until the job is running
   _wait_service_state "${SERVICE_NAME}" "Running"
@@ -732,7 +741,7 @@ _start_replicated_job() {
 stop_service() {
   local SERVICE_NAME="${1}"
   echo -n "Removing service "
-  docker service rm "${SERVICE_NAME}"
+  docker service rm "${SERVICE_NAME}" &
 }
 
 _get_script_dir() {
@@ -769,9 +778,12 @@ _get_entrypoint() {
 
 _add_file_to_mount_options() {
   local MOUNT_OPTIONS="${1}"
-  local FILE="${2}"
-  if [ -n "${FILE}" ] && [ -r "${FILE}" ]; then
-    MOUNT_OPTIONS="${MOUNT_OPTIONS} --mount type=bind,source=${FILE},target=${FILE}"
+  local HOST_PATH="${2}"
+  if [ -n "${HOST_PATH}" ] && [ -r "${HOST_PATH}" ]; then
+    # Use the absolute path inside the container.
+    local TARGET=
+    TARGET=$(readlink -f "${HOST_PATH}")
+    MOUNT_OPTIONS="${MOUNT_OPTIONS} --mount type=bind,source=${HOST_PATH},target=${TARGET}"
   fi
   echo "${MOUNT_OPTIONS}"
 }
@@ -787,6 +799,7 @@ _run_gantry_container() {
   SERVICE_NAME="gantry-test-SUT-$(unique_id)"
   docker service rm "${SERVICE_NAME}" >/dev/null 2>&1;
   local MOUNT_OPTIONS=
+  MOUNT_OPTIONS=$(_add_file_to_mount_options "${MOUNT_OPTIONS}" "${DOCKER_CONFIG}")
   MOUNT_OPTIONS=$(_add_file_to_mount_options "${MOUNT_OPTIONS}" "${GANTRY_REGISTRY_CONFIG_FILE}")
   MOUNT_OPTIONS=$(_add_file_to_mount_options "${MOUNT_OPTIONS}" "${GANTRY_REGISTRY_CONFIGS_FILE}")
   MOUNT_OPTIONS=$(_add_file_to_mount_options "${MOUNT_OPTIONS}" "${GANTRY_REGISTRY_HOST_FILE}")
@@ -802,6 +815,7 @@ _run_gantry_container() {
     --constraint "node.role==manager" \
     --mount type=bind,source=/var/run/docker.sock,target=/var/run/docker.sock \
     ${MOUNT_OPTIONS} \
+    --env "DOCKER_CONFIG=${DOCKER_CONFIG}" \
     --env "DOCKER_HOST=${DOCKER_HOST}" \
     --env "GANTRY_LOG_LEVEL=${GANTRY_LOG_LEVEL}" \
     --env "GANTRY_NODE_NAME=${GANTRY_NODE_NAME}" \

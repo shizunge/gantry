@@ -78,10 +78,17 @@ _read_env_or_label() {
   echo "${VALUE}"
 }
 
+_get_docker_default_config() {
+  local LOCAL_DOCKER_CONFIG="${DOCKER_CONFIG:-""}"
+  local DEFAULT_LOCATION="${LOCAL_DOCKER_CONFIG}"
+  [ -z "${DEFAULT_LOCATION}" ] && DEFAULT_LOCATION="${HOME}/.docker"
+  readlink -f "${DEFAULT_LOCATION}"
+}
+
 # Record that the default config is used.
 _use_docker_default_config() {
   local CONFIG_TO_REPORT=
-  CONFIG_TO_REPORT=$(readlink -f ~/.docker)
+  CONFIG_TO_REPORT=$(_get_docker_default_config)
   _static_variable_add_unique_to_list STATIC_VAR_DOCKER_CONFIG_DEFAULT "${CONFIG_TO_REPORT}"
 }
 
@@ -105,8 +112,8 @@ _login_registry() {
   [ -z "${PASSWORD}" ] && log ERROR "PASSWORD is empty." && return 1
   local REGISTRY_MESSAGE="registry ${HOST}"
   if [ -z "${HOST}" ]; then
-   log WARN "HOST is empty. Will login to the default registry."
-   REGISTRY_MESSAGE="default registry"
+    log WARN "HOST is empty. Will login to the default registry."
+    REGISTRY_MESSAGE="default registry"
   fi
   local AUTH_CONFIG=
   local CONFIG_MESSAGE="with default configuration"
@@ -125,7 +132,10 @@ _login_registry() {
   log INFO "Logged into ${REGISTRY_CONFIG_MESSAGE}. ${LOGIN_MSG}"
   if [ -n "${CONFIG}" ]; then
     _static_variable_add_unique_to_list STATIC_VAR_DOCKER_CONFIGS "${CONFIG}"
-  else
+  fi
+  local DEFAULT_LOCATION=
+  DEFAULT_LOCATION=$(_get_docker_default_config)
+  if [ -z "${CONFIG}" ] || [ "$(readlink -f "${CONFIG}")" = "${DEFAULT_LOCATION}" ]; then
     _use_docker_default_config
   fi
   return 0
@@ -680,10 +690,10 @@ _check_auth_config_folder() {
     return 0
   fi
   log WARN "${AUTH_CONFIG} is not a directory that contains Docker configuration files."
-  local MSG="configuration(s) set via GANTRY_REGISTRY_CONFIG* or GANTRY_REGISTRY_CONFIGS_FILE"
+  local MSG="configuration(s) set via GANTRY_REGISTRY_CONFIG or GANTRY_REGISTRY_CONFIGS_FILE"
   _report_from_static_variable STATIC_VAR_DOCKER_CONFIGS "There are" "${MSG}" "There are no ${MSG}." | log_lines WARN
   if _docker_default_config_is_used; then
-    log WARN "User logged into the default Docker configuration."
+    log WARN "User logged in using the default Docker configuration $(_get_docker_default_config)."
   fi
   return 1
 }
@@ -899,7 +909,9 @@ _get_service_update_additional_options() {
   # Add `--with-registry-auth` if needed.
   local WITH_REGISTRY_AUTH=
   WITH_REGISTRY_AUTH="$(_get_with_registry_auth "${AUTH_CONFIG}")"
-  [ -n "${WITH_REGISTRY_AUTH}" ] && OPTIONS="${OPTIONS} ${WITH_REGISTRY_AUTH}"
+  local SPACE=" "
+  [ -z "${OPTIONS}" ] && SPACE=""
+  [ -n "${WITH_REGISTRY_AUTH}" ] && OPTIONS="${OPTIONS}${SPACE}${WITH_REGISTRY_AUTH}"
   echo "${OPTIONS}"
 }
 
