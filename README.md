@@ -53,15 +53,16 @@ You can configure the most behaviors of *Gantry* via environment variables.
 
 | Environment Variable  | Default | Description |
 |-----------------------|---------|-------------|
-| GANTRY_REGISTRY_CONFIG        | | See [Authentication](#authentication). |
-| GANTRY_REGISTRY_CONFIG_FILE   | | See [Authentication](#authentication). |
-| GANTRY_REGISTRY_CONFIGS_FILE  | | See [Authentication](#authentication). |
-| GANTRY_REGISTRY_HOST          | | See [Authentication](#authentication). |
-| GANTRY_REGISTRY_HOST_FILE     | | See [Authentication](#authentication). |
-| GANTRY_REGISTRY_PASSWORD      | | See [Authentication](#authentication). |
-| GANTRY_REGISTRY_PASSWORD_FILE | | See [Authentication](#authentication). |
-| GANTRY_REGISTRY_USER          | | See [Authentication](#authentication). |
-| GANTRY_REGISTRY_USER_FILE     | | See [Authentication](#authentication). |
+| DOCKER_CONFIG                 | | The location of the [client configuration files](https://docs.docker.com/engine/reference/commandline/cli/#configuration-files) where authentication stores. It applys to all Docker commands, i.e. to all services. See [Authentication](docs/authentication.md). You can apply a different value to a particular service via [labels](#labels). |
+| GANTRY_REGISTRY_CONFIG        | | See [Authentication](docs/authentication.md). |
+| GANTRY_REGISTRY_CONFIG_FILE   | | See [Authentication](docs/authentication.md). |
+| GANTRY_REGISTRY_CONFIGS_FILE  | | See [Authentication](docs/authentication.md). |
+| GANTRY_REGISTRY_HOST          | | See [Authentication](docs/authentication.md). |
+| GANTRY_REGISTRY_HOST_FILE     | | See [Authentication](docs/authentication.md). |
+| GANTRY_REGISTRY_PASSWORD      | | See [Authentication](docs/authentication.md). |
+| GANTRY_REGISTRY_PASSWORD_FILE | | See [Authentication](docs/authentication.md). |
+| GANTRY_REGISTRY_USER          | | See [Authentication](docs/authentication.md). |
+| GANTRY_REGISTRY_USER_FILE     | | See [Authentication](docs/authentication.md). |
 
 ### To select services
 
@@ -75,7 +76,7 @@ You can configure the most behaviors of *Gantry* via environment variables.
 
 | Environment Variable  | Default | Description |
 |-----------------------|---------|-------------|
-| GANTRY_MANIFEST_CMD         | buildx | Valid values are `buildx`, `manifest`, and `none`.<br>Set which command for manifest inspection. Also see FAQ section [when to set `GANTRY_MANIFEST_CMD`](docs/faq.md#when-to-set-gantry_manifest_cmd).<ul><li>[`docker buildx imagetools inspect`](https://docs.docker.com/engine/reference/commandline/buildx_imagetools_inspect/)</li><li>[`docker manifest inspect`](https://docs.docker.com/engine/reference/commandline/manifest_inspect/)</li></ul>Set to `none` to skip checking the manifest. As a result of skipping, `docker service update` always runs. In case you add `--force` to `GANTRY_UPDATE_OPTIONS`, you also want to disable the inspection. You can apply a different value to a particular service via [labels](#labels). |
+| GANTRY_MANIFEST_CMD         | buildx | Valid values are `buildx`, `manifest`, and `none`.<br>Set which command for manifest inspection.<ul><li>[`docker buildx imagetools inspect`](https://docs.docker.com/engine/reference/commandline/buildx_imagetools_inspect/)</li><li>[`docker manifest inspect`](https://docs.docker.com/engine/reference/commandline/manifest_inspect/)</li></ul>Set to `none` to skip checking the manifest. As a result of skipping, `docker service update` always runs. Also see FAQ [which `GANTRY_MANIFEST_CMD` to use](docs/faq.md#which-gantry_manifest_cmd-to-use). You can apply a different value to a particular service via [labels](#labels). |
 | GANTRY_MANIFEST_NUM_WORKERS | 1      | The maximum number of `GANTRY_MANIFEST_CMD` that can run in parallel. |
 | GANTRY_MANIFEST_OPTIONS     |        | [Options](https://docs.docker.com/engine/reference/commandline/buildx_imagetools_inspect/#options) added to the `docker buildx imagetools inspect` or [options](https://docs.docker.com/engine/reference/commandline/manifest_inspect/#options) to `docker manifest inspect`, depending on `GANTRY_MANIFEST_CMD` value, for all services. You can apply a different value to a particular service via [labels](#labels). |
 
@@ -85,7 +86,7 @@ You can configure the most behaviors of *Gantry* via environment variables.
 |-----------------------|---------|-------------|
 | GANTRY_ROLLBACK_ON_FAILURE    | true  | Set to `true` to enable rollback when updating fails. Set to `false` to disable the rollback. You can apply a different value to a particular service via [labels](#labels). |
 | GANTRY_ROLLBACK_OPTIONS       |       | [Options](https://docs.docker.com/engine/reference/commandline/service_update/#options) added to the `docker service update --rollback` command for all services. You can apply a different value to a particular service via [labels](#labels). |
-| GANTRY_UPDATE_JOBS            | false | Set to `true` to update replicated-job or global-job. Set to `false` to disable updating jobs. *Gantry* adds additional options to `docker service update` when there is [no running tasks](docs/faq.md#how-to-update-services-with-no-running-tasks). You can apply a different value to a particular service via [labels](#labels). |
+| GANTRY_UPDATE_JOBS            | false | Set to `true` to update `replicated-job` or `global-job`. Set to `false` to disable updating jobs. *Gantry* adds additional options to `docker service update` when there is [no running tasks](docs/faq.md#how-to-update-services-with-no-running-tasks). You can apply a different value to a particular service via [labels](#labels). |
 | GANTRY_UPDATE_NUM_WORKERS     | 1     | The maximum number of updates that can run in parallel. |
 | GANTRY_UPDATE_OPTIONS         |       | [Options](https://docs.docker.com/engine/reference/commandline/service_update/#options) added to the `docker service update` command for all services. You can apply a different value to a particular service via [labels](#labels). |
 | GANTRY_UPDATE_TIMEOUT_SECONDS | 0     | Error out if updating of a single service takes longer than the given time. Set to `0` to disable timeout. You can apply a different value to a particular service via [labels](#labels). |
@@ -100,48 +101,25 @@ You can configure the most behaviors of *Gantry* via environment variables.
 | GANTRY_NOTIFICATION_CONDITION   | all   | Valid values are `all` and `on-change`. Specifies the conditions under which notifications are sent. Set to `all` to send notifications every run. Set to `on-change` to send notifications only when there are updates or errors. |
 | GANTRY_NOTIFICATION_TITLE       |       | Add an additional message to the notification title. |
 
-## Authentication
-
-If you only need to login to a single registry, you can use the environment variables  `GANTRY_REGISTRY_USER`, `GANTRY_REGISTRY_PASSWORD`, `GANTRY_REGISTRY_HOST` and `GANTRY_REGISTRY_CONFIG` to provide the authentication information. You may also use the `*_FILE` variants to pass the information through files. The files can be added to the service via [docker secret](https://docs.docker.com/engine/swarm/secrets/). `GANTRY_REGISTRY_HOST` and `GANTRY_REGISTRY_CONFIG` are optional. Use `GANTRY_REGISTRY_HOST` when you are not using Docker Hub. Use `GANTRY_REGISTRY_CONFIG` when you want to enable authentication for only selected services.
-
-If the images of services are hosted on multiple registries that are required authentication, you should provide a configuration file to the *Gantry* and set `GANTRY_REGISTRY_CONFIGS_FILE` correspondingly. You can use [docker secret](https://docs.docker.com/engine/swarm/secrets/) to provision the configuration file. The configuration file must be in the following format:
-
-* Each line should contain 4 columns, which are either `<TAB>` or `<SPACE>` separated. The columns are 
-```
-<configuration> <host> <user> <password>
-```
-> * configuration: an identifier for the account. This is used as a path to [Docker configuration files](https://docs.docker.com/engine/reference/commandline/cli/#configuration-files), which could be either a relative path or an absolute path.
-> * host: the registry to authenticate against, e.g. docker.io.
-> * user: the user name to authenticate as.
-> * password: the password to authenticate with.
-* Lines starting with  `#` are comments.
-* Empty lines, comment lines and invalid lines are ignored.
-
-You need to tell *Gantry* to use a named configuration rather than the default one when updating a particular service. The named configurations are set via either `GANTRY_REGISTRY_CONFIG`, `GANTRY_REGISTRY_CONFIG_FILE` or `GANTRY_REGISTRY_CONFIGS_FILE`. This can be done by adding the following label to the service `gantry.auth.config=<configuration>`. *Gantry* creates [Docker configuration files](https://docs.docker.com/engine/reference/commandline/cli/#configuration-files) and adds `--config <configuration>` to the Docker command line for the corresponding services.
-
-> NOTE: *Gantry* automatically adds `--with-registry-auth` to the `docker service update` command for a service, when it finds the label `gantry.auth.config=<configuration>` on the service, or when it logs in with the default Docker configuration. Without `--with-registry-auth`, the service will be updated to an image without digest. See this [comment](https://github.com/shizunge/gantry/issues/53#issuecomment-2348376336).
-
-> NOTE: You can use `GANTRY_REGISTRY_CONFIGS_FILE` together with other authentication environment variables.
-
-> NOTE: *Gantry* uses `GANTRY_REGISTRY_PASSWORD` and `GANTRY_REGISTRY_USER` to obtain Docker Hub rate when `GANTRY_REGISTRY_HOST` is empty or `docker.io`. You can also use their `_FILE` variants. If either password or user is empty, *Gantry* reads the Docker Hub rate for anonymous users.
-
 ## Labels
 
 Labels can be added to services to modify the behavior of *Gantry* for particular services. When *Gantry* sees the following labels on a service, it will modify the Docker command line only for that service. The value on the label overrides the global environment variables.
 
 | Label  | Description |
 |--------|-------------|
-| `gantry.auth.config=<configuration>`     | See [Authentication](#authentication). |
+| `gantry.auth.config=<configuration>`     | Override [`DOCKER_CONFIG`](https://docs.docker.com/engine/reference/commandline/cli/#environment-variables). See [Authentication](docs/authentication.md). |
 | `gantry.services.excluded=true`          | Exclude the services from updating if you are using the default [`GANTRY_SERVICES_EXCLUDED_FILTERS`](#to-select-services). |
-| `gantry.manifest.cmd=<command>`          | Override [`GANTRY_MANIFEST_CMD`](#to-check-if-new-images-are-available) |
-| `gantry.manifest.options=<string> `      | Override [`GANTRY_MANIFEST_OPTIONS`](#to-check-if-new-images-are-available) |
-| `gantry.rollback.on_failure=<boolean>`   | Override [`GANTRY_ROLLBACK_ON_FAILURE`](#to-add-options-to-services-update) |
-| `gantry.rollback.options=<string>`       | Override [`GANTRY_ROLLBACK_OPTIONS`](#to-add-options-to-services-update) |
-| `gantry.update.jobs=<boolean>`           | Override [`GANTRY_UPDATE_JOBS`](#to-add-options-to-services-update) |
-| `gantry.update.options=<string>`         | Override [`GANTRY_UPDATE_OPTIONS`](#to-add-options-to-services-update) |
-| `gantry.update.timeout_seconds=<number>` | Override [`GANTRY_UPDATE_TIMEOUT_SECONDS`](#to-add-options-to-services-update) |
+| `gantry.manifest.cmd=<command>`          | Override [`GANTRY_MANIFEST_CMD`](#to-check-if-new-images-are-available). |
+| `gantry.manifest.options=<string> `      | Override [`GANTRY_MANIFEST_OPTIONS`](#to-check-if-new-images-are-available). |
+| `gantry.rollback.on_failure=<boolean>`   | Override [`GANTRY_ROLLBACK_ON_FAILURE`](#to-add-options-to-services-update). |
+| `gantry.rollback.options=<string>`       | Override [`GANTRY_ROLLBACK_OPTIONS`](#to-add-options-to-services-update). |
+| `gantry.update.jobs=<boolean>`           | Override [`GANTRY_UPDATE_JOBS`](#to-add-options-to-services-update). |
+| `gantry.update.options=<string>`         | Override [`GANTRY_UPDATE_OPTIONS`](#to-add-options-to-services-update). |
+| `gantry.update.timeout_seconds=<number>` | Override [`GANTRY_UPDATE_TIMEOUT_SECONDS`](#to-add-options-to-services-update). |
 
 ## FAQ
+
+[Authentication](docs/authentication.md)
 
 [FAQ](docs/faq.md)
 

@@ -6,8 +6,8 @@
 * High usage of Docker Hub rate. Getting manifest and then pulling the image double the usage.
 * Running `docker service update` command when there is no new image slows down the overall process.
 * Removing images related
-    * Failure of removing old images will exit and block subsequent updating.
-    * `docker rmi` only works for the current host.
+  * Failure of removing old images will exit and block subsequent updating.
+  * `docker rmi` only works for the current host.
 * `docker service update` CLI hangs when updating services without running tasks.
 * Other UX issues when running it as a script outside the provided container.
 
@@ -41,12 +41,18 @@ The label on the services to select config to enable authentication is renamed t
 
 | *Shepherd* Env | Workaround |
 |----------------|------------|
-| WITH_REGISTRY_AUTH     | *Gantry* automatically adds `--with-registry-auth` to the `docker service update` command for a sevice, when it finds the label `gantry.auth.config=<config-name>` on the service. Or manually add `--with-registry-auth` to `GANTRY_UPDATE_OPTIONS`. |
-| WITH_INSECURE_REGISTRY | Manually add `--insecure` to `GANTRY_MANIFEST_OPTIONS` and set `GANTRY_MANIFEST_CMD` to `manifest`. |
+| WITH_REGISTRY_AUTH     | *Gantry* automatically adds `--with-registry-auth` to the `docker service update` command for a sevice, when it finds the label `gantry.auth.config=<configuration>` on the service, or when it logs in with the default Docker configuration. You can also manually add `--with-registry-auth` to `GANTRY_UPDATE_OPTIONS`. |
+| WITH_INSECURE_REGISTRY | Manually add `--insecure` to `GANTRY_MANIFEST_OPTIONS` when `GANTRY_MANIFEST_CMD` is `manifest`. |
 | WITH_NO_RESOLVE_IMAGE  | Manually add `--no-resolve-image` to `GANTRY_UPDATE_OPTIONS`. |
 | RUN_ONCE_AND_EXIT      | Set `GANTRY_SLEEP_SECONDS` to 0. |
 
 ### New configurations
+
+You can enable these new features of *Gantry* through new configurations.
+
+* Execute pre-run and post-run commands via `GANTRY_PRE_RUN_CMD` and `GANTRY_POST_RUN_CMD`.
+* Exclude services via filters in addition to names via `GANTRY_SERVICES_EXCLUDED_FILTERS`.
+* Run updates in parallel via `GANTRY_MANIFEST_NUM_WORKERS` and `GANTRY_UPDATE_NUM_WORKERS`.
 
 | *Gantry* Env  | Purpose |
 |---------------|----------------------|
@@ -62,7 +68,7 @@ The label on the services to select config to enable authentication is renamed t
 | GANTRY_REGISTRY_HOST_FILE        | To pass sensitive information via [docker secret](https://docs.docker.com/engine/swarm/secrets/). |
 | GANTRY_REGISTRY_PASSWORD_FILE    | To pass sensitive information via [docker secret](https://docs.docker.com/engine/swarm/secrets/). |
 | GANTRY_REGISTRY_USER_FILE        | To pass sensitive information via [docker secret](https://docs.docker.com/engine/swarm/secrets/). |
-| GANTRY_SERVICES_EXCLUDED_FILTERS | To provide an alternative method to exclude services from being updated. |
+| GANTRY_SERVICES_EXCLUDED_FILTERS | To provide an additional method to exclude services from being updated, in companion with `GANTRY_SERVICES_EXCLUDED`. |
 | GANTRY_UPDATE_JOBS               | *Gantry* can distinguish `replicated-job` and `global-job` from other services. *Gantry* automatically adds more options to [update services with no running tasks](faq.md#how-to-update-services-with-no-running-tasks) to avoid hanging. |
 | GANTRY_UPDATE_NUM_WORKERS        | To run multiple update commands in parallel to accelerate the updating process. |
 
