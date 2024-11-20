@@ -19,7 +19,7 @@ Describe 'update-options'
   SUITE_NAME="update-options"
   BeforeAll "initialize_all_tests ${SUITE_NAME}"
   AfterAll "finish_all_tests ${SUITE_NAME}"
-  Describe "test_update_jobs_skipping" "container_test:true"
+  Describe "test_update_jobs_skipping" "container_test:true" "coverage:true"
     # For `docker service ls --filter`, the name filter matches on all or the prefix of a service's name
     # See https://docs.docker.com/engine/reference/commandline/service_ls/#name
     # It does not do the exact match of the name. See https://github.com/moby/moby/issues/32985
@@ -85,7 +85,7 @@ Describe 'update-options'
       The stderr should satisfy spec_expect_no_message "${FAILED_TO_REMOVE_IMAGE}.*${IMAGE_WITH_TAG}"
     End
   End
-  Describe "test_update_jobs_UPDATE_JOBS_true" "container_test:true"
+  Describe "test_update_jobs_UPDATE_JOBS_true" "container_test:true" "coverage:true"
     TEST_NAME="test_update_jobs_UPDATE_JOBS_true"
     IMAGE_WITH_TAG=$(get_image_with_tag "${SUITE_NAME}")
     SERVICE_NAME="gantry-test-$(unique_id)"
@@ -132,7 +132,7 @@ Describe 'update-options'
       The stderr should satisfy spec_expect_message    "${FAILED_TO_REMOVE_IMAGE}.*${IMAGE_WITH_TAG}"
     End
   End
-  Describe "test_update_jobs_label_UPDATE_JOBS_true" "container_test:true"
+  Describe "test_update_jobs_label_UPDATE_JOBS_true" "container_test:true" "coverage:true"
     TEST_NAME="test_update_jobs_label_UPDATE_JOBS_true"
     IMAGE_WITH_TAG=$(get_image_with_tag "${SUITE_NAME}")
     SERVICE_NAME="gantry-test-$(unique_id)"
@@ -185,7 +185,7 @@ Describe 'update-options'
       The stderr should satisfy spec_expect_message    "${FAILED_TO_REMOVE_IMAGE}.*${IMAGE_WITH_TAG}"
     End
   End
-  Describe "test_update_jobs_no_running_tasks" "container_test:true"
+  Describe "test_update_jobs_no_running_tasks" "container_test:true" "coverage:true"
     TEST_NAME="test_update_jobs_no_running_tasks"
     IMAGE_WITH_TAG=$(get_image_with_tag "${SUITE_NAME}")
     SERVICE_NAME="gantry-test-$(unique_id)"
@@ -242,7 +242,7 @@ Describe 'update-options'
       The stderr should satisfy spec_expect_no_message "${FAILED_TO_REMOVE_IMAGE}.*${IMAGE_WITH_TAG}"
     End
   End
-  Describe "test_update_UPDATE_OPTIONS" "container_test:true"
+  Describe "test_update_UPDATE_OPTIONS" "container_test:true" "coverage:true"
     TEST_NAME="test_update_UPDATE_OPTIONS"
     IMAGE_WITH_TAG=$(get_image_with_tag "${SUITE_NAME}")
     SERVICE_NAME="gantry-test-$(unique_id)"
@@ -302,7 +302,7 @@ Describe 'update-options'
       The stderr should satisfy spec_expect_no_message "${FAILED_TO_REMOVE_IMAGE}.*${IMAGE_WITH_TAG}"
     End
   End
-  Describe "test_update_label_UPDATE_OPTIONS" "container_test:true"
+  Describe "test_update_label_UPDATE_OPTIONS" "container_test:true" "coverage:true"
     TEST_NAME="test_update_label_UPDATE_OPTIONS"
     IMAGE_WITH_TAG=$(get_image_with_tag "${SUITE_NAME}")
     SERVICE_NAME="gantry-test-$(unique_id)"
@@ -365,7 +365,7 @@ Describe 'update-options'
       The stderr should satisfy spec_expect_no_message "${FAILED_TO_REMOVE_IMAGE}.*${IMAGE_WITH_TAG}"
     End
   End
-  Describe "test_update_UPDATE_TIMEOUT_SECONDS_not_a_number" "container_test:false"
+  Describe "test_update_UPDATE_TIMEOUT_SECONDS_not_a_number" "container_test:false" "coverage:true"
     TEST_NAME="test_update_UPDATE_TIMEOUT_SECONDS_not_a_number"
     IMAGE_WITH_TAG=$(get_image_with_tag "${SUITE_NAME}")
     SERVICE_NAME="gantry-test-$(unique_id)"

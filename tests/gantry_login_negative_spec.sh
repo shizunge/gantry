@@ -19,7 +19,7 @@ Describe 'login_negative'
   SUITE_NAME="login_negative"
   BeforeAll "initialize_all_tests ${SUITE_NAME} ENFORCE_LOGIN"
   AfterAll "finish_all_tests ${SUITE_NAME} ENFORCE_LOGIN"
-  Describe "test_login_no_login" "container_test:false"
+  Describe "test_login_no_login" "container_test:false" "coverage:true"
     TEST_NAME="test_login_no_login"
     IMAGE_WITH_TAG=$(get_image_with_tag "${SUITE_NAME}")
     SERVICE_NAME="gantry-test-$(unique_id)"
@@ -69,7 +69,7 @@ Describe 'login_negative'
       The stderr should satisfy spec_expect_no_message "${FAILED_TO_REMOVE_IMAGE}.*${IMAGE_WITH_TAG}"
     End
   End
-  Describe "test_login_incorrect_password" "container_test:false"
+  Describe "test_login_incorrect_password" "container_test:false" "coverage:true"
     TEST_NAME="test_login_incorrect_password"
     IMAGE_WITH_TAG=$(get_image_with_tag "${SUITE_NAME}")
     SERVICE_NAME="gantry-test-$(unique_id)"
@@ -137,7 +137,7 @@ Describe 'login_negative'
       The stderr should satisfy spec_expect_no_message "${FAILED_TO_REMOVE_IMAGE}.*${IMAGE_WITH_TAG}"
     End
   End
-  Describe "test_login_read_only_file" "container_test:false"
+  Describe "test_login_read_only_file" "container_test:false" "coverage:true"
     TEST_NAME="test_login_read_only_file"
     IMAGE_WITH_TAG=$(get_image_with_tag "${SUITE_NAME}")
     SERVICE_NAME="gantry-test-$(unique_id)"
@@ -207,7 +207,7 @@ Describe 'login_negative'
       The stderr should satisfy spec_expect_no_message "${FAILED_TO_REMOVE_IMAGE}.*${IMAGE_WITH_TAG}"
     End
   End
-  Describe "test_login_config_mismatch_default" "container_test:false"
+  Describe "test_login_config_mismatch_default" "container_test:false" "coverage:true"
     TEST_NAME="test_login_config_mismatch_default"
     IMAGE_WITH_TAG=$(get_image_with_tag "${SUITE_NAME}")
     SERVICE_NAME="gantry-test-$(unique_id)"
@@ -291,7 +291,7 @@ Describe 'login_negative'
       The stderr should satisfy spec_expect_no_message "${FAILED_TO_REMOVE_IMAGE}.*${IMAGE_WITH_TAG}"
     End
   End
-  Describe "test_login_config_mismatch_no_default" "container_test:false"
+  Describe "test_login_config_mismatch_no_default" "container_test:false" "coverage:true"
     TEST_NAME="test_login_config_mismatch_no_default"
     IMAGE_WITH_TAG=$(get_image_with_tag "${SUITE_NAME}")
     SERVICE_NAME="gantry-test-$(unique_id)"
@@ -369,7 +369,7 @@ Describe 'login_negative'
       The stderr should satisfy spec_expect_no_message "${FAILED_TO_REMOVE_IMAGE}.*${IMAGE_WITH_TAG}"
     End
   End
-  Describe "test_login_multi_services_no_label" "container_test:false"
+  Describe "test_login_multi_services_no_label" "container_test:false" "coverage:true"
     # To test https://github.com/shizunge/gantry/issues/64#issuecomment-2475499085
     TEST_NAME="test_login_multi_services_no_label"
     IMAGE_WITH_TAG=$(get_image_with_tag "${SUITE_NAME}")
@@ -483,7 +483,7 @@ Describe 'login_negative'
       The stderr should satisfy spec_expect_no_message "${FAILED_TO_REMOVE_IMAGE}.*"
     End
   End
-  Describe "test_login_REGISTRY_CONFIGS_FILE_bad_format" "container_test:false"
+  Describe "test_login_REGISTRY_CONFIGS_FILE_bad_format" "container_test:false" "coverage:true"
     TEST_NAME="test_login_REGISTRY_CONFIGS_FILE_bad_format"
     IMAGE_WITH_TAG=$(get_image_with_tag "${SUITE_NAME}")
     SERVICE_NAME="gantry-test-$(unique_id)"
@@ -552,7 +552,7 @@ Describe 'login_negative'
       The stderr should satisfy spec_expect_no_message "${FAILED_TO_REMOVE_IMAGE}.*${IMAGE_WITH_TAG}"
     End
   End
-  Describe "test_login_file_not_exist" "container_test:false"
+  Describe "test_login_file_not_exist" "container_test:false" "coverage:true"
     TEST_NAME="test_login_file_not_exist"
     IMAGE_WITH_TAG=$(get_image_with_tag "${SUITE_NAME}")
     SERVICE_NAME="gantry-test-$(unique_id)"

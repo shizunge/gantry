@@ -19,7 +19,7 @@ Describe 'service-multiple-services'
   SUITE_NAME="service-multiple-services"
   BeforeAll "initialize_all_tests ${SUITE_NAME}"
   AfterAll "finish_all_tests ${SUITE_NAME}"
-  Describe "test_multiple_services_excluded_filters" "container_test:true"
+  Describe "test_multiple_services_excluded_filters" "container_test:true" "coverage:true"
     TEST_NAME="test_multiple_services_excluded_filters"
     IMAGE_WITH_TAG=$(get_image_with_tag "${SUITE_NAME}")
     SERVICE_NAME="gantry-test-$(unique_id)"

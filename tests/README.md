@@ -35,7 +35,7 @@ bash shellspec --kcov
 If you want to test a container image of *Gantry*, you need to specify the image of *Gantry* via the environment variable `GANTRY_TEST_CONTAINER_REPO_TAG`.
 ```
 export GANTRY_TEST_CONTAINER_REPO_TAG=<gantry image>:<tag>
-bash shellspec --tag "container_test:true"
+bash shellspec --tag "container_test:true" "coverage:true"
 ```
 
 > NOTE: Negative tests will hang when testing a *Gantry* container, which may be due to a bug in shellspec. So when testing *Gantry* images, we should run only tests with tag `container_test:true`.

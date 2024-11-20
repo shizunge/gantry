@@ -19,7 +19,7 @@ Describe 'rollback'
   SUITE_NAME="rollback"
   BeforeAll "initialize_all_tests ${SUITE_NAME}"
   AfterAll "finish_all_tests ${SUITE_NAME}"
-  Describe "test_rollback_due_to_timeout" "container_test:false"
+  Describe "test_rollback_due_to_timeout" "container_test:false" "coverage:true"
     TEST_NAME="test_rollback_due_to_timeout"
     IMAGE_WITH_TAG=$(get_image_with_tag "${SUITE_NAME}")
     SERVICE_NAME="gantry-test-$(unique_id)"
@@ -67,7 +67,7 @@ Describe 'rollback'
       The stderr should satisfy spec_expect_no_message "${FAILED_TO_REMOVE_IMAGE}.*${IMAGE_WITH_TAG}"
     End
   End
-  Describe "test_rollback_failed" "container_test:false"
+  Describe "test_rollback_failed" "container_test:false" "coverage:true"
     TEST_NAME="test_rollback_failed"
     IMAGE_WITH_TAG=$(get_image_with_tag "${SUITE_NAME}")
     SERVICE_NAME="gantry-test-$(unique_id)"
@@ -118,7 +118,7 @@ Describe 'rollback'
       The stderr should satisfy spec_expect_no_message "${FAILED_TO_REMOVE_IMAGE}.*${IMAGE_WITH_TAG}"
     End
   End
-  Describe "test_rollback_ROLLBACK_ON_FAILURE_false" "container_test:false"
+  Describe "test_rollback_ROLLBACK_ON_FAILURE_false" "container_test:false" "coverage:true"
     TEST_NAME="test_rollback_ROLLBACK_ON_FAILURE_false"
     IMAGE_WITH_TAG=$(get_image_with_tag "${SUITE_NAME}")
     SERVICE_NAME="gantry-test-$(unique_id)"
@@ -167,7 +167,7 @@ Describe 'rollback'
       The stderr should satisfy spec_expect_no_message "${FAILED_TO_REMOVE_IMAGE}.*${IMAGE_WITH_TAG}"
     End
   End
-  Describe "test_rollback_lable_due_to_timeout" "container_test:false"
+  Describe "test_rollback_lable_due_to_timeout" "container_test:false" "coverage:true"
     TEST_NAME="test_rollback_lable_due_to_timeout"
     IMAGE_WITH_TAG=$(get_image_with_tag "${SUITE_NAME}")
     SERVICE_NAME="gantry-test-$(unique_id)"
@@ -218,7 +218,7 @@ Describe 'rollback'
       The stderr should satisfy spec_expect_no_message "${FAILED_TO_REMOVE_IMAGE}.*${IMAGE_WITH_TAG}"
     End
   End
-  Describe "test_rollback_label_failed" "container_test:false"
+  Describe "test_rollback_label_failed" "container_test:false" "coverage:true"
     TEST_NAME="test_rollback_label_failed"
     IMAGE_WITH_TAG=$(get_image_with_tag "${SUITE_NAME}")
     SERVICE_NAME="gantry-test-$(unique_id)"
@@ -274,7 +274,7 @@ Describe 'rollback'
       The stderr should satisfy spec_expect_no_message "${FAILED_TO_REMOVE_IMAGE}.*${IMAGE_WITH_TAG}"
     End
   End
-  Describe "test_rollback_label_ROLLBACK_ON_FAILURE_false" "container_test:false"
+  Describe "test_rollback_label_ROLLBACK_ON_FAILURE_false" "container_test:false" "coverage:true"
     TEST_NAME="test_rollback_label_ROLLBACK_ON_FAILURE_false"
     IMAGE_WITH_TAG=$(get_image_with_tag "${SUITE_NAME}")
     SERVICE_NAME="gantry-test-$(unique_id)"

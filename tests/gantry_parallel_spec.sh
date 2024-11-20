@@ -19,7 +19,7 @@ Describe 'service-parallel'
   SUITE_NAME="service-parallel"
   BeforeAll "initialize_all_tests ${SUITE_NAME}"
   AfterAll "finish_all_tests ${SUITE_NAME}"
-  Describe "test_parallel_less_workers" "container_test:true"
+  Describe "test_parallel_less_workers" "container_test:true" "coverage:true"
     TEST_NAME="test_parallel_less_workers"
     IMAGE_WITH_TAG=$(get_image_with_tag "${SUITE_NAME}")
     SERVICE_NAME="gantry-test-$(unique_id)"
@@ -84,7 +84,7 @@ Describe 'service-parallel'
       The stderr should satisfy spec_expect_no_message "${FAILED_TO_REMOVE_IMAGE}.*${IMAGE_WITH_TAG}"
     End
   End
-  Describe "test_parallel_more_workers" "container_test:true"
+  Describe "test_parallel_more_workers" "container_test:true" "coverage:true"
     TEST_NAME="test_parallel_more_workers"
     IMAGE_WITH_TAG=$(get_image_with_tag "${SUITE_NAME}")
     SERVICE_NAME="gantry-test-$(unique_id)"
@@ -130,7 +130,7 @@ Describe 'service-parallel'
       The stderr should satisfy spec_expect_no_message "${FAILED_TO_REMOVE_IMAGE}.*${IMAGE_WITH_TAG}"
     End
   End
-  Describe "test_parallel_GANTRY_MANIFEST_NUM_WORKERS_not_a_number" "container_test:false"
+  Describe "test_parallel_GANTRY_MANIFEST_NUM_WORKERS_not_a_number" "container_test:false" "coverage:true"
     TEST_NAME="test_parallel_GANTRY_MANIFEST_NUM_WORKERS_not_a_number"
     IMAGE_WITH_TAG=$(get_image_with_tag "${SUITE_NAME}")
     SERVICE_NAME="gantry-test-$(unique_id)"
@@ -173,7 +173,7 @@ Describe 'service-parallel'
       The stderr should satisfy spec_expect_no_message "${FAILED_TO_REMOVE_IMAGE}.*${IMAGE_WITH_TAG}"
     End
   End
-  Describe "test_parallel_GANTRY_UPDATE_NUM_WORKERS_not_a_number" "container_test:false"
+  Describe "test_parallel_GANTRY_UPDATE_NUM_WORKERS_not_a_number" "container_test:false" "coverage:true"
     TEST_NAME="test_parallel_GANTRY_UPDATE_NUM_WORKERS_not_a_number"
     IMAGE_WITH_TAG=$(get_image_with_tag "${SUITE_NAME}")
     SERVICE_NAME="gantry-test-$(unique_id)"

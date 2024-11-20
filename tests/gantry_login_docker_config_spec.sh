@@ -35,7 +35,7 @@ Describe 'login_docker_config'
   SUITE_NAME="login_docker_config"
   BeforeAll "initialize_all_tests ${SUITE_NAME} ENFORCE_LOGIN"
   AfterAll "finish_all_tests ${SUITE_NAME} ENFORCE_LOGIN"
-  Describe "test_login_docker_config_no_label" "container_test:true"
+  Describe "test_login_docker_config_no_label" "container_test:true" "coverage:true"
     TEST_NAME="test_login_docker_config_no_label"
     IMAGE_WITH_TAG=$(get_image_with_tag "${SUITE_NAME}")
     SERVICE_NAME="gantry-test-$(unique_id)"
@@ -105,7 +105,7 @@ Describe 'login_docker_config'
       The stderr should satisfy spec_expect_no_message "${FAILED_TO_REMOVE_IMAGE}.*${IMAGE_WITH_TAG}"
     End
   End
-  Describe "test_login_docker_config_default_config" "container_test:true"
+  Describe "test_login_docker_config_default_config" "container_test:true" "coverage:true"
     TEST_NAME="test_login_docker_config_default_config"
     IMAGE_WITH_TAG=$(get_image_with_tag "${SUITE_NAME}")
     SERVICE_NAME="gantry-test-$(unique_id)"
@@ -175,7 +175,7 @@ Describe 'login_docker_config'
       The stderr should satisfy spec_expect_no_message "${FAILED_TO_REMOVE_IMAGE}.*${IMAGE_WITH_TAG}"
     End
   End
-  Describe "test_login_docker_config_label_override" "container_test:false"
+  Describe "test_login_docker_config_label_override" "container_test:false" "coverage:true"
     TEST_NAME="test_login_docker_config_label_override"
     IMAGE_WITH_TAG=$(get_image_with_tag "${SUITE_NAME}")
     SERVICE_NAME="gantry-test-$(unique_id)"

@@ -19,7 +19,7 @@ Describe 'common-options'
   SUITE_NAME="common-options"
   BeforeAll "initialize_all_tests ${SUITE_NAME}"
   AfterAll "finish_all_tests ${SUITE_NAME}"
-  Describe "test_common_DOCKER_HOST_not_swarm_manager" "container_test:false"
+  Describe "test_common_DOCKER_HOST_not_swarm_manager" "container_test:false" "coverage:true"
     TEST_NAME="test_common_DOCKER_HOST_not_swarm_manager"
     IMAGE_WITH_TAG=$(get_image_with_tag "${SUITE_NAME}")
     SERVICE_NAME="gantry-test-$(unique_id)"
@@ -68,7 +68,7 @@ Describe 'common-options'
       The stderr should satisfy spec_expect_no_message "${SLEEP_SECONDS_BEFORE_NEXT_UPDATE}"
     End
   End
-  Describe "test_common_LOG_LEVEL_none" "container_test:true"
+  Describe "test_common_LOG_LEVEL_none" "container_test:true" "coverage:true"
     TEST_NAME="test_common_LOG_LEVEL_none"
     IMAGE_WITH_TAG=$(get_image_with_tag "${SUITE_NAME}")
     SERVICE_NAME="gantry-test-$(unique_id)"
@@ -91,7 +91,8 @@ Describe 'common-options'
       The stderr should satisfy spec_expect_no_message ".+"
     End
   End
-  Describe "test_common_no_new_env" "container_test:false"
+  # Do not run test_common_no_new_env with the kcov, which alters the environment variables.
+  Describe "test_common_no_new_env" "container_test:false" "coverage:false"
     # Check there is no new variable set,
     # to avoid errors like https://github.com/shizunge/gantry/issues/64#issuecomment-2475499085
     # We don't need to run this test using containers because we check env on the host, while the container test set env inside the container.
@@ -134,7 +135,7 @@ Describe 'common-options'
       The stderr should satisfy spec_expect_no_message ".+"
     End
   End
-  Describe "test_common_PRE_POST_RUN_CMD" "container_test:true"
+  Describe "test_common_PRE_POST_RUN_CMD" "container_test:true" "coverage:true"
     TEST_NAME="test_common_PRE_POST_RUN_CMD"
     IMAGE_WITH_TAG=$(get_image_with_tag "${SUITE_NAME}")
     SERVICE_NAME="gantry-test-$(unique_id)"
@@ -184,7 +185,7 @@ Describe 'common-options'
   # run_gantry prints logs after gantry exists, while testing a container.
   # In thes test, gantry never exit, but will be killed, thus there is no log.
   # Therefore we disable the container test for this test.
-  Describe "test_common_SLEEP_SECONDS" "container_test:false"
+  Describe "test_common_SLEEP_SECONDS" "container_test:false" "coverage:true"
     TEST_NAME="test_common_SLEEP_SECONDS"
     IMAGE_WITH_TAG=$(get_image_with_tag "${SUITE_NAME}")
     SERVICE_NAME="gantry-test-$(unique_id)"
@@ -233,7 +234,7 @@ Describe 'common-options'
       The stderr should satisfy spec_expect_message           "${SLEEP_SECONDS_BEFORE_NEXT_UPDATE}"
     End
   End
-  Describe "test_common_SLEEP_SECONDS_not_a_number" "container_test:false"
+  Describe "test_common_SLEEP_SECONDS_not_a_number" "container_test:false" "coverage:true"
     TEST_NAME="test_common_SLEEP_SECONDS_not_a_number"
     IMAGE_WITH_TAG=$(get_image_with_tag "${SUITE_NAME}")
     SERVICE_NAME="gantry-test-$(unique_id)"

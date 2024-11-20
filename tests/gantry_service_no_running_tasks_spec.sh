@@ -19,7 +19,7 @@ Describe "service-no-running-tasks"
   SUITE_NAME="service-no-running-tasks"
   BeforeAll "initialize_all_tests ${SUITE_NAME}"
   AfterAll "finish_all_tests ${SUITE_NAME}"
-  Describe "test_no_running_tasks_replicated" "container_test:true"
+  Describe "test_no_running_tasks_replicated" "container_test:true" "coverage:true"
     # For `docker service ls --filter`, the name filter matches on all or the prefix of a service's name
     # See https://docs.docker.com/engine/reference/commandline/service_ls/#name
     # It does not do the exact match of the name. See https://github.com/moby/moby/issues/32985
@@ -98,7 +98,7 @@ Describe "service-no-running-tasks"
       The stderr should satisfy spec_expect_no_message "${FAILED_TO_REMOVE_IMAGE}.*${IMAGE_WITH_TAG}"
     End
   End
-  Describe "test_no_running_tasks_global" "container_test:true"
+  Describe "test_no_running_tasks_global" "container_test:true" "coverage:true"
     TEST_NAME="test_no_running_tasks_global"
     IMAGE_WITH_TAG=$(get_image_with_tag "${SUITE_NAME}")
     SERVICE_NAME="gantry-test-$(unique_id)"

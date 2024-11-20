@@ -19,7 +19,7 @@ Describe 'service-single-service'
   SUITE_NAME="service-single-service"
   BeforeAll "initialize_all_tests ${SUITE_NAME}"
   AfterAll "finish_all_tests ${SUITE_NAME}"
-  Describe "test_new_image_no" "container_test:true"
+  Describe "test_new_image_no" "container_test:true" "coverage:true"
     TEST_NAME="test_new_image_no"
     IMAGE_WITH_TAG=$(get_image_with_tag "${SUITE_NAME}")
     SERVICE_NAME="gantry-test-$(unique_id)"
@@ -64,7 +64,7 @@ Describe 'service-single-service'
       The stderr should satisfy spec_expect_no_message "${SCHEDULE_NEXT_UPDATE_AT}"
     End
   End
-  Describe "test_new_image_yes" "container_test:true"
+  Describe "test_new_image_yes" "container_test:true" "coverage:true"
     TEST_NAME="test_new_image_yes"
     IMAGE_WITH_TAG=$(get_image_with_tag "${SUITE_NAME}")
     SERVICE_NAME="gantry-test-$(unique_id)"
@@ -109,7 +109,7 @@ Describe 'service-single-service'
       The stderr should satisfy spec_expect_no_message "${SCHEDULE_NEXT_UPDATE_AT}"
     End
   End
-  Describe "test_new_image_no_digest" "container_test:true"
+  Describe "test_new_image_no_digest" "container_test:true" "coverage:true"
     TEST_NAME="test_new_image_no_digest"
     IMAGE_WITH_TAG=$(get_image_with_tag "${SUITE_NAME}")
     SERVICE_NAME="gantry-test-$(unique_id)"

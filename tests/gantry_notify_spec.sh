@@ -70,7 +70,7 @@ Describe 'notify'
   SUITE_NAME="notify"
   BeforeAll "_notify_before_all ${SUITE_NAME}"
   AfterAll "_notify_after_all ${SUITE_NAME}"
-  Describe "test_notify_apprise" "container_test:true"
+  Describe "test_notify_apprise" "container_test:true" "coverage:true"
     TEST_NAME="test_notify_apprise"
     IMAGE_WITH_TAG=$(get_image_with_tag "${SUITE_NAME}")
     SERVICE_NAME="gantry-test-$(unique_id)"
@@ -123,7 +123,7 @@ Describe 'notify'
       The stderr should satisfy spec_expect_message    "${SEND_NOTIFY_APPRISE}"
     End
   End
-  Describe "test_notify_apprise_no_new_image" "container_test:true"
+  Describe "test_notify_apprise_no_new_image" "container_test:true" "coverage:true"
     TEST_NAME="test_notify_apprise_no_new_image"
     IMAGE_WITH_TAG=$(get_image_with_tag "${SUITE_NAME}")
     SERVICE_NAME="gantry-test-$(unique_id)"
@@ -177,7 +177,7 @@ Describe 'notify'
       The stderr should satisfy spec_expect_message    "${SEND_NOTIFY_APPRISE}"
     End
   End
-  Describe "test_notify_apprise_bad_url" "container_test:true"
+  Describe "test_notify_apprise_bad_url" "container_test:true" "coverage:true"
     TEST_NAME="test_notify_apprise_bad_url"
     IMAGE_WITH_TAG=$(get_image_with_tag "${SUITE_NAME}")
     SERVICE_NAME="gantry-test-$(unique_id)"
@@ -221,7 +221,7 @@ Describe 'notify'
       The stderr should satisfy spec_expect_message    "Failed to send notification via Apprise"
     End
   End
-  Describe "test_notify_on_change_new_image" "container_test:true"
+  Describe "test_notify_on_change_new_image" "container_test:true" "coverage:true"
     TEST_NAME="test_notify_on_change_new_image"
     IMAGE_WITH_TAG=$(get_image_with_tag "${SUITE_NAME}")
     SERVICE_NAME="gantry-test-$(unique_id)"
@@ -275,7 +275,7 @@ Describe 'notify'
       The stderr should satisfy spec_expect_message    "${SEND_NOTIFY_APPRISE}"
     End
   End
-  Describe "test_notify_on_change_no_updates" "container_test:true"
+  Describe "test_notify_on_change_no_updates" "container_test:true" "coverage:true"
     TEST_NAME="test_notify_on_change_no_updates"
     IMAGE_WITH_TAG=$(get_image_with_tag "${SUITE_NAME}")
     SERVICE_NAME="gantry-test-$(unique_id)"
@@ -325,7 +325,7 @@ Describe 'notify'
       The stderr should satisfy spec_expect_message    "${SKIP_SENDING_NOTIFICATION}"
     End
   End
-  Describe "test_notify_on_change_errors" "container_test:false"
+  Describe "test_notify_on_change_errors" "container_test:false" "coverage:true"
     TEST_NAME="test_notify_on_change_errors"
     IMAGE_WITH_TAG=$(get_image_with_tag "${SUITE_NAME}")
     SERVICE_NAME="gantry-test-$(unique_id)"
