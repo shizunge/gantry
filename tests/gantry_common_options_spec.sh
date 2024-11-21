@@ -22,7 +22,7 @@ Describe 'common-options'
   Describe "test_common_DOCKER_HOST_not_swarm_manager" "container_test:false" "coverage:true"
     TEST_NAME="test_common_DOCKER_HOST_not_swarm_manager"
     IMAGE_WITH_TAG=$(get_image_with_tag "${SUITE_NAME}")
-    SERVICE_NAME="gantry-test-$(unique_id)"
+    SERVICE_NAME=$(get_test_service_name "${TEST_NAME}")
     test_common_DOCKER_HOST_not_swarm_manager() {
       local TEST_NAME="${1}"
       local SERVICE_NAME="${2}"
@@ -71,7 +71,7 @@ Describe 'common-options'
   Describe "test_common_LOG_LEVEL_none" "container_test:true" "coverage:true"
     TEST_NAME="test_common_LOG_LEVEL_none"
     IMAGE_WITH_TAG=$(get_image_with_tag "${SUITE_NAME}")
-    SERVICE_NAME="gantry-test-$(unique_id)"
+    SERVICE_NAME=$(get_test_service_name "${TEST_NAME}")
     test_common_LOG_LEVEL_none() {
       local TEST_NAME="${1}"
       local SERVICE_NAME="${2}"
@@ -98,7 +98,7 @@ Describe 'common-options'
     # We don't need to run this test using containers because we check env on the host, while the container test set env inside the container.
     TEST_NAME="test_common_no_new_env"
     IMAGE_WITH_TAG=$(get_image_with_tag "${SUITE_NAME}")
-    SERVICE_NAME="gantry-test-$(unique_id)"
+    SERVICE_NAME=$(get_test_service_name "${TEST_NAME}")
     test_common_no_new_env() {
       local TEST_NAME="${1}"
       local SERVICE_NAME="${2}"
@@ -137,7 +137,7 @@ Describe 'common-options'
   Describe "test_common_PRE_POST_RUN_CMD" "container_test:true" "coverage:true"
     TEST_NAME="test_common_PRE_POST_RUN_CMD"
     IMAGE_WITH_TAG=$(get_image_with_tag "${SUITE_NAME}")
-    SERVICE_NAME="gantry-test-$(unique_id)"
+    SERVICE_NAME=$(get_test_service_name "${TEST_NAME}")
     test_common_PRE_POST_RUN_CMD() {
       local TEST_NAME="${1}"
       local SERVICE_NAME="${2}"
@@ -194,7 +194,7 @@ Describe 'common-options'
   Describe "test_common_SLEEP_SECONDS" "container_test:false" "coverage:true"
     TEST_NAME="test_common_SLEEP_SECONDS"
     IMAGE_WITH_TAG=$(get_image_with_tag "${SUITE_NAME}")
-    SERVICE_NAME="gantry-test-$(unique_id)"
+    SERVICE_NAME=$(get_test_service_name "${TEST_NAME}")
     test_common_SLEEP_SECONDS() {
       local TEST_NAME="${1}"
       local SERVICE_NAME="${2}"
@@ -202,7 +202,7 @@ Describe 'common-options'
       export GANTRY_SLEEP_SECONDS="7"
       run_gantry "${TEST_NAME}" &
       local PID="${!}"
-      sleep $((GANTRY_SLEEP_SECONDS*2+1))
+      sleep $((GANTRY_SLEEP_SECONDS*3+1))
       kill "${PID}"
     }
     BeforeEach "common_setup_no_new_image ${TEST_NAME} ${IMAGE_WITH_TAG} ${SERVICE_NAME}"
@@ -244,7 +244,7 @@ Describe 'common-options'
   Describe "test_common_SLEEP_SECONDS_not_a_number" "container_test:false" "coverage:true"
     TEST_NAME="test_common_SLEEP_SECONDS_not_a_number"
     IMAGE_WITH_TAG=$(get_image_with_tag "${SUITE_NAME}")
-    SERVICE_NAME="gantry-test-$(unique_id)"
+    SERVICE_NAME=$(get_test_service_name "${TEST_NAME}")
     test_common_SLEEP_SECONDS_not_a_number() {
       local TEST_NAME="${1}"
       local SERVICE_NAME="${2}"

@@ -70,7 +70,7 @@ Describe 'notify'
   Describe "test_notify_apprise" "container_test:true" "coverage:true"
     TEST_NAME="test_notify_apprise"
     IMAGE_WITH_TAG=$(get_image_with_tag "${SUITE_NAME}")
-    SERVICE_NAME="gantry-test-$(unique_id)"
+    SERVICE_NAME=$(get_test_service_name "${TEST_NAME}")
     test_notify_apprise() {
       local TEST_NAME="${1}"
       local SERVICE_NAME="${2}"
@@ -120,7 +120,7 @@ Describe 'notify'
   Describe "test_notify_apprise_no_new_image" "container_test:true" "coverage:true"
     TEST_NAME="test_notify_apprise_no_new_image"
     IMAGE_WITH_TAG=$(get_image_with_tag "${SUITE_NAME}")
-    SERVICE_NAME="gantry-test-$(unique_id)"
+    SERVICE_NAME=$(get_test_service_name "${TEST_NAME}")
     test_notify_apprise_no_new_image() {
       local TEST_NAME="${1}"
       local SERVICE_NAME="${2}"
@@ -171,7 +171,7 @@ Describe 'notify'
   Describe "test_notify_apprise_bad_url" "container_test:true" "coverage:true"
     TEST_NAME="test_notify_apprise_bad_url"
     IMAGE_WITH_TAG=$(get_image_with_tag "${SUITE_NAME}")
-    SERVICE_NAME="gantry-test-$(unique_id)"
+    SERVICE_NAME=$(get_test_service_name "${TEST_NAME}")
     test_notify_apprise_bad_url() {
       local TEST_NAME="${1}"
       local SERVICE_NAME="${2}"
@@ -215,7 +215,7 @@ Describe 'notify'
   Describe "test_notify_on_change_new_image" "container_test:true" "coverage:true"
     TEST_NAME="test_notify_on_change_new_image"
     IMAGE_WITH_TAG=$(get_image_with_tag "${SUITE_NAME}")
-    SERVICE_NAME="gantry-test-$(unique_id)"
+    SERVICE_NAME=$(get_test_service_name "${TEST_NAME}")
     test_notify_on_change_new_image() {
       local TEST_NAME="${1}"
       local SERVICE_NAME="${2}"
@@ -266,7 +266,7 @@ Describe 'notify'
   Describe "test_notify_on_change_no_updates" "container_test:true" "coverage:true"
     TEST_NAME="test_notify_on_change_no_updates"
     IMAGE_WITH_TAG=$(get_image_with_tag "${SUITE_NAME}")
-    SERVICE_NAME="gantry-test-$(unique_id)"
+    SERVICE_NAME=$(get_test_service_name "${TEST_NAME}")
     test_notify_on_change_no_updates() {
       local TEST_NAME="${1}"
       local SERVICE_NAME="${2}"
@@ -316,7 +316,7 @@ Describe 'notify'
   Describe "test_notify_on_change_errors" "container_test:false" "coverage:true"
     TEST_NAME="test_notify_on_change_errors"
     IMAGE_WITH_TAG=$(get_image_with_tag "${SUITE_NAME}")
-    SERVICE_NAME="gantry-test-$(unique_id)"
+    SERVICE_NAME=$(get_test_service_name "${TEST_NAME}")
     test_notify_on_change_errors() {
       local TEST_NAME="${1}"
       local SERVICE_NAME="${2}"

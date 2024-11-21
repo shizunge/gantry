@@ -26,7 +26,7 @@ Describe "service-no-running-tasks"
     # This test also checks whether we do an extra step to to perform the exact match.
     TEST_NAME="test_no_running_tasks_replicated"
     IMAGE_WITH_TAG=$(get_image_with_tag "${SUITE_NAME}")
-    SERVICE_NAME="gantry-test-$(unique_id)"
+    SERVICE_NAME=$(get_test_service_name "${TEST_NAME}")
     SERVICE_NAME_SUFFIX="${SERVICE_NAME}-suffix"
     test_start() {
       local TEST_NAME="${1}"
@@ -101,7 +101,7 @@ Describe "service-no-running-tasks"
   Describe "test_no_running_tasks_global" "container_test:true" "coverage:true"
     TEST_NAME="test_no_running_tasks_global"
     IMAGE_WITH_TAG=$(get_image_with_tag "${SUITE_NAME}")
-    SERVICE_NAME="gantry-test-$(unique_id)"
+    SERVICE_NAME=$(get_test_service_name "${TEST_NAME}")
     test_start() {
       local TEST_NAME="${1}"
       local IMAGE_WITH_TAG="${2}"

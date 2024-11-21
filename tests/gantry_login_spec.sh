@@ -25,7 +25,7 @@ Describe 'login'
   Describe "test_login_config" "container_test:true" "coverage:true"
     TEST_NAME="test_login_config"
     IMAGE_WITH_TAG=$(get_image_with_tag "${SUITE_NAME}")
-    SERVICE_NAME="gantry-test-$(unique_id)"
+    SERVICE_NAME=$(get_test_service_name "${TEST_NAME}")
     CONFIG="C$(unique_id)"
     TEST_REGISTRY=$(load_test_registry "${SUITE_NAME}") || return 1
     test_login_config() {
@@ -98,7 +98,7 @@ Describe 'login'
   Describe "test_login_default_config" "container_test:true" "coverage:true"
     TEST_NAME="test_login_default_config"
     IMAGE_WITH_TAG=$(get_image_with_tag "${SUITE_NAME}")
-    SERVICE_NAME="gantry-test-$(unique_id)"
+    SERVICE_NAME=$(get_test_service_name "${TEST_NAME}")
     CONFIG="NotUsed"
     TEST_REGISTRY=$(load_test_registry "${SUITE_NAME}") || return 1
     test_login_default_config() {
@@ -167,7 +167,7 @@ Describe 'login'
   Describe "test_login_REGISTRY_CONFIGS_FILE" "container_test:true" "coverage:true"
     TEST_NAME="test_login_REGISTRY_CONFIGS_FILE"
     IMAGE_WITH_TAG=$(get_image_with_tag "${SUITE_NAME}")
-    SERVICE_NAME="gantry-test-$(unique_id)"
+    SERVICE_NAME=$(get_test_service_name "${TEST_NAME}")
     CONFIG="C$(unique_id)"
     TEST_REGISTRY=$(load_test_registry "${SUITE_NAME}") || return 1
     test_login_REGISTRY_CONFIGS_FILE() {
@@ -241,7 +241,7 @@ Describe 'login'
   Describe "test_login_external_config" "container_test:true" "coverage:true"
     TEST_NAME="test_login_external_config"
     IMAGE_WITH_TAG=$(get_image_with_tag "${SUITE_NAME}")
-    SERVICE_NAME="gantry-test-$(unique_id)"
+    SERVICE_NAME=$(get_test_service_name "${TEST_NAME}")
     CONFIG="$(mktemp -d)"
     TEST_REGISTRY=$(load_test_registry "${SUITE_NAME}") || return 1
     test_login_external_config() {

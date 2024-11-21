@@ -22,7 +22,7 @@ Describe 'filters'
   Describe "test_SERVICES_FILTERS_bad" "container_test:false" "coverage:true"
     TEST_NAME="test_SERVICES_FILTERS_bad"
     IMAGE_WITH_TAG=$(get_image_with_tag "${SUITE_NAME}")
-    SERVICE_NAME="gantry-test-$(unique_id)"
+    SERVICE_NAME=$(get_test_service_name "${TEST_NAME}")
     test_SERVICES_FILTERS_bad() {
       local TEST_NAME="${1}"
       local SERVICE_NAME="${2}"
@@ -66,7 +66,7 @@ Describe 'filters'
   Describe "test_SERVICES_EXCLUDED_multiple_services" "container_test:true" "coverage:true"
     TEST_NAME="test_SERVICES_EXCLUDED_multiple_services"
     IMAGE_WITH_TAG=$(get_image_with_tag "${SUITE_NAME}")
-    SERVICE_NAME="gantry-test-$(unique_id)"
+    SERVICE_NAME=$(get_test_service_name "${TEST_NAME}")
     MAX_SERVICES_NUM=10
     test_SERVICES_EXCLUDED_multiple_services() {
       local TEST_NAME="${1}"
@@ -123,7 +123,7 @@ Describe 'filters'
   Describe "test_SERVICES_EXCLUDED_FILTERS_default" "container_test:true" "coverage:true"
     TEST_NAME="test_SERVICES_EXCLUDED_FILTERS_default"
     IMAGE_WITH_TAG=$(get_image_with_tag "${SUITE_NAME}")
-    SERVICE_NAME="gantry-test-$(unique_id)"
+    SERVICE_NAME=$(get_test_service_name "${TEST_NAME}")
     MAX_SERVICES_NUM=10
     test_SERVICES_EXCLUDED_FILTERS_default() {
       local TEST_NAME="${1}"
@@ -173,7 +173,7 @@ Describe 'filters'
   Describe "test_SERVICES_EXCLUDED_FILTERS_bad" "container_test:false" "coverage:true"
     TEST_NAME="test_SERVICES_EXCLUDED_FILTERS_bad"
     IMAGE_WITH_TAG=$(get_image_with_tag "${SUITE_NAME}")
-    SERVICE_NAME="gantry-test-$(unique_id)"
+    SERVICE_NAME=$(get_test_service_name "${TEST_NAME}")
     test_SERVICES_EXCLUDED_FILTERS_bad() {
       local TEST_NAME="${1}"
       local SERVICE_NAME="${2}"

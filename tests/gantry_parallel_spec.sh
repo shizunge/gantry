@@ -22,7 +22,7 @@ Describe 'service-parallel'
   Describe "test_parallel_less_workers" "container_test:true" "coverage:true"
     TEST_NAME="test_parallel_less_workers"
     IMAGE_WITH_TAG=$(get_image_with_tag "${SUITE_NAME}")
-    SERVICE_NAME="gantry-test-$(unique_id)"
+    SERVICE_NAME=$(get_test_service_name "${TEST_NAME}")
     MANIFEST_NUM_WORKERS=2
     MAX_SERVICES_NUM=6
     MAX_NO_NEW_IMAGE=3
@@ -87,7 +87,7 @@ Describe 'service-parallel'
   Describe "test_parallel_more_workers" "container_test:true" "coverage:true"
     TEST_NAME="test_parallel_more_workers"
     IMAGE_WITH_TAG=$(get_image_with_tag "${SUITE_NAME}")
-    SERVICE_NAME="gantry-test-$(unique_id)"
+    SERVICE_NAME=$(get_test_service_name "${TEST_NAME}")
     MANIFEST_NUM_WORKERS=2
     MAX_SERVICES_NUM=10
     test_parallel_more_workers() {
@@ -133,7 +133,7 @@ Describe 'service-parallel'
   Describe "test_parallel_GANTRY_MANIFEST_NUM_WORKERS_not_a_number" "container_test:false" "coverage:true"
     TEST_NAME="test_parallel_GANTRY_MANIFEST_NUM_WORKERS_not_a_number"
     IMAGE_WITH_TAG=$(get_image_with_tag "${SUITE_NAME}")
-    SERVICE_NAME="gantry-test-$(unique_id)"
+    SERVICE_NAME=$(get_test_service_name "${TEST_NAME}")
     test_parallel_GANTRY_MANIFEST_NUM_WORKERS_not_a_number() {
       local TEST_NAME="${1}"
       local SERVICE_NAME="${2}"
@@ -176,7 +176,7 @@ Describe 'service-parallel'
   Describe "test_parallel_GANTRY_UPDATE_NUM_WORKERS_not_a_number" "container_test:false" "coverage:true"
     TEST_NAME="test_parallel_GANTRY_UPDATE_NUM_WORKERS_not_a_number"
     IMAGE_WITH_TAG=$(get_image_with_tag "${SUITE_NAME}")
-    SERVICE_NAME="gantry-test-$(unique_id)"
+    SERVICE_NAME=$(get_test_service_name "${TEST_NAME}")
     test_parallel_GANTRY_UPDATE_NUM_WORKERS_not_a_number() {
       local TEST_NAME="${1}"
       local SERVICE_NAME="${2}"

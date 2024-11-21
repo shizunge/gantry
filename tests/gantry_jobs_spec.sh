@@ -26,7 +26,7 @@ Describe 'update-jobs'
     # This test also checks whether we do an extra step to to perform the exact match.
     TEST_NAME="test_update_jobs_skipping"
     IMAGE_WITH_TAG=$(get_image_with_tag "${SUITE_NAME}")
-    SERVICE_NAME="gantry-test-$(unique_id)"
+    SERVICE_NAME=$(get_test_service_name "${TEST_NAME}")
     SERVICE_NAME_SUFFIX="${SERVICE_NAME}-suffix"
     test_start() {
       local TEST_NAME="${1}"
@@ -88,7 +88,10 @@ Describe 'update-jobs'
   Describe "test_update_jobs_UPDATE_JOBS_true" "container_test:true" "coverage:true"
     TEST_NAME="test_update_jobs_UPDATE_JOBS_true"
     IMAGE_WITH_TAG=$(get_image_with_tag "${SUITE_NAME}")
-    SERVICE_NAME="gantry-test-$(unique_id)"
+    SERVICE_NAME=$(get_test_service_name "${TEST_NAME}")
+    TASK_SECONDS=-1
+    # Use a long EXIT_SECONDS, because we want the task keep running for a while after updating to trigger the image removing failure.
+    EXIT_SECONDS=30
     test_update_jobs_UPDATE_JOBS_true() {
       local TEST_NAME="${1}"
       local SERVICE_NAME="${2}"
@@ -98,7 +101,7 @@ Describe 'update-jobs'
       export GANTRY_UPDATE_OPTIONS="--detach=true"
       run_gantry "${TEST_NAME}"
     }
-    BeforeEach "common_setup_job ${TEST_NAME} ${IMAGE_WITH_TAG} ${SERVICE_NAME}"
+    BeforeEach "common_setup_job ${TEST_NAME} ${IMAGE_WITH_TAG} ${SERVICE_NAME} ${TASK_SECONDS} ${EXIT_SECONDS}"
     AfterEach "common_cleanup ${TEST_NAME} ${IMAGE_WITH_TAG} ${SERVICE_NAME}"
     It 'run_test'
       When run test_update_jobs_UPDATE_JOBS_true "${TEST_NAME}" "${SERVICE_NAME}"
@@ -135,7 +138,10 @@ Describe 'update-jobs'
   Describe "test_update_jobs_label_UPDATE_JOBS_true" "container_test:true" "coverage:true"
     TEST_NAME="test_update_jobs_label_UPDATE_JOBS_true"
     IMAGE_WITH_TAG=$(get_image_with_tag "${SUITE_NAME}")
-    SERVICE_NAME="gantry-test-$(unique_id)"
+    SERVICE_NAME=$(get_test_service_name "${TEST_NAME}")
+    TASK_SECONDS=-1
+    # Use a long EXIT_SECONDS, because we want the task keep running for a while after updating to trigger the image removing failure.
+    EXIT_SECONDS=30
     test_update_jobs_label_UPDATE_JOBS_true() {
       local TEST_NAME="${1}"
       local SERVICE_NAME="${2}"
@@ -151,7 +157,7 @@ Describe 'update-jobs'
       docker_service_update --detach=true --label-add "${LABEL_AND_VALUE}" "${SERVICE_NAME}"
       run_gantry "${TEST_NAME}"
     }
-    BeforeEach "common_setup_job ${TEST_NAME} ${IMAGE_WITH_TAG} ${SERVICE_NAME}"
+    BeforeEach "common_setup_job ${TEST_NAME} ${IMAGE_WITH_TAG} ${SERVICE_NAME} ${TASK_SECONDS} ${EXIT_SECONDS}"
     AfterEach "common_cleanup ${TEST_NAME} ${IMAGE_WITH_TAG} ${SERVICE_NAME}"
     It 'run_test'
       When run test_update_jobs_label_UPDATE_JOBS_true "${TEST_NAME}" "${SERVICE_NAME}"
@@ -188,7 +194,8 @@ Describe 'update-jobs'
   Describe "test_update_jobs_no_running_tasks" "container_test:true" "coverage:true"
     TEST_NAME="test_update_jobs_no_running_tasks"
     IMAGE_WITH_TAG=$(get_image_with_tag "${SUITE_NAME}")
-    SERVICE_NAME="gantry-test-$(unique_id)"
+    SERVICE_NAME=$(get_test_service_name "${TEST_NAME}")
+    # Use a short TASK_SECONDS, because we want the task finishes soon.
     TASK_SECONDS=1
     test_start() {
       local TEST_NAME="${1}"

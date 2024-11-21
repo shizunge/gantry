@@ -22,7 +22,7 @@ Describe 'service-single-service'
   Describe "test_new_image_no" "container_test:true" "coverage:true"
     TEST_NAME="test_new_image_no"
     IMAGE_WITH_TAG=$(get_image_with_tag "${SUITE_NAME}")
-    SERVICE_NAME="gantry-test-$(unique_id)"
+    SERVICE_NAME=$(get_test_service_name "${TEST_NAME}")
     test_new_image_no() {
       local TEST_NAME="${1}"
       local SERVICE_NAME="${2}"
@@ -67,7 +67,7 @@ Describe 'service-single-service'
   Describe "test_new_image_yes" "container_test:true" "coverage:true"
     TEST_NAME="test_new_image_yes"
     IMAGE_WITH_TAG=$(get_image_with_tag "${SUITE_NAME}")
-    SERVICE_NAME="gantry-test-$(unique_id)"
+    SERVICE_NAME=$(get_test_service_name "${TEST_NAME}")
     test_new_image_yes() {
       local TEST_NAME="${1}"
       local SERVICE_NAME="${2}"
@@ -112,7 +112,7 @@ Describe 'service-single-service'
   Describe "test_new_image_no_digest" "container_test:true" "coverage:true"
     TEST_NAME="test_new_image_no_digest"
     IMAGE_WITH_TAG=$(get_image_with_tag "${SUITE_NAME}")
-    SERVICE_NAME="gantry-test-$(unique_id)"
+    SERVICE_NAME=$(get_test_service_name "${TEST_NAME}")
     test_start() {
       local TEST_NAME="${1}"
       local IMAGE_WITH_TAG="${2}"
@@ -168,7 +168,7 @@ Describe 'service-single-service'
   Describe "test_new_image_SERVICES_SELF" "container_test:true" "coverage:true"
     TEST_NAME="test_new_image_SERVICES_SELF"
     IMAGE_WITH_TAG=$(get_image_with_tag "${SUITE_NAME}")
-    SERVICE_NAME="gantry-test-$(unique_id)"
+    SERVICE_NAME=$(get_test_service_name "${TEST_NAME}")
     test_new_image_SERVICES_SELF() {
       local TEST_NAME="${1}"
       local SERVICE_NAME="${2}"

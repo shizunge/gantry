@@ -22,7 +22,7 @@ Describe 'service-multiple-services'
   Describe "test_multiple_services_excluded_filters" "container_test:true" "coverage:true"
     TEST_NAME="test_multiple_services_excluded_filters"
     IMAGE_WITH_TAG=$(get_image_with_tag "${SUITE_NAME}")
-    SERVICE_NAME="gantry-test-$(unique_id)"
+    SERVICE_NAME=$(get_test_service_name "${TEST_NAME}")
     SERVICE_NAME0="${SERVICE_NAME}-0"
     SERVICE_NAME1="${SERVICE_NAME}-1"
     SERVICE_NAME2="${SERVICE_NAME}-2"

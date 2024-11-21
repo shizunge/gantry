@@ -28,7 +28,7 @@ Describe 'update-options'
   Describe "test_update_UPDATE_OPTIONS" "container_test:true" "coverage:true"
     TEST_NAME="test_update_UPDATE_OPTIONS"
     IMAGE_WITH_TAG=$(get_image_with_tag "${SUITE_NAME}")
-    SERVICE_NAME="gantry-test-$(unique_id)"
+    SERVICE_NAME=$(get_test_service_name "${TEST_NAME}")
     test_update_UPDATE_OPTIONS() {
       local TEST_NAME="${1}"
       local SERVICE_NAME="${2}"
@@ -83,7 +83,7 @@ Describe 'update-options'
   Describe "test_update_label_UPDATE_OPTIONS" "container_test:true" "coverage:true"
     TEST_NAME="test_update_label_UPDATE_OPTIONS"
     IMAGE_WITH_TAG=$(get_image_with_tag "${SUITE_NAME}")
-    SERVICE_NAME="gantry-test-$(unique_id)"
+    SERVICE_NAME=$(get_test_service_name "${TEST_NAME}")
     test_update_label_UPDATE_OPTIONS() {
       local TEST_NAME="${1}"
       local SERVICE_NAME="${2}"
@@ -141,7 +141,7 @@ Describe 'update-options'
   Describe "test_update_UPDATE_TIMEOUT_SECONDS_not_a_number" "container_test:false" "coverage:true"
     TEST_NAME="test_update_UPDATE_TIMEOUT_SECONDS_not_a_number"
     IMAGE_WITH_TAG=$(get_image_with_tag "${SUITE_NAME}")
-    SERVICE_NAME="gantry-test-$(unique_id)"
+    SERVICE_NAME=$(get_test_service_name "${TEST_NAME}")
     test_update_UPDATE_TIMEOUT_SECONDS_not_a_number() {
       local TEST_NAME="${1}"
       local SERVICE_NAME="${2}"
@@ -185,7 +185,7 @@ Describe 'update-options'
   Describe "test_update_lable_UPDATE_TIMEOUT_SECONDS" "container_test:true" "coverage:true"
     TEST_NAME="test_update_lable_UPDATE_TIMEOUT_SECONDS"
     IMAGE_WITH_TAG=$(get_image_with_tag "${SUITE_NAME}")
-    SERVICE_NAME="gantry-test-$(unique_id)"
+    SERVICE_NAME=$(get_test_service_name "${TEST_NAME}")
     TIMEOUT=300
     test_update_lable_UPDATE_TIMEOUT_SECONDS() {
       local TEST_NAME="${1}"

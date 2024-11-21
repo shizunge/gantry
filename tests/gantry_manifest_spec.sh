@@ -22,7 +22,7 @@ Describe 'manifest-command'
   Describe "test_MANIFEST_CMD_none" "container_test:true" "coverage:true"
     TEST_NAME="test_MANIFEST_CMD_none"
     IMAGE_WITH_TAG=$(get_image_with_tag "${SUITE_NAME}")
-    SERVICE_NAME="gantry-test-$(unique_id)"
+    SERVICE_NAME=$(get_test_service_name "${TEST_NAME}")
     test_MANIFEST_CMD_none() {
       local TEST_NAME="${1}"
       local SERVICE_NAME="${2}"
@@ -72,7 +72,7 @@ Describe 'manifest-command'
   Describe "test_MANIFEST_CMD_none_SERVICES_SELF" "container_test:true" "coverage:true"
     TEST_NAME="test_MANIFEST_CMD_none_SERVICES_SELF"
     IMAGE_WITH_TAG=$(get_image_with_tag "${SUITE_NAME}")
-    SERVICE_NAME="gantry-test-$(unique_id)"
+    SERVICE_NAME=$(get_test_service_name "${TEST_NAME}")
     test_MANIFEST_CMD_none_SERVICES_SELF() {
       # If the service is self, it will always run manifest checking. Even if the CMD is set to none
       local TEST_NAME="${1}"
@@ -119,7 +119,7 @@ Describe 'manifest-command'
   Describe "test_MANIFEST_CMD_manifest" "container_test:true" "coverage:true"
     TEST_NAME="test_MANIFEST_CMD_manifest"
     IMAGE_WITH_TAG=$(get_image_with_tag "${SUITE_NAME}")
-    SERVICE_NAME="gantry-test-$(unique_id)"
+    SERVICE_NAME=$(get_test_service_name "${TEST_NAME}")
     test_MANIFEST_CMD_manifest() {
       local TEST_NAME="${1}"
       local SERVICE_NAME="${2}"
@@ -163,7 +163,7 @@ Describe 'manifest-command'
   Describe "test_MANIFEST_CMD_label" "container_test:true" "coverage:true"
     TEST_NAME="test_MANIFEST_CMD_label"
     IMAGE_WITH_TAG=$(get_image_with_tag "${SUITE_NAME}")
-    SERVICE_NAME="gantry-test-$(unique_id)"
+    SERVICE_NAME=$(get_test_service_name "${TEST_NAME}")
     test_MANIFEST_CMD_label() {
       local TEST_NAME="${1}"
       local SERVICE_NAME="${2}"
@@ -212,7 +212,7 @@ Describe 'manifest-command'
   Describe "test_MANIFEST_CMD_unsupported_cmd" "container_test:false" "coverage:true"
     TEST_NAME="test_MANIFEST_CMD_unsupported_cmd"
     IMAGE_WITH_TAG=$(get_image_with_tag "${SUITE_NAME}")
-    SERVICE_NAME="gantry-test-$(unique_id)"
+    SERVICE_NAME=$(get_test_service_name "${TEST_NAME}")
     test_MANIFEST_CMD_unsupported_cmd() {
       local TEST_NAME="${1}"
       local SERVICE_NAME="${2}"
@@ -258,7 +258,7 @@ Describe 'manifest-command'
   Describe "test_MANIFEST_CMD_failure" "container_test:false" "coverage:true"
     TEST_NAME="test_MANIFEST_CMD_failure"
     IMAGE_WITH_TAG=$(get_image_with_tag "${SUITE_NAME}")
-    SERVICE_NAME="gantry-test-$(unique_id)"
+    SERVICE_NAME=$(get_test_service_name "${TEST_NAME}")
     test_start() {
       # This test assumes that the IMAGE_WITH_TAG does not exist on the registry.
       # get_image_with_tag should return an image with a unique tag.

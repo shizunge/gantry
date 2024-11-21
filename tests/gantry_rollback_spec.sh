@@ -22,7 +22,7 @@ Describe 'rollback'
   Describe "test_rollback_due_to_timeout" "container_test:false" "coverage:true"
     TEST_NAME="test_rollback_due_to_timeout"
     IMAGE_WITH_TAG=$(get_image_with_tag "${SUITE_NAME}")
-    SERVICE_NAME="gantry-test-$(unique_id)"
+    SERVICE_NAME=$(get_test_service_name "${TEST_NAME}")
     TIMEOUT=1
     test_rollback_due_to_timeout() {
       local TEST_NAME="${1}"
@@ -70,7 +70,7 @@ Describe 'rollback'
   Describe "test_rollback_failed" "container_test:false" "coverage:true"
     TEST_NAME="test_rollback_failed"
     IMAGE_WITH_TAG=$(get_image_with_tag "${SUITE_NAME}")
-    SERVICE_NAME="gantry-test-$(unique_id)"
+    SERVICE_NAME=$(get_test_service_name "${TEST_NAME}")
     TIMEOUT=1
     test_rollback_failed() {
       local TEST_NAME="${1}"
@@ -121,7 +121,7 @@ Describe 'rollback'
   Describe "test_rollback_ROLLBACK_ON_FAILURE_false" "container_test:false" "coverage:true"
     TEST_NAME="test_rollback_ROLLBACK_ON_FAILURE_false"
     IMAGE_WITH_TAG=$(get_image_with_tag "${SUITE_NAME}")
-    SERVICE_NAME="gantry-test-$(unique_id)"
+    SERVICE_NAME=$(get_test_service_name "${TEST_NAME}")
     TIMEOUT=1
     test_rollback_ROLLBACK_ON_FAILURE_false() {
       local TEST_NAME="${1}"
@@ -170,7 +170,7 @@ Describe 'rollback'
   Describe "test_rollback_label_failed" "container_test:false" "coverage:true"
     TEST_NAME="test_rollback_label_failed"
     IMAGE_WITH_TAG=$(get_image_with_tag "${SUITE_NAME}")
-    SERVICE_NAME="gantry-test-$(unique_id)"
+    SERVICE_NAME=$(get_test_service_name "${TEST_NAME}")
     TIMEOUT=1
     test_rollback_label_failed() {
       local TEST_NAME="${1}"
@@ -224,7 +224,7 @@ Describe 'rollback'
   Describe "test_rollback_label_ROLLBACK_ON_FAILURE_false" "container_test:false" "coverage:true"
     TEST_NAME="test_rollback_label_ROLLBACK_ON_FAILURE_false"
     IMAGE_WITH_TAG=$(get_image_with_tag "${SUITE_NAME}")
-    SERVICE_NAME="gantry-test-$(unique_id)"
+    SERVICE_NAME=$(get_test_service_name "${TEST_NAME}")
     TIMEOUT=1
     test_rollback_label_ROLLBACK_ON_FAILURE_false() {
       local TEST_NAME="${1}"

@@ -127,10 +127,11 @@ common_setup_job() {
   local IMAGE_WITH_TAG="${2}"
   local SERVICE_NAME="${3}"
   local TASK_SECONDS="${4}"
+  local EXIT_SECONDS="${5}"
   initialize_test "${TEST_NAME}"
   # The task will finish in ${TASK_SECONDS} seconds, when ${TASK_SECONDS} is not empty
-  build_and_push_test_image "${IMAGE_WITH_TAG}" "${TASK_SECONDS}"
-  _start_replicated_job "${SERVICE_NAME}" "${IMAGE_WITH_TAG}"
+  build_and_push_test_image "${IMAGE_WITH_TAG}" "${TASK_SECONDS}" "${EXIT_SECONDS}"
+  _start_replicated_job "${SERVICE_NAME}" "${IMAGE_WITH_TAG}" "${TASK_SECONDS}" "${EXIT_SECONDS}"
   build_and_push_test_image "${IMAGE_WITH_TAG}"
 }
 
@@ -143,9 +144,9 @@ common_setup_timeout() {
   local TIMEOUT_PLUS_TWO=$((TIMEOUT+2))
   initialize_test "${TEST_NAME}"
   # -1 thus the task runs forever.
-  # exit will take double of the timeout.
+  # exit will take longer than the timeout.
   build_and_push_test_image "${IMAGE_WITH_TAG}" "-1" "${TIMEOUT_PLUS_TWO}"
-  # Timeout set by service create should be smaller than the exit time above.
+  # Timeout set by "service create" should be smaller than the exit time above.
   start_replicated_service "${SERVICE_NAME}" "${IMAGE_WITH_TAG}" "${TIMEOUT_PLUS_ONE}"
   build_and_push_test_image "${IMAGE_WITH_TAG}"
 }
@@ -313,6 +314,7 @@ _start_registry() {
   local TRIES=0
   local MAX_RETRIES=50
   local PORT_LIMIT=500
+  pull_image_if_not_exist "${REGISTRY_IMAGE}"
   while true; do
     if ! REGISTRY_PORT=$(_next_available_port "${REGISTRY_PORT}" "${PORT_LIMIT}" 2>&1); then
       echo "_start_registry _next_available_port error: ${REGISTRY_PORT}" >&2
@@ -528,10 +530,13 @@ unique_id() {
   # Try to generate a unique id.
   # To reduce the possibility that tests run in parallel on the same machine affect each other.
   local PID="$$"
+  local TIME_STR=
+  TIME_STR=$(date +%s)
+  TIME_STR=$((TIME_STR % 10000))
   local RANDOM_STR=
   # repository name must be lowercase
   RANDOM_STR=$(head /dev/urandom | LANG=C tr -dc 'a-z0-9' | head -c 8)
-  echo "${PID}-$(date +%s)-${RANDOM_STR}"
+  echo "${PID}-${TIME_STR}-${RANDOM_STR}"
 }
 
 build_test_image() {
@@ -544,7 +549,7 @@ build_test_image() {
     # Finsih the job in the given time.
     TASK_CMD="sleep ${TASK_SECONDS};"
   fi
-  local EXIT_CMD="sleep 0;"
+  local EXIT_CMD="true;"
   if [ -n "${EXIT_SECONDS}" ] && [ "${EXIT_SECONDS}" -gt "0" ]; then
     EXIT_CMD="sleep ${EXIT_SECONDS};"
   fi
@@ -552,6 +557,7 @@ build_test_image() {
   FILE=$(mktemp)
   echo "FROM alpinelinux/docker-cli:latest" > "${FILE}"
   echo "ENTRYPOINT [\"sh\", \"-c\", \"echo $(unique_id); trap \\\"${EXIT_CMD}\\\" HUP INT TERM; ${TASK_CMD}\"]" >> "${FILE}"
+  pull_image_if_not_exist alpinelinux/docker-cli:latest
   echo "Building ${IMAGE_WITH_TAG} "
   timeout 120 docker build --quiet --tag "${IMAGE_WITH_TAG}" --file "${FILE}" .
   rm "${FILE}"
@@ -680,11 +686,29 @@ _wait_service_state() {
   done
 }
 
+_correct_service_name() {
+  local SERVICE_NAME="${1}"
+  [ "${#SERVICE_NAME}" -gt 63 ] && SERVICE_NAME=${SERVICE_NAME:0:63}
+  echo "${SERVICE_NAME}"
+}
+
+get_test_service_name() {
+  local TEST_NAME="${1}"
+  local TEST_NAME_SHORT="${TEST_NAME}"
+  # Max length is 63. Leave some spaces for suffix
+  [ "${#TEST_NAME}" -gt 30 ] && TEST_NAME_SHORT=${TEST_NAME:0-30}
+  local SERVICE_NAME=
+  SERVICE_NAME="g$(unique_id)-${TEST_NAME_SHORT}"
+  SERVICE_NAME=$(echo "${SERVICE_NAME}" | tr '[:upper:]' '[:lower:]')
+  SERVICE_NAME=$(echo "${SERVICE_NAME}" | tr '_' '-')
+  echo "${SERVICE_NAME}"
+}
+
 start_replicated_service() {
   local SERVICE_NAME="${1}"
   local IMAGE_WITH_TAG="${2}"
   local TIMEOUT_SECONDS="${3:-1}"
-  [ "${#SERVICE_NAME}" -gt 63 ] && SERVICE_NAME=${SERVICE_NAME:0:63}
+  SERVICE_NAME=$(_correct_service_name "${SERVICE_NAME}")
   echo "Creating service ${SERVICE_NAME} in replicated mode "
   # During creation:
   # * Add --detach to reduce the test runtime.
@@ -707,6 +731,7 @@ start_replicated_service() {
     --mode=replicated \
     --detach=true \
     "${IMAGE_WITH_TAG}"
+  _wait_service_state "${SERVICE_NAME}" "Running"
 }
 
 start_multiple_replicated_services() {
@@ -730,7 +755,7 @@ start_global_service() {
   local SERVICE_NAME="${1}"
   local IMAGE_WITH_TAG="${2}"
   local TIMEOUT_SECONDS="${3:-1}"
-  [ "${#SERVICE_NAME}" -gt 63 ] && SERVICE_NAME=${SERVICE_NAME:0:63}
+  SERVICE_NAME=$(_correct_service_name "${SERVICE_NAME}")
   echo "Creating service ${SERVICE_NAME} in global mode "
   # Do not add --detach, because we want to wait for the job finishes.
   # SC2046 (warning): Quote this to prevent word splitting.
@@ -751,7 +776,9 @@ start_global_service() {
 _start_replicated_job() {
   local SERVICE_NAME="${1}"
   local IMAGE_WITH_TAG="${2}"
-  [ "${#SERVICE_NAME}" -gt 63 ] && SERVICE_NAME=${SERVICE_NAME:0:63}
+  local TASK_SECONDS="${3:-1}"
+  local EXIT_SECONDS="${4:-1}"
+  SERVICE_NAME=$(_correct_service_name "${SERVICE_NAME}")
   echo "Creating service ${SERVICE_NAME} in replicated job mode "
   # Always add --detach=true, do not wait for the job finishes.
   # SC2046 (warning): Quote this to prevent word splitting.
@@ -761,6 +788,7 @@ _start_replicated_job() {
     --restart-condition "on-failure" \
     --restart-max-attempts 5 \
     --with-registry-auth \
+    --stop-grace-period="${EXIT_SECONDS}s" \
     $(_location_constraints) \
     --mode=replicated-job \
     --detach=true \

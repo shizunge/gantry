@@ -23,7 +23,7 @@ Describe 'cleanup-images'
   Describe "test_CLEANUP_IMAGES_false" "container_test:true" "coverage:true"
     TEST_NAME="test_CLEANUP_IMAGES_false"
     IMAGE_WITH_TAG=$(get_image_with_tag "${SUITE_NAME}")
-    SERVICE_NAME="gantry-test-$(unique_id)"
+    SERVICE_NAME=$(get_test_service_name "${TEST_NAME}")
     test_CLEANUP_IMAGES_false() {
       local TEST_NAME="${1}"
       local SERVICE_NAME="${2}"
@@ -65,7 +65,7 @@ Describe 'cleanup-images'
   Describe "test_CLEANUP_IMAGES_OPTIONS_bad" "container_test:true" "coverage:true"
     TEST_NAME="test_CLEANUP_IMAGES_OPTIONS_bad"
     IMAGE_WITH_TAG=$(get_image_with_tag "${SUITE_NAME}")
-    SERVICE_NAME="gantry-test-$(unique_id)"
+    SERVICE_NAME=$(get_test_service_name "${TEST_NAME}")
     test_CLEANUP_IMAGES_OPTIONS_bad() {
       local TEST_NAME="${1}"
       local SERVICE_NAME="${2}"
@@ -111,7 +111,7 @@ Describe 'cleanup-images'
   Describe "test_CLEANUP_IMAGES_OPTIONS_good" "container_test:true" "coverage:true"
     TEST_NAME="test_CLEANUP_IMAGES_OPTIONS_good"
     IMAGE_WITH_TAG=$(get_image_with_tag "${SUITE_NAME}")
-    SERVICE_NAME="gantry-test-$(unique_id)"
+    SERVICE_NAME=$(get_test_service_name "${TEST_NAME}")
     test_CLEANUP_IMAGES_OPTIONS_good() {
       local TEST_NAME="${1}"
       local SERVICE_NAME="${2}"
@@ -160,7 +160,7 @@ Describe 'cleanup-images'
     IMAGE_WITH_TAG0="${IMAGE_WITH_TAG}-0"
     IMAGE_WITH_TAG1="${IMAGE_WITH_TAG}-1"
     IMAGE_WITH_TAG2="${IMAGE_WITH_TAG}-2"
-    SERVICE_NAME="gantry-test-$(unique_id)"
+    SERVICE_NAME=$(get_test_service_name "${TEST_NAME}")
     SERVICE_NAME0="${SERVICE_NAME}-0"
     SERVICE_NAME1="${SERVICE_NAME}-1"
     test_start() {

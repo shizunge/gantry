@@ -22,7 +22,7 @@ Describe 'login_negative'
   Describe "test_login_no_login" "container_test:false" "coverage:true"
     TEST_NAME="test_login_no_login"
     IMAGE_WITH_TAG=$(get_image_with_tag "${SUITE_NAME}")
-    SERVICE_NAME="gantry-test-$(unique_id)"
+    SERVICE_NAME=$(get_test_service_name "${TEST_NAME}")
     CONFIG="C$(unique_id)"
     TEST_REGISTRY=$(load_test_registry "${SUITE_NAME}") || return 1
     test_login_no_login() {
@@ -72,7 +72,7 @@ Describe 'login_negative'
   Describe "test_login_incorrect_password" "container_test:false" "coverage:true"
     TEST_NAME="test_login_incorrect_password"
     IMAGE_WITH_TAG=$(get_image_with_tag "${SUITE_NAME}")
-    SERVICE_NAME="gantry-test-$(unique_id)"
+    SERVICE_NAME=$(get_test_service_name "${TEST_NAME}")
     CONFIG="C$(unique_id)"
     TEST_REGISTRY=$(load_test_registry "${SUITE_NAME}") || return 1
     test_login_incorrect_password() {
@@ -140,7 +140,7 @@ Describe 'login_negative'
   Describe "test_login_read_only_file" "container_test:false" "coverage:true"
     TEST_NAME="test_login_read_only_file"
     IMAGE_WITH_TAG=$(get_image_with_tag "${SUITE_NAME}")
-    SERVICE_NAME="gantry-test-$(unique_id)"
+    SERVICE_NAME=$(get_test_service_name "${TEST_NAME}")
     CONFIG="C$(unique_id)"
     TEST_REGISTRY=$(load_test_registry "${SUITE_NAME}") || return 1
     test_login_read_only_file() {
@@ -210,7 +210,7 @@ Describe 'login_negative'
   Describe "test_login_config_mismatch_default" "container_test:false" "coverage:true"
     TEST_NAME="test_login_config_mismatch_default"
     IMAGE_WITH_TAG=$(get_image_with_tag "${SUITE_NAME}")
-    SERVICE_NAME="gantry-test-$(unique_id)"
+    SERVICE_NAME=$(get_test_service_name "${TEST_NAME}")
     CONFIG="C$(unique_id)"
     TEST_REGISTRY=$(load_test_registry "${SUITE_NAME}") || return 1
     test_login_config_mismatch_default() {
@@ -294,7 +294,7 @@ Describe 'login_negative'
   Describe "test_login_config_mismatch_no_default" "container_test:false" "coverage:true"
     TEST_NAME="test_login_config_mismatch_no_default"
     IMAGE_WITH_TAG=$(get_image_with_tag "${SUITE_NAME}")
-    SERVICE_NAME="gantry-test-$(unique_id)"
+    SERVICE_NAME=$(get_test_service_name "${TEST_NAME}")
     CONFIG="C$(unique_id)"
     TEST_REGISTRY=$(load_test_registry "${SUITE_NAME}") || return 1
     test_login_config_mismatch_no_default() {
@@ -373,7 +373,7 @@ Describe 'login_negative'
     # To test https://github.com/shizunge/gantry/issues/64#issuecomment-2475499085
     TEST_NAME="test_login_multi_services_no_label"
     IMAGE_WITH_TAG=$(get_image_with_tag "${SUITE_NAME}")
-    SERVICE_NAME="gantry-test-$(unique_id)"
+    SERVICE_NAME=$(get_test_service_name "${TEST_NAME}")
     IMAGE_WITH_TAG0="${IMAGE_WITH_TAG}-0"
     IMAGE_WITH_TAG1="${IMAGE_WITH_TAG}-1"
     SERVICE_NAME0="${SERVICE_NAME}-0"
@@ -486,7 +486,7 @@ Describe 'login_negative'
   Describe "test_login_REGISTRY_CONFIGS_FILE_bad_format" "container_test:false" "coverage:true"
     TEST_NAME="test_login_REGISTRY_CONFIGS_FILE_bad_format"
     IMAGE_WITH_TAG=$(get_image_with_tag "${SUITE_NAME}")
-    SERVICE_NAME="gantry-test-$(unique_id)"
+    SERVICE_NAME=$(get_test_service_name "${TEST_NAME}")
     CONFIG="C$(unique_id)"
     TEST_REGISTRY=$(load_test_registry "${SUITE_NAME}") || return 1
     test_login_REGISTRY_CONFIGS_FILE_bad_format() {
@@ -555,7 +555,7 @@ Describe 'login_negative'
   Describe "test_login_file_not_exist" "container_test:false" "coverage:true"
     TEST_NAME="test_login_file_not_exist"
     IMAGE_WITH_TAG=$(get_image_with_tag "${SUITE_NAME}")
-    SERVICE_NAME="gantry-test-$(unique_id)"
+    SERVICE_NAME=$(get_test_service_name "${TEST_NAME}")
     CONFIG="C$(unique_id)"
     TEST_REGISTRY=$(load_test_registry "${SUITE_NAME}") || return 1
     test_login_file_not_exist() {

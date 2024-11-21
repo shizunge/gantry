@@ -38,7 +38,7 @@ Describe 'login_docker_config'
   Describe "test_login_docker_config_no_label" "container_test:true" "coverage:true"
     TEST_NAME="test_login_docker_config_no_label"
     IMAGE_WITH_TAG=$(get_image_with_tag "${SUITE_NAME}")
-    SERVICE_NAME="gantry-test-$(unique_id)"
+    SERVICE_NAME=$(get_test_service_name "${TEST_NAME}")
     CONFIG="C$(unique_id)"
     TEST_REGISTRY=$(load_test_registry "${SUITE_NAME}") || return 1
     test_login_docker_config_no_label() {
@@ -108,7 +108,7 @@ Describe 'login_docker_config'
   Describe "test_login_docker_config_default_config" "container_test:true" "coverage:true"
     TEST_NAME="test_login_docker_config_default_config"
     IMAGE_WITH_TAG=$(get_image_with_tag "${SUITE_NAME}")
-    SERVICE_NAME="gantry-test-$(unique_id)"
+    SERVICE_NAME=$(get_test_service_name "${TEST_NAME}")
     CONFIG="C$(unique_id)"
     TEST_REGISTRY=$(load_test_registry "${SUITE_NAME}") || return 1
     test_login_docker_config_default_config() {
@@ -178,7 +178,7 @@ Describe 'login_docker_config'
   Describe "test_login_docker_config_label_override" "container_test:false" "coverage:true"
     TEST_NAME="test_login_docker_config_label_override"
     IMAGE_WITH_TAG=$(get_image_with_tag "${SUITE_NAME}")
-    SERVICE_NAME="gantry-test-$(unique_id)"
+    SERVICE_NAME=$(get_test_service_name "${TEST_NAME}")
     SERVICE_NAME0="${SERVICE_NAME}-0"
     SERVICE_NAME1="${SERVICE_NAME}-1"
     SERVICE_NAME2="${SERVICE_NAME}-2"
