@@ -139,12 +139,14 @@ common_setup_timeout() {
   local IMAGE_WITH_TAG="${2}"
   local SERVICE_NAME="${3}"
   local TIMEOUT="${4}"
-  local DOUBLE_TIMEOUT=$((TIMEOUT+TIMEOUT))
+  local TIMEOUT_PLUS_ONE=$((TIMEOUT+1))
+  local TIMEOUT_PLUS_TWO=$((TIMEOUT+2))
   initialize_test "${TEST_NAME}"
   # -1 thus the task runs forever.
   # exit will take double of the timeout.
-  build_and_push_test_image "${IMAGE_WITH_TAG}" "-1" "${DOUBLE_TIMEOUT}"
-  start_replicated_service "${SERVICE_NAME}" "${IMAGE_WITH_TAG}"
+  build_and_push_test_image "${IMAGE_WITH_TAG}" "-1" "${TIMEOUT_PLUS_TWO}"
+  # Timeout set by service create should be smaller than the exit time above.
+  start_replicated_service "${SERVICE_NAME}" "${IMAGE_WITH_TAG}" "${TIMEOUT_PLUS_ONE}"
   build_and_push_test_image "${IMAGE_WITH_TAG}"
 }
 
@@ -194,6 +196,13 @@ _init_swarm() {
 _get_sut_image() {
   local SUT_REPO_TAG="${GANTRY_TEST_CONTAINER_REPO_TAG:-""}"
   echo "${SUT_REPO_TAG}"
+}
+
+_get_initial_port() {
+  # local BASE="${1}"
+  local PID=$$
+  local RANDOM_NUM=$(( PID % 1000 ))
+  echo $(( 55000 + RANDOM_NUM ))
 }
 
 _next_available_port() {
@@ -290,11 +299,13 @@ load_test_registry() {
 _start_registry() {
   local SUITE_NAME="${1:?}"
   local ENFORCE_LOGIN="${2}"
+  local TIMEOUT_SECONDS="${3:-1}"
   SUITE_NAME=$(echo "${SUITE_NAME}" | tr ' ' '-')
   local SUITE_NAME_LENGTH="${#SUITE_NAME}"
   local REGISTRY_SERVICE_NAME="gantry-test-registry-${SUITE_NAME}"
   local REGISTRY_BASE="127.0.0.1"
-  local REGISTRY_PORT=$((55000+SUITE_NAME_LENGTH*2))
+  local REGISTRY_PORT=
+  REGISTRY_PORT=$(_get_initial_port "${SUITE_NAME_LENGTH}")
   local TEST_REGISTRY="${REGISTRY_BASE}:${REGISTRY_PORT}"
   export TEST_USERNAME="gantry"
   export TEST_PASSWORD="gantry"
@@ -321,6 +332,9 @@ _start_registry() {
       --name "${REGISTRY_SERVICE_NAME}" \
       --restart-condition "on-failure" \
       --restart-max-attempts 5 \
+      --update-monitor="${TIMEOUT_SECONDS}s" \
+      --stop-grace-period="${TIMEOUT_SECONDS}s" \
+      --rollback-monitor="${TIMEOUT_SECONDS}s" \
       $(_location_constraints) \
       --mode=replicated \
       -p "${REGISTRY_PORT}:5000" \
@@ -517,7 +531,7 @@ unique_id() {
   local RANDOM_STR=
   # repository name must be lowercase
   RANDOM_STR=$(head /dev/urandom | LANG=C tr -dc 'a-z0-9' | head -c 8)
-  echo "$(date +%s)-${PID}-${RANDOM_STR}"
+  echo "${PID}-$(date +%s)-${RANDOM_STR}"
 }
 
 build_test_image() {
@@ -669,6 +683,7 @@ _wait_service_state() {
 start_replicated_service() {
   local SERVICE_NAME="${1}"
   local IMAGE_WITH_TAG="${2}"
+  local TIMEOUT_SECONDS="${3:-1}"
   [ "${#SERVICE_NAME}" -gt 63 ] && SERVICE_NAME=${SERVICE_NAME:0:63}
   echo "Creating service ${SERVICE_NAME} in replicated mode "
   # During creation:
@@ -685,9 +700,9 @@ start_replicated_service() {
     --restart-condition "on-failure" \
     --restart-max-attempts 5 \
     --with-registry-auth \
-    --update-monitor=1s \
-    --stop-grace-period=1s \
-    --rollback-monitor=1s \
+    --update-monitor="${TIMEOUT_SECONDS}s" \
+    --stop-grace-period="${TIMEOUT_SECONDS}s" \
+    --rollback-monitor="${TIMEOUT_SECONDS}s" \
     $(_location_constraints) \
     --mode=replicated \
     --detach=true \
@@ -714,6 +729,7 @@ start_multiple_replicated_services() {
 start_global_service() {
   local SERVICE_NAME="${1}"
   local IMAGE_WITH_TAG="${2}"
+  local TIMEOUT_SECONDS="${3:-1}"
   [ "${#SERVICE_NAME}" -gt 63 ] && SERVICE_NAME=${SERVICE_NAME:0:63}
   echo "Creating service ${SERVICE_NAME} in global mode "
   # Do not add --detach, because we want to wait for the job finishes.
@@ -724,9 +740,9 @@ start_global_service() {
     --restart-condition "on-failure" \
     --restart-max-attempts 5 \
     --with-registry-auth \
-    --update-monitor=1s \
-    --stop-grace-period=1s \
-    --rollback-monitor=1s \
+    --update-monitor="${TIMEOUT_SECONDS}s" \
+    --stop-grace-period="${TIMEOUT_SECONDS}s" \
+    --rollback-monitor="${TIMEOUT_SECONDS}s" \
     $(_location_constraints) \
     --mode=global \
     "${IMAGE_WITH_TAG}"

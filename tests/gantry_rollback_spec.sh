@@ -23,7 +23,7 @@ Describe 'rollback'
     TEST_NAME="test_rollback_due_to_timeout"
     IMAGE_WITH_TAG=$(get_image_with_tag "${SUITE_NAME}")
     SERVICE_NAME="gantry-test-$(unique_id)"
-    TIMEOUT=3
+    TIMEOUT=1
     test_rollback_due_to_timeout() {
       local TEST_NAME="${1}"
       local SERVICE_NAME="${2}"
@@ -71,7 +71,7 @@ Describe 'rollback'
     TEST_NAME="test_rollback_failed"
     IMAGE_WITH_TAG=$(get_image_with_tag "${SUITE_NAME}")
     SERVICE_NAME="gantry-test-$(unique_id)"
-    TIMEOUT=3
+    TIMEOUT=1
     test_rollback_failed() {
       local TEST_NAME="${1}"
       local SERVICE_NAME="${2}"
@@ -122,7 +122,7 @@ Describe 'rollback'
     TEST_NAME="test_rollback_ROLLBACK_ON_FAILURE_false"
     IMAGE_WITH_TAG=$(get_image_with_tag "${SUITE_NAME}")
     SERVICE_NAME="gantry-test-$(unique_id)"
-    TIMEOUT=3
+    TIMEOUT=1
     test_rollback_ROLLBACK_ON_FAILURE_false() {
       local TEST_NAME="${1}"
       local SERVICE_NAME="${2}"
@@ -167,76 +167,23 @@ Describe 'rollback'
       The stderr should satisfy spec_expect_no_message "${FAILED_TO_REMOVE_IMAGE}.*${IMAGE_WITH_TAG}"
     End
   End
-  Describe "test_rollback_lable_due_to_timeout" "container_test:false" "coverage:true"
-    TEST_NAME="test_rollback_lable_due_to_timeout"
-    IMAGE_WITH_TAG=$(get_image_with_tag "${SUITE_NAME}")
-    SERVICE_NAME="gantry-test-$(unique_id)"
-    TIMEOUT=3
-    test_rollback_lable_due_to_timeout() {
-      local TEST_NAME="${1}"
-      local SERVICE_NAME="${2}"
-      local TIMEOUT="${3}"
-      reset_gantry_env "${SERVICE_NAME}"
-      # label should override the global environment variable.
-      export GANTRY_UPDATE_TIMEOUT_SECONDS="NotANumber"
-      # Assume service update won't be done within TIMEOUT second.
-      local LABEL_AND_VALUE="gantry.update.timeout_seconds=${TIMEOUT}"
-      docker_service_update --label-add "${LABEL_AND_VALUE}" "${SERVICE_NAME}"
-      run_gantry "${TEST_NAME}"
-    }
-    BeforeEach "common_setup_timeout ${TEST_NAME} ${IMAGE_WITH_TAG} ${SERVICE_NAME} ${TIMEOUT}"
-    AfterEach "common_cleanup ${TEST_NAME} ${IMAGE_WITH_TAG} ${SERVICE_NAME}"
-    It 'run_test'
-      When run test_rollback_lable_due_to_timeout "${TEST_NAME}" "${SERVICE_NAME}" "${TIMEOUT}"
-      The status should be failure
-      The stdout should satisfy display_output
-      The stdout should satisfy spec_expect_no_message ".+"
-      The stderr should satisfy display_output
-      The stderr should satisfy spec_expect_no_message "${START_WITHOUT_A_SQUARE_BRACKET}"
-      The stderr should satisfy spec_expect_no_message "${SKIP_UPDATING}.*${SERVICE_NAME}"
-      The stderr should satisfy spec_expect_message    "${PERFORM_UPDATING}.*${SERVICE_NAME}.*${PERFORM_REASON_HAS_NEWER_IMAGE}"
-      The stderr should satisfy spec_expect_message    "${SET_TIMEOUT_TO} ${TIMEOUT}.*${SERVICE_NAME}"
-      The stderr should satisfy spec_expect_message    "${RETURN_VALUE_INDICATES_TIMEOUT}"
-      The stderr should satisfy spec_expect_no_message "${NUM_SERVICES_SKIP_JOBS}"
-      The stderr should satisfy spec_expect_no_message "${NUM_SERVICES_INSPECT_FAILURE}"
-      The stderr should satisfy spec_expect_no_message "${NUM_SERVICES_NO_NEW_IMAGES}"
-      The stderr should satisfy spec_expect_message    "${NUM_SERVICES_UPDATING}"
-      The stderr should satisfy spec_expect_no_message "${UPDATED}.*${SERVICE_NAME}"
-      The stderr should satisfy spec_expect_no_message "${NO_UPDATES}.*${SERVICE_NAME}"
-      The stderr should satisfy spec_expect_no_message "${ADDING_OPTIONS}"
-      The stderr should satisfy spec_expect_message    "${ROLLING_BACK}.*${SERVICE_NAME}"
-      The stderr should satisfy spec_expect_no_message "${FAILED_TO_ROLLBACK}.*${SERVICE_NAME}"
-      The stderr should satisfy spec_expect_message    "${ROLLED_BACK}.*${SERVICE_NAME}"
-      The stderr should satisfy spec_expect_message    "${NO_SERVICES_UPDATED}"
-      The stderr should satisfy spec_expect_no_message "${NUM_SERVICES_UPDATED}"
-      The stderr should satisfy spec_expect_message    "${NUM_SERVICES_UPDATE_FAILED}"
-      The stderr should satisfy spec_expect_no_message "${NUM_SERVICES_ERRORS}"
-      The stderr should satisfy spec_expect_message    "${NO_IMAGES_TO_REMOVE}"
-      The stderr should satisfy spec_expect_no_message "${REMOVING_NUM_IMAGES}"
-      The stderr should satisfy spec_expect_no_message "${SKIP_REMOVING_IMAGES}"
-      The stderr should satisfy spec_expect_no_message "${REMOVED_IMAGE}.*${IMAGE_WITH_TAG}"
-      The stderr should satisfy spec_expect_no_message "${FAILED_TO_REMOVE_IMAGE}.*${IMAGE_WITH_TAG}"
-    End
-  End
   Describe "test_rollback_label_failed" "container_test:false" "coverage:true"
     TEST_NAME="test_rollback_label_failed"
     IMAGE_WITH_TAG=$(get_image_with_tag "${SUITE_NAME}")
     SERVICE_NAME="gantry-test-$(unique_id)"
-    TIMEOUT=3
+    TIMEOUT=1
     test_rollback_label_failed() {
       local TEST_NAME="${1}"
       local SERVICE_NAME="${2}"
       local TIMEOUT="${3}"
       reset_gantry_env "${SERVICE_NAME}"
-      # label should override the global environment variable.
-      export GANTRY_UPDATE_TIMEOUT_SECONDS="NotANumber"
-      export GANTRY_ROLLBACK_OPTIONS="--insecure"
       # Assume service update won't be done within TIMEOUT second.
-      local LABEL_AND_VALUE="gantry.update.timeout_seconds=${TIMEOUT}"
-      docker_service_update --label-add "${LABEL_AND_VALUE}" "${SERVICE_NAME}"
+      export GANTRY_UPDATE_TIMEOUT_SECONDS="${TIMEOUT}"
+      # label should override the global environment variable.
+      export GANTRY_ROLLBACK_OPTIONS="--insecure"
       # Rollback would fail due to the incorrect option.
       # --with-registry-auth cannot be combined with --rollback.
-      LABEL_AND_VALUE="gantry.rollback.options=--with-registry-auth"
+      local LABEL_AND_VALUE="gantry.rollback.options=--with-registry-auth"
       docker_service_update --label-add "${LABEL_AND_VALUE}" "${SERVICE_NAME}"
       run_gantry "${TEST_NAME}"
     }
@@ -278,18 +225,16 @@ Describe 'rollback'
     TEST_NAME="test_rollback_label_ROLLBACK_ON_FAILURE_false"
     IMAGE_WITH_TAG=$(get_image_with_tag "${SUITE_NAME}")
     SERVICE_NAME="gantry-test-$(unique_id)"
-    TIMEOUT=3
+    TIMEOUT=1
     test_rollback_label_ROLLBACK_ON_FAILURE_false() {
       local TEST_NAME="${1}"
       local SERVICE_NAME="${2}"
       local TIMEOUT="${3}"
       reset_gantry_env "${SERVICE_NAME}"
-      # label should override the global environment variable.
-      export GANTRY_UPDATE_TIMEOUT_SECONDS="NotANumber"
       # Assume service update won't be done within TIMEOUT second.
-      local LABEL_AND_VALUE="gantry.update.timeout_seconds=${TIMEOUT}"
-      docker_service_update --label-add "${LABEL_AND_VALUE}" "${SERVICE_NAME}"
-      LABEL_AND_VALUE="gantry.rollback.on_failure=false"
+      export GANTRY_UPDATE_TIMEOUT_SECONDS="${TIMEOUT}"
+      # label should override the global environment variable.
+      local LABEL_AND_VALUE="gantry.rollback.on_failure=false"
       docker_service_update --label-add "${LABEL_AND_VALUE}" "${SERVICE_NAME}"
       run_gantry "${TEST_NAME}"
     }

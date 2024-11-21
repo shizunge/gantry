@@ -199,10 +199,10 @@ Describe 'common-options'
       local TEST_NAME="${1}"
       local SERVICE_NAME="${2}"
       reset_gantry_env "${SERVICE_NAME}"
-      export GANTRY_SLEEP_SECONDS="5"
+      export GANTRY_SLEEP_SECONDS="7"
       run_gantry "${TEST_NAME}" &
       local PID="${!}"
-      sleep 15
+      sleep $((GANTRY_SLEEP_SECONDS*2+1))
       kill "${PID}"
     }
     BeforeEach "common_setup_no_new_image ${TEST_NAME} ${IMAGE_WITH_TAG} ${SERVICE_NAME}"

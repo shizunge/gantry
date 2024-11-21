@@ -173,12 +173,13 @@ Describe 'cleanup-images'
       local SERVICE_NAME0="${SERVICE_NAME}-0"
       local SERVICE_NAME1="${SERVICE_NAME}-1"
       local TASK_SECONDS=15
+      local TIMEOUT_SECONDS=1
       initialize_test "${TEST_NAME}"
       # The task will finish in ${TASK_SECONDS} seconds
       build_and_push_test_image "${IMAGE_WITH_TAG0}" "${TASK_SECONDS}"
-      start_global_service "${SERVICE_NAME0}" "${IMAGE_WITH_TAG0}"
+      start_global_service "${SERVICE_NAME0}" "${IMAGE_WITH_TAG0}" "${TIMEOUT_SECONDS}"
       build_and_push_test_image "${IMAGE_WITH_TAG1}"
-      start_global_service "${SERVICE_NAME1}" "${IMAGE_WITH_TAG1}"
+      start_global_service "${SERVICE_NAME1}" "${IMAGE_WITH_TAG1}" "${TIMEOUT_SECONDS}"
       # The tasks should exit after TASK_SECONDS seconds sleep. Then it will have 0 running tasks.
       wait_zero_running_tasks "${SERVICE_NAME0}"
       # Do not creat the Image IMAGE_WITH_TAG2, to run the test on a non-exist image.

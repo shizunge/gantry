@@ -107,10 +107,11 @@ Describe "service-no-running-tasks"
       local IMAGE_WITH_TAG="${2}"
       local SERVICE_NAME="${3}"
       local TASK_SECONDS=15
+      local TIMEOUT_SECONDS=1
       initialize_test "${TEST_NAME}"
       # The task will finish in ${TASK_SECONDS} seconds
       build_and_push_test_image "${IMAGE_WITH_TAG}" "${TASK_SECONDS}"
-      start_global_service "${SERVICE_NAME}" "${IMAGE_WITH_TAG}"
+      start_global_service "${SERVICE_NAME}" "${IMAGE_WITH_TAG}" "${TIMEOUT_SECONDS}"
       build_and_push_test_image "${IMAGE_WITH_TAG}"
       # The tasks should exit after TASK_SECONDS seconds sleep. Then it will have 0 running tasks.
       wait_zero_running_tasks "${SERVICE_NAME}"
