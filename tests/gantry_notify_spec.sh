@@ -34,6 +34,8 @@ _notify_before_all() {
   initialize_all_tests "${SUITE_NAME}"
   pull_image_if_not_exist caronc/apprise
   pull_image_if_not_exist axllent/mailpit
+  docker_remove "${SERVICE_NAME_APPRISE}" 1>/dev/null 2>&1
+  docker_remove "${SERVICE_NAME_MAILPIT}" 1>/dev/null 2>&1
   # Use docker_run to improve coverage on lib-common.sh. `docker run` can do the same thing.
   docker_run -d --restart=on-failure:10 --name="${SERVICE_NAME_APPRISE}" --network=host \
     -e "APPRISE_STATELESS_URLS=mailto://localhost:${SMTP_PORT}?user=userid&pass=password" \

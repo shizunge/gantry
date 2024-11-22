@@ -70,6 +70,8 @@ export FAILED_TO_REMOVE_IMAGE="Failed to remove image"
 export SCHEDULE_NEXT_UPDATE_AT="Schedule next update at"
 export SLEEP_SECONDS_BEFORE_NEXT_UPDATE="Sleep [0-9]+ seconds before next update"
 
+export TEST_IMAGE_REMOVER="ghcr.io/shizunge/gantry-development"
+
 test_log() {
   echo "${GANTRY_LOG_LEVEL}" | grep -q -i "^NONE$"  && return 0;
   [ -n "${GANTRY_IMAGES_TO_REMOVE}" ] && echo "${*}" >&2 && return 0;
@@ -304,7 +306,7 @@ _start_registry() {
   SUITE_NAME=$(echo "${SUITE_NAME}" | tr ' ' '-')
   local SUITE_NAME_LENGTH="${#SUITE_NAME}"
   local REGISTRY_SERVICE_NAME="gantry-test-registry-${SUITE_NAME}"
-  local REGISTRY_BASE="127.0.0.1"
+  local REGISTRY_BASE="localhost"
   local REGISTRY_PORT=
   REGISTRY_PORT=$(_get_initial_port "${SUITE_NAME_LENGTH}")
   local TEST_REGISTRY="${REGISTRY_BASE}:${REGISTRY_PORT}"
@@ -324,36 +326,46 @@ _start_registry() {
       echo "_start_registry _next_available_port error: REGISTRY_PORT is empty." >&2
       return 1
     fi
-    stop_service "${REGISTRY_SERVICE_NAME}" 1>/dev/null 2>&1
+    docker container stop "${REGISTRY_SERVICE_NAME}" 1>/dev/null 2>&1;
+    docker container rm -f "${REGISTRY_SERVICE_NAME}" 1>/dev/null 2>&1;
     TEST_REGISTRY="${REGISTRY_BASE}:${REGISTRY_PORT}"
     echo "Suite \"${SUITE_NAME}\" starts registry ${TEST_REGISTRY} "
+    local CID=
     # SC2046 (warning): Quote this to prevent word splitting.
     # SC2086 (info): Double quote to prevent globbing and word splitting.
     # shellcheck disable=SC2046,SC2086
-    if docker service create --quiet \
+    if CID=$(docker container run -d --rm \
       --name "${REGISTRY_SERVICE_NAME}" \
-      --restart-condition "on-failure" \
-      --restart-max-attempts 5 \
-      --update-monitor="${TIMEOUT_SECONDS}s" \
-      --stop-grace-period="${TIMEOUT_SECONDS}s" \
-      --rollback-monitor="${TIMEOUT_SECONDS}s" \
-      $(_location_constraints) \
-      --mode=replicated \
-      -p "${REGISTRY_PORT}:5000" \
+      --network=host \
+      -e "REGISTRY_HTTP_ADDR=${TEST_REGISTRY}" \
+      -e "REGISTRY_HTTP_HOST=http://${TEST_REGISTRY}" \
+      --stop-timeout "${TIMEOUT_SECONDS}" \
       $(_add_htpasswd "${ENFORCE_LOGIN}" "${TEST_USERNAME}" "${TEST_PASSWORD}") \
-      "${REGISTRY_IMAGE}" 2>&1; then
+      "${REGISTRY_IMAGE}" 2>&1); then
+      local STATUS=
+      while [ "${STATUS}" != "running" ]; do
+        STATUS=$(docker container inspect "${CID}" --format '{{.State.Status}}')
+      done
       break;
     fi
     if [ "${TRIES}" -ge "${MAX_RETRIES}" ]; then
       echo "_start_registry Reach MAX_RETRIES ${MAX_RETRIES}" >&2
       return 1
     fi
-    TRIES=$((TRIES+1))
     REGISTRY_PORT=$((REGISTRY_PORT+1))
+    TRIES=$((TRIES+1))
     sleep 1
   done
   _store_test_registry "${SUITE_NAME}" "${TEST_REGISTRY}" || return 1;
-  _login_test_registry "${ENFORCE_LOGIN}" "${TEST_REGISTRY}" "${TEST_USERNAME}" "${TEST_PASSWORD}" || return 1;
+  TRIES=0
+  while ! _login_test_registry "${ENFORCE_LOGIN}" "${TEST_REGISTRY}" "${TEST_USERNAME}" "${TEST_PASSWORD}"; do
+    if [ "${TRIES}" -ge "${MAX_RETRIES}" ]; then
+      echo "_login_test_registry Reach MAX_RETRIES ${MAX_RETRIES}" >&2
+      return 1
+    fi
+    TRIES=$((TRIES+1))
+    sleep 1
+  done
 }
 
 _stop_registry() {
@@ -364,7 +376,8 @@ _stop_registry() {
   local REGISTRY=
   REGISTRY=$(load_test_registry "${SUITE_NAME}") || return 1
   echo "Removing registry ${REGISTRY} "
-  stop_service "${REGISTRY_SERVICE_NAME}"
+  docker container stop "${REGISTRY_SERVICE_NAME}" 1>/dev/null 2>&1;
+  docker container rm -f "${REGISTRY_SERVICE_NAME}" 1>/dev/null 2>&1;
   _logout_test_registry "${ENFORCE_LOGIN}" "${REGISTRY}" || return 1
   _remove_test_registry_file "${SUITE_NAME}" || return 1
   return 0
@@ -382,6 +395,7 @@ initialize_all_tests() {
   echo "=============================="
   _init_swarm
   _start_registry "${SUITE_NAME}" "${ENFORCE_LOGIN}"
+  pull_image_if_not_exist "${TEST_IMAGE_REMOVER}"
 }
 
 # finish_all_tests should return non zero when there are errors.
@@ -438,7 +452,7 @@ reset_gantry_env() {
   export GANTRY_UPDATE_TIMEOUT_SECONDS=
   export GANTRY_CLEANUP_IMAGES=
   export GANTRY_CLEANUP_IMAGES_OPTIONS=
-  export GANTRY_CLEANUP_IMAGES_REMOVER=ghcr.io/shizunge/gantry-development
+  export GANTRY_CLEANUP_IMAGES_REMOVER="${TEST_IMAGE_REMOVER}"
   export GANTRY_IMAGES_TO_REMOVE=
   export GANTRY_NOTIFICATION_APPRISE_URL=
   export GANTRY_NOTIFICATION_CONDITION=
@@ -557,8 +571,8 @@ build_test_image() {
   FILE=$(mktemp)
   echo "FROM alpinelinux/docker-cli:latest" > "${FILE}"
   echo "ENTRYPOINT [\"sh\", \"-c\", \"echo $(unique_id); trap \\\"${EXIT_CMD}\\\" HUP INT TERM; ${TASK_CMD}\"]" >> "${FILE}"
-  pull_image_if_not_exist alpinelinux/docker-cli:latest
-  echo "Building ${IMAGE_WITH_TAG} "
+  pull_image_if_not_exist "alpinelinux/docker-cli:latest"
+  echo "Building ${IMAGE_WITH_TAG} from ${FILE}"
   timeout 120 docker build --quiet --tag "${IMAGE_WITH_TAG}" --file "${FILE}" .
   rm "${FILE}"
 }
