@@ -230,10 +230,19 @@ _time_elapsed_between() {
     echo "NaN"
     return 1
   fi
-  local FORMAT="%-Ss"
-  [ "${SECONDS_ELAPSED}" -ge 60 ] && FORMAT="%-Mm %-Ss"
-  [ "${SECONDS_ELAPSED}" -ge 3600 ] && FORMAT="%-Hh %-Mm %-Ss"
-  date -u -d "@${SECONDS_ELAPSED}" +"${FORMAT}"
+  local HOUR=0
+  local MIN=0
+  local SEC=0
+  HOUR=$((SECONDS_ELAPSED / 3600))
+  local WITHIN_AN_HOUR=0
+  WITHIN_AN_HOUR=$((SECONDS_ELAPSED % 3600))
+  MIN=$((WITHIN_AN_HOUR / 60))
+  SEC=$((WITHIN_AN_HOUR % 60))
+  local TIME_STR=""
+  [ "${HOUR}" != "0" ] && TIME_STR="${HOUR}h "
+  if [ -n "${TIME_STR}" ] || [ "${MIN}" != "0" ]; then TIME_STR="${TIME_STR}${MIN}m "; fi
+  TIME_STR="${TIME_STR}${SEC}s"
+  echo "${TIME_STR}"
 }
 
 time_elapsed_since() {
