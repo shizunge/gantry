@@ -239,6 +239,18 @@ _send_notification() {
   notify_summary "${TYPE}" "${TITLE}" "${BODY}"
 }
 
+_get_static_variables_folder_name() {
+  local PID=$$
+  echo "/tmp/gantry-static-variables-folder-${PID}"
+}
+
+_make_static_variables_folder() {
+  STATIC_VARIABLES_FOLDER=$(_get_static_variables_folder_name)
+  local OUTPUT=
+  ! OUTPUT=$(mkdir -p "${STATIC_VARIABLES_FOLDER}" 2>&1) && log ERROR "failed: mkdir -p ${STATIC_VARIABLES_FOLDER}: ${OUTPUT}" && return 1
+  echo "${STATIC_VARIABLES_FOLDER}"
+}
+
 # We want the static variables live longer than a function.
 # However if we call the function in a subprocess, which could be casued by
 # 1. pipe, e.g. echo "message" | my_function
@@ -246,29 +258,21 @@ _send_notification() {
 # and changing the static variables, the value won't go back to the parent process.
 # So here we use the file system to pass value between multiple processes.
 _get_static_variables_folder() {
-  local INDIRECT_FILE="/tmp/gantry-STATIC_VARIABLES_FOLDER"
-  if [ -z "${STATIC_VARIABLES_FOLDER}" ]; then
-    if [ -e "${INDIRECT_FILE}" ]; then
-      STATIC_VARIABLES_FOLDER=$(head -1 "${INDIRECT_FILE}")
-    fi
-  fi
   if [ -d "${STATIC_VARIABLES_FOLDER}" ]; then
     echo "${STATIC_VARIABLES_FOLDER}"
     return 0
   fi
-  while ! STATIC_VARIABLES_FOLDER=$(mktemp -d); do log ERROR "\"mktemp -d\" failed"; done
-  log DEBUG "Created STATIC_VARIABLES_FOLDER ${STATIC_VARIABLES_FOLDER}"
-  echo "${STATIC_VARIABLES_FOLDER}" > "${INDIRECT_FILE}"
+  log DEBUG "Creating STATIC_VARIABLES_FOLDER"
+  STATIC_VARIABLES_FOLDER=$(_make_static_variables_folder)
+  log DEBUG "Created STATIC_VARIABLES_FOLDER \"${STATIC_VARIABLES_FOLDER}\""
   export STATIC_VARIABLES_FOLDER
   echo "${STATIC_VARIABLES_FOLDER}"
 }
 
 _remove_static_variables_folder() {
-  local INDIRECT_FILE="/tmp/gantry-STATIC_VARIABLES_FOLDER"
-  rm "${INDIRECT_FILE}" >/dev/null 2>&1
   [ -z "${STATIC_VARIABLES_FOLDER}" ] && return 0
   local TO_REMOVE_STATIC_VARIABLES_FOLDER=
-  TO_REMOVE_STATIC_VARIABLES_FOLDER="$(_get_static_variables_folder)"
+  TO_REMOVE_STATIC_VARIABLES_FOLDER="$(_get_static_variables_folder_name)"
   log DEBUG "Removing STATIC_VARIABLES_FOLDER ${TO_REMOVE_STATIC_VARIABLES_FOLDER}"
   unset STATIC_VARIABLES_FOLDER
   rm -r "${TO_REMOVE_STATIC_VARIABLES_FOLDER}"
