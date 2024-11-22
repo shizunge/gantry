@@ -67,6 +67,7 @@ export REMOVING_NUM_IMAGES="Removing [0-9]+ image\(s\)"
 export SKIP_REMOVING_IMAGES="Skip removing images"
 export REMOVED_IMAGE="Removed image"
 export FAILED_TO_REMOVE_IMAGE="Failed to remove image"
+export DONE_REMOVING_IMAGES="Done removing images"
 export SCHEDULE_NEXT_UPDATE_AT="Schedule next update at"
 export SLEEP_SECONDS_BEFORE_NEXT_UPDATE="Sleep [0-9]+ seconds before next update"
 
@@ -246,7 +247,8 @@ _login_test_registry() {
   local USERNAME="${3}"
   local PASSWORD="${4}"
   if ! _enforce_login_enabled "${ENFORCE_LOGIN}"; then
-    return 0
+    USERNAME="username"
+    PASSWORD="password"
   fi
   echo "Logging in ${REGISTRY}."
   local CONFIG=
@@ -522,7 +524,7 @@ _expect_message() {
   MESSAGE="${2}"
   local GREEN='\033[0;32m'
   local NO_COLOR='\033[0m'
-  if ! ACTUAL_MSG=$(echo "${TEXT}" | grep -Po "${MESSAGE}"); then
+  if ! ACTUAL_MSG=$(echo -e "${TEXT}" | grep -Po "${MESSAGE}"); then
     _handle_failure "Failed to find expected message \"${MESSAGE}\"."
     return 1
   fi
@@ -534,7 +536,7 @@ _expect_no_message() {
   MESSAGE="${2}"
   local GREEN='\033[0;32m'
   local NO_COLOR='\033[0m'
-  if ACTUAL_MSG=$(echo "${TEXT}" | grep -Po "${MESSAGE}"); then
+  if ACTUAL_MSG=$(echo -e "${TEXT}" | grep -Po "${MESSAGE}"); then
     _handle_failure "The following message should not present: \"${ACTUAL_MSG}\""
     return 1
   fi
@@ -573,7 +575,7 @@ build_test_image() {
   echo "FROM ${TEST_SERVICE_IMAGE}" > "${FILE}"
   echo "ENTRYPOINT [\"sh\", \"-c\", \"echo $(unique_id); trap \\\"${EXIT_CMD}\\\" HUP INT TERM; ${TASK_CMD}\"]" >> "${FILE}"
   pull_image_if_not_exist "${TEST_SERVICE_IMAGE}"
-  echo "Building ${IMAGE_WITH_TAG} from ${FILE}"
+  echo "Building image ${IMAGE_WITH_TAG} from ${FILE}"
   timeout 120 docker build --quiet --tag "${IMAGE_WITH_TAG}" --file "${FILE}" .
   rm "${FILE}"
 }
@@ -583,7 +585,7 @@ build_and_push_test_image() {
   local TASK_SECONDS="${2}"
   local EXIT_SECONDS="${3}"
   build_test_image "${IMAGE_WITH_TAG}" "${TASK_SECONDS}" "${EXIT_SECONDS}"
-  echo "Pushing image "
+  echo "Pushing image ${IMAGE_WITH_TAG}"
   # SC2046 (warning): Quote this to prevent word splitting.
   # shellcheck disable=SC2046
   docker $(_get_docker_config_argument "${IMAGE_WITH_TAG}") push --quiet "${IMAGE_WITH_TAG}"
@@ -591,8 +593,8 @@ build_and_push_test_image() {
 
 prune_local_test_image() {
   local IMAGE_WITH_TAG="${1}"
-  echo "Removing image ${IMAGE_WITH_TAG} "
-  docker image rm "${IMAGE_WITH_TAG}" --force &
+  echo "Removing image ${IMAGE_WITH_TAG}"
+  docker image rm "${IMAGE_WITH_TAG}" --force
 }
 
 docker_service_update() {
@@ -814,8 +816,8 @@ _start_replicated_job() {
 
 stop_service() {
   local SERVICE_NAME="${1}"
-  echo "Removing service "
-  docker service rm "${SERVICE_NAME}" &
+  echo "Removing service ${SERVICE_NAME}"
+  docker service rm "${SERVICE_NAME}"
 }
 
 stop_multiple_services() {

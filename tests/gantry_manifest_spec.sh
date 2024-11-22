@@ -67,6 +67,7 @@ Describe 'manifest-command'
       The stderr should satisfy spec_expect_no_message "${SKIP_REMOVING_IMAGES}"
       The stderr should satisfy spec_expect_no_message "${REMOVED_IMAGE}.*${IMAGE_WITH_TAG}"
       The stderr should satisfy spec_expect_no_message "${FAILED_TO_REMOVE_IMAGE}.*${IMAGE_WITH_TAG}"
+      The stderr should satisfy spec_expect_no_message "${DONE_REMOVING_IMAGES}"
     End
   End
   Describe "test_MANIFEST_CMD_none_SERVICES_SELF" "container_test:true" "coverage:true"
@@ -114,6 +115,7 @@ Describe 'manifest-command'
       The stderr should satisfy spec_expect_no_message "${SKIP_REMOVING_IMAGES}"
       The stderr should satisfy spec_expect_no_message "${REMOVED_IMAGE}.*${IMAGE_WITH_TAG}"
       The stderr should satisfy spec_expect_no_message "${FAILED_TO_REMOVE_IMAGE}.*${IMAGE_WITH_TAG}"
+      The stderr should satisfy spec_expect_no_message "${DONE_REMOVING_IMAGES}"
     End
   End
   Describe "test_MANIFEST_CMD_manifest" "container_test:true" "coverage:true"
@@ -158,6 +160,7 @@ Describe 'manifest-command'
       The stderr should satisfy spec_expect_no_message "${SKIP_REMOVING_IMAGES}"
       The stderr should satisfy spec_expect_message    "${REMOVED_IMAGE}.*${IMAGE_WITH_TAG}"
       The stderr should satisfy spec_expect_no_message "${FAILED_TO_REMOVE_IMAGE}.*${IMAGE_WITH_TAG}"
+      The stderr should satisfy spec_expect_message    "${DONE_REMOVING_IMAGES}"
     End
   End
   Describe "test_MANIFEST_CMD_label" "container_test:true" "coverage:true"
@@ -207,6 +210,7 @@ Describe 'manifest-command'
       The stderr should satisfy spec_expect_no_message "${SKIP_REMOVING_IMAGES}"
       The stderr should satisfy spec_expect_message    "${REMOVED_IMAGE}.*${IMAGE_WITH_TAG}"
       The stderr should satisfy spec_expect_no_message "${FAILED_TO_REMOVE_IMAGE}.*${IMAGE_WITH_TAG}"
+      The stderr should satisfy spec_expect_message    "${DONE_REMOVING_IMAGES}"
     End
   End
   Describe "test_MANIFEST_CMD_unsupported_cmd" "container_test:false" "coverage:true"
@@ -253,6 +257,7 @@ Describe 'manifest-command'
       The stderr should satisfy spec_expect_no_message "${SKIP_REMOVING_IMAGES}"
       The stderr should satisfy spec_expect_no_message "${REMOVED_IMAGE}.*${IMAGE_WITH_TAG}"
       The stderr should satisfy spec_expect_no_message "${FAILED_TO_REMOVE_IMAGE}.*${IMAGE_WITH_TAG}"
+      The stderr should satisfy spec_expect_no_message "${DONE_REMOVING_IMAGES}"
     End
   End
   Describe "test_MANIFEST_CMD_failure" "container_test:false" "coverage:true"
@@ -307,6 +312,7 @@ Describe 'manifest-command'
       The stderr should satisfy spec_expect_no_message "${SKIP_REMOVING_IMAGES}"
       The stderr should satisfy spec_expect_no_message "${REMOVED_IMAGE}.*${IMAGE_WITH_TAG}"
       The stderr should satisfy spec_expect_no_message "${FAILED_TO_REMOVE_IMAGE}.*${IMAGE_WITH_TAG}"
+      The stderr should satisfy spec_expect_no_message "${DONE_REMOVING_IMAGES}"
     End
   End
 End # Describe 'Manifest command'

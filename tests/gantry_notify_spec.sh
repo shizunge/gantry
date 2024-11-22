@@ -115,6 +115,7 @@ Describe 'notify'
       The stderr should satisfy spec_expect_no_message "${SKIP_REMOVING_IMAGES}"
       The stderr should satisfy spec_expect_message    "${REMOVED_IMAGE}.*${IMAGE_WITH_TAG}"
       The stderr should satisfy spec_expect_no_message "${FAILED_TO_REMOVE_IMAGE}.*${IMAGE_WITH_TAG}"
+      The stderr should satisfy spec_expect_message    "${DONE_REMOVING_IMAGES}"
       The stderr should satisfy spec_expect_no_message "${SKIP_NOTIFY_APPRISE}"
       The stderr should satisfy spec_expect_message    "${SEND_NOTIFY_APPRISE}"
     End
@@ -166,6 +167,7 @@ Describe 'notify'
       The stderr should satisfy spec_expect_no_message "${SKIP_REMOVING_IMAGES}"
       The stderr should satisfy spec_expect_no_message "${REMOVED_IMAGE}.*${IMAGE_WITH_TAG}"
       The stderr should satisfy spec_expect_no_message "${FAILED_TO_REMOVE_IMAGE}.*${IMAGE_WITH_TAG}"
+      The stderr should satisfy spec_expect_no_message "${DONE_REMOVING_IMAGES}"
       The stderr should satisfy spec_expect_no_message "${SKIP_NOTIFY_APPRISE}"
       The stderr should satisfy spec_expect_message    "${SEND_NOTIFY_APPRISE}"
     End
@@ -210,6 +212,7 @@ Describe 'notify'
       The stderr should satisfy spec_expect_no_message "${SKIP_REMOVING_IMAGES}"
       The stderr should satisfy spec_expect_message    "${REMOVED_IMAGE}.*${IMAGE_WITH_TAG}"
       The stderr should satisfy spec_expect_no_message "${FAILED_TO_REMOVE_IMAGE}.*${IMAGE_WITH_TAG}"
+      The stderr should satisfy spec_expect_message    "${DONE_REMOVING_IMAGES}"
       The stderr should satisfy spec_expect_no_message "${SKIP_NOTIFY_APPRISE}"
       The stderr should satisfy spec_expect_message    "Failed to send notification via Apprise"
     End
@@ -261,6 +264,7 @@ Describe 'notify'
       The stderr should satisfy spec_expect_no_message "${SKIP_REMOVING_IMAGES}"
       The stderr should satisfy spec_expect_message    "${REMOVED_IMAGE}.*${IMAGE_WITH_TAG}"
       The stderr should satisfy spec_expect_no_message "${FAILED_TO_REMOVE_IMAGE}.*${IMAGE_WITH_TAG}"
+      The stderr should satisfy spec_expect_message    "${DONE_REMOVING_IMAGES}"
       The stderr should satisfy spec_expect_no_message "${SKIP_NOTIFY_APPRISE}"
       The stderr should satisfy spec_expect_message    "${SEND_NOTIFY_APPRISE}"
     End
@@ -311,6 +315,7 @@ Describe 'notify'
       The stderr should satisfy spec_expect_no_message "${SKIP_REMOVING_IMAGES}"
       The stderr should satisfy spec_expect_no_message "${REMOVED_IMAGE}.*${IMAGE_WITH_TAG}"
       The stderr should satisfy spec_expect_no_message "${FAILED_TO_REMOVE_IMAGE}.*${IMAGE_WITH_TAG}"
+      The stderr should satisfy spec_expect_no_message "${DONE_REMOVING_IMAGES}"
       The stderr should satisfy spec_expect_message    "${NO_UPDATES_OR_ERRORS_FOR_NOTIFICATION}"
       The stderr should satisfy spec_expect_message    "${SKIP_SENDING_NOTIFICATION}"
     End
@@ -362,6 +367,7 @@ Describe 'notify'
       The stderr should satisfy spec_expect_no_message "${REMOVING_NUM_IMAGES}"
       The stderr should satisfy spec_expect_no_message "${SKIP_REMOVING_IMAGES}"
       The stderr should satisfy spec_expect_no_message "${REMOVED_IMAGE}.*${IMAGE_WITH_TAG}"
+      The stderr should satisfy spec_expect_no_message "${DONE_REMOVING_IMAGES}"
       The stderr should satisfy spec_expect_no_message "${SKIP_NOTIFY_APPRISE}"
       The stderr should satisfy spec_expect_message    "${SEND_NOTIFY_APPRISE}"
     End

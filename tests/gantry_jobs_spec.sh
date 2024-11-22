@@ -19,12 +19,12 @@ Describe 'update-jobs'
   SUITE_NAME="update-jobs"
   BeforeAll "initialize_all_tests ${SUITE_NAME}"
   AfterAll "finish_all_tests ${SUITE_NAME}"
-  Describe "test_update_jobs_skipping" "container_test:true" "coverage:true"
+  Describe "test_jobs_skipping" "container_test:true" "coverage:true"
     # For `docker service ls --filter`, the name filter matches on all or the prefix of a service's name
     # See https://docs.docker.com/engine/reference/commandline/service_ls/#name
     # It does not do the exact match of the name. See https://github.com/moby/moby/issues/32985
     # This test also checks whether we do an extra step to to perform the exact match.
-    TEST_NAME="test_update_jobs_skipping"
+    TEST_NAME="test_jobs_skipping"
     IMAGE_WITH_TAG=$(get_image_with_tag "${SUITE_NAME}")
     SERVICE_NAME=$(get_test_service_name "${TEST_NAME}")
     SERVICE_NAME_SUFFIX="${SERVICE_NAME}-suffix"
@@ -36,7 +36,7 @@ Describe 'update-jobs'
       common_setup_job "${TEST_NAME}" "${IMAGE_WITH_TAG}" "${SERVICE_NAME_SUFFIX}"
       start_replicated_service "${SERVICE_NAME}" "${IMAGE_WITH_TAG}"
     }
-    test_update_jobs_skipping() {
+    test_jobs_skipping() {
       local TEST_NAME="${1}"
       local SERVICE_NAME="${2}"
       reset_gantry_env "${SERVICE_NAME}"
@@ -53,7 +53,7 @@ Describe 'update-jobs'
     BeforeEach "test_start ${TEST_NAME} ${IMAGE_WITH_TAG} ${SERVICE_NAME}"
     AfterEach "test_end ${TEST_NAME} ${IMAGE_WITH_TAG} ${SERVICE_NAME}"
     It 'run_test'
-      When run test_update_jobs_skipping "${TEST_NAME}" "${SERVICE_NAME}"
+      When run test_jobs_skipping "${TEST_NAME}" "${SERVICE_NAME}"
       The status should be success
       The stdout should satisfy display_output
       The stdout should satisfy spec_expect_no_message ".+"
@@ -83,16 +83,17 @@ Describe 'update-jobs'
       The stderr should satisfy spec_expect_no_message "${SKIP_REMOVING_IMAGES}"
       The stderr should satisfy spec_expect_no_message "${REMOVED_IMAGE}.*${IMAGE_WITH_TAG}"
       The stderr should satisfy spec_expect_no_message "${FAILED_TO_REMOVE_IMAGE}.*${IMAGE_WITH_TAG}"
+      The stderr should satisfy spec_expect_no_message "${DONE_REMOVING_IMAGES}"
     End
   End
-  Describe "test_update_jobs_UPDATE_JOBS_true" "container_test:true" "coverage:true"
-    TEST_NAME="test_update_jobs_UPDATE_JOBS_true"
+  Describe "test_jobs_UPDATE_JOBS_true" "container_test:true" "coverage:true"
+    TEST_NAME="test_jobs_UPDATE_JOBS_true"
     IMAGE_WITH_TAG=$(get_image_with_tag "${SUITE_NAME}")
     SERVICE_NAME=$(get_test_service_name "${TEST_NAME}")
     TASK_SECONDS=-1
     # Use a long EXIT_SECONDS, because we want the task keep running for a while after updating to trigger the image removing failure.
     EXIT_SECONDS=30
-    test_update_jobs_UPDATE_JOBS_true() {
+    test_jobs_UPDATE_JOBS_true() {
       local TEST_NAME="${1}"
       local SERVICE_NAME="${2}"
       reset_gantry_env "${SERVICE_NAME}"
@@ -104,7 +105,7 @@ Describe 'update-jobs'
     BeforeEach "common_setup_job ${TEST_NAME} ${IMAGE_WITH_TAG} ${SERVICE_NAME} ${TASK_SECONDS} ${EXIT_SECONDS}"
     AfterEach "common_cleanup ${TEST_NAME} ${IMAGE_WITH_TAG} ${SERVICE_NAME}"
     It 'run_test'
-      When run test_update_jobs_UPDATE_JOBS_true "${TEST_NAME}" "${SERVICE_NAME}"
+      When run test_jobs_UPDATE_JOBS_true "${TEST_NAME}" "${SERVICE_NAME}"
       The status should be success
       The stdout should satisfy display_output
       The stdout should satisfy spec_expect_no_message ".+"
@@ -133,16 +134,17 @@ Describe 'update-jobs'
       # Since the job may not reach the desired state, they are still using the image. Image remover will fail.
       The stderr should satisfy spec_expect_no_message "${REMOVED_IMAGE}.*${IMAGE_WITH_TAG}"
       The stderr should satisfy spec_expect_message    "${FAILED_TO_REMOVE_IMAGE}.*${IMAGE_WITH_TAG}"
+      The stderr should satisfy spec_expect_message    "${DONE_REMOVING_IMAGES}"
     End
   End
-  Describe "test_update_jobs_label_UPDATE_JOBS_true" "container_test:true" "coverage:true"
-    TEST_NAME="test_update_jobs_label_UPDATE_JOBS_true"
+  Describe "test_jobs_label_UPDATE_JOBS_true" "container_test:true" "coverage:true"
+    TEST_NAME="test_jobs_label_UPDATE_JOBS_true"
     IMAGE_WITH_TAG=$(get_image_with_tag "${SUITE_NAME}")
     SERVICE_NAME=$(get_test_service_name "${TEST_NAME}")
     TASK_SECONDS=-1
     # Use a long EXIT_SECONDS, because we want the task keep running for a while after updating to trigger the image removing failure.
     EXIT_SECONDS=30
-    test_update_jobs_label_UPDATE_JOBS_true() {
+    test_jobs_label_UPDATE_JOBS_true() {
       local TEST_NAME="${1}"
       local SERVICE_NAME="${2}"
       reset_gantry_env "${SERVICE_NAME}"
@@ -160,7 +162,7 @@ Describe 'update-jobs'
     BeforeEach "common_setup_job ${TEST_NAME} ${IMAGE_WITH_TAG} ${SERVICE_NAME} ${TASK_SECONDS} ${EXIT_SECONDS}"
     AfterEach "common_cleanup ${TEST_NAME} ${IMAGE_WITH_TAG} ${SERVICE_NAME}"
     It 'run_test'
-      When run test_update_jobs_label_UPDATE_JOBS_true "${TEST_NAME}" "${SERVICE_NAME}"
+      When run test_jobs_label_UPDATE_JOBS_true "${TEST_NAME}" "${SERVICE_NAME}"
       The status should be success
       The stdout should satisfy display_output
       The stdout should satisfy spec_expect_no_message ".+"
@@ -189,10 +191,11 @@ Describe 'update-jobs'
       # Since the job may not reach the desired state, they are still using the image. Image remover will fail.
       The stderr should satisfy spec_expect_no_message "${REMOVED_IMAGE}.*${IMAGE_WITH_TAG}"
       The stderr should satisfy spec_expect_message    "${FAILED_TO_REMOVE_IMAGE}.*${IMAGE_WITH_TAG}"
+      The stderr should satisfy spec_expect_message    "${DONE_REMOVING_IMAGES}"
     End
   End
-  Describe "test_update_jobs_no_running_tasks" "container_test:true" "coverage:true"
-    TEST_NAME="test_update_jobs_no_running_tasks"
+  Describe "test_jobs_no_running_tasks" "container_test:true" "coverage:true"
+    TEST_NAME="test_jobs_no_running_tasks"
     IMAGE_WITH_TAG=$(get_image_with_tag "${SUITE_NAME}")
     SERVICE_NAME=$(get_test_service_name "${TEST_NAME}")
     # Use a short TASK_SECONDS, because we want the task finishes soon.
@@ -206,7 +209,7 @@ Describe 'update-jobs'
       # The tasks should exit after TASK_SECONDS seconds sleep. Then it will have 0 running tasks.
       wait_zero_running_tasks "${SERVICE_NAME}"
     }
-    test_update_jobs_no_running_tasks() {
+    test_jobs_no_running_tasks() {
       local TEST_NAME="${1}"
       local SERVICE_NAME="${2}"
       reset_gantry_env "${SERVICE_NAME}"
@@ -217,7 +220,7 @@ Describe 'update-jobs'
     BeforeEach "test_start ${TEST_NAME} ${IMAGE_WITH_TAG} ${SERVICE_NAME} ${TASK_SECONDS}"
     AfterEach "common_cleanup ${TEST_NAME} ${IMAGE_WITH_TAG} ${SERVICE_NAME}"
     It 'run_test'
-      When run test_update_jobs_no_running_tasks "${TEST_NAME}" "${SERVICE_NAME}"
+      When run test_jobs_no_running_tasks "${TEST_NAME}" "${SERVICE_NAME}"
       The status should be success
       The stdout should satisfy display_output
       The stdout should satisfy spec_expect_no_message ".+"
@@ -247,6 +250,7 @@ Describe 'update-jobs'
       The stderr should satisfy spec_expect_no_message "${SKIP_REMOVING_IMAGES}"
       The stderr should satisfy spec_expect_message    "${REMOVED_IMAGE}.*${IMAGE_WITH_TAG}"
       The stderr should satisfy spec_expect_no_message "${FAILED_TO_REMOVE_IMAGE}.*${IMAGE_WITH_TAG}"
+      The stderr should satisfy spec_expect_message    "${DONE_REMOVING_IMAGES}"
     End
   End
 End # Describe 'update-jobs'

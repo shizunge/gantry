@@ -449,15 +449,14 @@ _remove_images() {
   # SC2086: Double quote to prevent globbing and word splitting.
   # shellcheck disable=SC2086
   docker_global_job --name "${SERVICE_NAME}" \
+    --detach=true \
     --restart-condition on-failure \
     --restart-max-attempts 1 \
     --mount type=bind,source=/var/run/docker.sock,destination=/var/run/docker.sock \
     --env "GANTRY_IMAGES_TO_REMOVE=${IMAGES_TO_REMOVE_LIST}" \
     ${CLEANUP_IMAGES_OPTIONS} \
     "${IMAGES_REMOVER}";
-  wait_service_state "${SERVICE_NAME}"
-  docker_service_logs "${SERVICE_NAME}"
-  docker_service_remove "${SERVICE_NAME}"
+  docker_service_follow_logs_wait_complete "${SERVICE_NAME}"
 }
 
 _report_list() {

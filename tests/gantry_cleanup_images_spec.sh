@@ -60,6 +60,7 @@ Describe 'cleanup-images'
       The stderr should satisfy spec_expect_message    "${SKIP_REMOVING_IMAGES}"
       The stderr should satisfy spec_expect_no_message "${REMOVED_IMAGE}.*${IMAGE_WITH_TAG}"
       The stderr should satisfy spec_expect_no_message "${FAILED_TO_REMOVE_IMAGE}.*${IMAGE_WITH_TAG}"
+      The stderr should satisfy spec_expect_no_message "${DONE_REMOVING_IMAGES}"
     End
   End
   Describe "test_CLEANUP_IMAGES_OPTIONS_bad" "container_test:true" "coverage:true"
@@ -106,6 +107,7 @@ Describe 'cleanup-images'
       The stderr should satisfy spec_expect_message    "Failed.*--incorrect-option"
       The stderr should satisfy spec_expect_no_message "${REMOVED_IMAGE}.*${IMAGE_WITH_TAG}"
       The stderr should satisfy spec_expect_no_message "${FAILED_TO_REMOVE_IMAGE}.*${IMAGE_WITH_TAG}"
+      The stderr should satisfy spec_expect_no_message "${DONE_REMOVING_IMAGES}"
     End
   End
   Describe "test_CLEANUP_IMAGES_OPTIONS_good" "container_test:true" "coverage:true"
@@ -151,6 +153,7 @@ Describe 'cleanup-images'
       The stderr should satisfy spec_expect_no_message "Failed.*--container-label=test"
       The stderr should satisfy spec_expect_message    "${REMOVED_IMAGE}.*${IMAGE_WITH_TAG}"
       The stderr should satisfy spec_expect_no_message "${FAILED_TO_REMOVE_IMAGE}.*${IMAGE_WITH_TAG}"
+      The stderr should satisfy spec_expect_message    "${DONE_REMOVING_IMAGES}"
     End
   End
   Describe "test_IMAGES_TO_REMOVE_none_empty" "container_test:true" "coverage:true"
@@ -221,6 +224,7 @@ Describe 'cleanup-images'
       The stderr should satisfy spec_expect_message    "${REMOVED_IMAGE}.*${IMAGE_WITH_TAG0}"
       The stderr should satisfy spec_expect_message    "${FAILED_TO_REMOVE_IMAGE}.*${IMAGE_WITH_TAG1}"
       The stderr should satisfy spec_expect_message    "There is no image.*${IMAGE_WITH_TAG2}"
+      The stderr should satisfy spec_expect_message    "${DONE_REMOVING_IMAGES}"
     End
   End
 End # Describe 'Single service'

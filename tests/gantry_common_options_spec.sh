@@ -64,6 +64,7 @@ Describe 'common-options'
       The stderr should satisfy spec_expect_no_message "${SKIP_REMOVING_IMAGES}"
       The stderr should satisfy spec_expect_no_message "${REMOVED_IMAGE}.*${IMAGE_WITH_TAG}"
       The stderr should satisfy spec_expect_no_message "${FAILED_TO_REMOVE_IMAGE}.*${IMAGE_WITH_TAG}"
+      The stderr should satisfy spec_expect_no_message "${DONE_REMOVING_IMAGES}"
       The stderr should satisfy spec_expect_no_message "${SCHEDULE_NEXT_UPDATE_AT}"
       The stderr should satisfy spec_expect_no_message "${SLEEP_SECONDS_BEFORE_NEXT_UPDATE}"
     End
@@ -146,8 +147,10 @@ Describe 'common-options'
       export GANTRY_CLEANUP_IMAGES=
       # Test that pre-run command can change the global configurations.
       export GANTRY_PRE_RUN_CMD="echo \"Pre update\"; GANTRY_UPDATE_OPTIONS=--detach=true; GANTRY_CLEANUP_IMAGES=false;"
+      # This command outputs multiple lines.
+      local POST_CMD="for I in \$(seq 3 5); do echo \"OUTPUT_LINE=\$I\"; done"
       # Test that the command returns a non-zero value.
-      export GANTRY_POST_RUN_CMD="echo \"Post update\"; false;"
+      export GANTRY_POST_RUN_CMD="echo \"Post update\"; ${POST_CMD}; false;"
       run_gantry "${TEST_NAME}"
     }
     BeforeEach "common_setup_new_image ${TEST_NAME} ${IMAGE_WITH_TAG} ${SERVICE_NAME}"
@@ -160,7 +163,7 @@ Describe 'common-options'
       The stderr should satisfy display_output
       The stderr should satisfy spec_expect_no_message "${START_WITHOUT_A_SQUARE_BRACKET}"
       The stderr should satisfy spec_expect_message    "Pre update"
-      The stderr should satisfy spec_expect_no_message "pre-run command returned a non-zero value"
+      The stderr should satisfy spec_expect_message    "Finish pre-run command."
       The stderr should satisfy spec_expect_no_message "${SKIP_UPDATING}.*${SERVICE_NAME}"
       The stderr should satisfy spec_expect_message    "${PERFORM_UPDATING}.*${SERVICE_NAME}.*${PERFORM_REASON_HAS_NEWER_IMAGE}"
       The stderr should satisfy spec_expect_no_message "${NUM_SERVICES_SKIP_JOBS}"
@@ -182,8 +185,12 @@ Describe 'common-options'
       The stderr should satisfy spec_expect_message    "${SKIP_REMOVING_IMAGES}"
       The stderr should satisfy spec_expect_no_message "${REMOVED_IMAGE}.*"
       The stderr should satisfy spec_expect_no_message "${FAILED_TO_REMOVE_IMAGE}.*"
+      The stderr should satisfy spec_expect_no_message "${DONE_REMOVING_IMAGES}"
       The stderr should satisfy spec_expect_message    "Post update"
-      The stderr should satisfy spec_expect_message    "post-run command returned a non-zero value"
+      The stderr should satisfy spec_expect_message    "OUTPUT_LINE=3"
+      The stderr should satisfy spec_expect_message    "OUTPUT_LINE=4"
+      The stderr should satisfy spec_expect_message    "OUTPUT_LINE=5"
+      The stderr should satisfy spec_expect_message    "Finish post-run command with a non-zero return value 1."
       The stderr should satisfy spec_expect_no_message "${SCHEDULE_NEXT_UPDATE_AT}"
       The stderr should satisfy spec_expect_no_message "${SLEEP_SECONDS_BEFORE_NEXT_UPDATE}"
     End
@@ -236,6 +243,7 @@ Describe 'common-options'
       The stderr should satisfy spec_expect_no_message        "${SKIP_REMOVING_IMAGES}"
       The stderr should satisfy spec_expect_no_message        "${REMOVED_IMAGE}.*${IMAGE_WITH_TAG}"
       The stderr should satisfy spec_expect_no_message        "${FAILED_TO_REMOVE_IMAGE}.*${IMAGE_WITH_TAG}"
+      The stderr should satisfy spec_expect_no_message        "${DONE_REMOVING_IMAGES}"
       # Check messages between iterations.
       The stderr should satisfy spec_expect_message           "${SCHEDULE_NEXT_UPDATE_AT}"
       The stderr should satisfy spec_expect_message           "${SLEEP_SECONDS_BEFORE_NEXT_UPDATE}"
@@ -283,6 +291,7 @@ Describe 'common-options'
       The stderr should satisfy spec_expect_no_message "${SKIP_REMOVING_IMAGES}"
       The stderr should satisfy spec_expect_no_message "${REMOVED_IMAGE}.*${IMAGE_WITH_TAG}"
       The stderr should satisfy spec_expect_no_message "${FAILED_TO_REMOVE_IMAGE}.*${IMAGE_WITH_TAG}"
+      The stderr should satisfy spec_expect_no_message "${DONE_REMOVING_IMAGES}"
       The stderr should satisfy spec_expect_no_message "${SCHEDULE_NEXT_UPDATE_AT}"
       The stderr should satisfy spec_expect_no_message "${SLEEP_SECONDS_BEFORE_NEXT_UPDATE}"
     End

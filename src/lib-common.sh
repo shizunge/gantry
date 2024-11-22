@@ -15,6 +15,20 @@
 # along with this program.  If not, see <https://www.gnu.org/licenses/>.
 #
 
+_random_string() {
+  head /dev/urandom | LANG=C tr -dc 'a-zA-Z0-9' | head -c 8
+}
+
+_pipe_name() {
+  local BASE_NAME="${1:-pipe-base-name}"
+  local RANDOM_STR=
+  RANDOM_STR=$(_random_string)
+  local TIMESTAMP=
+  TIMESTAMP=$(date +%s)
+  local PIPE_NAME="/tmp/${BASE_NAME}-$$-${TIMESTAMP}-${RANDOM_STR}"
+  echo "${PIPE_NAME}"
+}
+
 # Run "grep -q" and avoid broken pipe errors.
 grep_q() {
   # "grep -q" will exit immediately when the first line of data matches, and leading to broken pipe errors.
@@ -173,22 +187,28 @@ _log_docker_node() {
 # 2023-06-22T01:20:54.535860111Z <task>@<node>    | <msg>
 _log_docker_line() {
   local LEVEL="INFO";
-  local TIME_DOCKER TIME TASK_NODE SCOPE NODE MESSAGE SPACE FIRST_WORD
+  local TIME_DOCKER TIME TASK_NODE SCOPE NODE MESSAGE FIRST_WORD
   TIME_DOCKER=$(extract_string "${*}" ' ' 1)
   TIME=$(_log_docker_time "${TIME_DOCKER}")
   TASK_NODE=$(extract_string "${*}" ' ' 2)
   SCOPE=$(_log_docker_scope "${TASK_NODE}");
   NODE=$(_log_docker_node "${TASK_NODE}");
   MESSAGE=$(extract_string "${*}" '|' 2-);
-  # Remove the leading space.
-  SPACE=$(extract_string "${MESSAGE}" ' ' 1)
-  [ -z "${SPACE}" ] && MESSAGE=$(extract_string "${MESSAGE}" ' ' 2-)
+  # Remove a single leading space.
+  [ "${MESSAGE:0:1}" = " " ] && MESSAGE="${MESSAGE:1}"
   FIRST_WORD=$(extract_string "${MESSAGE}" ' ' 1);
   if _log_level "${FIRST_WORD}" >/dev/null; then
     LEVEL=${FIRST_WORD};
     MESSAGE=$(extract_string "${MESSAGE}" ' ' 2-);
   fi
   _log_formatter "${LEVEL}" "${TIME}" "${NODE}" "${SCOPE}" "${MESSAGE}";
+}
+
+_log_docker_multiple_lines() {
+  local LINE=
+  while read -r LINE; do
+    _log_docker_line "${LINE}"
+  done
 }
 
 # Usage: echo "${LOGS}" | log_lines INFO
@@ -296,6 +316,24 @@ attach_tag_to_log_scope() {
   echo "${OLD_LOG_SCOPE}${SEP}${TAG}"
 }
 
+_eval_cmd_core() {
+  local STDOUT_CMD="${1}"; shift;
+  local CMD="${*}"
+  local PIPE_NAME=
+  PIPE_NAME="$(_pipe_name "eval-cmd-stdout-pipe")"
+  mkfifo "${PIPE_NAME}"
+  local PID=
+  eval "${STDOUT_CMD}" < "${PIPE_NAME}" &
+  PID="${!}"
+  local RETURN_VALUE=
+  # No redirect for stderr, unless it is done by the CMD.
+  eval "${CMD}" > "${PIPE_NAME}"
+  RETURN_VALUE=$?
+  wait "${PID}"
+  rm "${PIPE_NAME}"
+  return "${RETURN_VALUE}"
+}
+
 eval_cmd() {
   local TAG="${1}"; shift;
   local CMD="${*}"
@@ -304,21 +342,17 @@ eval_cmd() {
   LOG_SCOPE=$(attach_tag_to_log_scope "${TAG}")
   export LOG_SCOPE
   log INFO "Run ${TAG} command: ${CMD}"
-  local EVAL_OUTPUT=
-  local EVAL_RETURN=
-  EVAL_OUTPUT=$(mktemp)
-  eval "${CMD}" > "${EVAL_OUTPUT}"
-  EVAL_RETURN=$?
-  if [ "${EVAL_RETURN}" = "0" ]; then
-    log_lines INFO < "${EVAL_OUTPUT}"
+  local LOG_CMD="log_lines INFO"
+  local RETURN_VALUE=0
+  _eval_cmd_core "${LOG_CMD}" "${CMD}"
+  RETURN_VALUE=$?
+  if [ "${RETURN_VALUE}" = "0" ]; then
+    log INFO "Finish ${TAG} command."
   else
-    log_lines WARN < "${EVAL_OUTPUT}"
-    log WARN "${TAG} command returned a non-zero value ${EVAL_RETURN}."
+    log ERROR "Finish ${TAG} command with a non-zero return value ${RETURN_VALUE}."
   fi
-  rm "${EVAL_OUTPUT}"
-  log INFO "Finish ${TAG} command."
   export LOG_SCOPE="${OLD_LOG_SCOPE}"
-  return "${EVAL_RETURN}"
+  return "${RETURN_VALUE}"
 }
 
 swarm_network_arguments() {
@@ -349,34 +383,55 @@ _get_docker_command_name_arg() {
 }
 
 _get_docker_command_detach() {
-  if echo "${@}" | grep_q "--detach"; then
+  if echo "${@}" | grep_q "--detach=false"; then
+    echo "false"
+  elif echo "${@}" | grep_q "--detach"; then
+    # assume we find --detach or --detach=true.
     echo "true"
-    return 0
+  else
+    echo "false"
   fi
-  echo "false"
+  return 0
 }
 
-docker_service_logs () {
+docker_service_logs() {
   local SERVICE_NAME="${1}"
+  local LOG_CMD="_log_docker_multiple_lines"
+  local CMD="docker service logs --timestamps --no-task-ids ${SERVICE_NAME} 2>&1"
   local RETURN_VALUE=0
-  local LOGS=
-  if ! LOGS=$(docker service logs --timestamps --no-task-ids "${SERVICE_NAME}" 2>&1); then
-    log ERROR "Failed to obtain logs of service ${SERVICE_NAME}."
-    RETURN_VALUE=1
-  fi
-  echo "${LOGS}" |
-  while read -r LINE; do
-    _log_docker_line "${LINE}"
-  done
+  _eval_cmd_core "${LOG_CMD}" "${CMD}"
+  RETURN_VALUE=$?
+  [ "${RETURN_VALUE}" != 0 ] && log ERROR "Failed to obtain logs of service ${SERVICE_NAME}. Return code ${RETURN_VALUE}."
   return "${RETURN_VALUE}"
+}
+
+_docker_service_exists() {
+  local SERVICE_NAME="${1}"
+  docker service inspect --format '{{.ID}}' "${SERVICE_NAME}" >/dev/null 2>&1
+}
+
+_docker_wait_until_service_removed() {
+  local SERVICE_NAME="${1}"
+  while _docker_service_exists "${SERVICE_NAME}"; do
+    sleep 1s
+  done
+}
+
+# "docker service logs --follow" does not stop when the service stops.
+# This function will check the status of the service and stop the "docker service logs" command.
+_docker_service_logs_follow_and_stop() {
+  local SERVICE_NAME="${1}"
+  ! _docker_service_exists "${SERVICE_NAME}" && return 1;
+  local PID=
+  docker service logs --timestamps --no-task-ids --follow "${SERVICE_NAME}" 2>&1 &
+  PID="${!}"
+  _docker_wait_until_service_removed "${SERVICE_NAME}"
+  kill "${PID}" 2>&1
 }
 
 docker_service_logs_follow() {
   local SERVICE_NAME="${1}"
-  docker service logs --timestamps --no-task-ids --follow "${SERVICE_NAME}" 2>&1 |
-  while read -r LINE; do
-    _log_docker_line "${LINE}"
-  done
+  _docker_service_logs_follow_and_stop "${SERVICE_NAME}" | _log_docker_multiple_lines
 }
 
 _docker_service_task_states() {
@@ -388,6 +443,7 @@ _docker_service_task_states() {
     return 1
   fi
   local NAME_LIST=
+  local LINE=
   echo "${STATES}" | while read -r LINE; do
     local NAME=
     local NODE_STATE_AND_ERROR=
@@ -401,69 +457,142 @@ _docker_service_task_states() {
   done
 }
 
-# Usage: wait_service_state <SERVICE_NAME> [--running] [--complete]
-# Wait for the service, usually a global job or a replicated job, to reach either running or complete state.
-# The function returns immediately when any of the tasks of the service fails.
+# Echo the return value from the tasks.
+# Return 0: All tasks reach the want state, or there is an error.
+# Return 1: Keep waiting.
+_all_tasks_reach_state() {
+  local WANT_STATE="${1}"
+  local CHECK_FAILURES="${2}"
+  local STATES="${3}"
+  local NUM_LINES=0
+  local NUM_STATES=0
+  local NUM_FAILS=0
+  local LINE=
+  while read -r LINE; do
+    [ -z "${LINE}" ] && continue;
+    NUM_LINES=$((NUM_LINES+1));
+    echo "${LINE}" | grep_q "${WANT_STATE}" && NUM_STATES=$((NUM_STATES+1));
+    "${CHECK_FAILURES}" && echo "${LINE}" | grep_q "Failed" && NUM_FAILS=$((NUM_FAILS+1));
+  done < <(echo "${STATES}")
+  if [ "${NUM_LINES}" -le 0 ]; then
+    # continue
+    return 1
+  fi
+  if [ "${NUM_STATES}" = "${NUM_LINES}" ]; then
+    # break
+    echo "0"
+    return 0
+  fi
+  if [ "${NUM_FAILS}" = 0 ]; then
+    # continue
+    return 1
+  fi
+  # Get return value of the task from the string "task: non-zero exit (1)".
+  local TASK_RETURN_VALUE=
+  TASK_RETURN_VALUE=$(echo "${STATES}" | grep "Failed" | sed -n 's/.*task: non-zero exit (\([0-9]\+\)).*/\1/p')
+  # Get the first error code.
+  local RETURN_VALUE=
+  RETURN_VALUE=$(extract_string "${TASK_RETURN_VALUE:-1}" ' ' 1)
+  # break
+  echo "${RETURN_VALUE}"
+  return 0
+}
+
+# Usage: wait_service_state <SERVICE_NAME> <WANT_STATE>
+# Wait for the service, usually a global job or a replicated job,
+# to reach either running or complete state.
+# Valid WANT_STATE includes "Running" and "Complete"
+# When the WANT_STATE is complete, the function returns immediately
+# when any of the tasks of the service fails.
 # In case of task failing, the function returns a non-zero value.
 wait_service_state() {
-  local SERVICE_NAME="${1}"; shift;
-  local WAIT_RUNNING WAIT_COMPLETE;
-  WAIT_RUNNING=$(echo "${@}" | grep_q "--running" && echo "true" || echo "false")
-  WAIT_COMPLETE=$(echo "${@}" | grep_q "--complete" && echo "true" || echo "false")
-  local RETURN_VALUE=0
-  local DOCKER_CMD_ERROR=1
+  local SERVICE_NAME="${1}";
+  local WANT_STATE="${2}";
+  local CHECK_FAILURES=false
+  [ "${WANT_STATE}" = "Complete" ] && CHECK_FAILURES=true
   local SLEEP_SECONDS=1
+  local DOCKER_CMD_ERROR=1
+  local RETURN_VALUE=0
   local STATES=
   while STATES=$(_docker_service_task_states "${SERVICE_NAME}" 2>&1); do
-    if ! ("${WAIT_RUNNING}" || "${WAIT_COMPLETE}"); then
-      RETURN_VALUE=0
-      DOCKER_CMD_ERROR=0
-      break
-    fi
-    local NUM_LINES=0
-    local NUM_RUNS=0
-    local NUM_DONES=0
-    local NUM_FAILS=0
-    local LINE=
-    while read -r LINE; do
-      [ -z "${LINE}" ] && continue;
-      NUM_LINES=$((NUM_LINES+1));
-      echo "${LINE}" | grep_q "Running" && NUM_RUNS=$((NUM_RUNS+1));
-      echo "${LINE}" | grep_q "Complete" && NUM_DONES=$((NUM_DONES+1));
-      echo "${LINE}" | grep_q "Failed" && NUM_FAILS=$((NUM_FAILS+1));
-    done < <(echo "${STATES}")
-    if [ "${NUM_LINES}" -gt 0 ]; then
-      if "${WAIT_RUNNING}" && [ "${NUM_RUNS}" -eq "${NUM_LINES}" ]; then
-        RETURN_VALUE=0
-        DOCKER_CMD_ERROR=0
-        break
-      fi
-      if "${WAIT_COMPLETE}" && [ "${NUM_DONES}" -eq "${NUM_LINES}" ]; then
-        RETURN_VALUE=0
-        DOCKER_CMD_ERROR=0
-        break
-      fi
-      if "${WAIT_COMPLETE}" && [ "${NUM_FAILS}" -gt 0 ]; then
-        # Get return value of the task from the string "task: non-zero exit (1)".
-        local TASK_RETURN_VALUE=
-        TASK_RETURN_VALUE=$(echo "${STATES}" | grep "Failed" | sed -n 's/.*task: non-zero exit (\([0-9]\+\)).*/\1/p')
-        # Get the first error code.
-        RETURN_VALUE=$(extract_string "${TASK_RETURN_VALUE:-1}" ' ' 1)
-        DOCKER_CMD_ERROR=0
-        break
-      fi
-    fi
+    DOCKER_CMD_ERROR=0
+    RETURN_VALUE=$(_all_tasks_reach_state "${WANT_STATE}" "${CHECK_FAILURES}" "${STATES}") && break
     sleep "${SLEEP_SECONDS}"
+    DOCKER_CMD_ERROR=1
   done
   if [ "${DOCKER_CMD_ERROR}" != "0" ]; then
     log ERROR "Failed to obtain task states of service ${SERVICE_NAME}: ${STATES}"
     return 1
   fi
   local LINE=
-  while read -r LINE; do
+  echo "${STATES}" | while read -r LINE; do
     log INFO "Service ${SERVICE_NAME}: ${LINE}."
-  done < <(echo "${STATES}")
+  done
   return "${RETURN_VALUE}"
+}
+
+docker_service_remove() {
+  local SERVICE_NAME="${1}"
+  local POST_COMMAND="${2}"
+  ! _docker_service_exists "${SERVICE_NAME}" && return 0
+  log INFO "Removing service ${SERVICE_NAME}."
+  local LOG=
+  if ! LOG=$(docker service rm "${SERVICE_NAME}" 2>&1); then
+    log ERROR "Failed to remove docker service ${SERVICE_NAME}: ${LOG}"
+    return 1
+  fi
+  if [ -n "${POST_COMMAND}" ]; then
+    eval "${POST_COMMAND}"
+  fi
+  log INFO "Removed service ${SERVICE_NAME}."
+  return 0
+}
+
+# Works with the service started (e.g. via docker_global_job) with --detach.
+docker_service_follow_logs_wait_complete() {
+  local SERVICE_NAME="${1}"
+  local PID=
+  docker_service_logs_follow "${SERVICE_NAME}" &
+  PID="${!}"
+  wait_service_state "${SERVICE_NAME}" "Complete"
+  docker_service_remove "${SERVICE_NAME}" "wait ${PID}"
+}
+
+# We do not expect failures when using docker_global_job.
+# Docker will try to restart the failed tasks.
+# We do not check the converge of the service, thus some jobs may failed on some nodes.
+# It is better to be used togther with wait_service_state.
+docker_global_job() {
+  local SERVICE_NAME=
+  SERVICE_NAME=$(_get_docker_command_name_arg "${@}")
+  log INFO "Starting global-job ${SERVICE_NAME}."
+  local LOG=
+  if ! LOG=$(docker service create --mode global-job "${@}"  2>&1); then
+    log ERROR "Failed to create global-job ${SERVICE_NAME}: ${LOG}"
+    return 1
+  fi
+  return 0
+}
+
+# A job could fail when using docker_replicated_job.
+docker_replicated_job() {
+  local SERVICE_NAME=
+  local IS_DETACH=
+  SERVICE_NAME=$(_get_docker_command_name_arg "${@}")
+  IS_DETACH=$(_get_docker_command_detach "${@}")
+  # Add "--detach" to work around https://github.com/docker/cli/issues/2979
+  # The Docker CLI does not exit on failures.
+  log INFO "Starting replicated-job ${SERVICE_NAME}."
+  local LOG=
+  if ! LOG=$(docker service create --mode replicated-job --detach "${@}" 2>&1); then
+    log ERROR "Failed to create replicated-job ${SERVICE_NAME}: ${LOG}"
+    return 1
+  fi
+  # If the command line does not contain '--detach', the function returns til the replicated job is complete.
+  if ! "${IS_DETACH}"; then
+    wait_service_state "${SERVICE_NAME}" "Complete" || return $?
+  fi
+  return 0
 }
 
 docker_version() {
@@ -515,58 +644,6 @@ docker_current_container_name() {
       done
     done
   done
-}
-
-docker_service_remove() {
-  local SERVICE_NAME="${1}"
-  if ! docker service inspect --format '{{.JobStatus}}' "${SERVICE_NAME}" >/dev/null 2>&1; then
-    return 0
-  fi
-  log INFO "Removing service ${SERVICE_NAME}."
-  local LOG=
-  if ! LOG=$(docker service rm "${SERVICE_NAME}" 2>&1); then
-    log ERROR "Failed to remove docker service ${SERVICE_NAME}: ${LOG}"
-    return 1
-  fi
-  log INFO "Removed service ${SERVICE_NAME}."
-  return 0
-}
-
-# We do not expect failures when using docker_global_job.
-# Docker will try to restart the failed tasks.
-# We do not check the converge of the service, thus some jobs may failed on some nodes.
-# It is better to be used togther with wait_service_state.
-docker_global_job() {
-  local SERVICE_NAME=
-  SERVICE_NAME=$(_get_docker_command_name_arg "${@}")
-  log INFO "Starting global-job ${SERVICE_NAME}."
-  local LOG=
-  if ! LOG=$(docker service create --mode global-job "${@}"  2>&1); then
-    log ERROR "Failed to create global-job ${SERVICE_NAME}: ${LOG}"
-    return 1
-  fi
-  return 0
-}
-
-# A job could fail when using docker_replicated_job.
-docker_replicated_job() {
-  local SERVICE_NAME=
-  local IS_DETACH=
-  SERVICE_NAME=$(_get_docker_command_name_arg "${@}")
-  IS_DETACH=$(_get_docker_command_detach "${@}")
-  # Add "--detach" to work around https://github.com/docker/cli/issues/2979
-  # The Docker CLI does not exit on failures.
-  log INFO "Starting replicated-job ${SERVICE_NAME}."
-  local LOG=
-  if ! LOG=$(docker service create --mode replicated-job --detach "${@}" 2>&1); then
-    log ERROR "Failed to create replicated-job ${SERVICE_NAME}: ${LOG}"
-    return 1
-  fi
-  # If the command line does not contain '--detach', the function returns til the replicated job is complete.
-  if ! "${IS_DETACH}"; then
-    wait_service_state "${SERVICE_NAME}" --complete || return $?
-  fi
-  return 0
 }
 
 _container_status() {
