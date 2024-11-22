@@ -71,6 +71,7 @@ export SCHEDULE_NEXT_UPDATE_AT="Schedule next update at"
 export SLEEP_SECONDS_BEFORE_NEXT_UPDATE="Sleep [0-9]+ seconds before next update"
 
 export TEST_IMAGE_REMOVER="ghcr.io/shizunge/gantry-development"
+export TEST_SERVICE_IMAGE="alpine:latest"
 
 test_log() {
   echo "${GANTRY_LOG_LEVEL}" | grep -q -i "^NONE$"  && return 0;
@@ -569,9 +570,9 @@ build_test_image() {
   fi
   local FILE=
   FILE=$(mktemp)
-  echo "FROM alpinelinux/docker-cli:latest" > "${FILE}"
+  echo "FROM ${TEST_SERVICE_IMAGE}" > "${FILE}"
   echo "ENTRYPOINT [\"sh\", \"-c\", \"echo $(unique_id); trap \\\"${EXIT_CMD}\\\" HUP INT TERM; ${TASK_CMD}\"]" >> "${FILE}"
-  pull_image_if_not_exist "alpinelinux/docker-cli:latest"
+  pull_image_if_not_exist "${TEST_SERVICE_IMAGE}"
   echo "Building ${IMAGE_WITH_TAG} from ${FILE}"
   timeout 120 docker build --quiet --tag "${IMAGE_WITH_TAG}" --file "${FILE}" .
   rm "${FILE}"
@@ -582,7 +583,7 @@ build_and_push_test_image() {
   local TASK_SECONDS="${2}"
   local EXIT_SECONDS="${3}"
   build_test_image "${IMAGE_WITH_TAG}" "${TASK_SECONDS}" "${EXIT_SECONDS}"
-  echo -n "Pushing image "
+  echo "Pushing image "
   # SC2046 (warning): Quote this to prevent word splitting.
   # shellcheck disable=SC2046
   docker $(_get_docker_config_argument "${IMAGE_WITH_TAG}") push --quiet "${IMAGE_WITH_TAG}"
@@ -590,7 +591,7 @@ build_and_push_test_image() {
 
 prune_local_test_image() {
   local IMAGE_WITH_TAG="${1}"
-  echo -n "Removing image ${IMAGE_WITH_TAG} "
+  echo "Removing image ${IMAGE_WITH_TAG} "
   docker image rm "${IMAGE_WITH_TAG}" --force &
 }
 
@@ -813,7 +814,7 @@ _start_replicated_job() {
 
 stop_service() {
   local SERVICE_NAME="${1}"
-  echo -n "Removing service "
+  echo "Removing service "
   docker service rm "${SERVICE_NAME}" &
 }
 
