@@ -403,6 +403,13 @@ gantry_remove_images() {
   log INFO "Done removing images.";
 }
 
+_correct_service_name() {
+  local SERVICE_NAME="${1}"
+  SERVICE_NAME=$(echo "${SERVICE_NAME}" | tr ' ' '-')
+  [ "${#SERVICE_NAME}" -gt 63 ] && SERVICE_NAME="${SERVICE_NAME:0:63}"
+  echo "${SERVICE_NAME}"
+}
+
 _remove_images() {
   local CLEANUP_IMAGES="${GANTRY_CLEANUP_IMAGES:-"true"}"
   local CLEANUP_IMAGES_OPTIONS="${GANTRY_CLEANUP_IMAGES_OPTIONS:-""}"
@@ -413,7 +420,7 @@ _remove_images() {
     return 0
   fi
   local SERVICE_NAME="${1:-"gantry-image-remover"}"
-  SERVICE_NAME=$(echo "${SERVICE_NAME}" | tr ' ' '-')
+  SERVICE_NAME=$(_correct_service_name "${SERVICE_NAME}")
   docker_service_remove "${SERVICE_NAME}"
   local IMAGES_TO_REMOVE=
   IMAGES_TO_REMOVE=$(_static_variable_read_list STATIC_VAR_IMAGES_TO_REMOVE)
@@ -816,7 +823,7 @@ _inspect_image() {
     # The image may not contain the digest for the following reasons:
     # 1. The image has not been push to or pulled from a V2 registry
     # 2. The image has been pulled from a V1 registry
-    # 3. The service has not been updated via Docker CLI, but via Docker API, i.e. via 3rd party tools.
+    # 3. The service is updated without --with-registry-auth when registry requests authentication.
     log DEBUG "Perform updating ${SERVICE_NAME} because DIGEST is empty in ${IMAGE_WITH_DIGEST}, assume there is a new image."
     echo "${IMAGE}"
     return 0
@@ -1193,7 +1200,7 @@ gantry_finalize() {
   local STACK="${1:-gantry}"
   local NUM_ERRORS="${2:-0}"
   local RETURN_VALUE=0
-  ! _remove_images "${STACK}_image-remover" && RETURN_VALUE=1
+  ! _remove_images "${STACK}-image-remover" && RETURN_VALUE=1
   ! _report_services "${STACK}" "${NUM_ERRORS}" && RETURN_VALUE=1
   _remove_static_variables_folder
   return "${RETURN_VALUE}"

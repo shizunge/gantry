@@ -686,7 +686,7 @@ _wait_service_state() {
   done
 }
 
-_correct_service_name() {
+_correct_test_service_name() {
   local SERVICE_NAME="${1}"
   [ "${#SERVICE_NAME}" -gt 63 ] && SERVICE_NAME=${SERVICE_NAME:0:63}
   echo "${SERVICE_NAME}"
@@ -708,7 +708,7 @@ start_replicated_service() {
   local SERVICE_NAME="${1}"
   local IMAGE_WITH_TAG="${2}"
   local TIMEOUT_SECONDS="${3:-1}"
-  SERVICE_NAME=$(_correct_service_name "${SERVICE_NAME}")
+  SERVICE_NAME=$(_correct_test_service_name "${SERVICE_NAME}")
   echo "Creating service ${SERVICE_NAME} in replicated mode "
   # During creation:
   # * Add --detach to reduce the test runtime.
@@ -755,7 +755,7 @@ start_global_service() {
   local SERVICE_NAME="${1}"
   local IMAGE_WITH_TAG="${2}"
   local TIMEOUT_SECONDS="${3:-1}"
-  SERVICE_NAME=$(_correct_service_name "${SERVICE_NAME}")
+  SERVICE_NAME=$(_correct_test_service_name "${SERVICE_NAME}")
   echo "Creating service ${SERVICE_NAME} in global mode "
   # Do not add --detach, because we want to wait for the job finishes.
   # SC2046 (warning): Quote this to prevent word splitting.
@@ -778,7 +778,7 @@ _start_replicated_job() {
   local IMAGE_WITH_TAG="${2}"
   local TASK_SECONDS="${3:-1}"
   local EXIT_SECONDS="${4:-1}"
-  SERVICE_NAME=$(_correct_service_name "${SERVICE_NAME}")
+  SERVICE_NAME=$(_correct_test_service_name "${SERVICE_NAME}")
   echo "Creating service ${SERVICE_NAME} in replicated job mode "
   # Always add --detach=true, do not wait for the job finishes.
   # SC2046 (warning): Quote this to prevent word splitting.
