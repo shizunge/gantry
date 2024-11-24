@@ -29,7 +29,7 @@ bash shellspec --jobs 50
 
 To generate coverage (require [kcov](https://github.com/SimonKagstrom/kcov) installed):
 ```
-bash shellspec --kcov
+bash shellspec --kcov --tag coverage:true
 ```
 
 If you want to test a container image of *Gantry*, you need to specify the image of *Gantry* via the environment variable `GANTRY_TEST_CONTAINER_REPO_TAG`.

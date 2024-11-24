@@ -259,13 +259,12 @@ _login_test_registry() {
 _logout_test_registry() {
   local ENFORCE_LOGIN="${1}"
   local REGISTRY="${2}"
-  if ! _enforce_login_enabled "${ENFORCE_LOGIN}"; then
-    return 0
-  fi
-  echo "Logging out ${REGISTRY}."
   local CONFIG=
   CONFIG=$(_get_docker_config_file "${REGISTRY}") || return 1
-  docker --config "${CONFIG}" logout
+  if _enforce_login_enabled "${ENFORCE_LOGIN}"; then
+    echo "Logging out ${REGISTRY}."
+    docker --config "${CONFIG}" logout
+  fi
   [ -d "${CONFIG}" ] && rm -r "${CONFIG}"
 }
 

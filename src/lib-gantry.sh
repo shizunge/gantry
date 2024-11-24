@@ -205,11 +205,7 @@ _authenticate_to_registries() {
     [ "${LINE:0:1}" = "#" ] && continue
     LINE=$(echo "${LINE}" | tr '\t' ' ')
     local OTHERS=
-    CONFIG=$(extract_string "${LINE}" ' ' 1)
-    HOST=$(extract_string "${LINE}" ' ' 2)
-    USER=$(extract_string "${LINE}" ' ' 3)
-    PASSWORD=$(extract_string "${LINE}" ' ' 4)
-    OTHERS=$(extract_string "${LINE}" ' ' 5-)
+    read -r CONFIG HOST USER PASSWORD OTHERS < <(echo "${LINE}")
     local ERROR_MSG=
     if [ -n "${OTHERS}" ]; then
       ERROR_MSG="Found extra item(s)."
@@ -460,8 +456,9 @@ _remove_images() {
 }
 
 _report_list() {
-  local PRE="${1}"; shift
-  local POST="${1}"; shift
+  local PRE="${1}";
+  local POST="${2}";
+  shift 2;
   local LIST="${*}"
   local NUM=
   NUM=$(_get_number_of_elements "${LIST}")
@@ -621,7 +618,7 @@ gantry_current_service_name() {
   local SNAME=
   SNAME=$(docker container inspect "${CNAME}" --format '{{range $key,$value := .Config.Labels}}{{$key}}={{println $value}}{{end}}' \
     | grep "com.docker.swarm.service.name" \
-    | sed -n "s/com.docker.swarm.service.name=\(.*\)$/\1/p") || return 1
+    | sed -n -E "s/com.docker.swarm.service.name=(.*)$/\1/p") || return 1
   _static_variable_add_unique_to_list STATIC_VAR_CURRENT_SERVICE_NAME "${SNAME}"
   echo "${SNAME}"
 }
@@ -666,7 +663,7 @@ _get_service_mode() {
   # See https://docs.docker.com/engine/reference/commandline/service_ls/#name
   # It does not do the exact match of the name. See https://github.com/moby/moby/issues/32985
   # We do an extra step to to perform the exact match.
-  MODE=$(echo "${MODE}" | sed -n "s/\(.*\) ${SERVICE_NAME}$/\1/p")
+  MODE=$(echo "${MODE}" | sed -n -E "s/(.*) ${SERVICE_NAME}$/\1/p")
   echo "${MODE}"
 }
 
@@ -880,7 +877,7 @@ _get_number_of_running_tasks() {
   # See https://docs.docker.com/engine/reference/commandline/service_ls/#name
   # It does not do the exact match of the name. See https://github.com/moby/moby/issues/32985
   # We do an extra step to to perform the exact match.
-  REPLICAS=$(echo "${REPLICAS}" | sed -n "s/\(.*\) ${SERVICE_NAME}$/\1/p")
+  REPLICAS=$(echo "${REPLICAS}" | sed -n -E "s/(.*) ${SERVICE_NAME}$/\1/p")
   # https://docs.docker.com/engine/reference/commandline/service_ls/#examples
   # The REPLICAS is like "5/5" or "1/1 (3/5 completed)"
   # Get the number before the first "/".

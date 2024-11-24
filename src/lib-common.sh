@@ -29,6 +29,10 @@ _pipe_name() {
   echo "${PIPE_NAME}"
 }
 
+_get_first_word() {
+  echo "${*}" | sed -n -E "s/^(\S+).*/\1/p";
+}
+
 # Run "grep -q" and avoid broken pipe errors.
 grep_q() {
   # "grep -q" will exit immediately when the first line of data matches, and leading to broken pipe errors.
@@ -72,19 +76,79 @@ extract_string() {
   echo "${ECHO_STRING}" | cut -d "${DELIMITER}" -f "${POSITION}"
 }
 
-# echo the number of the log level.
-# return 0 if LEVEL is supported.
-# return 1 if LEVLE is unsupported.
-_log_level() {
+# All lower or all upper. No mix.
+_log_level_to_upper() {
   local LEVEL="${1}";
-  [ -z "${LEVEL}" ] && _log_level "INFO" && return 1;
-  echo "${LEVEL}" | grep_q_i "^DEBUG$" && echo 0 && return 0;
-  echo "${LEVEL}" | grep_q_i "^INFO$"  && echo 1 && return 0;
-  echo "${LEVEL}" | grep_q_i "^WARN$"  && echo 2 && return 0;
-  echo "${LEVEL}" | grep_q_i "^ERROR$" && echo 3 && return 0;
-  echo "${LEVEL}" | grep_q_i "^NONE$"  && echo 4 && return 0;
-  _log_level "NONE";
-  return 1;
+  case "${LEVEL}" in
+    "debug") echo "DEBUG"; ;;
+    "info")  echo "INFO";  ;;
+    "warn")  echo "WARN";  ;;
+    "error") echo "ERROR"; ;;
+    "none")  echo "NONE";  ;;
+    *) echo "${LEVEL}"; ;;
+  esac
+}
+
+# Return 0 if the first work is a supported level.
+# Return 1 else.
+_first_word_is_level() {
+  local MSG="${1}"
+  local LEN="${#MSG}"
+  local LEVEL=
+  [ "${LEN}" -lt 4 ] && return 1
+  if [ "${LEN}" = 4 ] || [ "${MSG:4:1}" = " " ]; then
+    LEVEL="${MSG:0:4}"
+  elif [ "${LEN}" = 5 ] || [ "${MSG:5:1}" = " " ]; then
+    LEVEL="${MSG:0:5}"
+  else
+    return 1
+  fi
+  LEVEL=$(_log_level_to_upper "${LEVEL}")
+  case "${LEVEL}" in
+    "DEBUG") return 0; ;;
+    "INFO")  return 0; ;;
+    "WARN")  return 0; ;;
+    "ERROR") return 0; ;;
+    "NONE")  return 0; ;;
+    *) return 1; ;;
+  esac
+}
+
+_log_skip_level() {
+  local LEVEL="${1}";
+  case "${LEVEL}" in
+    "DEBUG")   return "${2}"; ;;
+    "INFO"|"") return "${3}"; ;;
+    "WARN")    return "${4}"; ;;
+    "ERROR")   return "${5}"; ;;
+    "NONE"|*)  return "${6}"; ;;
+  esac
+}
+
+# return 0 to skip logging.
+# return 1 otherwise.
+_log_skip() {
+  local TARGET_LEVEL="${1}";
+  local LEVEL="${2}";
+  # This is 10% faster than the following command:
+  # _log_level() {
+  #   local LEVEL="${1}";
+  #   case "${LEVEL}" in
+  #     "DEBUG") echo 0; ;;
+  #     "INFO"|"") echo 1; ;;
+  #     "WARN") echo 2; ;;
+  #     "ERROR") echo 3; ;;
+  #     "NONE"|*) echo 4; ;;
+  #   esac
+  # }
+  # test "$(_log_level "${LEVEL}")" -lt "$(_log_level "${TARGET_LEVEL}")"; return $?
+  case "${TARGET_LEVEL}" in
+    "DEBUG")   _log_skip_level "${LEVEL}" 1 1 1 1 1; ;;
+    "INFO"|"") _log_skip_level "${LEVEL}" 0 1 1 1 1; ;;
+    "WARN")    _log_skip_level "${LEVEL}" 0 0 1 1 1; ;;
+    "ERROR")   _log_skip_level "${LEVEL}" 0 0 0 1 1; ;;
+    "NONE"|*)  _log_skip_level "${LEVEL}" 0 0 0 0 1; ;;
+  esac
 }
 
 _level_color() {
@@ -94,114 +158,109 @@ _level_color() {
   local ORANGE='\033[0;33m'
   local GREEN='\033[0;32m'
   local BLUE='\033[0;34m'
-  echo "${LEVEL}" | grep_q_i "^DEBUG$" && echo "${BLUE}" && return 0;
-  echo "${LEVEL}" | grep_q_i "^INFO$"  && echo "${GREEN}" && return 0;
-  echo "${LEVEL}" | grep_q_i "^WARN$"  && echo "${ORANGE}" && return 0;
-  echo "${LEVEL}" | grep_q_i "^ERROR$" && echo "${RED}" && return 0;
-  echo "${NO_COLOR}"
+  case "${LEVEL}" in
+    "DEBUG") echo "${BLUE}"; ;;
+    "INFO")  echo "${GREEN}"; ;;
+    "WARN")  echo "${ORANGE}"; ;;
+    "ERROR") echo "${RED}"; ;;
+    *)       echo "${NO_COLOR}"; ;;
+  esac
+  return 0;
 }
 
 _color_iso_time() {
-  # Highlight time within the day in ISO-8601
-  # \\033[1;30m : Dark Gray
-  # \\033[0;37m : Ligth Gray
-  # \\033[0m    : No color
-  echo "${*}" | sed -E 's/(.*[0-9]+-[0-9]+-[0-9]+)T([0-9]+:[0-9]+:[0-9]+)(.*)/\\033[1;30m\1T\\033[0;37m\2\\033[1;30m\3\\033[0m/'
+  local EPOCH="${1}"
+  # Highlight time within the day in ISO-8601 (2024-11-23T21:50:13-08:00)
+  # local NO_COLOR='\033[0m'
+  # local DGRAY="\033[1;30m"
+  # local LGRAY="\033[0;37m"
+  local TIME_STR=
+  TIME_STR=$(busybox date -d "@${EPOCH}" +"\033[1;30m%Y-%m-%dT\033[0;37m%H:%M:%S\033[1;30m%z")
+  # +0000 -> +00:00
+  echo "${TIME_STR:0:-2}:${TIME_STR:0-2}\033[0m"
 }
 
 _log_formatter() {
-  local LOG_LEVEL="${LOG_LEVEL}"
-  local LEVEL="${1}"; shift;
-  [ "$(_log_level "${LEVEL}")" -lt "$(_log_level "${LOG_LEVEL}")" ] && return 0;
-  LEVEL=$(echo "${LEVEL}" | tr '[:lower:]' '[:upper:]')
-  local TIME="${1}"; shift;
-  local LOCATION="${1}"; shift;
-  local SCOPE="${1}"; shift;
+  local TARGET_LEVEL="${LOG_LEVEL:-}";
+  local LEVEL="${1}";
+  local EPOCH="${2}";
+  local LOCATION="${3}";
+  local SCOPE="${4}";
+  TARGET_LEVEL=$(_log_level_to_upper "${TARGET_LEVEL}")
+  LEVEL=$(_log_level_to_upper "${LEVEL}")
+  _log_skip "${TARGET_LEVEL}" "${LEVEL}" && return 0;
+  shift 4;
   local NO_COLOR='\033[0m'
   local DGRAY='\033[1;30m'
-  local MSG=
-  MSG="${DGRAY}[$(_color_iso_time "${TIME}")${DGRAY}]${NO_COLOR}"
+  local TIME_STR LOC_STR LEVEL_STR SCOPE_STR
+  TIME_STR="${DGRAY}[$(_color_iso_time "${EPOCH}")${DGRAY}]${NO_COLOR}"
   if [ -n "${LOCATION}" ]; then
-    MSG="${MSG}${DGRAY}[${LOCATION}]${NO_COLOR}"
+    LOC_STR="${DGRAY}[${LOCATION}]${NO_COLOR}"
   fi
-  MSG="${MSG}$(_level_color "${LEVEL}")[${LEVEL}]${NO_COLOR} "
+  LEVEL_STR="$(_level_color "${LEVEL}")[${LEVEL}]${NO_COLOR} "
   if [ -n "${SCOPE}" ]; then
-    MSG="${MSG}${DGRAY}${SCOPE}:${NO_COLOR} "
+    SCOPE_STR="${DGRAY}${SCOPE}:${NO_COLOR} "
   fi
-  MSG="${MSG}$(echo "${*}" | tr '\n' ' ')"
-  echo -e "${MSG}" >&2
+  local MSG_STR=
+  MSG_STR=$(echo "${*}" | tr '\n' ' ')
+  echo -e "${TIME_STR}${LOC_STR}${LEVEL_STR}${SCOPE_STR}${MSG_STR}" >&2
 }
 
 # We want to print an empty line for log without an argument. Thus we do not run the following check.
 # [ -z "${1}" ] && return 0
 log() {
-  local NODE_NAME="${NODE_NAME}"
-  local LOG_SCOPE="${LOG_SCOPE}"
+  local LOCAL_NODE="${NODE_NAME:-}"
+  local LOCAL_SCOPE="${LOG_SCOPE:-}"
   local LEVEL="INFO";
-  if _log_level "${1}" >/dev/null; then
+  if _first_word_is_level "${1}"; then
     LEVEL="${1}";
     shift;
   fi
-  _log_formatter "${LEVEL}" "$(date -Iseconds)" "${NODE_NAME}" "${LOG_SCOPE}" "${@}";
-}
-
-_log_docker_time() {
-  # Convert timestamps from `docker service logs` to ISO-8601. The timestamps is in UTC.
-  # docker service logs --timestamps --no-task-ids <service>
-  # 2023-06-22T01:20:54.535860111Z <task>@<node>    | <msg>
-  local TIME_INPUT="${1}"
   local EPOCH=
-  if ! EPOCH="$(busybox date -d "${TIME_INPUT}" -D "%Y-%m-%dT%H:%M:%S" -u +%s 2>/dev/null)"; then
-    date -Iseconds
-    return 1
-  fi
-  busybox date -d "@${EPOCH}" -Iseconds 2>&1
+  EPOCH="$(date +%s)"
+  _log_formatter "${LEVEL}" "${EPOCH}" "${LOCAL_NODE}" "${LOCAL_SCOPE}" "${@}";
 }
 
-_log_docker_scope() {
-  local LOG_SCOPE="${LOG_SCOPE}"
-  local TASK_NODE="${1}"
-  local SCOPE=
-  SCOPE=$(echo "${TASK_NODE}" | sed -n "s/\(.*\)@.*/\1/p");
-  if [ -z "${SCOPE}" ]; then
-    echo "${LOG_SCOPE}"
+_log_docker_time_epoch() {
+  # Convert timestamps from `docker service logs` to EPOCH.
+  # The timestamps is in UTC.
+  # docker service logs --timestamps --no-task-ids <service>
+  # 2023-06-22T01:20:54.535860111Z <task>@<node>    | <msg with spaces>
+  local TIME_INPUT="${1}"
+  if ! busybox date -d "${TIME_INPUT}" -D "%Y-%m-%dT%H:%M:%S" -u +%s 2>/dev/null; then
+    date +%s
     return 1
   fi
-  echo "${SCOPE}"
-}
-
-_log_docker_node() {
-  local NODE_NAME="${NODE_NAME}"
-  local TASK_NODE="${1}"
-  local NODE=
-  NODE=$(echo "${TASK_NODE}" | sed -n "s/.*@\(.*\)/\1/p");
-  if [ -z "${NODE}" ]; then
-    echo "${NODE_NAME}"
-    return 1
-  fi
-  echo "${NODE}"
 }
 
 # Convert logs from `docker service logs` to `log` format.
 # docker service logs --timestamps --no-task-ids <service>
-# 2023-06-22T01:20:54.535860111Z <task>@<node>    | <msg>
+# 2023-06-22T01:20:54.535860111Z <task>@<node>    | <msg with spaces>
 _log_docker_line() {
+  local LOCAL_NODE="${NODE_NAME:-}"
+  local LOCAL_SCOPE="${LOG_SCOPE:-}"
   local LEVEL="INFO";
-  local TIME_DOCKER TIME TASK_NODE SCOPE NODE MESSAGE FIRST_WORD
-  TIME_DOCKER=$(extract_string "${*}" ' ' 1)
-  TIME=$(_log_docker_time "${TIME_DOCKER}")
-  TASK_NODE=$(extract_string "${*}" ' ' 2)
-  SCOPE=$(_log_docker_scope "${TASK_NODE}");
-  NODE=$(_log_docker_node "${TASK_NODE}");
-  MESSAGE=$(extract_string "${*}" '|' 2-);
-  # Remove a single leading space.
-  [ "${MESSAGE:0:1}" = " " ] && MESSAGE="${MESSAGE:1}"
-  FIRST_WORD=$(extract_string "${MESSAGE}" ' ' 1);
-  if _log_level "${FIRST_WORD}" >/dev/null; then
-    LEVEL=${FIRST_WORD};
-    MESSAGE=$(extract_string "${MESSAGE}" ' ' 2-);
+  local EPOCH NODE SCOPE MESSAGE
+  # Using the same regexp for all 4 parts:
+  local TIME_DOCKER TASK_DOCKER NODE_DOCKER
+  read -r TIME_DOCKER TASK_DOCKER NODE_DOCKER MESSAGE < <(echo "${*}" | sed -n -E "s/^(\S+) +(\S+)@(\S+) +\| ?/\1 \2 \3 /p");
+  EPOCH=$(_log_docker_time_epoch "${TIME_DOCKER}");
+  if [ -n "${TASK_DOCKER}" ] || [ -n "${NODE_DOCKER}" ] || [ -n "${MESSAGE}" ]; then
+    NODE="${NODE_DOCKER}"
+    SCOPE="${TASK_DOCKER}"
+    if _first_word_is_level "${MESSAGE}"; then
+      LEVEL=$(_get_first_word "${MESSAGE}");
+      MESSAGE=$(extract_string "${MESSAGE}" ' ' 2-);
+    fi
+  else
+    # All three are empty, sed failure indicates errors.
+    # format error, imply that we receive an error message from the "docker service logs" command.
+    LEVEL="ERROR"
+    NODE="${LOCAL_NODE}"
+    SCOPE="${LOCAL_SCOPE}"
+    MESSAGE="${*}"
   fi
-  _log_formatter "${LEVEL}" "${TIME}" "${NODE}" "${SCOPE}" "${MESSAGE}";
+  _log_formatter "${LEVEL}" "${EPOCH}" "${NODE}" "${SCOPE}" "${MESSAGE}";
 }
 
 _log_docker_multiple_lines() {
@@ -227,8 +286,7 @@ is_number() {
 
 is_true() {
   local CONFIG="${1}"
-  CONFIG=$(extract_string "${CONFIG}" ' ' 1)
-  echo "${CONFIG}" | grep_q_i "true"
+  echo "${CONFIG}" | grep_q_i "^true$"
 }
 
 first_minus_second() {
@@ -277,7 +335,7 @@ add_unique_to_list() {
   echo -e "${OLD_LIST}\n${NEW_ITEM}" | sort | uniq
 }
 
-# For a givne variable name <VAR>, try to read content of <VAR>_FILE if file exists.
+# For a given variable name <VAR>, try to read content of <VAR>_FILE if file exists.
 # otherwise echo the content of <VAR>.
 read_config() {
   local CONFIG_NAME="${1}"
@@ -338,7 +396,7 @@ eval_cmd() {
   local TAG="${1}"; shift;
   local CMD="${*}"
   [ -z "${CMD}" ] && return 0
-  local OLD_LOG_SCOPE="${LOG_SCOPE}"
+  local OLD_LOG_SCOPE="${LOG_SCOPE:-}"
   LOG_SCOPE=$(attach_tag_to_log_scope "${TAG}")
   export LOG_SCOPE
   log INFO "Run ${TAG} command: ${CMD}"
@@ -379,7 +437,7 @@ timezone_arguments() {
 
 _get_docker_command_name_arg() {
   # get <NAME> from "--name <NAME>" or "--name=<NAME>"
-  echo "${@}" | tr '\n' ' ' | sed -E 's/.*--name[ =]([^ ]*).*/\1/'
+  echo "${@}" | tr '\n' ' ' | sed -n -E 's/.*--name[ =](\S*).*/\1/p'
 }
 
 _get_docker_command_detach() {
@@ -426,7 +484,8 @@ _docker_service_logs_follow_and_stop() {
   docker service logs --timestamps --no-task-ids --follow "${SERVICE_NAME}" 2>&1 &
   PID="${!}"
   _docker_wait_until_service_removed "${SERVICE_NAME}"
-  kill "${PID}" 2>&1
+  # Use kill signal to avoid an additional "context canceled" message from the Term or Int signal.
+  kill -kill "${PID}" 2>&1
 }
 
 docker_service_logs_follow() {
@@ -489,10 +548,10 @@ _all_tasks_reach_state() {
   fi
   # Get return value of the task from the string "task: non-zero exit (1)".
   local TASK_RETURN_VALUE=
-  TASK_RETURN_VALUE=$(echo "${STATES}" | grep "Failed" | sed -n 's/.*task: non-zero exit (\([0-9]\+\)).*/\1/p')
+  TASK_RETURN_VALUE=$(echo "${STATES}" | grep "Failed" | sed -n -E 's/.*task: non-zero exit \(([0-9]+)\).*/\1/p')
   # Get the first error code.
   local RETURN_VALUE=
-  RETURN_VALUE=$(extract_string "${TASK_RETURN_VALUE:-1}" ' ' 1)
+  RETURN_VALUE=$(_get_first_word "${TASK_RETURN_VALUE:-1}")
   # break
   echo "${RETURN_VALUE}"
   return 0
@@ -561,7 +620,7 @@ docker_service_follow_logs_wait_complete() {
 # We do not expect failures when using docker_global_job.
 # Docker will try to restart the failed tasks.
 # We do not check the converge of the service, thus some jobs may failed on some nodes.
-# It is better to be used togther with wait_service_state.
+# It is better to be used together with wait_service_state.
 docker_global_job() {
   local SERVICE_NAME=
   SERVICE_NAME=$(_get_docker_command_name_arg "${@}")
@@ -612,7 +671,9 @@ docker_current_container_name() {
   ALL_NETWORKS=$(docker network ls --format '{{.ID}}') || return 1;
   [ -z "${ALL_NETWORKS}" ] && return 0;
   local IPS=;
-  IPS=$(ip route | grep src | sed -n "s/.* src \(\S*\).*$/\1/p");
+  # Get the string after "src":
+  # 172.17.0.0/16 dev docker0 proto kernel scope link src 172.17.0.1 linkdown
+  IPS=$(ip route | grep src | sed -n -E "s/.* src (\S+).*$/\1/p");
   [ -z "${IPS}" ] && return 0;
   local GWBRIDGE_NETWORK HOST_NETWORK;
   GWBRIDGE_NETWORK=$(docker network ls --format '{{.ID}}' --filter 'name=^docker_gwbridge$') || return 1;
