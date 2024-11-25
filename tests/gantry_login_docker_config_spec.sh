@@ -31,15 +31,18 @@
 # D=1 C=1 L=0 test_login_docker_config_no_label
 # D=1 C=1 L=1 test_login_docker_config_label_override SERVICE_NAME1
 
-Describe 'login_docker_config'
-  SUITE_NAME="login_docker_config"
+Describe 'login-docker-config'
+  SUITE_NAME="login-docker-config"
   BeforeAll "initialize_all_tests ${SUITE_NAME} ENFORCE_LOGIN"
   AfterAll "finish_all_tests ${SUITE_NAME} ENFORCE_LOGIN"
-  Describe "test_login_docker_config_no_label" "container_test:true" "coverage:true"
+  Describe "test_login_docker_config_no_label"
     TEST_NAME="test_login_docker_config_no_label"
     IMAGE_WITH_TAG=$(get_image_with_tag "${SUITE_NAME}")
     SERVICE_NAME=$(get_test_service_name "${TEST_NAME}")
-    CONFIG="C$(unique_id)"
+    # When running with an Gantry image, docker buildx writes files to this folder which are owned by root.
+    # Using a relative path, this the container will not write to the folder on the host.
+    # So do not use an absolute path, otherwise we cannot remove this folder on the host.
+    AUTH_CONFIG="C$(unique_id)"
     TEST_REGISTRY=$(load_test_registry "${SUITE_NAME}") || return 1
     test_login_docker_config_no_label() {
       local TEST_NAME="${1}"
@@ -52,7 +55,7 @@ Describe 'login_docker_config'
       local USER_FILE=; USER_FILE=$(mktemp); echo "${USERNAME}" > "${USER_FILE}";
       local PASS_FILE=; PASS_FILE=$(mktemp); echo "${PASSWORD}" > "${PASS_FILE}";
       reset_gantry_env "${SERVICE_NAME}"
-      export DOCKER_CONFIG="${CONFIG}"
+      export GANTRY_TEST_DOCKER_CONFIG="${CONFIG}"
       export GANTRY_REGISTRY_CONFIG="${CONFIG}"
       export GANTRY_REGISTRY_HOST="${REGISTRY}"
       export GANTRY_REGISTRY_PASSWORD_FILE="${PASS_FILE}"
@@ -68,14 +71,14 @@ Describe 'login_docker_config'
     BeforeEach "common_setup_new_image ${TEST_NAME} ${IMAGE_WITH_TAG} ${SERVICE_NAME}"
     AfterEach "common_cleanup ${TEST_NAME} ${IMAGE_WITH_TAG} ${SERVICE_NAME}"
     It 'run_test'
-      When run test_login_docker_config_no_label "${TEST_NAME}" "${SERVICE_NAME}" "${CONFIG}" "${TEST_REGISTRY}" "${TEST_USERNAME}" "${TEST_PASSWORD}"
+      When run test_login_docker_config_no_label "${TEST_NAME}" "${SERVICE_NAME}" "${AUTH_CONFIG}" "${TEST_REGISTRY}" "${TEST_USERNAME}" "${TEST_PASSWORD}"
       The status should be success
       The stdout should satisfy display_output
       The stdout should satisfy spec_expect_no_message ".+"
       The stderr should satisfy display_output
       The stderr should satisfy spec_expect_no_message "${START_WITHOUT_A_SQUARE_BRACKET}"
       The stderr should satisfy spec_expect_no_message "${LOGGED_INTO_REGISTRY}.*${DEFAULT_CONFIGURATION}"
-      The stderr should satisfy spec_expect_message    "${LOGGED_INTO_REGISTRY}.*${TEST_REGISTRY}.*${CONFIG}"
+      The stderr should satisfy spec_expect_message    "${LOGGED_INTO_REGISTRY}.*${TEST_REGISTRY}.*${AUTH_CONFIG}"
       The stderr should satisfy spec_expect_no_message "${FAILED_TO_LOGIN_TO_REGISTRY}"
       The stderr should satisfy spec_expect_no_message "${CONFIG_IS_NOT_A_DIRECTORY}"
       The stderr should satisfy spec_expect_no_message "${SKIP_UPDATING}.*${SERVICE_NAME}"
@@ -106,11 +109,14 @@ Describe 'login_docker_config'
       The stderr should satisfy spec_expect_message    "${DONE_REMOVING_IMAGES}"
     End
   End
-  Describe "test_login_docker_config_default_config" "container_test:true" "coverage:true"
+  Describe "test_login_docker_config_default_config"
     TEST_NAME="test_login_docker_config_default_config"
     IMAGE_WITH_TAG=$(get_image_with_tag "${SUITE_NAME}")
     SERVICE_NAME=$(get_test_service_name "${TEST_NAME}")
-    CONFIG="C$(unique_id)"
+    # When running with an Gantry image, docker buildx writes files to this folder which are owned by root.
+    # Using a relative path, this the container will not write to the folder on the host.
+    # So do not use an absolute path, otherwise we cannot remove this folder on the host.
+    AUTH_CONFIG="C$(unique_id)"
     TEST_REGISTRY=$(load_test_registry "${SUITE_NAME}") || return 1
     test_login_docker_config_default_config() {
       local TEST_NAME="${1}"
@@ -124,7 +130,7 @@ Describe 'login_docker_config'
       local PASS_FILE=; PASS_FILE=$(mktemp); echo "${PASSWORD}" > "${PASS_FILE}";
       # Do not set GANTRY_AUTH_CONFIG_LABEL on the service.
       reset_gantry_env "${SERVICE_NAME}"
-      export DOCKER_CONFIG="${CONFIG}"
+      export GANTRY_TEST_DOCKER_CONFIG="${CONFIG}"
       # Do not set GANTRY_REGISTRY_CONFIG to login to the default configuration.
       export GANTRY_REGISTRY_HOST="${REGISTRY}"
       export GANTRY_REGISTRY_PASSWORD_FILE="${PASS_FILE}"
@@ -141,7 +147,7 @@ Describe 'login_docker_config'
     BeforeEach "common_setup_new_image ${TEST_NAME} ${IMAGE_WITH_TAG} ${SERVICE_NAME}"
     AfterEach "common_cleanup ${TEST_NAME} ${IMAGE_WITH_TAG} ${SERVICE_NAME}"
     It 'run_test'
-      When run test_login_docker_config_default_config "${TEST_NAME}" "${SERVICE_NAME}" "${CONFIG}" "${TEST_REGISTRY}" "${TEST_USERNAME}" "${TEST_PASSWORD}"
+      When run test_login_docker_config_default_config "${TEST_NAME}" "${SERVICE_NAME}" "${AUTH_CONFIG}" "${TEST_REGISTRY}" "${TEST_USERNAME}" "${TEST_PASSWORD}"
       The status should be success
       The stdout should satisfy display_output
       The stdout should satisfy spec_expect_no_message ".+"
@@ -177,14 +183,17 @@ Describe 'login_docker_config'
       The stderr should satisfy spec_expect_message    "${DONE_REMOVING_IMAGES}"
     End
   End
-  Describe "test_login_docker_config_label_override" "container_test:false" "coverage:true"
+  Describe "test_login_docker_config_label_override"
     TEST_NAME="test_login_docker_config_label_override"
     IMAGE_WITH_TAG=$(get_image_with_tag "${SUITE_NAME}")
     SERVICE_NAME=$(get_test_service_name "${TEST_NAME}")
     SERVICE_NAME0="${SERVICE_NAME}-0"
     SERVICE_NAME1="${SERVICE_NAME}-1"
     SERVICE_NAME2="${SERVICE_NAME}-2"
-    CONFIG="C$(unique_id)"
+    # When running with an Gantry image, docker buildx writes files to this folder which are owned by root.
+    # Using a relative path, this the container will not write to the folder on the host.
+    # So do not use an absolute path, otherwise we cannot remove this folder on the host.
+    AUTH_CONFIG="C$(unique_id)"
     TEST_REGISTRY=$(load_test_registry "${SUITE_NAME}") || return 1
     test_start() {
       local TEST_NAME="${1}"
@@ -218,7 +227,7 @@ Describe 'login_docker_config'
       docker_service_update --label-add "${GANTRY_AUTH_CONFIG_LABEL}=${CONFIG}" "${SERVICE_NAME1}"
       reset_gantry_env "${SERVICE_NAME}"
       # Inspection and updating should use DOCKER_CONFIG or the label.
-      export DOCKER_CONFIG="${CONFIG}"
+      export GANTRY_TEST_DOCKER_CONFIG="${CONFIG}"
       export GANTRY_REGISTRY_CONFIGS_FILE="${CONFIGS_FILE}"
       # Set GANTRY_CLEANUP_IMAGES="false" to speedup the test. We are not testing removing image here.
       export GANTRY_CLEANUP_IMAGES="false"
@@ -241,21 +250,21 @@ Describe 'login_docker_config'
     BeforeEach "test_start ${TEST_NAME} ${IMAGE_WITH_TAG} ${SERVICE_NAME}"
     AfterEach "test_end ${TEST_NAME} ${IMAGE_WITH_TAG} ${SERVICE_NAME}"
     It 'run_test'
-      When run test_login_docker_config_label_override "${TEST_NAME}" "${SERVICE_NAME}" "${CONFIG}" "${TEST_REGISTRY}" "${TEST_USERNAME}" "${TEST_PASSWORD}"
+      When run test_login_docker_config_label_override "${TEST_NAME}" "${SERVICE_NAME}" "${AUTH_CONFIG}" "${TEST_REGISTRY}" "${TEST_USERNAME}" "${TEST_PASSWORD}"
       The status should be failure
       The stdout should satisfy display_output
       The stdout should satisfy spec_expect_no_message ".+"
       The stderr should satisfy display_output
       The stderr should satisfy spec_expect_no_message "${START_WITHOUT_A_SQUARE_BRACKET}"
-      The stderr should satisfy spec_expect_message    "${LOGGED_INTO_REGISTRY}.*${TEST_REGISTRY}.*${CONFIG}"
+      The stderr should satisfy spec_expect_message    "${LOGGED_INTO_REGISTRY}.*${TEST_REGISTRY}.*${AUTH_CONFIG}"
       The stderr should satisfy spec_expect_no_message "${FAILED_TO_LOGIN_TO_REGISTRY}"
-      The stderr should satisfy spec_expect_message    "incorrect-${CONFIG}.*${CONFIG_IS_NOT_A_DIRECTORY}"
+      The stderr should satisfy spec_expect_message    "incorrect-${AUTH_CONFIG}.*${CONFIG_IS_NOT_A_DIRECTORY}"
       # Check warnings
       The stderr should satisfy spec_expect_message    "${THERE_ARE_NUM_CONFIGURATIONS}.*"
       The stderr should satisfy spec_expect_message    "${USER_LOGGED_INTO_DEFAULT}.*"
-      The stderr should satisfy spec_expect_message    "${ADDING_OPTIONS}.*--config incorrect-${CONFIG}.*${SERVICE_NAME0}"
-      The stderr should satisfy spec_expect_message    "${ADDING_OPTIONS}.*--config ${CONFIG}.*${SERVICE_NAME1}"
-      The stderr should satisfy spec_expect_no_message "${ADDING_OPTIONS}.*--config ${CONFIG}.*${SERVICE_NAME2}"
+      The stderr should satisfy spec_expect_message    "${ADDING_OPTIONS}.*--config incorrect-${AUTH_CONFIG}.*${SERVICE_NAME0}"
+      The stderr should satisfy spec_expect_message    "${ADDING_OPTIONS}.*--config ${AUTH_CONFIG}.*${SERVICE_NAME1}"
+      The stderr should satisfy spec_expect_no_message "${ADDING_OPTIONS}.*--config ${AUTH_CONFIG}.*${SERVICE_NAME2}"
       The stderr should satisfy spec_expect_no_message "${PERFORM_UPDATING}.*${SERVICE_NAME0}.*"
       The stderr should satisfy spec_expect_message    "${SKIP_UPDATING}.*${SERVICE_NAME0}.*${SKIP_REASON_MANIFEST_FAILURE}"
       The stderr should satisfy spec_expect_message    "${PERFORM_UPDATING}.*${SERVICE_NAME1}.*${PERFORM_REASON_HAS_NEWER_IMAGE}"
@@ -296,4 +305,4 @@ Describe 'login_docker_config'
       The stderr should satisfy spec_expect_no_message "${DONE_REMOVING_IMAGES}"
     End
   End
-End # Describe 'login_docker_config'
+End # Describe 'login-docker-config'

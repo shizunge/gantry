@@ -79,7 +79,7 @@ docker_hub_rate() {
     return 1
   fi
   local TOKEN=
-  TOKEN=$(echo "${RESPONSE}" | sed 's/.*"token":"\([^"]*\).*/\1/')
+  TOKEN=$(echo "${RESPONSE}" | sed -E 's/.*"token":"([^"]*).*/\1/')
   if [ -z "${TOKEN}" ]; then
     _docker_hub_echo_error "PARSE TOKEN ERROR" "${RESPONSE}"
     return 1
@@ -94,7 +94,7 @@ docker_hub_rate() {
     return 1
   fi
   local RATE=
-  RATE=$(echo "${RESPONSE}" | sed -n 's/.*ratelimit-remaining: \([-]\?[0-9]\+\);.*/\1/p' )
+  RATE=$(echo "${RESPONSE}" | sed -n -E 's/.*ratelimit-remaining: (-?[0-9]+);.*/\1/p' )
   if [ -z "${RATE}" ]; then
     _docker_hub_echo_error "PARSE RATE ERROR" "${RESPONSE}"
     return 1

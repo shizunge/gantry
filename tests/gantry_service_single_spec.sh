@@ -19,7 +19,7 @@ Describe 'service-single-service'
   SUITE_NAME="service-single-service"
   BeforeAll "initialize_all_tests ${SUITE_NAME}"
   AfterAll "finish_all_tests ${SUITE_NAME}"
-  Describe "test_new_image_no" "container_test:true" "coverage:true"
+  Describe "test_new_image_no"
     TEST_NAME="test_new_image_no"
     IMAGE_WITH_TAG=$(get_image_with_tag "${SUITE_NAME}")
     SERVICE_NAME=$(get_test_service_name "${TEST_NAME}")
@@ -40,12 +40,13 @@ Describe 'service-single-service'
       The stderr should satisfy spec_expect_no_message "${START_WITHOUT_A_SQUARE_BRACKET}"
       The stderr should satisfy spec_expect_message    "${SKIP_UPDATING}.*${SERVICE_NAME}.*${SKIP_REASON_CURRENT_IS_LATEST}"
       The stderr should satisfy spec_expect_no_message "${PERFORM_UPDATING}.*${SERVICE_NAME}"
-      The stderr should satisfy spec_expect_no_message "${SET_TIMEOUT_TO}"
       The stderr should satisfy spec_expect_no_message "${NUM_SERVICES_SKIP_JOBS}"
       The stderr should satisfy spec_expect_no_message "${NUM_SERVICES_INSPECT_FAILURE}"
       The stderr should satisfy spec_expect_message    "${NUM_SERVICES_NO_NEW_IMAGES}"
       The stderr should satisfy spec_expect_no_message "${NUM_SERVICES_UPDATING}"
       The stderr should satisfy spec_expect_no_message "${ADDING_OPTIONS}"
+      The stderr should satisfy spec_expect_no_message "${SET_TIMEOUT_TO}"
+      The stderr should satisfy spec_expect_no_message "${RETURN_VALUE_INDICATES_TIMEOUT}"
       The stderr should satisfy spec_expect_no_message "${THERE_ARE_ADDITIONAL_MESSAGES}.*${SERVICE_NAME}.*"
       The stderr should satisfy spec_expect_no_message "${UPDATED}.*${SERVICE_NAME}"
       The stderr should satisfy spec_expect_no_message "${NO_UPDATES}.*${SERVICE_NAME}"
@@ -65,7 +66,7 @@ Describe 'service-single-service'
       The stderr should satisfy spec_expect_no_message "${SCHEDULE_NEXT_UPDATE_AT}"
     End
   End
-  Describe "test_new_image_yes" "container_test:true" "coverage:true"
+  Describe "test_new_image_yes"
     TEST_NAME="test_new_image_yes"
     IMAGE_WITH_TAG=$(get_image_with_tag "${SUITE_NAME}")
     SERVICE_NAME=$(get_test_service_name "${TEST_NAME}")
@@ -86,12 +87,13 @@ Describe 'service-single-service'
       The stderr should satisfy spec_expect_no_message "${START_WITHOUT_A_SQUARE_BRACKET}"
       The stderr should satisfy spec_expect_no_message "${SKIP_UPDATING}.*${SERVICE_NAME}"
       The stderr should satisfy spec_expect_message    "${PERFORM_UPDATING}.*${SERVICE_NAME}.*${PERFORM_REASON_HAS_NEWER_IMAGE}"
-      The stderr should satisfy spec_expect_no_message "${SET_TIMEOUT_TO}"
       The stderr should satisfy spec_expect_no_message "${NUM_SERVICES_SKIP_JOBS}"
       The stderr should satisfy spec_expect_no_message "${NUM_SERVICES_INSPECT_FAILURE}"
       The stderr should satisfy spec_expect_no_message "${NUM_SERVICES_NO_NEW_IMAGES}"
       The stderr should satisfy spec_expect_message    "${NUM_SERVICES_UPDATING}"
       The stderr should satisfy spec_expect_no_message "${ADDING_OPTIONS}"
+      The stderr should satisfy spec_expect_no_message "${SET_TIMEOUT_TO}"
+      The stderr should satisfy spec_expect_no_message "${RETURN_VALUE_INDICATES_TIMEOUT}"
       The stderr should satisfy spec_expect_no_message "${THERE_ARE_ADDITIONAL_MESSAGES}.*${SERVICE_NAME}.*"
       The stderr should satisfy spec_expect_message    "${UPDATED}.*${SERVICE_NAME}"
       The stderr should satisfy spec_expect_no_message "${NO_UPDATES}.*${SERVICE_NAME}"
@@ -111,7 +113,7 @@ Describe 'service-single-service'
       The stderr should satisfy spec_expect_no_message "${SCHEDULE_NEXT_UPDATE_AT}"
     End
   End
-  Describe "test_new_image_no_digest" "container_test:true" "coverage:true"
+  Describe "test_new_image_no_digest"
     TEST_NAME="test_new_image_no_digest"
     IMAGE_WITH_TAG=$(get_image_with_tag "${SUITE_NAME}")
     SERVICE_NAME=$(get_test_service_name "${TEST_NAME}")
@@ -142,12 +144,13 @@ Describe 'service-single-service'
       The stderr should satisfy spec_expect_no_message "${START_WITHOUT_A_SQUARE_BRACKET}"
       The stderr should satisfy spec_expect_no_message "${SKIP_UPDATING}.*${SERVICE_NAME}"
       The stderr should satisfy spec_expect_message    "${PERFORM_UPDATING}.*${SERVICE_NAME}.*${PERFORM_REASON_DIGEST_IS_EMPTY}"
-      The stderr should satisfy spec_expect_no_message "${SET_TIMEOUT_TO}"
       The stderr should satisfy spec_expect_no_message "${NUM_SERVICES_SKIP_JOBS}"
       The stderr should satisfy spec_expect_no_message "${NUM_SERVICES_INSPECT_FAILURE}"
       The stderr should satisfy spec_expect_no_message "${NUM_SERVICES_NO_NEW_IMAGES}"
       The stderr should satisfy spec_expect_message    "${NUM_SERVICES_UPDATING}"
       The stderr should satisfy spec_expect_no_message "${ADDING_OPTIONS}"
+      The stderr should satisfy spec_expect_no_message "${SET_TIMEOUT_TO}"
+      The stderr should satisfy spec_expect_no_message "${RETURN_VALUE_INDICATES_TIMEOUT}"
       The stderr should satisfy spec_expect_no_message "${THERE_ARE_ADDITIONAL_MESSAGES}.*${SERVICE_NAME}.*"
       The stderr should satisfy spec_expect_message    "${UPDATED}.*${SERVICE_NAME}"
       The stderr should satisfy spec_expect_no_message "${NO_UPDATES}.*${SERVICE_NAME}"
@@ -168,7 +171,7 @@ Describe 'service-single-service'
       The stderr should satisfy spec_expect_no_message "${SCHEDULE_NEXT_UPDATE_AT}"
     End
   End
-  Describe "test_new_image_SERVICES_SELF" "container_test:true" "coverage:true"
+  Describe "test_new_image_SERVICES_SELF"
     TEST_NAME="test_new_image_SERVICES_SELF"
     IMAGE_WITH_TAG=$(get_image_with_tag "${SUITE_NAME}")
     SERVICE_NAME=$(get_test_service_name "${TEST_NAME}")
@@ -191,7 +194,6 @@ Describe 'service-single-service'
       The stderr should satisfy spec_expect_no_message "${START_WITHOUT_A_SQUARE_BRACKET}"
       The stderr should satisfy spec_expect_no_message "${SKIP_UPDATING}.*${SERVICE_NAME}"
       The stderr should satisfy spec_expect_message    "${PERFORM_UPDATING}.*${SERVICE_NAME}.*${PERFORM_REASON_HAS_NEWER_IMAGE}"
-      The stderr should satisfy spec_expect_no_message "${SET_TIMEOUT_TO}"
       The stderr should satisfy spec_expect_no_message "${NUM_SERVICES_SKIP_JOBS}"
       The stderr should satisfy spec_expect_no_message "${NUM_SERVICES_INSPECT_FAILURE}"
       The stderr should satisfy spec_expect_no_message "${NUM_SERVICES_NO_NEW_IMAGES}"
@@ -199,6 +201,8 @@ Describe 'service-single-service'
       # We won't see the NUM_SERVICES_UPDATING message because GANTRY_SERVICES_SELF is not added to the list.
       The stderr should satisfy spec_expect_no_message "${NUM_SERVICES_UPDATING}"
       The stderr should satisfy spec_expect_no_message "${ADDING_OPTIONS}"
+      The stderr should satisfy spec_expect_no_message "${SET_TIMEOUT_TO}"
+      The stderr should satisfy spec_expect_no_message "${RETURN_VALUE_INDICATES_TIMEOUT}"
       The stderr should satisfy spec_expect_no_message "${THERE_ARE_ADDITIONAL_MESSAGES}.*${SERVICE_NAME}.*"
       The stderr should satisfy spec_expect_message    "${UPDATED}.*${SERVICE_NAME}"
       The stderr should satisfy spec_expect_no_message "${NO_UPDATES}.*${SERVICE_NAME}"

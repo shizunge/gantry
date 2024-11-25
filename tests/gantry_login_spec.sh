@@ -22,11 +22,14 @@ Describe 'login'
   SUITE_NAME="login"
   BeforeAll "initialize_all_tests ${SUITE_NAME} ENFORCE_LOGIN"
   AfterAll "finish_all_tests ${SUITE_NAME} ENFORCE_LOGIN"
-  Describe "test_login_config" "container_test:true" "coverage:true"
+  Describe "test_login_config"
     TEST_NAME="test_login_config"
     IMAGE_WITH_TAG=$(get_image_with_tag "${SUITE_NAME}")
     SERVICE_NAME=$(get_test_service_name "${TEST_NAME}")
-    CONFIG="C$(unique_id)"
+    # When running with an Gantry image, docker buildx writes files to this folder which are owned by root.
+    # Using a relative path, this the container will not write to the folder on the host.
+    # So do not use an absolute path, otherwise we cannot remove this folder on the host.
+    AUTH_CONFIG="C$(unique_id)"
     TEST_REGISTRY=$(load_test_registry "${SUITE_NAME}") || return 1
     test_login_config() {
       local TEST_NAME="${1}"
@@ -58,14 +61,14 @@ Describe 'login'
     BeforeEach "common_setup_new_image ${TEST_NAME} ${IMAGE_WITH_TAG} ${SERVICE_NAME}"
     AfterEach "common_cleanup ${TEST_NAME} ${IMAGE_WITH_TAG} ${SERVICE_NAME}"
     It 'run_test'
-      When run test_login_config "${TEST_NAME}" "${SERVICE_NAME}" "${CONFIG}" "${TEST_REGISTRY}" "${TEST_USERNAME}" "${TEST_PASSWORD}"
+      When run test_login_config "${TEST_NAME}" "${SERVICE_NAME}" "${AUTH_CONFIG}" "${TEST_REGISTRY}" "${TEST_USERNAME}" "${TEST_PASSWORD}"
       The status should be success
       The stdout should satisfy display_output
       The stdout should satisfy spec_expect_no_message ".+"
       The stderr should satisfy display_output
       The stderr should satisfy spec_expect_no_message "${START_WITHOUT_A_SQUARE_BRACKET}"
       The stderr should satisfy spec_expect_no_message "${LOGGED_INTO_REGISTRY}.*${DEFAULT_CONFIGURATION}"
-      The stderr should satisfy spec_expect_message    "${LOGGED_INTO_REGISTRY}.*${TEST_REGISTRY}.*${CONFIG}"
+      The stderr should satisfy spec_expect_message    "${LOGGED_INTO_REGISTRY}.*${TEST_REGISTRY}.*${AUTH_CONFIG}"
       The stderr should satisfy spec_expect_no_message "${FAILED_TO_LOGIN_TO_REGISTRY}"
       The stderr should satisfy spec_expect_no_message "${CONFIG_IS_NOT_A_DIRECTORY}"
       The stderr should satisfy spec_expect_no_message "${SKIP_UPDATING}.*${SERVICE_NAME}"
@@ -74,7 +77,7 @@ Describe 'login'
       The stderr should satisfy spec_expect_no_message "${NUM_SERVICES_INSPECT_FAILURE}"
       The stderr should satisfy spec_expect_no_message "${NUM_SERVICES_NO_NEW_IMAGES}"
       The stderr should satisfy spec_expect_message    "${NUM_SERVICES_UPDATING}"
-      The stderr should satisfy spec_expect_message    "${ADDING_OPTIONS}.*--config ${CONFIG}.*${SERVICE_NAME}"
+      The stderr should satisfy spec_expect_message    "${ADDING_OPTIONS}.*--config ${AUTH_CONFIG}.*${SERVICE_NAME}"
       # 2 "--with-registry-auth" for SERVICE_NAME. One is automatically added. The other is from user.
       The stderr should satisfy spec_expect_message    "${ADDING_OPTIONS_WITH_REGISTRY_AUTH}.*automatically.*${SERVICE_NAME}"
       The stderr should satisfy spec_expect_message    "${ADDING_OPTIONS_WITH_REGISTRY_AUTH}.*specified by user.*${SERVICE_NAME}"
@@ -96,11 +99,11 @@ Describe 'login'
       The stderr should satisfy spec_expect_message    "${DONE_REMOVING_IMAGES}"
     End
   End
-  Describe "test_login_default_config" "container_test:true" "coverage:true"
+  Describe "test_login_default_config"
     TEST_NAME="test_login_default_config"
     IMAGE_WITH_TAG=$(get_image_with_tag "${SUITE_NAME}")
     SERVICE_NAME=$(get_test_service_name "${TEST_NAME}")
-    CONFIG="NotUsed"
+    AUTH_CONFIG="NotUsed"
     TEST_REGISTRY=$(load_test_registry "${SUITE_NAME}") || return 1
     test_login_default_config() {
       local TEST_NAME="${1}"
@@ -130,7 +133,7 @@ Describe 'login'
     BeforeEach "common_setup_new_image ${TEST_NAME} ${IMAGE_WITH_TAG} ${SERVICE_NAME}"
     AfterEach "common_cleanup ${TEST_NAME} ${IMAGE_WITH_TAG} ${SERVICE_NAME}"
     It 'run_test'
-      When run test_login_default_config "${TEST_NAME}" "${SERVICE_NAME}" "${CONFIG}" "${TEST_REGISTRY}" "${TEST_USERNAME}" "${TEST_PASSWORD}"
+      When run test_login_default_config "${TEST_NAME}" "${SERVICE_NAME}" "${AUTH_CONFIG}" "${TEST_REGISTRY}" "${TEST_USERNAME}" "${TEST_PASSWORD}"
       The status should be success
       The stdout should satisfy display_output
       The stdout should satisfy spec_expect_no_message ".+"
@@ -166,11 +169,14 @@ Describe 'login'
       The stderr should satisfy spec_expect_message    "${DONE_REMOVING_IMAGES}"
     End
   End
-  Describe "test_login_REGISTRY_CONFIGS_FILE" "container_test:true" "coverage:true"
+  Describe "test_login_REGISTRY_CONFIGS_FILE"
     TEST_NAME="test_login_REGISTRY_CONFIGS_FILE"
     IMAGE_WITH_TAG=$(get_image_with_tag "${SUITE_NAME}")
     SERVICE_NAME=$(get_test_service_name "${TEST_NAME}")
-    CONFIG="C$(unique_id)"
+    # When running with an Gantry image, docker buildx writes files to this folder which are owned by root.
+    # Using a relative path, this the container will not write to the folder on the host.
+    # So do not use an absolute path, otherwise we cannot remove this folder on the host.
+    AUTH_CONFIG="C$(unique_id)"
     TEST_REGISTRY=$(load_test_registry "${SUITE_NAME}") || return 1
     test_login_REGISTRY_CONFIGS_FILE() {
       local TEST_NAME="${1}"
@@ -204,14 +210,14 @@ Describe 'login'
     BeforeEach "common_setup_new_image ${TEST_NAME} ${IMAGE_WITH_TAG} ${SERVICE_NAME}"
     AfterEach "common_cleanup ${TEST_NAME} ${IMAGE_WITH_TAG} ${SERVICE_NAME}"
     It 'run_test'
-      When run test_login_REGISTRY_CONFIGS_FILE "${TEST_NAME}" "${SERVICE_NAME}" "${CONFIG}" "${TEST_REGISTRY}" "${TEST_USERNAME}" "${TEST_PASSWORD}"
+      When run test_login_REGISTRY_CONFIGS_FILE "${TEST_NAME}" "${SERVICE_NAME}" "${AUTH_CONFIG}" "${TEST_REGISTRY}" "${TEST_USERNAME}" "${TEST_PASSWORD}"
       The status should be success
       The stdout should satisfy display_output
       The stdout should satisfy spec_expect_no_message ".+"
       The stderr should satisfy display_output
       The stderr should satisfy spec_expect_no_message "${START_WITHOUT_A_SQUARE_BRACKET}"
       The stderr should satisfy spec_expect_no_message "${LOGGED_INTO_REGISTRY}.*${DEFAULT_CONFIGURATION}"
-      The stderr should satisfy spec_expect_message    "${LOGGED_INTO_REGISTRY}.*${TEST_REGISTRY}.*${CONFIG}"
+      The stderr should satisfy spec_expect_message    "${LOGGED_INTO_REGISTRY}.*${TEST_REGISTRY}.*${AUTH_CONFIG}"
       The stderr should satisfy spec_expect_no_message "${FAILED_TO_LOGIN_TO_REGISTRY}"
       The stderr should satisfy spec_expect_no_message "${CONFIG_IS_NOT_A_DIRECTORY}"
       The stderr should satisfy spec_expect_no_message "${SKIP_UPDATING}.*${SERVICE_NAME}"
@@ -220,7 +226,7 @@ Describe 'login'
       The stderr should satisfy spec_expect_no_message "${NUM_SERVICES_INSPECT_FAILURE}"
       The stderr should satisfy spec_expect_no_message "${NUM_SERVICES_NO_NEW_IMAGES}"
       The stderr should satisfy spec_expect_message    "${NUM_SERVICES_UPDATING}"
-      The stderr should satisfy spec_expect_message    "${ADDING_OPTIONS}.*--config ${CONFIG}.*${SERVICE_NAME}"
+      The stderr should satisfy spec_expect_message    "${ADDING_OPTIONS}.*--config ${AUTH_CONFIG}.*${SERVICE_NAME}"
       # Gantry adds --with-registry-auth for finding GANTRY_AUTH_CONFIG_LABEL on the service.
       The stderr should satisfy spec_expect_message    "${ADDING_OPTIONS_WITH_REGISTRY_AUTH}.*${SERVICE_NAME}"
       The stderr should satisfy spec_expect_no_message "${THERE_ARE_ADDITIONAL_MESSAGES}.*${SERVICE_NAME}.*"
@@ -241,11 +247,11 @@ Describe 'login'
       The stderr should satisfy spec_expect_message    "${DONE_REMOVING_IMAGES}"
     End
   End
-  Describe "test_login_external_config" "container_test:true" "coverage:true"
+  Describe "test_login_external_config"
     TEST_NAME="test_login_external_config"
     IMAGE_WITH_TAG=$(get_image_with_tag "${SUITE_NAME}")
     SERVICE_NAME=$(get_test_service_name "${TEST_NAME}")
-    CONFIG="$(mktemp -d)"
+    AUTH_CONFIG="$(mktemp -d)"
     TEST_REGISTRY=$(load_test_registry "${SUITE_NAME}") || return 1
     test_login_external_config() {
       local TEST_NAME="${1}"
@@ -260,7 +266,7 @@ Describe 'login'
       chmod 555 "${CONFIG}"
       # Do not set GANTRY_AUTH_CONFIG_LABEL on service.
       reset_gantry_env "${SERVICE_NAME}"
-      export DOCKER_CONFIG="${CONFIG}"
+      export GANTRY_TEST_DOCKER_CONFIG="${CONFIG}"
       # Use manifest to avoid write to DOCKER_CONFIG.
       # When running container test, Gantry runs as root.
       # We cannot remove DOCKER_CONFIG when it containes data from root.
@@ -276,7 +282,7 @@ Describe 'login'
     BeforeEach "common_setup_new_image ${TEST_NAME} ${IMAGE_WITH_TAG} ${SERVICE_NAME}"
     AfterEach "common_cleanup ${TEST_NAME} ${IMAGE_WITH_TAG} ${SERVICE_NAME}"
     It 'run_test'
-      When run test_login_external_config "${TEST_NAME}" "${SERVICE_NAME}" "${CONFIG}" "${TEST_REGISTRY}" "${TEST_USERNAME}" "${TEST_PASSWORD}"
+      When run test_login_external_config "${TEST_NAME}" "${SERVICE_NAME}" "${AUTH_CONFIG}" "${TEST_REGISTRY}" "${TEST_USERNAME}" "${TEST_PASSWORD}"
       The status should be success
       The stdout should satisfy display_output
       The stdout should satisfy spec_expect_no_message ".+"

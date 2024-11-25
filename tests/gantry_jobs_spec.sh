@@ -15,11 +15,11 @@
 # along with this program.  If not, see <https://www.gnu.org/licenses/>.
 #
 
-Describe 'update-jobs'
-  SUITE_NAME="update-jobs"
+Describe 'jobs'
+  SUITE_NAME="jobs"
   BeforeAll "initialize_all_tests ${SUITE_NAME}"
   AfterAll "finish_all_tests ${SUITE_NAME}"
-  Describe "test_jobs_skipping" "container_test:true" "coverage:true"
+  Describe "test_jobs_skipping"
     # For `docker service ls --filter`, the name filter matches on all or the prefix of a service's name
     # See https://docs.docker.com/engine/reference/commandline/service_ls/#name
     # It does not do the exact match of the name. See https://github.com/moby/moby/issues/32985
@@ -64,11 +64,11 @@ Describe 'update-jobs'
       The stderr should satisfy spec_expect_no_message "${PERFORM_UPDATING}.*${SERVICE_NAME_SUFFIX}"
       The stderr should satisfy spec_expect_message    "${SKIP_UPDATING}.*${SERVICE_NAME}.*${SKIP_REASON_CURRENT_IS_LATEST}"
       The stderr should satisfy spec_expect_no_message "${PERFORM_UPDATING}.*${SERVICE_NAME}"
-      The stderr should satisfy spec_expect_no_message "${SET_TIMEOUT_TO}"
       The stderr should satisfy spec_expect_message    "${NUM_SERVICES_SKIP_JOBS}"
       The stderr should satisfy spec_expect_no_message "${NUM_SERVICES_INSPECT_FAILURE}"
       The stderr should satisfy spec_expect_message    "${NUM_SERVICES_NO_NEW_IMAGES}"
       The stderr should satisfy spec_expect_no_message "${NUM_SERVICES_UPDATING}"
+      The stderr should satisfy spec_expect_no_message "${SET_TIMEOUT_TO}"
       The stderr should satisfy spec_expect_no_message "${UPDATED}.*${SERVICE_NAME}"
       The stderr should satisfy spec_expect_no_message "${NO_UPDATES}.*${SERVICE_NAME}"
       The stderr should satisfy spec_expect_no_message "${ROLLING_BACK}.*${SERVICE_NAME}"
@@ -86,7 +86,7 @@ Describe 'update-jobs'
       The stderr should satisfy spec_expect_no_message "${DONE_REMOVING_IMAGES}"
     End
   End
-  Describe "test_jobs_UPDATE_JOBS_true" "container_test:true" "coverage:true"
+  Describe "test_jobs_UPDATE_JOBS_true"
     TEST_NAME="test_jobs_UPDATE_JOBS_true"
     IMAGE_WITH_TAG=$(get_image_with_tag "${SUITE_NAME}")
     SERVICE_NAME=$(get_test_service_name "${TEST_NAME}")
@@ -113,12 +113,12 @@ Describe 'update-jobs'
       The stderr should satisfy spec_expect_no_message "${START_WITHOUT_A_SQUARE_BRACKET}"
       The stderr should satisfy spec_expect_no_message "${SKIP_UPDATING}.*${SERVICE_NAME}"
       The stderr should satisfy spec_expect_message    "${PERFORM_UPDATING}.*${SERVICE_NAME}.*${PERFORM_REASON_HAS_NEWER_IMAGE}"
-      The stderr should satisfy spec_expect_no_message "${SET_TIMEOUT_TO}"
       The stderr should satisfy spec_expect_no_message "${NUM_SERVICES_SKIP_JOBS}"
       The stderr should satisfy spec_expect_no_message "${NUM_SERVICES_INSPECT_FAILURE}"
       The stderr should satisfy spec_expect_no_message "${NUM_SERVICES_NO_NEW_IMAGES}"
       The stderr should satisfy spec_expect_message    "${NUM_SERVICES_UPDATING}"
       The stderr should satisfy spec_expect_message    "${ADDING_OPTIONS}.*--detach=true.*${SERVICE_NAME}"
+      The stderr should satisfy spec_expect_no_message "${SET_TIMEOUT_TO}"
       The stderr should satisfy spec_expect_message    "${UPDATED}.*${SERVICE_NAME}"
       The stderr should satisfy spec_expect_no_message "${NO_UPDATES}.*${SERVICE_NAME}"
       The stderr should satisfy spec_expect_no_message "${ROLLING_BACK}.*${SERVICE_NAME}"
@@ -137,7 +137,7 @@ Describe 'update-jobs'
       The stderr should satisfy spec_expect_message    "${DONE_REMOVING_IMAGES}"
     End
   End
-  Describe "test_jobs_label_UPDATE_JOBS_true" "container_test:true" "coverage:true"
+  Describe "test_jobs_label_UPDATE_JOBS_true"
     TEST_NAME="test_jobs_label_UPDATE_JOBS_true"
     IMAGE_WITH_TAG=$(get_image_with_tag "${SUITE_NAME}")
     SERVICE_NAME=$(get_test_service_name "${TEST_NAME}")
@@ -170,12 +170,12 @@ Describe 'update-jobs'
       The stderr should satisfy spec_expect_no_message "${START_WITHOUT_A_SQUARE_BRACKET}"
       The stderr should satisfy spec_expect_no_message "${SKIP_UPDATING}.*${SERVICE_NAME}"
       The stderr should satisfy spec_expect_message    "${PERFORM_UPDATING}.*${SERVICE_NAME}.*${PERFORM_REASON_HAS_NEWER_IMAGE}"
-      The stderr should satisfy spec_expect_no_message "${SET_TIMEOUT_TO}"
       The stderr should satisfy spec_expect_no_message "${NUM_SERVICES_SKIP_JOBS}"
       The stderr should satisfy spec_expect_no_message "${NUM_SERVICES_INSPECT_FAILURE}"
       The stderr should satisfy spec_expect_no_message "${NUM_SERVICES_NO_NEW_IMAGES}"
       The stderr should satisfy spec_expect_message    "${NUM_SERVICES_UPDATING}"
       The stderr should satisfy spec_expect_message    "${ADDING_OPTIONS}.*--detach=true.*${SERVICE_NAME}"
+      The stderr should satisfy spec_expect_no_message "${SET_TIMEOUT_TO}"
       The stderr should satisfy spec_expect_message    "${UPDATED}.*${SERVICE_NAME}"
       The stderr should satisfy spec_expect_no_message "${NO_UPDATES}.*${SERVICE_NAME}"
       The stderr should satisfy spec_expect_no_message "${ROLLING_BACK}.*${SERVICE_NAME}"
@@ -194,7 +194,7 @@ Describe 'update-jobs'
       The stderr should satisfy spec_expect_message    "${DONE_REMOVING_IMAGES}"
     End
   End
-  Describe "test_jobs_no_running_tasks" "container_test:true" "coverage:true"
+  Describe "test_jobs_no_running_tasks"
     TEST_NAME="test_jobs_no_running_tasks"
     IMAGE_WITH_TAG=$(get_image_with_tag "${SUITE_NAME}")
     SERVICE_NAME=$(get_test_service_name "${TEST_NAME}")
@@ -231,11 +231,11 @@ Describe 'update-jobs'
       The stderr should satisfy spec_expect_no_message "${ADDING_OPTIONS}.*--replicas=0"
       The stderr should satisfy spec_expect_no_message "${SKIP_UPDATING}.*${SERVICE_NAME}"
       The stderr should satisfy spec_expect_message    "${PERFORM_UPDATING}.*${SERVICE_NAME}.*${PERFORM_REASON_HAS_NEWER_IMAGE}"
-      The stderr should satisfy spec_expect_no_message "${SET_TIMEOUT_TO}"
       The stderr should satisfy spec_expect_no_message "${NUM_SERVICES_SKIP_JOBS}"
       The stderr should satisfy spec_expect_no_message "${NUM_SERVICES_INSPECT_FAILURE}"
       The stderr should satisfy spec_expect_no_message "${NUM_SERVICES_NO_NEW_IMAGES}"
       The stderr should satisfy spec_expect_message    "${NUM_SERVICES_UPDATING}"
+      The stderr should satisfy spec_expect_no_message "${SET_TIMEOUT_TO}"
       The stderr should satisfy spec_expect_message    "${UPDATED}.*${SERVICE_NAME}"
       The stderr should satisfy spec_expect_no_message "${NO_UPDATES}.*${SERVICE_NAME}"
       The stderr should satisfy spec_expect_no_message "${ROLLING_BACK}.*${SERVICE_NAME}"
@@ -253,4 +253,4 @@ Describe 'update-jobs'
       The stderr should satisfy spec_expect_message    "${DONE_REMOVING_IMAGES}"
     End
   End
-End # Describe 'update-jobs'
+End # Describe 'jobs'

@@ -19,7 +19,7 @@ Describe 'manifest-command'
   SUITE_NAME="manifest-command"
   BeforeAll "initialize_all_tests ${SUITE_NAME}"
   AfterAll "finish_all_tests ${SUITE_NAME}"
-  Describe "test_MANIFEST_CMD_none" "container_test:true" "coverage:true"
+  Describe "test_MANIFEST_CMD_none"
     TEST_NAME="test_MANIFEST_CMD_none"
     IMAGE_WITH_TAG=$(get_image_with_tag "${SUITE_NAME}")
     SERVICE_NAME=$(get_test_service_name "${TEST_NAME}")
@@ -70,7 +70,7 @@ Describe 'manifest-command'
       The stderr should satisfy spec_expect_no_message "${DONE_REMOVING_IMAGES}"
     End
   End
-  Describe "test_MANIFEST_CMD_none_SERVICES_SELF" "container_test:true" "coverage:true"
+  Describe "test_MANIFEST_CMD_none_SERVICES_SELF"
     TEST_NAME="test_MANIFEST_CMD_none_SERVICES_SELF"
     IMAGE_WITH_TAG=$(get_image_with_tag "${SUITE_NAME}")
     SERVICE_NAME=$(get_test_service_name "${TEST_NAME}")
@@ -118,7 +118,7 @@ Describe 'manifest-command'
       The stderr should satisfy spec_expect_no_message "${DONE_REMOVING_IMAGES}"
     End
   End
-  Describe "test_MANIFEST_CMD_manifest" "container_test:true" "coverage:true"
+  Describe "test_MANIFEST_CMD_manifest"
     TEST_NAME="test_MANIFEST_CMD_manifest"
     IMAGE_WITH_TAG=$(get_image_with_tag "${SUITE_NAME}")
     SERVICE_NAME=$(get_test_service_name "${TEST_NAME}")
@@ -163,7 +163,7 @@ Describe 'manifest-command'
       The stderr should satisfy spec_expect_message    "${DONE_REMOVING_IMAGES}"
     End
   End
-  Describe "test_MANIFEST_CMD_label" "container_test:true" "coverage:true"
+  Describe "test_MANIFEST_CMD_label"
     TEST_NAME="test_MANIFEST_CMD_label"
     IMAGE_WITH_TAG=$(get_image_with_tag "${SUITE_NAME}")
     SERVICE_NAME=$(get_test_service_name "${TEST_NAME}")
@@ -213,7 +213,7 @@ Describe 'manifest-command'
       The stderr should satisfy spec_expect_message    "${DONE_REMOVING_IMAGES}"
     End
   End
-  Describe "test_MANIFEST_CMD_unsupported_cmd" "container_test:false" "coverage:true"
+  Describe "test_MANIFEST_CMD_unsupported_cmd"
     TEST_NAME="test_MANIFEST_CMD_unsupported_cmd"
     IMAGE_WITH_TAG=$(get_image_with_tag "${SUITE_NAME}")
     SERVICE_NAME=$(get_test_service_name "${TEST_NAME}")
@@ -260,7 +260,7 @@ Describe 'manifest-command'
       The stderr should satisfy spec_expect_no_message "${DONE_REMOVING_IMAGES}"
     End
   End
-  Describe "test_MANIFEST_CMD_failure" "container_test:false" "coverage:true"
+  Describe "test_MANIFEST_CMD_failure"
     TEST_NAME="test_MANIFEST_CMD_failure"
     IMAGE_WITH_TAG=$(get_image_with_tag "${SUITE_NAME}")
     SERVICE_NAME=$(get_test_service_name "${TEST_NAME}")

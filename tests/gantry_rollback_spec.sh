@@ -19,7 +19,7 @@ Describe 'rollback'
   SUITE_NAME="rollback"
   BeforeAll "initialize_all_tests ${SUITE_NAME}"
   AfterAll "finish_all_tests ${SUITE_NAME}"
-  Describe "test_rollback_due_to_timeout" "container_test:false" "coverage:true"
+  Describe "test_rollback_due_to_timeout"
     TEST_NAME="test_rollback_due_to_timeout"
     IMAGE_WITH_TAG=$(get_image_with_tag "${SUITE_NAME}")
     SERVICE_NAME=$(get_test_service_name "${TEST_NAME}")
@@ -44,12 +44,12 @@ Describe 'rollback'
       The stderr should satisfy spec_expect_no_message "${START_WITHOUT_A_SQUARE_BRACKET}"
       The stderr should satisfy spec_expect_no_message "${SKIP_UPDATING}.*${SERVICE_NAME}"
       The stderr should satisfy spec_expect_message    "${PERFORM_UPDATING}.*${SERVICE_NAME}.*${PERFORM_REASON_HAS_NEWER_IMAGE}"
-      The stderr should satisfy spec_expect_message    "${SET_TIMEOUT_TO} ${TIMEOUT}.*${SERVICE_NAME}"
-      The stderr should satisfy spec_expect_message    "${RETURN_VALUE_INDICATES_TIMEOUT}"
       The stderr should satisfy spec_expect_no_message "${NUM_SERVICES_SKIP_JOBS}"
       The stderr should satisfy spec_expect_no_message "${NUM_SERVICES_INSPECT_FAILURE}"
       The stderr should satisfy spec_expect_no_message "${NUM_SERVICES_NO_NEW_IMAGES}"
       The stderr should satisfy spec_expect_message    "${NUM_SERVICES_UPDATING}"
+      The stderr should satisfy spec_expect_message    "${SET_TIMEOUT_TO} ${TIMEOUT}.*${SERVICE_NAME}"
+      The stderr should satisfy spec_expect_message    "${RETURN_VALUE_INDICATES_TIMEOUT}"
       The stderr should satisfy spec_expect_no_message "${UPDATED}.*${SERVICE_NAME}"
       The stderr should satisfy spec_expect_no_message "${NO_UPDATES}.*${SERVICE_NAME}"
       The stderr should satisfy spec_expect_no_message "${ADDING_OPTIONS}"
@@ -68,7 +68,7 @@ Describe 'rollback'
       The stderr should satisfy spec_expect_no_message "${DONE_REMOVING_IMAGES}"
     End
   End
-  Describe "test_rollback_failed" "container_test:false" "coverage:true"
+  Describe "test_rollback_failed"
     TEST_NAME="test_rollback_failed"
     IMAGE_WITH_TAG=$(get_image_with_tag "${SUITE_NAME}")
     SERVICE_NAME=$(get_test_service_name "${TEST_NAME}")
@@ -96,12 +96,12 @@ Describe 'rollback'
       The stderr should satisfy spec_expect_no_message "${START_WITHOUT_A_SQUARE_BRACKET}"
       The stderr should satisfy spec_expect_no_message "${SKIP_UPDATING}.*${SERVICE_NAME}"
       The stderr should satisfy spec_expect_message    "${PERFORM_UPDATING}.*${SERVICE_NAME}.*${PERFORM_REASON_HAS_NEWER_IMAGE}"
-      The stderr should satisfy spec_expect_message    "${SET_TIMEOUT_TO} ${TIMEOUT}.*${SERVICE_NAME}"
-      The stderr should satisfy spec_expect_message    "${RETURN_VALUE_INDICATES_TIMEOUT}"
       The stderr should satisfy spec_expect_no_message "${NUM_SERVICES_SKIP_JOBS}"
       The stderr should satisfy spec_expect_no_message "${NUM_SERVICES_INSPECT_FAILURE}"
       The stderr should satisfy spec_expect_no_message "${NUM_SERVICES_NO_NEW_IMAGES}"
       The stderr should satisfy spec_expect_message    "${NUM_SERVICES_UPDATING}"
+      The stderr should satisfy spec_expect_message    "${SET_TIMEOUT_TO} ${TIMEOUT}.*${SERVICE_NAME}"
+      The stderr should satisfy spec_expect_message    "${RETURN_VALUE_INDICATES_TIMEOUT}"
       The stderr should satisfy spec_expect_no_message "${UPDATED}.*${SERVICE_NAME}"
       The stderr should satisfy spec_expect_no_message "${NO_UPDATES}.*${SERVICE_NAME}"
       The stderr should satisfy spec_expect_message    "${ADDING_OPTIONS}.*--with-registry-auth.*${SERVICE_NAME}"
@@ -120,7 +120,7 @@ Describe 'rollback'
       The stderr should satisfy spec_expect_no_message "${DONE_REMOVING_IMAGES}"
     End
   End
-  Describe "test_rollback_ROLLBACK_ON_FAILURE_false" "container_test:false" "coverage:true"
+  Describe "test_rollback_ROLLBACK_ON_FAILURE_false"
     TEST_NAME="test_rollback_ROLLBACK_ON_FAILURE_false"
     IMAGE_WITH_TAG=$(get_image_with_tag "${SUITE_NAME}")
     SERVICE_NAME=$(get_test_service_name "${TEST_NAME}")
@@ -146,12 +146,12 @@ Describe 'rollback'
       The stderr should satisfy spec_expect_no_message "${START_WITHOUT_A_SQUARE_BRACKET}"
       The stderr should satisfy spec_expect_no_message "${SKIP_UPDATING}.*${SERVICE_NAME}"
       The stderr should satisfy spec_expect_message    "${PERFORM_UPDATING}.*${SERVICE_NAME}.*${PERFORM_REASON_HAS_NEWER_IMAGE}"
-      The stderr should satisfy spec_expect_message    "${SET_TIMEOUT_TO} ${TIMEOUT}.*${SERVICE_NAME}"
-      The stderr should satisfy spec_expect_message    "${RETURN_VALUE_INDICATES_TIMEOUT}"
       The stderr should satisfy spec_expect_no_message "${NUM_SERVICES_SKIP_JOBS}"
       The stderr should satisfy spec_expect_no_message "${NUM_SERVICES_INSPECT_FAILURE}"
       The stderr should satisfy spec_expect_no_message "${NUM_SERVICES_NO_NEW_IMAGES}"
       The stderr should satisfy spec_expect_message    "${NUM_SERVICES_UPDATING}"
+      The stderr should satisfy spec_expect_message    "${SET_TIMEOUT_TO} ${TIMEOUT}.*${SERVICE_NAME}"
+      The stderr should satisfy spec_expect_message    "${RETURN_VALUE_INDICATES_TIMEOUT}"
       The stderr should satisfy spec_expect_no_message "${UPDATED}.*${SERVICE_NAME}"
       The stderr should satisfy spec_expect_no_message "${NO_UPDATES}.*${SERVICE_NAME}"
       The stderr should satisfy spec_expect_no_message "${ADDING_OPTIONS}"
@@ -170,7 +170,7 @@ Describe 'rollback'
       The stderr should satisfy spec_expect_no_message "${DONE_REMOVING_IMAGES}"
     End
   End
-  Describe "test_rollback_label_failed" "container_test:false" "coverage:true"
+  Describe "test_rollback_label_failed"
     TEST_NAME="test_rollback_label_failed"
     IMAGE_WITH_TAG=$(get_image_with_tag "${SUITE_NAME}")
     SERVICE_NAME=$(get_test_service_name "${TEST_NAME}")
@@ -201,12 +201,12 @@ Describe 'rollback'
       The stderr should satisfy spec_expect_no_message "${START_WITHOUT_A_SQUARE_BRACKET}"
       The stderr should satisfy spec_expect_no_message "${SKIP_UPDATING}.*${SERVICE_NAME}"
       The stderr should satisfy spec_expect_message    "${PERFORM_UPDATING}.*${SERVICE_NAME}.*${PERFORM_REASON_HAS_NEWER_IMAGE}"
-      The stderr should satisfy spec_expect_message    "${SET_TIMEOUT_TO} ${TIMEOUT}.*${SERVICE_NAME}"
-      The stderr should satisfy spec_expect_message    "${RETURN_VALUE_INDICATES_TIMEOUT}"
       The stderr should satisfy spec_expect_no_message "${NUM_SERVICES_SKIP_JOBS}"
       The stderr should satisfy spec_expect_no_message "${NUM_SERVICES_INSPECT_FAILURE}"
       The stderr should satisfy spec_expect_no_message "${NUM_SERVICES_NO_NEW_IMAGES}"
       The stderr should satisfy spec_expect_message    "${NUM_SERVICES_UPDATING}"
+      The stderr should satisfy spec_expect_message    "${SET_TIMEOUT_TO} ${TIMEOUT}.*${SERVICE_NAME}"
+      The stderr should satisfy spec_expect_message    "${RETURN_VALUE_INDICATES_TIMEOUT}"
       The stderr should satisfy spec_expect_no_message "${UPDATED}.*${SERVICE_NAME}"
       The stderr should satisfy spec_expect_no_message "${NO_UPDATES}.*${SERVICE_NAME}"
       The stderr should satisfy spec_expect_message    "${ADDING_OPTIONS}.*--with-registry-auth.*${SERVICE_NAME}"
@@ -225,7 +225,7 @@ Describe 'rollback'
       The stderr should satisfy spec_expect_no_message "${DONE_REMOVING_IMAGES}"
     End
   End
-  Describe "test_rollback_label_ROLLBACK_ON_FAILURE_false" "container_test:false" "coverage:true"
+  Describe "test_rollback_label_ROLLBACK_ON_FAILURE_false"
     TEST_NAME="test_rollback_label_ROLLBACK_ON_FAILURE_false"
     IMAGE_WITH_TAG=$(get_image_with_tag "${SUITE_NAME}")
     SERVICE_NAME=$(get_test_service_name "${TEST_NAME}")
@@ -253,12 +253,12 @@ Describe 'rollback'
       The stderr should satisfy spec_expect_no_message "${START_WITHOUT_A_SQUARE_BRACKET}"
       The stderr should satisfy spec_expect_no_message "${SKIP_UPDATING}.*${SERVICE_NAME}"
       The stderr should satisfy spec_expect_message    "${PERFORM_UPDATING}.*${SERVICE_NAME}.*${PERFORM_REASON_HAS_NEWER_IMAGE}"
-      The stderr should satisfy spec_expect_message    "${SET_TIMEOUT_TO} ${TIMEOUT}.*${SERVICE_NAME}"
-      The stderr should satisfy spec_expect_message    "${RETURN_VALUE_INDICATES_TIMEOUT}"
       The stderr should satisfy spec_expect_no_message "${NUM_SERVICES_SKIP_JOBS}"
       The stderr should satisfy spec_expect_no_message "${NUM_SERVICES_INSPECT_FAILURE}"
       The stderr should satisfy spec_expect_no_message "${NUM_SERVICES_NO_NEW_IMAGES}"
       The stderr should satisfy spec_expect_message    "${NUM_SERVICES_UPDATING}"
+      The stderr should satisfy spec_expect_message    "${SET_TIMEOUT_TO} ${TIMEOUT}.*${SERVICE_NAME}"
+      The stderr should satisfy spec_expect_message    "${RETURN_VALUE_INDICATES_TIMEOUT}"
       The stderr should satisfy spec_expect_no_message "${UPDATED}.*${SERVICE_NAME}"
       The stderr should satisfy spec_expect_no_message "${NO_UPDATES}.*${SERVICE_NAME}"
       The stderr should satisfy spec_expect_no_message "${ADDING_OPTIONS}"

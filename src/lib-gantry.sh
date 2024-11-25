@@ -403,10 +403,10 @@ gantry_remove_images() {
   log INFO "Done removing images.";
 }
 
-_correct_service_name() {
+_sanitize_service_name() {
   local SERVICE_NAME="${1}"
   SERVICE_NAME=$(echo "${SERVICE_NAME}" | tr ' ' '-')
-  [ "${#SERVICE_NAME}" -gt 63 ] && SERVICE_NAME="${SERVICE_NAME:0:63}"
+  [ "${#SERVICE_NAME}" -gt 63 ] && SERVICE_NAME="g${SERVICE_NAME:0-62}"
   echo "${SERVICE_NAME}"
 }
 
@@ -420,7 +420,7 @@ _remove_images() {
     return 0
   fi
   local SERVICE_NAME="${1:-"gantry-image-remover"}"
-  SERVICE_NAME=$(_correct_service_name "${SERVICE_NAME}")
+  SERVICE_NAME=$(_sanitize_service_name "${SERVICE_NAME}")
   docker_service_remove "${SERVICE_NAME}"
   local IMAGES_TO_REMOVE=
   IMAGES_TO_REMOVE=$(_static_variable_read_list STATIC_VAR_IMAGES_TO_REMOVE)
@@ -1013,14 +1013,18 @@ _update_single_service() {
   local UPDATE_COMMAND="${TIMEOUT_COMMAND} docker ${AUTH_CONFIG} service update"
   local UPDATE_RETURN_VALUE=0
   local UPDATE_MSG=
+  # Add "2>/dev/null" outside the $(cmd) to suppress the "Terminated" message from "busybox timeout".
   # Add "-quiet" to suppress progress output.
   # SC2086: Double quote to prevent globbing and word splitting.
   # shellcheck disable=SC2086
-  UPDATE_MSG=$(${UPDATE_COMMAND} --quiet ${AUTOMATIC_OPTIONS} ${UPDATE_OPTIONS} --image="${IMAGE}" "${SERVICE_NAME}" 2>&1);
+  UPDATE_MSG=$(${UPDATE_COMMAND} --quiet ${AUTOMATIC_OPTIONS} ${UPDATE_OPTIONS} --image="${IMAGE}" "${SERVICE_NAME}" 2>&1) 2>/dev/null;
   UPDATE_RETURN_VALUE=$?
   if [ "${UPDATE_RETURN_VALUE}" != 0 ]; then
-    # https://git.savannah.gnu.org/cgit/coreutils.git/tree/src/timeout.c
+    # When there is a timeout:
+    # * coreutils timeout returns 124: https://git.savannah.gnu.org/cgit/coreutils.git/tree/src/timeout.c
+    # * busybox timeout returns 143
     local TIMEOUT_RETURN_CODE=124
+    timeout --help 2>&1 | grep_q_i "BusyBox" && TIMEOUT_RETURN_CODE=143
     local TIMEOUT_MSG=""
     if [ -n "${TIMEOUT_COMMAND}" ] && [ "${UPDATE_RETURN_VALUE}" = "${TIMEOUT_RETURN_CODE}" ]; then
       TIMEOUT_MSG="The return value ${UPDATE_RETURN_VALUE} indicates the job timed out."

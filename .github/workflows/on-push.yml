@@ -162,4 +162,4 @@ jobs:
           export DOCKERHUB_USERNAME=${{ secrets.DOCKERHUB_USERNAME }}
           export GANTRY_TEST_CONTAINER_REPO_TAG=$(cat tag.txt)
           echo "GANTRY_TEST_CONTAINER_REPO_TAG=${GANTRY_TEST_CONTAINER_REPO_TAG}"
-          bash shellspec --jobs 50 --tag "container_test:true"
+          bash shellspec --jobs 50

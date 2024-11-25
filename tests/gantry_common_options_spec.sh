@@ -19,7 +19,7 @@ Describe 'common-options'
   SUITE_NAME="common-options"
   BeforeAll "initialize_all_tests ${SUITE_NAME}"
   AfterAll "finish_all_tests ${SUITE_NAME}"
-  Describe "test_common_DOCKER_HOST_not_swarm_manager" "container_test:false" "coverage:true"
+  Describe "test_common_DOCKER_HOST_not_swarm_manager"
     TEST_NAME="test_common_DOCKER_HOST_not_swarm_manager"
     IMAGE_WITH_TAG=$(get_image_with_tag "${SUITE_NAME}")
     SERVICE_NAME=$(get_test_service_name "${TEST_NAME}")
@@ -27,12 +27,8 @@ Describe 'common-options'
       local TEST_NAME="${1}"
       local SERVICE_NAME="${2}"
       reset_gantry_env "${SERVICE_NAME}"
-      export DOCKER_HOST="8.8.8.8:53"
-      local RETURN_VALUE=0
+      export GANTRY_TEST_DOCKER_HOST="8.8.8.8:53"
       run_gantry "${TEST_NAME}"
-      RETURN_VALUE="${?}"
-      export DOCKER_HOST=
-      return "${RETURN_VALUE}"
     }
     BeforeEach "common_setup_new_image ${TEST_NAME} ${IMAGE_WITH_TAG} ${SERVICE_NAME}"
     AfterEach "common_cleanup ${TEST_NAME} ${IMAGE_WITH_TAG} ${SERVICE_NAME}"
@@ -69,7 +65,7 @@ Describe 'common-options'
       The stderr should satisfy spec_expect_no_message "${SLEEP_SECONDS_BEFORE_NEXT_UPDATE}"
     End
   End
-  Describe "test_common_LOG_LEVEL_none" "container_test:true" "coverage:true"
+  Describe "test_common_LOG_LEVEL_none"
     TEST_NAME="test_common_LOG_LEVEL_none"
     IMAGE_WITH_TAG=$(get_image_with_tag "${SUITE_NAME}")
     SERVICE_NAME=$(get_test_service_name "${TEST_NAME}")
@@ -93,10 +89,12 @@ Describe 'common-options'
     End
   End
   # Do not run test_common_no_new_env with the kcov, which alters the environment variables.
-  Describe "test_common_no_new_env" "container_test:false" "coverage:false"
+  Describe "test_common_no_new_env"
     # Check there is no new variable set,
     # to avoid errors like https://github.com/shizunge/gantry/issues/64#issuecomment-2475499085
-    # We don't need to run this test using containers because we check env on the host, while the container test set env inside the container.
+    #
+    # It makes no sense to run run this test using containers because we check env on the host, while the container test set env inside the container.
+    # But it should not failed with a container. We are just testing GANTRY_LOG_LEVEL=WARN.
     TEST_NAME="test_common_no_new_env"
     IMAGE_WITH_TAG=$(get_image_with_tag "${SUITE_NAME}")
     SERVICE_NAME=$(get_test_service_name "${TEST_NAME}")
@@ -111,16 +109,16 @@ Describe 'common-options'
       reset_gantry_env "${SERVICE_NAME}"
       # There should be no warnings or errors. So it should work the same as LOG_LEVLE=NONE.
       export GANTRY_LOG_LEVEL=WARN
-
-      # Allow the following 3 mismatches used in log() function.
-      unset LOG_LEVEL NODE_NAME LOG_SCOPE
-      # _ contains the last command. declare is a bash builtin.
-      unset _; declare -p > "${ENV_BEFORE_RUN}"
+      declare -p > "${ENV_BEFORE_RUN}"
       run_gantry "${TEST_NAME}"
-      # Allow the following 3 mismatches used in log() function.
-      unset LOG_LEVEL NODE_NAME LOG_SCOPE
-      unset _; declare -p > "${ENV_AFTER_RUN}"
-      diff "${ENV_BEFORE_RUN}" "${ENV_AFTER_RUN}"
+      declare -p > "${ENV_AFTER_RUN}"
+      # Allow the 3 mismatches LOG_LEVEL NODE_NAME LOG_SCOPE used in log() function.
+      # Allow the 2 mismatches LINENO _ for kcov coverage.
+      for ALLOWED in LOG_LEVEL NODE_NAME LOG_SCOPE LINENO _; do
+        sed -i "s/^declare .* ${ALLOWED}=.*//" "${ENV_BEFORE_RUN}"
+        sed -i "s/^declare .* ${ALLOWED}=.*//" "${ENV_AFTER_RUN}"
+      done
+      diff --ignore-blank-lines "${ENV_BEFORE_RUN}" "${ENV_AFTER_RUN}"
       rm "${ENV_BEFORE_RUN}"
       rm "${ENV_AFTER_RUN}"
     }
@@ -135,7 +133,7 @@ Describe 'common-options'
       The stderr should satisfy spec_expect_no_message ".+"
     End
   End
-  Describe "test_common_PRE_POST_RUN_CMD" "container_test:true" "coverage:true"
+  Describe "test_common_PRE_POST_RUN_CMD"
     TEST_NAME="test_common_PRE_POST_RUN_CMD"
     IMAGE_WITH_TAG=$(get_image_with_tag "${SUITE_NAME}")
     SERVICE_NAME=$(get_test_service_name "${TEST_NAME}")
@@ -148,7 +146,7 @@ Describe 'common-options'
       # Test that pre-run command can change the global configurations.
       export GANTRY_PRE_RUN_CMD="echo \"Pre update\"; GANTRY_UPDATE_OPTIONS=--detach=true; GANTRY_CLEANUP_IMAGES=false;"
       # This command outputs multiple lines.
-      local POST_CMD="for I in \$(seq 3 5); do echo \"OUTPUT_LINE=\$I\"; done"
+      local POST_CMD="for I in \$(seq 3 5); do echo \"TEST_OUTPUT_MULTIPLE_LINES=\$I\"; done"
       # Test that the command returns a non-zero value.
       export GANTRY_POST_RUN_CMD="echo \"Post update\"; ${POST_CMD}; false;"
       run_gantry "${TEST_NAME}"
@@ -162,8 +160,8 @@ Describe 'common-options'
       The stdout should satisfy spec_expect_no_message ".+"
       The stderr should satisfy display_output
       The stderr should satisfy spec_expect_no_message "${START_WITHOUT_A_SQUARE_BRACKET}"
-      The stderr should satisfy spec_expect_message    "Pre update"
-      The stderr should satisfy spec_expect_message    "Finish pre-run command."
+      The stderr should satisfy spec_expect_message    "Pre update$"
+      The stderr should satisfy spec_expect_message    "Finish pre-run command.$"
       The stderr should satisfy spec_expect_no_message "${SKIP_UPDATING}.*${SERVICE_NAME}"
       The stderr should satisfy spec_expect_message    "${PERFORM_UPDATING}.*${SERVICE_NAME}.*${PERFORM_REASON_HAS_NEWER_IMAGE}"
       The stderr should satisfy spec_expect_no_message "${NUM_SERVICES_SKIP_JOBS}"
@@ -186,19 +184,16 @@ Describe 'common-options'
       The stderr should satisfy spec_expect_no_message "${REMOVED_IMAGE}.*"
       The stderr should satisfy spec_expect_no_message "${FAILED_TO_REMOVE_IMAGE}.*"
       The stderr should satisfy spec_expect_no_message "${DONE_REMOVING_IMAGES}"
-      The stderr should satisfy spec_expect_message    "Post update"
-      The stderr should satisfy spec_expect_message    "OUTPUT_LINE=3"
-      The stderr should satisfy spec_expect_message    "OUTPUT_LINE=4"
-      The stderr should satisfy spec_expect_message    "OUTPUT_LINE=5"
-      The stderr should satisfy spec_expect_message    "Finish post-run command with a non-zero return value 1."
+      The stderr should satisfy spec_expect_message    "Post update$"
+      The stderr should satisfy spec_expect_message    "TEST_OUTPUT_MULTIPLE_LINES=3$"
+      The stderr should satisfy spec_expect_message    "TEST_OUTPUT_MULTIPLE_LINES=4$"
+      The stderr should satisfy spec_expect_message    "TEST_OUTPUT_MULTIPLE_LINES=5$"
+      The stderr should satisfy spec_expect_message    "Finish post-run command with a non-zero return value 1.$"
       The stderr should satisfy spec_expect_no_message "${SCHEDULE_NEXT_UPDATE_AT}"
       The stderr should satisfy spec_expect_no_message "${SLEEP_SECONDS_BEFORE_NEXT_UPDATE}"
     End
   End
-  # run_gantry prints logs after gantry exists, while testing a container.
-  # In thes test, gantry never exit, but will be killed, thus there is no log.
-  # Therefore we disable the container test for this test.
-  Describe "test_common_SLEEP_SECONDS" "container_test:false" "coverage:true"
+  Describe "test_common_SLEEP_SECONDS"
     TEST_NAME="test_common_SLEEP_SECONDS"
     IMAGE_WITH_TAG=$(get_image_with_tag "${SUITE_NAME}")
     SERVICE_NAME=$(get_test_service_name "${TEST_NAME}")
@@ -207,9 +202,11 @@ Describe 'common-options'
       local SERVICE_NAME="${2}"
       reset_gantry_env "${SERVICE_NAME}"
       export GANTRY_SLEEP_SECONDS="7"
+      # Run run_gantry in background.
       run_gantry "${TEST_NAME}" &
       local PID="${!}"
       sleep $((GANTRY_SLEEP_SECONDS*3+1))
+      stop_gantry_container "${TEST_NAME}"
       kill "${PID}"
     }
     BeforeEach "common_setup_no_new_image ${TEST_NAME} ${IMAGE_WITH_TAG} ${SERVICE_NAME}"
@@ -249,7 +246,7 @@ Describe 'common-options'
       The stderr should satisfy spec_expect_message           "${SLEEP_SECONDS_BEFORE_NEXT_UPDATE}"
     End
   End
-  Describe "test_common_SLEEP_SECONDS_not_a_number" "container_test:false" "coverage:true"
+  Describe "test_common_SLEEP_SECONDS_not_a_number"
     TEST_NAME="test_common_SLEEP_SECONDS_not_a_number"
     IMAGE_WITH_TAG=$(get_image_with_tag "${SUITE_NAME}")
     SERVICE_NAME=$(get_test_service_name "${TEST_NAME}")

@@ -19,7 +19,7 @@ Describe 'filters'
   SUITE_NAME="filters"
   BeforeAll "initialize_all_tests ${SUITE_NAME}"
   AfterAll "finish_all_tests ${SUITE_NAME}"
-  Describe "test_SERVICES_FILTERS_bad" "container_test:false" "coverage:true"
+  Describe "test_SERVICES_FILTERS_bad"
     TEST_NAME="test_SERVICES_FILTERS_bad"
     IMAGE_WITH_TAG=$(get_image_with_tag "${SUITE_NAME}")
     SERVICE_NAME=$(get_test_service_name "${TEST_NAME}")
@@ -64,7 +64,7 @@ Describe 'filters'
       The stderr should satisfy spec_expect_no_message "${DONE_REMOVING_IMAGES}"
     End
   End
-  Describe "test_SERVICES_EXCLUDED_multiple_services" "container_test:true" "coverage:true"
+  Describe "test_SERVICES_EXCLUDED_multiple_services"
     TEST_NAME="test_SERVICES_EXCLUDED_multiple_services"
     IMAGE_WITH_TAG=$(get_image_with_tag "${SUITE_NAME}")
     SERVICE_NAME=$(get_test_service_name "${TEST_NAME}")
@@ -122,7 +122,7 @@ Describe 'filters'
       The stderr should satisfy spec_expect_no_message "${DONE_REMOVING_IMAGES}"
     End
   End
-  Describe "test_SERVICES_EXCLUDED_FILTERS_default" "container_test:true" "coverage:true"
+  Describe "test_SERVICES_EXCLUDED_FILTERS_default"
     TEST_NAME="test_SERVICES_EXCLUDED_FILTERS_default"
     IMAGE_WITH_TAG=$(get_image_with_tag "${SUITE_NAME}")
     SERVICE_NAME=$(get_test_service_name "${TEST_NAME}")
@@ -173,7 +173,7 @@ Describe 'filters'
       The stderr should satisfy spec_expect_no_message "${DONE_REMOVING_IMAGES}"
     End
   End
-  Describe "test_SERVICES_EXCLUDED_FILTERS_bad" "container_test:false" "coverage:true"
+  Describe "test_SERVICES_EXCLUDED_FILTERS_bad"
     TEST_NAME="test_SERVICES_EXCLUDED_FILTERS_bad"
     IMAGE_WITH_TAG=$(get_image_with_tag "${SUITE_NAME}")
     SERVICE_NAME=$(get_test_service_name "${TEST_NAME}")

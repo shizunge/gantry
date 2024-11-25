@@ -21,11 +21,12 @@ _random_string() {
 
 _pipe_name() {
   local BASE_NAME="${1:-pipe-base-name}"
-  local RANDOM_STR=
-  RANDOM_STR=$(_random_string)
+  local PID=$$
   local TIMESTAMP=
   TIMESTAMP=$(date +%s)
-  local PIPE_NAME="/tmp/${BASE_NAME}-$$-${TIMESTAMP}-${RANDOM_STR}"
+  local RANDOM_STR=
+  RANDOM_STR=$(_random_string)
+  local PIPE_NAME="/tmp/${BASE_NAME}-${PID}-${TIMESTAMP}-${RANDOM_STR}"
   echo "${PIPE_NAME}"
 }
 
@@ -79,6 +80,7 @@ extract_string() {
 # All lower or all upper. No mix.
 _log_level_to_upper() {
   local LEVEL="${1}";
+  # tr is slow.
   case "${LEVEL}" in
     "debug") echo "DEBUG"; ;;
     "info")  echo "INFO";  ;;
@@ -114,20 +116,30 @@ _first_word_is_level() {
   esac
 }
 
-_log_skip_level() {
+_log_skip_level_echo_color() {
   local LEVEL="${1}";
+  # Ideally, one function should do one thing.
+  # But by merging two functions "_log_skip" and "log_color" into one, we reduce the number of "case" to improve performance.
+  # local BLUE='\033[0;34m'
+  # local GREEN='\033[0;32m'
+  # local ORANGE='\033[0;33m'
+  # local RED='\033[0;31m'
+  # local NO_COLOR='\033[0m'
+  # SC2028 (info): echo may not expand escape sequences. Use printf.
+  # shellcheck disable=SC2028
   case "${LEVEL}" in
-    "DEBUG")   return "${2}"; ;;
-    "INFO"|"") return "${3}"; ;;
-    "WARN")    return "${4}"; ;;
-    "ERROR")   return "${5}"; ;;
-    "NONE"|*)  return "${6}"; ;;
+    "DEBUG")   echo "\033[0;34m"; return "${2}"; ;;
+    "INFO"|"") echo "\033[0;32m"; return "${3}"; ;;
+    "WARN")    echo "\033[0;33m"; return "${4}"; ;;
+    "ERROR")   echo "\033[0;31m"; return "${5}"; ;;
+    "NONE"|*)  echo "\033[0m";    return "${6}"; ;;
   esac
 }
 
+# Echo the color for the given LEVEL.
 # return 0 to skip logging.
 # return 1 otherwise.
-_log_skip() {
+_log_skip_echo_color() {
   local TARGET_LEVEL="${1}";
   local LEVEL="${2}";
   # This is 10% faster than the following command:
@@ -143,67 +155,64 @@ _log_skip() {
   # }
   # test "$(_log_level "${LEVEL}")" -lt "$(_log_level "${TARGET_LEVEL}")"; return $?
   case "${TARGET_LEVEL}" in
-    "DEBUG")   _log_skip_level "${LEVEL}" 1 1 1 1 1; ;;
-    "INFO"|"") _log_skip_level "${LEVEL}" 0 1 1 1 1; ;;
-    "WARN")    _log_skip_level "${LEVEL}" 0 0 1 1 1; ;;
-    "ERROR")   _log_skip_level "${LEVEL}" 0 0 0 1 1; ;;
-    "NONE"|*)  _log_skip_level "${LEVEL}" 0 0 0 0 1; ;;
+    "DEBUG")   _log_skip_level_echo_color "${LEVEL}" 1 1 1 1 1; ;;
+    "INFO"|"") _log_skip_level_echo_color "${LEVEL}" 0 1 1 1 1; ;;
+    "WARN")    _log_skip_level_echo_color "${LEVEL}" 0 0 1 1 1; ;;
+    "ERROR")   _log_skip_level_echo_color "${LEVEL}" 0 0 0 1 1; ;;
+    "NONE"|*)  _log_skip_level_echo_color "${LEVEL}" 0 0 0 0 1; ;;
   esac
-}
-
-_level_color() {
-  local LEVEL="${1}"
-  local NO_COLOR='\033[0m'
-  local RED='\033[0;31m'
-  local ORANGE='\033[0;33m'
-  local GREEN='\033[0;32m'
-  local BLUE='\033[0;34m'
-  case "${LEVEL}" in
-    "DEBUG") echo "${BLUE}"; ;;
-    "INFO")  echo "${GREEN}"; ;;
-    "WARN")  echo "${ORANGE}"; ;;
-    "ERROR") echo "${RED}"; ;;
-    *)       echo "${NO_COLOR}"; ;;
-  esac
-  return 0;
-}
-
-_color_iso_time() {
-  local EPOCH="${1}"
-  # Highlight time within the day in ISO-8601 (2024-11-23T21:50:13-08:00)
-  # local NO_COLOR='\033[0m'
-  # local DGRAY="\033[1;30m"
-  # local LGRAY="\033[0;37m"
-  local TIME_STR=
-  TIME_STR=$(busybox date -d "@${EPOCH}" +"\033[1;30m%Y-%m-%dT\033[0;37m%H:%M:%S\033[1;30m%z")
-  # +0000 -> +00:00
-  echo "${TIME_STR:0:-2}:${TIME_STR:0-2}\033[0m"
 }
 
 _log_formatter() {
   local TARGET_LEVEL="${LOG_LEVEL:-}";
   local LEVEL="${1}";
-  local EPOCH="${2}";
+  local TIME_WITH_COLOR="${2}";
   local LOCATION="${3}";
   local SCOPE="${4}";
   TARGET_LEVEL=$(_log_level_to_upper "${TARGET_LEVEL}")
   LEVEL=$(_log_level_to_upper "${LEVEL}")
-  _log_skip "${TARGET_LEVEL}" "${LEVEL}" && return 0;
+  local LEVEL_COLOR=
+  LEVEL_COLOR=$(_log_skip_echo_color "${TARGET_LEVEL}" "${LEVEL}") && return 0;
   shift 4;
-  local NO_COLOR='\033[0m'
-  local DGRAY='\033[1;30m'
-  local TIME_STR LOC_STR LEVEL_STR SCOPE_STR
-  TIME_STR="${DGRAY}[$(_color_iso_time "${EPOCH}")${DGRAY}]${NO_COLOR}"
+  # Faster for not using local variables. (tested in a micro benchmark)
+  # local DGRAY='\033[1;30m'
+  # local NO_COLOR='\033[0m'
+  # Formatting time logically should be done inside this function.
+  # But we let caller do it to reduce the number of calls of "date" to increase performance.
+  local TIME_STR="\033[1;30m[${TIME_WITH_COLOR}\033[1;30m]\033[0m"
+  local LEVEL_STR="${LEVEL_COLOR}[${LEVEL}]\033[0m "
+  local LOC_STR SCOPE_STR
   if [ -n "${LOCATION}" ]; then
-    LOC_STR="${DGRAY}[${LOCATION}]${NO_COLOR}"
+    LOC_STR="\033[1;30m[${LOCATION}]\033[0m"
   fi
-  LEVEL_STR="$(_level_color "${LEVEL}")[${LEVEL}]${NO_COLOR} "
   if [ -n "${SCOPE}" ]; then
-    SCOPE_STR="${DGRAY}${SCOPE}:${NO_COLOR} "
+    SCOPE_STR="\033[1;30m${SCOPE}:\033[0m "
   fi
-  local MSG_STR=
-  MSG_STR=$(echo "${*}" | tr '\n' ' ')
-  echo -e "${TIME_STR}${LOC_STR}${LEVEL_STR}${SCOPE_STR}${MSG_STR}" >&2
+  # sed to remove \n
+  # :a - Creates a label a for looping.
+  # N - Appends the next line to the pattern space.
+  # $!ba - Loops back to the label a if not the last line ($! means "not last line").
+  # s/\n/ /g - Substitutes all newline characters with a space.
+  echo -e "${TIME_STR}${LOC_STR}${LEVEL_STR}${SCOPE_STR}${*}" | sed ':a;N;$!ba;s/\n/ /g' >&2
+  # Here are a few alternatives to "sed"
+  # "echo without quotes" remove carriage returns, tabs and multiple spaces.
+  # "echo" is faster than "tr", but it does not preserve the leading space.
+  # That is why we don't use "echo" here.
+  # "tr '\n' ' '" is slow and adds a space to the end of the string.
+}
+
+_time_format() {
+  # To mimik format from "date -Isecond".
+  # Highlight time within the day in ISO-8601 (2024-11-23T21:50:13-08:00)
+  # local DGRAY="\033[1;30m"
+  # local LGRAY="\033[0;37m"
+  # local NO_COLOR='\033[0m'
+  # echo "${DGRAY}%Y-%m-%dT${LGRAY}%H:%M:%S${DGRAY}%z${NO_COLOR}"
+  # The following is faster than the above for not using local variables. (tested in a micro benchmark)
+  # Busybox date does not support %:z, only %z. So the time zone will be -0800.
+  # SC2028 (info): echo may not expand escape sequences. Use printf.
+  # shellcheck disable=SC2028
+  echo "\033[1;30m%Y-%m-%dT\033[0;37m%H:%M:%S\033[1;30m%z\033[0m"
 }
 
 # We want to print an empty line for log without an argument. Thus we do not run the following check.
@@ -216,38 +225,52 @@ log() {
     LEVEL="${1}";
     shift;
   fi
-  local EPOCH=
-  EPOCH="$(date +%s)"
-  _log_formatter "${LEVEL}" "${EPOCH}" "${LOCAL_NODE}" "${LOCAL_SCOPE}" "${@}";
+  local TIME_WITH_COLOR=
+  TIME_WITH_COLOR="$(date +"$(_time_format)")"
+  _log_formatter "${LEVEL}" "${TIME_WITH_COLOR}" "${LOCAL_NODE}" "${LOCAL_SCOPE}" "${@}";
 }
 
-_log_docker_time_epoch() {
-  # Convert timestamps from `docker service logs` to EPOCH.
+_log_docker_time() {
+  # Convert timestamps from `docker service logs`.
   # The timestamps is in UTC.
   # docker service logs --timestamps --no-task-ids <service>
   # 2023-06-22T01:20:54.535860111Z <task>@<node>    | <msg with spaces>
   local TIME_INPUT="${1}"
-  if ! busybox date -d "${TIME_INPUT}" -D "%Y-%m-%dT%H:%M:%S" -u +%s 2>/dev/null; then
-    date +%s
-    return 1
+  # We are expecting most inputs are correct.
+  # coreutils date can do the conversion in one command, thus faster.
+  # busybox date does not read timezone via "-d".
+  # date -d "${TIME_INPUT}" +"$(_time_format)" 2>/dev/null && return 0
+  local EPOCH=
+  if EPOCH=$(busybox date -d "${TIME_INPUT}" -D "%Y-%m-%dT%H:%M:%S" -u +%s 2>/dev/null); then
+    date -d "@${EPOCH}" +"$(_time_format)" 2>&1
+    return 0
   fi
+  if [ -n "${TIME_INPUT}" ]; then
+    echo "${TIME_INPUT}"
+  else
+    date +"$(_time_format)"
+  fi
+  return 1
 }
 
 # Convert logs from `docker service logs` to `log` format.
 # docker service logs --timestamps --no-task-ids <service>
 # 2023-06-22T01:20:54.535860111Z <task>@<node>    | <msg with spaces>
 _log_docker_line() {
-  local LOCAL_NODE="${NODE_NAME:-}"
-  local LOCAL_SCOPE="${LOG_SCOPE:-}"
+  local NODE="${NODE_NAME:-}"
+  local SCOPE="${LOG_SCOPE:-}"
   local LEVEL="INFO";
-  local EPOCH NODE SCOPE MESSAGE
   # Using the same regexp for all 4 parts:
-  local TIME_DOCKER TASK_DOCKER NODE_DOCKER
-  read -r TIME_DOCKER TASK_DOCKER NODE_DOCKER MESSAGE < <(echo "${*}" | sed -n -E "s/^(\S+) +(\S+)@(\S+) +\| ?/\1 \2 \3 /p");
-  EPOCH=$(_log_docker_time_epoch "${TIME_DOCKER}");
+  local TIME_DOCKER TASK_DOCKER NODE_DOCKER MESSAGE
+  # Add a "+" before the last part to ensure we preserve the leading spaces in the message.
+  read -r TIME_DOCKER TASK_DOCKER NODE_DOCKER MESSAGE < <(echo "${*}" | sed -n -E "s/^(\S+) +(\S+)@(\S+) +\| ?/\1 \2 \3 +/p");
+  local TIME_WITH_COLOR=
+  TIME_WITH_COLOR=$(_log_docker_time "${TIME_DOCKER}");
   if [ -n "${TASK_DOCKER}" ] || [ -n "${NODE_DOCKER}" ] || [ -n "${MESSAGE}" ]; then
     NODE="${NODE_DOCKER}"
     SCOPE="${TASK_DOCKER}"
+    # Remove the extra "+" we added above for preserving the leading spaces.
+    MESSAGE="${MESSAGE:1}"
     if _first_word_is_level "${MESSAGE}"; then
       LEVEL=$(_get_first_word "${MESSAGE}");
       MESSAGE=$(extract_string "${MESSAGE}" ' ' 2-);
@@ -256,11 +279,9 @@ _log_docker_line() {
     # All three are empty, sed failure indicates errors.
     # format error, imply that we receive an error message from the "docker service logs" command.
     LEVEL="ERROR"
-    NODE="${LOCAL_NODE}"
-    SCOPE="${LOCAL_SCOPE}"
     MESSAGE="${*}"
   fi
-  _log_formatter "${LEVEL}" "${EPOCH}" "${NODE}" "${SCOPE}" "${MESSAGE}";
+  _log_formatter "${LEVEL}" "${TIME_WITH_COLOR}" "${NODE}" "${SCOPE}" "${MESSAGE}";
 }
 
 _log_docker_multiple_lines() {
@@ -441,15 +462,10 @@ _get_docker_command_name_arg() {
 }
 
 _get_docker_command_detach() {
-  if echo "${@}" | grep_q "--detach=false"; then
-    echo "false"
-  elif echo "${@}" | grep_q "--detach"; then
-    # assume we find --detach or --detach=true.
-    echo "true"
-  else
-    echo "false"
-  fi
-  return 0
+  echo "${@}" | grep_q "--detach=false" && return 1;
+  # assume we find --detach or --detach=true.
+  echo "${@}" | grep_q "--detach" && return 0;
+  return 1;
 }
 
 docker_service_logs() {
@@ -557,25 +573,35 @@ _all_tasks_reach_state() {
   return 0
 }
 
-# Usage: wait_service_state <SERVICE_NAME> <WANT_STATE>
-# Wait for the service, usually a global job or a replicated job,
-# to reach either running or complete state.
+# Usage: wait_service_state <SERVICE_NAME> [WANT_STATE] [timeout in seconds]
+# Wait for the service, usually a global job or a replicated job, to reach either running or complete state.
 # Valid WANT_STATE includes "Running" and "Complete"
-# When the WANT_STATE is complete, the function returns immediately
-# when any of the tasks of the service fails.
-# In case of task failing, the function returns a non-zero value.
+# When the WANT_STATE is complete, the function returns immediately when any of the tasks of the service fails.
+# In case of task failing, the function returns the first failing task's return value.
+# When the WANT_STATE is empty, this function reports the status of all tasks and then returns.
 wait_service_state() {
   local SERVICE_NAME="${1}";
   local WANT_STATE="${2}";
+  local TIMEOUT_SECONDS="${3}";
   local CHECK_FAILURES=false
   [ "${WANT_STATE}" = "Complete" ] && CHECK_FAILURES=true
   local SLEEP_SECONDS=1
-  local DOCKER_CMD_ERROR=1
+  local START_TIME=
+  START_TIME=$(date +%s)
   local RETURN_VALUE=0
+  local DOCKER_CMD_ERROR=1
   local STATES=
   while STATES=$(_docker_service_task_states "${SERVICE_NAME}" 2>&1); do
     DOCKER_CMD_ERROR=0
     RETURN_VALUE=$(_all_tasks_reach_state "${WANT_STATE}" "${CHECK_FAILURES}" "${STATES}") && break
+    local SECONDS_ELAPSED=
+    if is_number "${TIMEOUT_SECONDS}" \
+        && SECONDS_ELAPSED=$(first_minus_second "$(date +%s)" "${START_TIME}") \
+        && [ "${SECONDS_ELAPSED}" -ge "${TIMEOUT_SECONDS}" ]; then
+      log ERROR "wait_service_state ${SERVICE_NAME} ${WANT_STATE} timeout after ${SECONDS_ELAPSED}s."
+      RETURN_VALUE=2
+      break
+    fi
     sleep "${SLEEP_SECONDS}"
     DOCKER_CMD_ERROR=1
   done
@@ -636,9 +662,7 @@ docker_global_job() {
 # A job could fail when using docker_replicated_job.
 docker_replicated_job() {
   local SERVICE_NAME=
-  local IS_DETACH=
   SERVICE_NAME=$(_get_docker_command_name_arg "${@}")
-  IS_DETACH=$(_get_docker_command_detach "${@}")
   # Add "--detach" to work around https://github.com/docker/cli/issues/2979
   # The Docker CLI does not exit on failures.
   log INFO "Starting replicated-job ${SERVICE_NAME}."
@@ -648,7 +672,7 @@ docker_replicated_job() {
     return 1
   fi
   # If the command line does not contain '--detach', the function returns til the replicated job is complete.
-  if ! "${IS_DETACH}"; then
+  if ! _get_docker_command_detach "${@}"; then
     wait_service_state "${SERVICE_NAME}" "Complete" || return $?
   fi
   return 0

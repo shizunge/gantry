@@ -15,8 +15,6 @@
 # along with this program.  If not, see <https://www.gnu.org/licenses/>.
 #
 
-set -a
-
 # Constant strings for checks.
 # START_WITHOUT_A_SQUARE_BRACKET ignores color codes. Use test_log not to trigger this check.
 export START_WITHOUT_A_SQUARE_BRACKET="^(?!(?:\x1b\[[0-9;]*[mG])?\[)"
@@ -46,7 +44,7 @@ export USER_LOGGED_INTO_DEFAULT="User logged in using the default Docker configu
 export ADDING_OPTIONS="Adding options"
 export ADDING_OPTIONS_WITH_REGISTRY_AUTH="Adding options.*--with-registry-auth"
 export SET_TIMEOUT_TO="Set timeout to"
-export RETURN_VALUE_INDICATES_TIMEOUT="The return value 124 indicates the job timed out."
+export RETURN_VALUE_INDICATES_TIMEOUT="The return value [0-9]+ indicates the job timed out."
 export THERE_ARE_ADDITIONAL_MESSAGES="There are additional messages from updating"
 export NUM_SERVICES_SKIP_JOBS="Skip updating [0-9]+ service\(s\) due to they are job\(s\)"
 export NUM_SERVICES_INSPECT_FAILURE="Failed to inspect [0-9]+ service\(s\)"
@@ -76,6 +74,8 @@ export TEST_SERVICE_IMAGE="alpine:latest"
 
 test_log() {
   echo "${GANTRY_LOG_LEVEL}" | grep -q -i "^NONE$"  && return 0;
+  echo "${GANTRY_LOG_LEVEL}" | grep -q -i "^ERROR$"  && return 0;
+  echo "${GANTRY_LOG_LEVEL}" | grep -q -i "^WARN$"  && return 0;
   [ -n "${GANTRY_IMAGES_TO_REMOVE}" ] && echo "${*}" >&2 && return 0;
   echo "[$(date -Iseconds)] Test: ${*}" >&2
 }
@@ -144,14 +144,14 @@ common_setup_timeout() {
   local IMAGE_WITH_TAG="${2}"
   local SERVICE_NAME="${3}"
   local TIMEOUT="${4}"
-  local TIMEOUT_PLUS_ONE=$((TIMEOUT+1))
-  local TIMEOUT_PLUS_TWO=$((TIMEOUT+2))
+  local TIMEOUT_PLUS=$((TIMEOUT+1))
+  local TIMEOUT_MORE=$((TIMEOUT+2))
   initialize_test "${TEST_NAME}"
   # -1 thus the task runs forever.
   # exit will take longer than the timeout.
-  build_and_push_test_image "${IMAGE_WITH_TAG}" "-1" "${TIMEOUT_PLUS_TWO}"
+  build_and_push_test_image "${IMAGE_WITH_TAG}" "-1" "${TIMEOUT_MORE}"
   # Timeout set by "service create" should be smaller than the exit time above.
-  start_replicated_service "${SERVICE_NAME}" "${IMAGE_WITH_TAG}" "${TIMEOUT_PLUS_ONE}"
+  start_replicated_service "${SERVICE_NAME}" "${IMAGE_WITH_TAG}" "${TIMEOUT_PLUS}"
   build_and_push_test_image "${IMAGE_WITH_TAG}"
 }
 
@@ -420,8 +420,9 @@ initialize_test() {
 
 reset_gantry_env() {
   local SERVICE_NAME="${1}"
-  export DOCKER_CONFIG=
-  export DOCKER_HOST=
+  export GANTRY_TEST_HOST_TO_CONTAINER=
+  export GANTRY_TEST_DOCKER_CONFIG=
+  export GANTRY_TEST_DOCKER_HOST=
   export GANTRY_LOG_LEVEL="DEBUG"
   export GANTRY_NODE_NAME=
   export GANTRY_POST_RUN_CMD=
@@ -622,7 +623,7 @@ wait_zero_running_tasks() {
     # See https://docs.docker.com/engine/reference/commandline/service_ls/#name
     # It does not do the exact match of the name. See https://github.com/moby/moby/issues/32985
     # We do an extra step to to perform the exact match.
-    REPLICAS=$(echo "${REPLICAS}" | sed -n "s/\(.*\) ${SERVICE_NAME}$/\1/p")
+    REPLICAS=$(echo "${REPLICAS}" | sed -n -E "s/(.*) ${SERVICE_NAME}$/\1/p")
     if [ "${TRIES}" -ge "${MAX_RETRIES}" ]; then
       echo "wait_zero_running_tasks Reach MAX_RETRIES ${MAX_RETRIES}" >&2
       return 1
@@ -665,7 +666,7 @@ pull_image_if_not_exist() {
 
 _enforce_login_enabled() {
   local ENFORCE_LOGIN="${1}"
-  test "${ENFORCE_LOGIN}" == "ENFORCE_LOGIN"
+  test "${ENFORCE_LOGIN}" = "ENFORCE_LOGIN"
 }
 
 _add_htpasswd() {
@@ -688,21 +689,13 @@ _add_htpasswd() {
 }
 
 _wait_service_state() {
-  local SERVICE_NAME="${1}"
-  local STATE="${2}"
-  local TRIES=0
-  local MAX_RETRIES=120
-  while ! docker service ps --format "{{.CurrentState}}" "${SERVICE_NAME}" | grep -q "${STATE}"; do
-    if [ "${TRIES}" -ge "${MAX_RETRIES}" ]; then
-      echo "_wait_service_state Reach MAX_RETRIES ${MAX_RETRIES}" >&2
-      return 1
-    fi
-    TRIES=$((TRIES+1))
-    sleep 1
-  done
+  local SERVICE_NAME="${1}";
+  local WANT_STATE="${2}";
+  local TIMEOUT_SECONDS="${3}";
+  wait_service_state "${SERVICE_NAME}" "${WANT_STATE}" "${TIMEOUT_SECONDS}" 1>/dev/null 2>&1
 }
 
-_correct_test_service_name() {
+_sanitize_test_service_name() {
   local SERVICE_NAME="${1}"
   [ "${#SERVICE_NAME}" -gt 63 ] && SERVICE_NAME=${SERVICE_NAME:0:63}
   echo "${SERVICE_NAME}"
@@ -724,7 +717,7 @@ start_replicated_service() {
   local SERVICE_NAME="${1}"
   local IMAGE_WITH_TAG="${2}"
   local TIMEOUT_SECONDS="${3:-1}"
-  SERVICE_NAME=$(_correct_test_service_name "${SERVICE_NAME}")
+  SERVICE_NAME=$(_sanitize_test_service_name "${SERVICE_NAME}")
   echo "Creating service ${SERVICE_NAME} in replicated mode "
   # During creation:
   # * Add --detach to reduce the test runtime.
@@ -746,8 +739,8 @@ start_replicated_service() {
     $(_location_constraints) \
     --mode=replicated \
     --detach=true \
-    "${IMAGE_WITH_TAG}"
-  _wait_service_state "${SERVICE_NAME}" "Running"
+    "${IMAGE_WITH_TAG}";
+  _wait_service_state "${SERVICE_NAME}" "Running" 120
 }
 
 start_multiple_replicated_services() {
@@ -771,7 +764,7 @@ start_global_service() {
   local SERVICE_NAME="${1}"
   local IMAGE_WITH_TAG="${2}"
   local TIMEOUT_SECONDS="${3:-1}"
-  SERVICE_NAME=$(_correct_test_service_name "${SERVICE_NAME}")
+  SERVICE_NAME=$(_sanitize_test_service_name "${SERVICE_NAME}")
   echo "Creating service ${SERVICE_NAME} in global mode "
   # Do not add --detach, because we want to wait for the job finishes.
   # SC2046 (warning): Quote this to prevent word splitting.
@@ -794,7 +787,7 @@ _start_replicated_job() {
   local IMAGE_WITH_TAG="${2}"
   local TASK_SECONDS="${3:-1}"
   local EXIT_SECONDS="${4:-1}"
-  SERVICE_NAME=$(_correct_test_service_name "${SERVICE_NAME}")
+  SERVICE_NAME=$(_sanitize_test_service_name "${SERVICE_NAME}")
   echo "Creating service ${SERVICE_NAME} in replicated job mode "
   # Always add --detach=true, do not wait for the job finishes.
   # SC2046 (warning): Quote this to prevent word splitting.
@@ -808,9 +801,9 @@ _start_replicated_job() {
     $(_location_constraints) \
     --mode=replicated-job \
     --detach=true \
-    "${IMAGE_WITH_TAG}"
+    "${IMAGE_WITH_TAG}";
   # wait until the job is running
-  _wait_service_state "${SERVICE_NAME}" "Running"
+  _wait_service_state "${SERVICE_NAME}" "Running" 120
 }
 
 stop_service() {
@@ -867,6 +860,15 @@ _get_entrypoint() {
   echo "source ${STATIC_VAR_ENTRYPOINT}"
 }
 
+_get_file_readonly() {
+  local NAME="${1}"
+  if [ -w "${NAME}" ]; then
+    echo "false"
+  else
+    echo "true"
+  fi
+}
+
 _add_file_to_mount_options() {
   local MOUNT_OPTIONS="${1}"
   local HOST_PATH="${2}"
@@ -874,40 +876,63 @@ _add_file_to_mount_options() {
     # Use the absolute path inside the container.
     local TARGET=
     TARGET=$(readlink -f "${HOST_PATH}")
-    MOUNT_OPTIONS="${MOUNT_OPTIONS} --mount type=bind,source=${HOST_PATH},target=${TARGET}"
+    local READONLY=
+    READONLY=$(_get_file_readonly "${HOST_PATH}")
+    MOUNT_OPTIONS="${MOUNT_OPTIONS} --mount type=bind,source=${HOST_PATH},target=${TARGET},readonly=${READONLY}"
   fi
   echo "${MOUNT_OPTIONS}"
 }
 
-_run_gantry_container() {
+stop_gantry_container() {
   local STACK="${1}"
   local SUT_REPO_TAG=
   SUT_REPO_TAG="$(_get_sut_image)"
   if [ -z "${SUT_REPO_TAG}" ]; then
-    return 1
+    return 0;
   fi
+  local RETURN_VALUE=0
   local SERVICE_NAME=
-  SERVICE_NAME="gantry-test-SUT-$(unique_id)"
+  SERVICE_NAME="gantry-test-SUT-${STACK}"
+  SERVICE_NAME=$(_sanitize_test_service_name "${SERVICE_NAME}")
+  local CMD_OUTPUT=
+  docker service logs --raw "${SERVICE_NAME}"
+  if ! CMD_OUTPUT=$(docker service rm "${SERVICE_NAME}" 2>&1); then
+    echo "Failed to remove service ${SERVICE_NAME}: ${CMD_OUTPUT}" >&2
+    RETURN_VALUE=1
+  fi
+  return "${RETURN_VALUE}"
+}
+
+_run_gantry_container() {
+  local STACK="${1}"
+  local SUT_REPO_TAG="${2}"
+  pull_image_if_not_exist "${SUT_REPO_TAG}"
+  local SERVICE_NAME=
+  SERVICE_NAME="gantry-test-SUT-${STACK}"
+  SERVICE_NAME=$(_sanitize_test_service_name "${SERVICE_NAME}")
   docker service rm "${SERVICE_NAME}" >/dev/null 2>&1;
   local MOUNT_OPTIONS=
-  MOUNT_OPTIONS=$(_add_file_to_mount_options "${MOUNT_OPTIONS}" "${DOCKER_CONFIG}")
+  MOUNT_OPTIONS=$(_add_file_to_mount_options "${MOUNT_OPTIONS}" "${GANTRY_TEST_HOST_TO_CONTAINER}")
+  MOUNT_OPTIONS=$(_add_file_to_mount_options "${MOUNT_OPTIONS}" "${GANTRY_TEST_DOCKER_CONFIG}")
   MOUNT_OPTIONS=$(_add_file_to_mount_options "${MOUNT_OPTIONS}" "${GANTRY_REGISTRY_CONFIG_FILE}")
   MOUNT_OPTIONS=$(_add_file_to_mount_options "${MOUNT_OPTIONS}" "${GANTRY_REGISTRY_CONFIGS_FILE}")
   MOUNT_OPTIONS=$(_add_file_to_mount_options "${MOUNT_OPTIONS}" "${GANTRY_REGISTRY_HOST_FILE}")
   MOUNT_OPTIONS=$(_add_file_to_mount_options "${MOUNT_OPTIONS}" "${GANTRY_REGISTRY_PASSWORD_FILE}")
   MOUNT_OPTIONS=$(_add_file_to_mount_options "${MOUNT_OPTIONS}" "${GANTRY_REGISTRY_USER_FILE}")
   test_log "Starting SUT service ${SERVICE_NAME} with image ${SUT_REPO_TAG}."
+  test_log "MOUNT_OPTIONS=${MOUNT_OPTIONS}"
   local RETURN_VALUE=0
   local CMD_OUTPUT=
   # SC2086 (info): Double quote to prevent globbing and word splitting.
   # shellcheck disable=SC2086
   if ! CMD_OUTPUT=$(docker service create --name "${SERVICE_NAME}" \
+    --detach=true \
     --mode replicated-job --restart-condition=none --network host \
     --constraint "node.role==manager" \
     --mount type=bind,source=/var/run/docker.sock,target=/var/run/docker.sock \
     ${MOUNT_OPTIONS} \
-    --env "DOCKER_CONFIG=${DOCKER_CONFIG}" \
-    --env "DOCKER_HOST=${DOCKER_HOST}" \
+    --env "DOCKER_CONFIG=${GANTRY_TEST_DOCKER_CONFIG}" \
+    --env "DOCKER_HOST=${GANTRY_TEST_DOCKER_HOST}" \
     --env "GANTRY_LOG_LEVEL=${GANTRY_LOG_LEVEL}" \
     --env "GANTRY_NODE_NAME=${GANTRY_NODE_NAME}" \
     --env "GANTRY_POST_RUN_CMD=${GANTRY_POST_RUN_CMD}" \
@@ -948,22 +973,53 @@ _run_gantry_container() {
     echo "Failed to create service ${SERVICE_NAME}: ${CMD_OUTPUT}" >&2
     RETURN_VALUE=1
   fi
-  docker service logs --raw "${SERVICE_NAME}"
-  if ! CMD_OUTPUT=$(docker service rm "${SERVICE_NAME}" 2>&1); then
-    echo "Failed to remove service ${SERVICE_NAME}: ${CMD_OUTPUT}" >&2
-    RETURN_VALUE=1
-  fi
+  _wait_service_state "${SERVICE_NAME}" "Complete" 120
+  RETURN_VALUE=$?
+  stop_gantry_container "${STACK}" || return 1
   return "${RETURN_VALUE}"
+}
+
+_restore_env() {
+  local ENV_NAME="${1}"
+  local ENV_SET="${2}"
+  local ENV_VALUE="${3}"
+  if [ "${ENV_SET}" = "1" ]; then
+    eval "export ${ENV_NAME}=\"${ENV_VALUE}\""
+  else
+    unset "${ENV_NAME}"
+  fi
 }
 
 run_gantry() {
   local STACK="${1}"
-  if _run_gantry_container "${STACK}"; then
-    return 0
+  local DOCKER_CONFIG_SET=0
+  local OLD_DOCKER_CONFIG=
+  local DOCKER_HOST_SET=0
+  local OLD_DOCKER_HOST=
+  if env | grep_q "^DOCKER_CONFIG="; then
+    DOCKER_CONFIG_SET=1
+    OLD_DOCKER_CONFIG="${DOCKER_CONFIG}"
   fi
-  local ENTRYPOINT=
-  ENTRYPOINT=$(_get_entrypoint) || return 1
-  ${ENTRYPOINT} "${STACK}"
+  if env | grep_q "^DOCKER_HOST="; then
+    DOCKER_HOST_SET=1
+    OLD_DOCKER_HOST="${DOCKER_HOST}"
+  fi
+  local RETURN_VALUE=1
+  local SUT_REPO_TAG=
+  SUT_REPO_TAG="$(_get_sut_image)"
+  if [ -n "${SUT_REPO_TAG}" ]; then
+    _run_gantry_container "${STACK}" "${SUT_REPO_TAG}"
+    RETURN_VALUE=$?
+  else
+    [ -n "${GANTRY_TEST_DOCKER_CONFIG}" ] && export DOCKER_CONFIG="${GANTRY_TEST_DOCKER_CONFIG}"
+    [ -n "${GANTRY_TEST_DOCKER_HOST}" ] && export DOCKER_HOST="${GANTRY_TEST_DOCKER_HOST}"
+    local ENTRYPOINT=
+    if ENTRYPOINT=$(_get_entrypoint); then
+      ${ENTRYPOINT} "${STACK}"
+      RETURN_VALUE=$?
+    fi
+  fi
+  _restore_env "DOCKER_CONFIG" "${DOCKER_CONFIG_SET}" "${OLD_DOCKER_CONFIG}"
+  _restore_env "DOCKER_HOST" "${DOCKER_HOST_SET}" "${OLD_DOCKER_HOST}"
+  return "${RETURN_VALUE}"
 }
-
-set +a

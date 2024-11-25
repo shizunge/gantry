@@ -20,7 +20,7 @@ Describe 'cleanup-images'
   SUITE_NAME="cleanup-images"
   BeforeAll "initialize_all_tests ${SUITE_NAME}"
   AfterAll "finish_all_tests ${SUITE_NAME}"
-  Describe "test_CLEANUP_IMAGES_false" "container_test:true" "coverage:true"
+  Describe "test_CLEANUP_IMAGES_false"
     TEST_NAME="test_CLEANUP_IMAGES_false"
     IMAGE_WITH_TAG=$(get_image_with_tag "${SUITE_NAME}")
     SERVICE_NAME=$(get_test_service_name "${TEST_NAME}")
@@ -63,7 +63,7 @@ Describe 'cleanup-images'
       The stderr should satisfy spec_expect_no_message "${DONE_REMOVING_IMAGES}"
     End
   End
-  Describe "test_CLEANUP_IMAGES_OPTIONS_bad" "container_test:true" "coverage:true"
+  Describe "test_CLEANUP_IMAGES_OPTIONS_bad"
     TEST_NAME="test_CLEANUP_IMAGES_OPTIONS_bad"
     IMAGE_WITH_TAG=$(get_image_with_tag "${SUITE_NAME}")
     SERVICE_NAME=$(get_test_service_name "${TEST_NAME}")
@@ -110,7 +110,7 @@ Describe 'cleanup-images'
       The stderr should satisfy spec_expect_no_message "${DONE_REMOVING_IMAGES}"
     End
   End
-  Describe "test_CLEANUP_IMAGES_OPTIONS_good" "container_test:true" "coverage:true"
+  Describe "test_CLEANUP_IMAGES_OPTIONS_good"
     TEST_NAME="test_CLEANUP_IMAGES_OPTIONS_good"
     IMAGE_WITH_TAG=$(get_image_with_tag "${SUITE_NAME}")
     SERVICE_NAME=$(get_test_service_name "${TEST_NAME}")
@@ -156,7 +156,7 @@ Describe 'cleanup-images'
       The stderr should satisfy spec_expect_message    "${DONE_REMOVING_IMAGES}"
     End
   End
-  Describe "test_IMAGES_TO_REMOVE_none_empty" "container_test:true" "coverage:true"
+  Describe "test_IMAGES_TO_REMOVE_none_empty"
     # Test the remove image entrypoint. To improve coverage.
     TEST_NAME="test_IMAGES_TO_REMOVE_none_empty"
     IMAGE_WITH_TAG=$(get_image_with_tag "${SUITE_NAME}")
