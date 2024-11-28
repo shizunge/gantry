@@ -66,7 +66,7 @@ _read_env_or_label() {
   local LABEL_VALUE=
   LABEL_VALUE=$(_get_label_from_service "${SERVICE_NAME}" "${LABEL}")
   if [ -n "${LABEL_VALUE}" ]; then
-    log DEBUG "Use value \"${LABEL_VALUE}\" from label ${LABEL} on the service ${SERVICE_NAME}."
+    log INFO "Use value \"${LABEL_VALUE}\" from label ${LABEL} on the service ${SERVICE_NAME}."
     echo "${LABEL_VALUE}"
     return 0
   fi
@@ -441,7 +441,7 @@ _remove_images() {
   log DEBUG "Set IMAGES_REMOVER=${IMAGES_REMOVER}"
   local IMAGES_TO_REMOVE_LIST=
   IMAGES_TO_REMOVE_LIST=$(echo "${IMAGES_TO_REMOVE}" | tr '\n' ' ')
-  [ -n "${CLEANUP_IMAGES_OPTIONS}" ] && log DEBUG "Adding options \"${CLEANUP_IMAGES_OPTIONS}\" to the global job ${SERVICE_NAME}."
+  [ -n "${CLEANUP_IMAGES_OPTIONS}" ] && log INFO "Adding options \"${CLEANUP_IMAGES_OPTIONS}\" to the global job ${SERVICE_NAME}."
   # SC2086: Double quote to prevent globbing and word splitting.
   # shellcheck disable=SC2086
   docker_global_job --name "${SERVICE_NAME}" \
@@ -550,7 +550,7 @@ _report_services() {
   case "${CONDITION}" in
     "on-change")
       if [ "${NUM_UPDATED}" = "0" ] && [ "${NUM_FAILED_PLUS_ERRORS}" = "0" ]; then
-        log DEBUG "There are no updates or errors for notification."
+        log INFO "There are no updates or errors for notification."
         SEND_NOTIFICATION="false"
       fi
       ;;
@@ -558,7 +558,7 @@ _report_services() {
       ;;
   esac
   if ! is_true "${SEND_NOTIFICATION}"; then
-    log DEBUG "Skip sending notification."
+    log INFO "Skip sending notification."
     return 0
   fi
   local TYPE="success"
@@ -632,7 +632,7 @@ _service_is_self() {
       GANTRY_SERVICES_SELF=$(gantry_current_service_name)
       export GANTRY_SERVICES_SELF
       _static_variable_add_unique_to_list STATIC_VAR_SERVICES_SELF "${GANTRY_SERVICES_SELF}"
-      [ -n "${GANTRY_SERVICES_SELF}" ] && log INFO "Set GANTRY_SERVICES_SELF to ${GANTRY_SERVICES_SELF}."
+      [ -n "${GANTRY_SERVICES_SELF}" ] && log DEBUG "Set GANTRY_SERVICES_SELF to ${GANTRY_SERVICES_SELF}."
     fi
   fi
   local SELF="${GANTRY_SERVICES_SELF}"
@@ -729,7 +729,7 @@ _skip_jobs() {
   fi
   local MODE=
   if MODE=$(_service_is_job "${SERVICE_NAME}"); then
-    log DEBUG "Skip updating ${SERVICE_NAME} because it is in ${MODE} mode."
+    log INFO "Skip updating ${SERVICE_NAME} because it is in ${MODE} mode."
     return 0
   fi
   return 1
@@ -743,18 +743,18 @@ _get_image_info() {
   local IMAGE="${3}"
   local AUTH_CONFIG=
   AUTH_CONFIG=$(_get_auth_config_from_service "${SERVICE_NAME}")
-  [ -n "${AUTH_CONFIG}" ] && log DEBUG "Adding options \"${AUTH_CONFIG}\" to docker commands for ${SERVICE_NAME}."
+  [ -n "${AUTH_CONFIG}" ] && log INFO "Adding options \"${AUTH_CONFIG}\" to docker commands for ${SERVICE_NAME}."
   local MSG=
   local RETURN_VALUE=0
   if echo "${MANIFEST_CMD}" | grep_q_i "buildx"; then
     # https://github.com/orgs/community/discussions/45779
-    [ -n "${MANIFEST_OPTIONS}" ] && log DEBUG "Adding options \"${MANIFEST_OPTIONS}\" to the command \"docker buildx imagetools inspect\"."
+    [ -n "${MANIFEST_OPTIONS}" ] && log INFO "Adding options \"${MANIFEST_OPTIONS}\" to the command \"docker buildx imagetools inspect\"."
     # SC2086: Double quote to prevent globbing and word splitting.
     # shellcheck disable=SC2086
     MSG=$(docker ${AUTH_CONFIG} buildx imagetools inspect ${MANIFEST_OPTIONS} "${IMAGE}" 2>&1);
     RETURN_VALUE=$?
   elif echo "${MANIFEST_CMD}" | grep_q_i "manifest"; then
-    [ -n "${MANIFEST_OPTIONS}" ] && log DEBUG "Adding options \"${MANIFEST_OPTIONS}\" to the command \"docker manifest inspect\"."
+    [ -n "${MANIFEST_OPTIONS}" ] && log INFO "Adding options \"${MANIFEST_OPTIONS}\" to the command \"docker manifest inspect\"."
     # SC2086: Double quote to prevent globbing and word splitting.
     # shellcheck disable=SC2086
     MSG=$(docker ${AUTH_CONFIG} manifest inspect ${MANIFEST_OPTIONS} "${IMAGE}" 2>&1);
@@ -795,7 +795,7 @@ _inspect_image() {
       # Always inspecting self, never skipping.
       MANIFEST_CMD="buildx"
     else
-      log DEBUG "Perform updating ${SERVICE_NAME} because MANIFEST_CMD is \"none\"."
+      log INFO "Perform updating ${SERVICE_NAME} because MANIFEST_CMD is \"none\"."
       echo "${IMAGE}"
       return 0
     fi
@@ -803,38 +803,38 @@ _inspect_image() {
   local NO_NEW_IMAGES=
   NO_NEW_IMAGES=$(_static_variable_read_list STATIC_VAR_NO_NEW_IMAGES)
   if _in_list "${NO_NEW_IMAGES}" "${DIGEST}"; then
-    log DEBUG "Skip updating ${SERVICE_NAME} because there is no known newer version of image ${IMAGE_WITH_DIGEST}."
+    log INFO "Skip updating ${SERVICE_NAME} because there is no known newer version of image ${IMAGE_WITH_DIGEST}."
     return 0
   fi
   local HAS_NEW_IMAGES=
   HAS_NEW_IMAGES=$(_static_variable_read_list STATIC_VAR_NEW_IMAGES)
   if _in_list "${HAS_NEW_IMAGES}" "${DIGEST}"; then
-    log DEBUG "Perform updating ${SERVICE_NAME} because there is a known newer version of image ${IMAGE_WITH_DIGEST}."
+    log INFO "Perform updating ${SERVICE_NAME} because there is a known newer version of image ${IMAGE_WITH_DIGEST}."
     echo "${IMAGE}"
     return 0
   fi
   local IMAGE_INFO=
   if ! IMAGE_INFO=$(_get_image_info "${SERVICE_NAME}" "${MANIFEST_CMD}" "${IMAGE}"); then
-    log DEBUG "Skip updating ${SERVICE_NAME} because there is a failure to obtain the manifest from the registry of image ${IMAGE}."
+    log INFO "Skip updating ${SERVICE_NAME} because there is a failure to obtain the manifest from the registry of image ${IMAGE}."
     return 1
   fi
-  [ -z "${IMAGE_INFO}" ] && log DEBUG "IMAGE_INFO is empty."
+  [ -z "${IMAGE_INFO}" ] && log WARN "IMAGE_INFO is empty for ${SERVICE_NAME}."
   if [ -z "${DIGEST}" ]; then
     # The image may not contain the digest for the following reasons:
     # 1. The image has not been push to or pulled from a V2 registry
     # 2. The image has been pulled from a V1 registry
     # 3. The service is updated without --with-registry-auth when registry requests authentication.
-    log DEBUG "Perform updating ${SERVICE_NAME} because DIGEST is empty in ${IMAGE_WITH_DIGEST}, assume there is a new image."
+    log INFO "Perform updating ${SERVICE_NAME} because DIGEST is empty in ${IMAGE_WITH_DIGEST}, assume there is a new image."
     echo "${IMAGE}"
     return 0
   fi
   if [ -n "${DIGEST}" ] && echo "${IMAGE_INFO}" | grep_q "${DIGEST}"; then
     _static_variable_add_unique_to_list STATIC_VAR_NO_NEW_IMAGES "${DIGEST}"
-    log DEBUG "Skip updating ${SERVICE_NAME} because the current version is the latest of image ${IMAGE_WITH_DIGEST}."
+    log INFO "Skip updating ${SERVICE_NAME} because the current version is the latest of image ${IMAGE_WITH_DIGEST}."
     return 0
   fi
   _static_variable_add_unique_to_list STATIC_VAR_NEW_IMAGES "${DIGEST}"
-  log DEBUG "Perform updating ${SERVICE_NAME} because there is a newer version of image ${IMAGE_WITH_DIGEST}."
+  log INFO "Perform updating ${SERVICE_NAME} because there is a newer version of image ${IMAGE_WITH_DIGEST}."
   echo "${IMAGE}"
   return 0
 }
@@ -950,8 +950,8 @@ _rollback_service() {
   # "service update --rollback" needs to take different options from "service update"
   local AUTOMATIC_OPTIONS=
   AUTOMATIC_OPTIONS=$(_get_service_rollback_additional_options "${SERVICE_NAME}" "${AUTH_CONFIG}")
-  [ -n "${AUTOMATIC_OPTIONS}" ] && log DEBUG "Adding options \"${AUTOMATIC_OPTIONS}\" automatically to the command \"docker service update --rollback\" for ${SERVICE_NAME}."
-  [ -n "${ROLLBACK_OPTIONS}" ] && log DEBUG "Adding options \"${ROLLBACK_OPTIONS}\" specified by user to the command \"docker service update --rollback\" for ${SERVICE_NAME}."
+  [ -n "${AUTOMATIC_OPTIONS}" ] && log INFO "Adding options \"${AUTOMATIC_OPTIONS}\" automatically to the command \"docker service update --rollback\" for ${SERVICE_NAME}."
+  [ -n "${ROLLBACK_OPTIONS}" ] && log INFO "Adding options \"${ROLLBACK_OPTIONS}\" specified by user to the command \"docker service update --rollback\" for ${SERVICE_NAME}."
   local ROLLBACK_MSG=
   # Add "-quiet" to suppress progress output.
   # SC2086: Double quote to prevent globbing and word splitting.
@@ -979,7 +979,7 @@ _get_timeout_command() {
   local TIMEOUT_COMMAND=""
   if [ "${UPDATE_TIMEOUT_SECONDS}" != "0" ]; then
     TIMEOUT_COMMAND="timeout ${UPDATE_TIMEOUT_SECONDS}"
-    log DEBUG "Set timeout to ${UPDATE_TIMEOUT_SECONDS} for updating ${SERVICE_NAME}."
+    log INFO "Set timeout to ${UPDATE_TIMEOUT_SECONDS} for updating ${SERVICE_NAME}."
   fi
   echo "${TIMEOUT_COMMAND}"
 }
@@ -1005,9 +1005,9 @@ _update_single_service() {
   local AUTOMATIC_OPTIONS=
   AUTH_CONFIG=$(_get_auth_config_from_service "${SERVICE_NAME}")
   AUTOMATIC_OPTIONS=$(_get_service_update_additional_options "${SERVICE_NAME}" "${AUTH_CONFIG}")
-  [ -n "${AUTH_CONFIG}" ] && log DEBUG "Adding options \"${AUTH_CONFIG}\" to docker commands for ${SERVICE_NAME}."
-  [ -n "${AUTOMATIC_OPTIONS}" ] && log DEBUG "Adding options \"${AUTOMATIC_OPTIONS}\" automatically to the command \"docker service update\" for ${SERVICE_NAME}."
-  [ -n "${UPDATE_OPTIONS}" ] && log DEBUG "Adding options \"${UPDATE_OPTIONS}\" specified by user to the command \"docker service update\" for ${SERVICE_NAME}."
+  [ -n "${AUTH_CONFIG}" ] && log INFO "Adding options \"${AUTH_CONFIG}\" to docker commands for ${SERVICE_NAME}."
+  [ -n "${AUTOMATIC_OPTIONS}" ] && log INFO "Adding options \"${AUTOMATIC_OPTIONS}\" automatically to the command \"docker service update\" for ${SERVICE_NAME}."
+  [ -n "${UPDATE_OPTIONS}" ] && log INFO "Adding options \"${UPDATE_OPTIONS}\" specified by user to the command \"docker service update\" for ${SERVICE_NAME}."
   local TIMEOUT_COMMAND=""
   TIMEOUT_COMMAND=$(_get_timeout_command "${SERVICE_NAME}") || return 1
   local UPDATE_COMMAND="${TIMEOUT_COMMAND} docker ${AUTH_CONFIG} service update"
@@ -1049,7 +1049,7 @@ _update_single_service() {
   fi
   _static_variable_add_unique_to_list STATIC_VAR_SERVICES_UPDATED "${SERVICE_NAME}"
   _static_variable_add_unique_to_list STATIC_VAR_IMAGES_TO_REMOVE "${PREVIOUS_IMAGE}"
-  log INFO "UPDATED ${SERVICE_NAME}. Use ${TIME_ELAPSED}."
+  log INFO "Updated ${SERVICE_NAME}. Use ${TIME_ELAPSED}."
   return 0
 }
 
@@ -1135,7 +1135,7 @@ gantry_get_services_list() {
   local S=
   for S in ${SERVICES} ; do
     if _in_list "${SERVICES_EXCLUDED}" "${S}" ; then
-      log DEBUG "Exclude service ${S} from updating."
+      log INFO "Exclude service ${S} from updating."
       continue
     fi
     # Add self to the first of the list.

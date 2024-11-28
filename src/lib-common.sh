@@ -620,11 +620,13 @@ docker_service_remove() {
   local SERVICE_NAME="${1}"
   local POST_COMMAND="${2}"
   ! _docker_service_exists "${SERVICE_NAME}" && return 0
-  log INFO "Removing service ${SERVICE_NAME}."
+  log DEBUG "Removing service ${SERVICE_NAME}."
+  local RETURN_VALUE=0
   local LOG=
   if ! LOG=$(docker service rm "${SERVICE_NAME}" 2>&1); then
+    RETURN_VALUE=$?
     log ERROR "Failed to remove docker service ${SERVICE_NAME}: ${LOG}"
-    return 1
+    return "${RETURN_VALUE}"
   fi
   if [ -n "${POST_COMMAND}" ]; then
     eval "${POST_COMMAND}"
@@ -743,11 +745,13 @@ docker_remove() {
   if [ -z "${STATUS}" ]; then
     return 0
   fi
-  log INFO "Removing container ${CNAME}."
+  log DEBUG "Removing container ${CNAME}."
   if [ "${STATUS}" = "running" ]; then
     docker stop "${CNAME}" >/dev/null 2>/dev/null
   fi
-  docker rm "${CNAME}" >/dev/null
+  # If the container is created with "--rm", it will be removed automatically when being stopped.
+  docker rm -f "${CNAME}" >/dev/null;
+  log INFO "Removed container ${CNAME}."
 }
 
 docker_run() {
