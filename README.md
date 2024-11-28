@@ -117,6 +117,8 @@ Labels can be added to services to modify the behavior of *Gantry* for particula
 | `gantry.update.options=<string>`         | Override [`GANTRY_UPDATE_OPTIONS`](#to-add-options-to-services-update). |
 | `gantry.update.timeout_seconds=<number>` | Override [`GANTRY_UPDATE_TIMEOUT_SECONDS`](#to-add-options-to-services-update). |
 
+> NOTE: You must apply the labels to the services not the containers. If you are using docker compose files to setup your services, you need to add the label to the [deploy](https://docs.docker.com/reference/compose-file/deploy/#labels) section.
+
 ## FAQ
 
 [Authentication](docs/authentication.md)
