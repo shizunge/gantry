@@ -54,14 +54,14 @@ Describe 'login-docker-config'
       check_login_input "${REGISTRY}" "${USERNAME}" "${PASSWORD}" || return 1;
       local USER_FILE=; USER_FILE=$(mktemp); echo "${USERNAME}" > "${USER_FILE}";
       local PASS_FILE=; PASS_FILE=$(mktemp); echo "${PASSWORD}" > "${PASS_FILE}";
-      reset_gantry_env "${SERVICE_NAME}"
+      reset_gantry_env "${SUITE_NAME}" "${SERVICE_NAME}"
       export GANTRY_TEST_DOCKER_CONFIG="${CONFIG}"
       export GANTRY_REGISTRY_CONFIG="${CONFIG}"
       export GANTRY_REGISTRY_HOST="${REGISTRY}"
       export GANTRY_REGISTRY_PASSWORD_FILE="${PASS_FILE}"
       export GANTRY_REGISTRY_USER_FILE="${USER_FILE}"
       local RETURN_VALUE=
-      run_gantry "${TEST_NAME}"
+      run_gantry "${SUITE_NAME}" "${TEST_NAME}"
       RETURN_VALUE="${?}"
       rm "${USER_FILE}"
       rm "${PASS_FILE}"
@@ -129,14 +129,14 @@ Describe 'login-docker-config'
       local USER_FILE=; USER_FILE=$(mktemp); echo "${USERNAME}" > "${USER_FILE}";
       local PASS_FILE=; PASS_FILE=$(mktemp); echo "${PASSWORD}" > "${PASS_FILE}";
       # Do not set GANTRY_AUTH_CONFIG_LABEL on the service.
-      reset_gantry_env "${SERVICE_NAME}"
+      reset_gantry_env "${SUITE_NAME}" "${SERVICE_NAME}"
       export GANTRY_TEST_DOCKER_CONFIG="${CONFIG}"
       # Do not set GANTRY_REGISTRY_CONFIG to login to the default configuration.
       export GANTRY_REGISTRY_HOST="${REGISTRY}"
       export GANTRY_REGISTRY_PASSWORD_FILE="${PASS_FILE}"
       export GANTRY_REGISTRY_USER_FILE="${USER_FILE}"
       local RETURN_VALUE=
-      run_gantry "${TEST_NAME}"
+      run_gantry "${SUITE_NAME}" "${TEST_NAME}"
       RETURN_VALUE="${?}"
       docker logout "${REGISTRY}" > /dev/null
       rm "${USER_FILE}"
@@ -225,14 +225,14 @@ Describe 'login-docker-config'
       # Inspection of SERVICE_NAME2 should pass (use DOCKER_CONFIG).
       docker_service_update --label-add "${GANTRY_AUTH_CONFIG_LABEL}=${INCORRECT_CONFIG}" "${SERVICE_NAME0}"
       docker_service_update --label-add "${GANTRY_AUTH_CONFIG_LABEL}=${CONFIG}" "${SERVICE_NAME1}"
-      reset_gantry_env "${SERVICE_NAME}"
+      reset_gantry_env "${SUITE_NAME}" "${SERVICE_NAME}"
       # Inspection and updating should use DOCKER_CONFIG or the label.
       export GANTRY_TEST_DOCKER_CONFIG="${CONFIG}"
       export GANTRY_REGISTRY_CONFIGS_FILE="${CONFIGS_FILE}"
       # Set GANTRY_CLEANUP_IMAGES="false" to speedup the test. We are not testing removing image here.
       export GANTRY_CLEANUP_IMAGES="false"
       local RETURN_VALUE=
-      run_gantry "${TEST_NAME}"
+      run_gantry "${SUITE_NAME}" "${TEST_NAME}"
       RETURN_VALUE="${?}"
       rm "${CONFIGS_FILE}"
       [ -d "${CONFIG}" ] && rm -r "${CONFIG}"

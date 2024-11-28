@@ -45,11 +45,11 @@ Describe 'service-multiple-services'
       local SERVICE_NAME="${2}"
       local SERVICE_NAME1="${SERVICE_NAME}-1"
       local SERVICE_NAME2="${SERVICE_NAME}-2"
-      reset_gantry_env "${SERVICE_NAME}"
+      reset_gantry_env "${SUITE_NAME}" "${SERVICE_NAME}"
       # test both the list of names and the filters
       export GANTRY_SERVICES_EXCLUDED="${SERVICE_NAME1}"
       export GANTRY_SERVICES_EXCLUDED_FILTERS="name=${SERVICE_NAME2}"
-      run_gantry "${TEST_NAME}"
+      run_gantry "${SUITE_NAME}" "${TEST_NAME}"
     }
     test_end() {
       local TEST_NAME="${1}"

@@ -26,9 +26,9 @@ Describe 'common-options'
     test_common_DOCKER_HOST_not_swarm_manager() {
       local TEST_NAME="${1}"
       local SERVICE_NAME="${2}"
-      reset_gantry_env "${SERVICE_NAME}"
+      reset_gantry_env "${SUITE_NAME}" "${SERVICE_NAME}"
       export GANTRY_TEST_DOCKER_HOST="8.8.8.8:53"
-      run_gantry "${TEST_NAME}"
+      run_gantry "${SUITE_NAME}" "${TEST_NAME}"
     }
     BeforeEach "common_setup_new_image ${TEST_NAME} ${IMAGE_WITH_TAG} ${SERVICE_NAME}"
     AfterEach "common_cleanup ${TEST_NAME} ${IMAGE_WITH_TAG} ${SERVICE_NAME}"
@@ -72,10 +72,10 @@ Describe 'common-options'
     test_common_LOG_LEVEL_none() {
       local TEST_NAME="${1}"
       local SERVICE_NAME="${2}"
-      reset_gantry_env "${SERVICE_NAME}"
+      reset_gantry_env "${SUITE_NAME}" "${SERVICE_NAME}"
       # Same as test_new_image_yes, except set LOG_LEVEL to NONE
       export GANTRY_LOG_LEVEL=NONE
-      run_gantry "${TEST_NAME}"
+      run_gantry "${SUITE_NAME}" "${TEST_NAME}"
     }
     BeforeEach "common_setup_new_image ${TEST_NAME} ${IMAGE_WITH_TAG} ${SERVICE_NAME}"
     AfterEach "common_cleanup ${TEST_NAME} ${IMAGE_WITH_TAG} ${SERVICE_NAME}"
@@ -106,11 +106,11 @@ Describe 'common-options'
       local ENV_AFTER_RUN=
       ENV_AFTER_RUN=$(mktemp)
 
-      reset_gantry_env "${SERVICE_NAME}"
+      reset_gantry_env "${SUITE_NAME}" "${SERVICE_NAME}"
       # There should be no warnings or errors. So it should work the same as LOG_LEVLE=NONE.
       export GANTRY_LOG_LEVEL=WARN
       declare -p > "${ENV_BEFORE_RUN}"
-      run_gantry "${TEST_NAME}"
+      run_gantry "${SUITE_NAME}" "${TEST_NAME}"
       declare -p > "${ENV_AFTER_RUN}"
       # Allow the 3 mismatches LOG_LEVEL NODE_NAME LOG_SCOPE used in log() function.
       # Allow the 2 mismatches LINENO _ for kcov coverage.
@@ -140,7 +140,7 @@ Describe 'common-options'
     test_common_PRE_POST_RUN_CMD() {
       local TEST_NAME="${1}"
       local SERVICE_NAME="${2}"
-      reset_gantry_env "${SERVICE_NAME}"
+      reset_gantry_env "${SUITE_NAME}" "${SERVICE_NAME}"
       export GANTRY_UPDATE_OPTIONS=
       export GANTRY_CLEANUP_IMAGES=
       # Test that pre-run command can change the global configurations.
@@ -149,7 +149,7 @@ Describe 'common-options'
       local POST_CMD="for I in \$(seq 3 5); do echo \"TEST_OUTPUT_MULTIPLE_LINES=\$I\"; done"
       # Test that the command returns a non-zero value.
       export GANTRY_POST_RUN_CMD="echo \"Post update\"; ${POST_CMD}; false;"
-      run_gantry "${TEST_NAME}"
+      run_gantry "${SUITE_NAME}" "${TEST_NAME}"
     }
     BeforeEach "common_setup_new_image ${TEST_NAME} ${IMAGE_WITH_TAG} ${SERVICE_NAME}"
     AfterEach "common_cleanup ${TEST_NAME} ${IMAGE_WITH_TAG} ${SERVICE_NAME}"
@@ -200,10 +200,10 @@ Describe 'common-options'
     test_common_SLEEP_SECONDS() {
       local TEST_NAME="${1}"
       local SERVICE_NAME="${2}"
-      reset_gantry_env "${SERVICE_NAME}"
+      reset_gantry_env "${SUITE_NAME}" "${SERVICE_NAME}"
       export GANTRY_SLEEP_SECONDS="7"
       # Run run_gantry in background.
-      run_gantry "${TEST_NAME}" &
+      run_gantry "${SUITE_NAME}" "${TEST_NAME}" &
       local PID="${!}"
       sleep $((GANTRY_SLEEP_SECONDS*3+1))
       stop_gantry_container "${TEST_NAME}"
@@ -253,9 +253,9 @@ Describe 'common-options'
     test_common_SLEEP_SECONDS_not_a_number() {
       local TEST_NAME="${1}"
       local SERVICE_NAME="${2}"
-      reset_gantry_env "${SERVICE_NAME}"
+      reset_gantry_env "${SUITE_NAME}" "${SERVICE_NAME}"
       export GANTRY_SLEEP_SECONDS="NotANumber"
-      run_gantry "${TEST_NAME}"
+      run_gantry "${SUITE_NAME}" "${TEST_NAME}"
     }
     BeforeEach "common_setup_new_image ${TEST_NAME} ${IMAGE_WITH_TAG} ${SERVICE_NAME}"
     AfterEach "common_cleanup ${TEST_NAME} ${IMAGE_WITH_TAG} ${SERVICE_NAME}"

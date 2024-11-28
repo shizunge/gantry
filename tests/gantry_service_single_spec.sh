@@ -26,8 +26,8 @@ Describe 'service-single-service'
     test_new_image_no() {
       local TEST_NAME="${1}"
       local SERVICE_NAME="${2}"
-      reset_gantry_env "${SERVICE_NAME}"
-      run_gantry "${TEST_NAME}"
+      reset_gantry_env "${SUITE_NAME}" "${SERVICE_NAME}"
+      run_gantry "${SUITE_NAME}" "${TEST_NAME}"
     }
     BeforeEach "common_setup_no_new_image ${TEST_NAME} ${IMAGE_WITH_TAG} ${SERVICE_NAME}"
     AfterEach "common_cleanup ${TEST_NAME} ${IMAGE_WITH_TAG} ${SERVICE_NAME}"
@@ -73,8 +73,8 @@ Describe 'service-single-service'
     test_new_image_yes() {
       local TEST_NAME="${1}"
       local SERVICE_NAME="${2}"
-      reset_gantry_env "${SERVICE_NAME}"
-      run_gantry "${TEST_NAME}"
+      reset_gantry_env "${SUITE_NAME}" "${SERVICE_NAME}"
+      run_gantry "${SUITE_NAME}" "${TEST_NAME}"
     }
     BeforeEach "common_setup_new_image ${TEST_NAME} ${IMAGE_WITH_TAG} ${SERVICE_NAME}"
     AfterEach "common_cleanup ${TEST_NAME} ${IMAGE_WITH_TAG} ${SERVICE_NAME}"
@@ -130,8 +130,8 @@ Describe 'service-single-service'
     test_new_image_no_digest() {
       local TEST_NAME="${1}"
       local SERVICE_NAME="${2}"
-      reset_gantry_env "${SERVICE_NAME}"
-      run_gantry "${TEST_NAME}"
+      reset_gantry_env "${SUITE_NAME}" "${SERVICE_NAME}"
+      run_gantry "${SUITE_NAME}" "${TEST_NAME}"
     }
     BeforeEach "test_start ${TEST_NAME} ${IMAGE_WITH_TAG} ${SERVICE_NAME}"
     AfterEach "common_cleanup ${TEST_NAME} ${IMAGE_WITH_TAG} ${SERVICE_NAME}"
@@ -178,10 +178,10 @@ Describe 'service-single-service'
     test_new_image_SERVICES_SELF() {
       local TEST_NAME="${1}"
       local SERVICE_NAME="${2}"
-      reset_gantry_env "${SERVICE_NAME}"
+      reset_gantry_env "${SUITE_NAME}" "${SERVICE_NAME}"
       # Explicitly set GANTRY_SERVICES_SELF
       export GANTRY_SERVICES_SELF="${SERVICE_NAME}"
-      run_gantry "${TEST_NAME}"
+      run_gantry "${SUITE_NAME}" "${TEST_NAME}"
     }
     BeforeEach "common_setup_new_image ${TEST_NAME} ${IMAGE_WITH_TAG} ${SERVICE_NAME}"
     AfterEach "common_cleanup ${TEST_NAME} ${IMAGE_WITH_TAG} ${SERVICE_NAME}"

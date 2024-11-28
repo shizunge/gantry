@@ -26,10 +26,10 @@ Describe 'manifest-command'
     test_MANIFEST_CMD_none() {
       local TEST_NAME="${1}"
       local SERVICE_NAME="${2}"
-      reset_gantry_env "${SERVICE_NAME}"
+      reset_gantry_env "${SUITE_NAME}" "${SERVICE_NAME}"
       export GANTRY_MANIFEST_CMD="none"
       export GANTRY_UPDATE_OPTIONS="--force"
-      run_gantry "${TEST_NAME}"
+      run_gantry "${SUITE_NAME}" "${TEST_NAME}"
     }
     BeforeEach "common_setup_no_new_image ${TEST_NAME} ${IMAGE_WITH_TAG} ${SERVICE_NAME}"
     AfterEach "common_cleanup ${TEST_NAME} ${IMAGE_WITH_TAG} ${SERVICE_NAME}"
@@ -78,11 +78,11 @@ Describe 'manifest-command'
       # If the service is self, it will always run manifest checking. Even if the CMD is set to none
       local TEST_NAME="${1}"
       local SERVICE_NAME="${2}"
-      reset_gantry_env "${SERVICE_NAME}"
+      reset_gantry_env "${SUITE_NAME}" "${SERVICE_NAME}"
       # Explicitly set GANTRY_SERVICES_SELF
       export GANTRY_SERVICES_SELF="${SERVICE_NAME}"
       export GANTRY_MANIFEST_CMD="none"
-      run_gantry "${TEST_NAME}"
+      run_gantry "${SUITE_NAME}" "${TEST_NAME}"
     }
     BeforeEach "common_setup_no_new_image ${TEST_NAME} ${IMAGE_WITH_TAG} ${SERVICE_NAME}"
     AfterEach "common_cleanup ${TEST_NAME} ${IMAGE_WITH_TAG} ${SERVICE_NAME}"
@@ -125,10 +125,10 @@ Describe 'manifest-command'
     test_MANIFEST_CMD_manifest() {
       local TEST_NAME="${1}"
       local SERVICE_NAME="${2}"
-      reset_gantry_env "${SERVICE_NAME}"
+      reset_gantry_env "${SUITE_NAME}" "${SERVICE_NAME}"
       export GANTRY_MANIFEST_OPTIONS="--insecure"
       export GANTRY_MANIFEST_CMD="manifest"
-      run_gantry "${TEST_NAME}"
+      run_gantry "${SUITE_NAME}" "${TEST_NAME}"
     }
     BeforeEach "common_setup_new_image ${TEST_NAME} ${IMAGE_WITH_TAG} ${SERVICE_NAME}"
     AfterEach "common_cleanup ${TEST_NAME} ${IMAGE_WITH_TAG} ${SERVICE_NAME}"
@@ -170,7 +170,7 @@ Describe 'manifest-command'
     test_MANIFEST_CMD_label() {
       local TEST_NAME="${1}"
       local SERVICE_NAME="${2}"
-      reset_gantry_env "${SERVICE_NAME}"
+      reset_gantry_env "${SUITE_NAME}" "${SERVICE_NAME}"
       # The label should be equivalent to
       # export GANTRY_MANIFEST_CMD="manifest"
       # export GANTRY_MANIFEST_OPTIONS="--insecure"
@@ -178,7 +178,7 @@ Describe 'manifest-command'
       docker_service_update --label-add "${LABEL_AND_VALUE}" "${SERVICE_NAME}"
       LABEL_AND_VALUE="gantry.manifest.options=--insecure"
       docker_service_update --label-add "${LABEL_AND_VALUE}" "${SERVICE_NAME}"
-      run_gantry "${TEST_NAME}"
+      run_gantry "${SUITE_NAME}" "${TEST_NAME}"
     }
     BeforeEach "common_setup_new_image ${TEST_NAME} ${IMAGE_WITH_TAG} ${SERVICE_NAME}"
     AfterEach "common_cleanup ${TEST_NAME} ${IMAGE_WITH_TAG} ${SERVICE_NAME}"
@@ -220,10 +220,10 @@ Describe 'manifest-command'
     test_MANIFEST_CMD_unsupported_cmd() {
       local TEST_NAME="${1}"
       local SERVICE_NAME="${2}"
-      reset_gantry_env "${SERVICE_NAME}"
+      reset_gantry_env "${SUITE_NAME}" "${SERVICE_NAME}"
       export GANTRY_MANIFEST_OPTIONS="--insecure"
       export GANTRY_MANIFEST_CMD="unsupported_cmd"
-      run_gantry "${TEST_NAME}"
+      run_gantry "${SUITE_NAME}" "${TEST_NAME}"
     }
     BeforeEach "common_setup_new_image ${TEST_NAME} ${IMAGE_WITH_TAG} ${SERVICE_NAME}"
     AfterEach "common_cleanup ${TEST_NAME} ${IMAGE_WITH_TAG} ${SERVICE_NAME}"
@@ -278,8 +278,8 @@ Describe 'manifest-command'
     test_MANIFEST_CMD_failure() {
       local TEST_NAME="${1}"
       local SERVICE_NAME="${2}"
-      reset_gantry_env "${SERVICE_NAME}"
-      run_gantry "${TEST_NAME}"
+      reset_gantry_env "${SUITE_NAME}" "${SERVICE_NAME}"
+      run_gantry "${SUITE_NAME}" "${TEST_NAME}"
     }
     BeforeEach "test_start ${TEST_NAME} ${IMAGE_WITH_TAG} ${SERVICE_NAME}"
     AfterEach "common_cleanup ${TEST_NAME} ${IMAGE_WITH_TAG} ${SERVICE_NAME}"

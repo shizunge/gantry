@@ -32,7 +32,17 @@ To generate coverage (require [kcov](https://github.com/SimonKagstrom/kcov) inst
 bash shellspec --kcov
 ```
 
-If you want to test a container image of *Gantry*, you need to specify the image of *Gantry* via the environment variable `GANTRY_TEST_CONTAINER_REPO_TAG`.
+The above commands test *Gantry* as a script running on the host directly. We also want to test *Gantry* running inside a container in case the environments are different between the host and the container.
+
+To test *Gantry* running inside a container, set the environment variable `GANTRY_TEST_CONTAINER` to `true`. The testing framework will build a local image of *Gantry*, then start a service of that image to run the test.
+
+```
+export GANTRY_TEST_CONTAINER=true
+bash shellspec --jobs 50
+```
+
+If you want to test a specific image of *Gantry*, you need to set the image of *Gantry* explicitly via the environment variable `GANTRY_TEST_CONTAINER_REPO_TAG`.
+
 ```
 export GANTRY_TEST_CONTAINER_REPO_TAG=<gantry image>:<tag>
 bash shellspec --jobs 50

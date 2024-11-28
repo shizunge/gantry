@@ -42,7 +42,7 @@ Describe 'login'
       local USER_FILE=; USER_FILE=$(mktemp); echo "${USERNAME}" > "${USER_FILE}";
       local PASS_FILE=; PASS_FILE=$(mktemp); echo "${PASSWORD}" > "${PASS_FILE}";
       docker_service_update --label-add "${GANTRY_AUTH_CONFIG_LABEL}=${CONFIG}" "${SERVICE_NAME}"
-      reset_gantry_env "${SERVICE_NAME}"
+      reset_gantry_env "${SUITE_NAME}" "${SERVICE_NAME}"
       export GANTRY_REGISTRY_CONFIG="${CONFIG}"
       export GANTRY_REGISTRY_HOST="${REGISTRY}"
       export GANTRY_REGISTRY_PASSWORD_FILE="${PASS_FILE}"
@@ -51,7 +51,7 @@ Describe 'login'
       # A duplicated "--with-registry-auth" will be added, but it should be ok.
       export GANTRY_UPDATE_OPTIONS="--with-registry-auth"
       local RETURN_VALUE=
-      run_gantry "${TEST_NAME}"
+      run_gantry "${SUITE_NAME}" "${TEST_NAME}"
       RETURN_VALUE="${?}"
       rm "${USER_FILE}"
       rm "${PASS_FILE}"
@@ -116,13 +116,13 @@ Describe 'login'
       local USER_FILE=; USER_FILE=$(mktemp); echo "${USERNAME}" > "${USER_FILE}";
       local PASS_FILE=; PASS_FILE=$(mktemp); echo "${PASSWORD}" > "${PASS_FILE}";
       # Do not set GANTRY_AUTH_CONFIG_LABEL on the service.
-      reset_gantry_env "${SERVICE_NAME}"
+      reset_gantry_env "${SUITE_NAME}" "${SERVICE_NAME}"
       # Do not set GANTRY_REGISTRY_CONFIG to login to the default configuration.
       export GANTRY_REGISTRY_HOST="${REGISTRY}"
       export GANTRY_REGISTRY_PASSWORD_FILE="${PASS_FILE}"
       export GANTRY_REGISTRY_USER_FILE="${USER_FILE}"
       local RETURN_VALUE=
-      run_gantry "${TEST_NAME}"
+      run_gantry "${SUITE_NAME}" "${TEST_NAME}"
       RETURN_VALUE="${?}"
       docker logout "${REGISTRY}" > /dev/null
       rm "${USER_FILE}"
@@ -191,7 +191,7 @@ Describe 'login'
       echo "# Test comments: CONFIG REGISTRY USERNAME PASSWORD" >> "${CONFIGS_FILE}"
       echo "${CONFIG} ${REGISTRY} ${USERNAME} ${PASSWORD}" >> "${CONFIGS_FILE}"
       docker_service_update --label-add "${GANTRY_AUTH_CONFIG_LABEL}=${CONFIG}" "${SERVICE_NAME}"
-      reset_gantry_env "${SERVICE_NAME}"
+      reset_gantry_env "${SUITE_NAME}" "${SERVICE_NAME}"
       export GANTRY_REGISTRY_CONFIGS_FILE="${CONFIGS_FILE}"
       # Since we pass credentials via the configs file, we can use other envs to login to docker hub and check the rate.
       # However we do not actually check whether we read rates correctly, in case password or usrename for docker hub is not set.
@@ -201,7 +201,7 @@ Describe 'login'
       export GANTRY_REGISTRY_PASSWORD="${DOCKERHUB_PASSWORD:-""}"
       export GANTRY_REGISTRY_USER="${DOCKERHUB_USERNAME:-""}"
       local RETURN_VALUE=
-      run_gantry "${TEST_NAME}"
+      run_gantry "${SUITE_NAME}" "${TEST_NAME}"
       RETURN_VALUE="${?}"
       rm "${CONFIGS_FILE}"
       [ -d "${CONFIG}" ] && rm -r "${CONFIG}"
@@ -265,7 +265,7 @@ Describe 'login'
       echo "${PASSWORD}" | docker --config "${CONFIG}" login --username="${USERNAME}" --password-stdin "${REGISTRY}" > /dev/null 2>&1
       chmod 555 "${CONFIG}"
       # Do not set GANTRY_AUTH_CONFIG_LABEL on service.
-      reset_gantry_env "${SERVICE_NAME}"
+      reset_gantry_env "${SUITE_NAME}" "${SERVICE_NAME}"
       export GANTRY_TEST_DOCKER_CONFIG="${CONFIG}"
       # Use manifest to avoid write to DOCKER_CONFIG.
       # When running container test, Gantry runs as root.
@@ -274,7 +274,7 @@ Describe 'login'
       export GANTRY_MANIFEST_OPTIONS="--insecure"
       # Do not set --with-registry-auth to trigger a warning IMAGE_DIGEST_WARNING.
       local RETURN_VALUE=
-      run_gantry "${TEST_NAME}"
+      run_gantry "${SUITE_NAME}" "${TEST_NAME}"
       RETURN_VALUE="${?}"
       [ -d "${CONFIG}" ] && chmod 777 "${CONFIG}" && rm -r "${CONFIG}"
       return "${RETURN_VALUE}"

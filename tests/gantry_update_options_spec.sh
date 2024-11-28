@@ -36,10 +36,10 @@ Describe 'update-options'
       local LABEL_AND_VALUE=
       LABEL_AND_VALUE=$(_read_service_label "${SERVICE_NAME}" "${LABEL}")
       echo "Before updating: LABEL_AND_VALUE=${LABEL_AND_VALUE}"
-      reset_gantry_env "${SERVICE_NAME}"
+      reset_gantry_env "${SUITE_NAME}" "${SERVICE_NAME}"
       export GANTRY_UPDATE_OPTIONS="--label-add=${LABEL}=${SERVICE_NAME}"
       local RETURN_VALUE=
-      run_gantry "${TEST_NAME}"
+      run_gantry "${SUITE_NAME}" "${TEST_NAME}"
       RETURN_VALUE="${?}"
       LABEL_AND_VALUE=$(_read_service_label "${SERVICE_NAME}" "${LABEL}")
       echo "After updating: LABEL_AND_VALUE=${LABEL_AND_VALUE}"
@@ -92,13 +92,13 @@ Describe 'update-options'
       local LABEL_AND_VALUE=
       LABEL_AND_VALUE=$(_read_service_label "${SERVICE_NAME}" "${LABEL}")
       echo "Before updating: LABEL_AND_VALUE=${LABEL_AND_VALUE}"
-      reset_gantry_env "${SERVICE_NAME}"
+      reset_gantry_env "${SUITE_NAME}" "${SERVICE_NAME}"
       # label should override the global environment variable.
       export GANTRY_UPDATE_OPTIONS="--incorrect-option"
       local LABEL_AND_VALUE="gantry.update.options=--label-add=${LABEL}=${SERVICE_NAME}"
       docker_service_update --label-add "${LABEL_AND_VALUE}" "${SERVICE_NAME}"
       local RETURN_VALUE=
-      run_gantry "${TEST_NAME}"
+      run_gantry "${SUITE_NAME}" "${TEST_NAME}"
       RETURN_VALUE="${?}"
       LABEL_AND_VALUE=$(_read_service_label "${SERVICE_NAME}" "${LABEL}")
       echo "After updating: LABEL_AND_VALUE=${LABEL_AND_VALUE}"
@@ -147,9 +147,9 @@ Describe 'update-options'
     test_update_UPDATE_TIMEOUT_SECONDS_not_a_number() {
       local TEST_NAME="${1}"
       local SERVICE_NAME="${2}"
-      reset_gantry_env "${SERVICE_NAME}"
+      reset_gantry_env "${SUITE_NAME}" "${SERVICE_NAME}"
       export GANTRY_UPDATE_TIMEOUT_SECONDS="NotANumber"
-      run_gantry "${TEST_NAME}"
+      run_gantry "${SUITE_NAME}" "${TEST_NAME}"
     }
     BeforeEach "common_setup_new_image ${TEST_NAME} ${IMAGE_WITH_TAG} ${SERVICE_NAME}"
     AfterEach "common_cleanup ${TEST_NAME} ${IMAGE_WITH_TAG} ${SERVICE_NAME}"
@@ -198,7 +198,7 @@ Describe 'update-options'
       local LABEL_AND_VALUE=
       LABEL_AND_VALUE=$(_read_service_label "${SERVICE_NAME}" "${LABEL}")
       echo "Before updating: LABEL_AND_VALUE=${LABEL_AND_VALUE}"
-      reset_gantry_env "${SERVICE_NAME}"
+      reset_gantry_env "${SUITE_NAME}" "${SERVICE_NAME}"
       export GANTRY_UPDATE_OPTIONS="--label-add=${LABEL}=${SERVICE_NAME}"
       # label should override the global environment variable.
       export GANTRY_UPDATE_TIMEOUT_SECONDS="NotANumber"
@@ -206,7 +206,7 @@ Describe 'update-options'
       LABEL_AND_VALUE="gantry.update.timeout_seconds=${TIMEOUT}"
       docker_service_update --label-add "${LABEL_AND_VALUE}" "${SERVICE_NAME}"
       local RETURN_VALUE=
-      run_gantry "${TEST_NAME}"
+      run_gantry "${SUITE_NAME}" "${TEST_NAME}"
       RETURN_VALUE="${?}"
       LABEL_AND_VALUE=$(_read_service_label "${SERVICE_NAME}" "${LABEL}")
       echo "After updating: LABEL_AND_VALUE=${LABEL_AND_VALUE}"

@@ -27,9 +27,9 @@ Describe 'cleanup-images'
     test_CLEANUP_IMAGES_false() {
       local TEST_NAME="${1}"
       local SERVICE_NAME="${2}"
-      reset_gantry_env "${SERVICE_NAME}"
+      reset_gantry_env "${SUITE_NAME}" "${SERVICE_NAME}"
       export GANTRY_CLEANUP_IMAGES="false"
-      run_gantry "${TEST_NAME}"
+      run_gantry "${SUITE_NAME}" "${TEST_NAME}"
     }
     BeforeEach "common_setup_new_image ${TEST_NAME} ${IMAGE_WITH_TAG} ${SERVICE_NAME}"
     AfterEach "common_cleanup ${TEST_NAME} ${IMAGE_WITH_TAG} ${SERVICE_NAME}"
@@ -70,11 +70,11 @@ Describe 'cleanup-images'
     test_CLEANUP_IMAGES_OPTIONS_bad() {
       local TEST_NAME="${1}"
       local SERVICE_NAME="${2}"
-      reset_gantry_env "${SERVICE_NAME}"
+      reset_gantry_env "${SUITE_NAME}" "${SERVICE_NAME}"
       export GANTRY_CLEANUP_IMAGES="true"
       # Image remover would fail due to the incorrect option.
       export GANTRY_CLEANUP_IMAGES_OPTIONS="--incorrect-option"
-      run_gantry "${TEST_NAME}"
+      run_gantry "${SUITE_NAME}" "${TEST_NAME}"
     }
     BeforeEach "common_setup_new_image ${TEST_NAME} ${IMAGE_WITH_TAG} ${SERVICE_NAME}"
     AfterEach "common_cleanup ${TEST_NAME} ${IMAGE_WITH_TAG} ${SERVICE_NAME}"
@@ -117,10 +117,10 @@ Describe 'cleanup-images'
     test_CLEANUP_IMAGES_OPTIONS_good() {
       local TEST_NAME="${1}"
       local SERVICE_NAME="${2}"
-      reset_gantry_env "${SERVICE_NAME}"
+      reset_gantry_env "${SUITE_NAME}" "${SERVICE_NAME}"
       export GANTRY_CLEANUP_IMAGES="true"
       export GANTRY_CLEANUP_IMAGES_OPTIONS="--container-label=test"
-      run_gantry "${TEST_NAME}"
+      run_gantry "${SUITE_NAME}" "${TEST_NAME}"
     }
     BeforeEach "common_setup_new_image ${TEST_NAME} ${IMAGE_WITH_TAG} ${SERVICE_NAME}"
     AfterEach "common_cleanup ${TEST_NAME} ${IMAGE_WITH_TAG} ${SERVICE_NAME}"
@@ -194,9 +194,9 @@ Describe 'cleanup-images'
       local IMAGE_WITH_TAG0="${IMAGE_WITH_TAG}-0"
       local IMAGE_WITH_TAG1="${IMAGE_WITH_TAG}-1"
       local IMAGE_WITH_TAG2="${IMAGE_WITH_TAG}-2"
-      reset_gantry_env "${SERVICE_NAME}"
+      reset_gantry_env "${SUITE_NAME}" "${SERVICE_NAME}"
       export GANTRY_IMAGES_TO_REMOVE="${IMAGE_WITH_TAG0} ${IMAGE_WITH_TAG1} ${IMAGE_WITH_TAG2}"
-      run_gantry "${TEST_NAME}"
+      run_gantry "${SUITE_NAME}" "${TEST_NAME}"
     }
     test_end() {
       local TEST_NAME="${1}"

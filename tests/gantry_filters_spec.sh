@@ -26,9 +26,9 @@ Describe 'filters'
     test_SERVICES_FILTERS_bad() {
       local TEST_NAME="${1}"
       local SERVICE_NAME="${2}"
-      reset_gantry_env "${SERVICE_NAME}"
+      reset_gantry_env "${SUITE_NAME}" "${SERVICE_NAME}"
       export GANTRY_SERVICES_FILTERS="BadFilterValue"
-      run_gantry "${TEST_NAME}"
+      run_gantry "${SUITE_NAME}" "${TEST_NAME}"
     }
     BeforeEach "common_setup_new_image ${TEST_NAME} ${IMAGE_WITH_TAG} ${SERVICE_NAME}"
     AfterEach "common_cleanup ${TEST_NAME} ${IMAGE_WITH_TAG} ${SERVICE_NAME}"
@@ -75,7 +75,7 @@ Describe 'filters'
       local MAX_SERVICES_NUM="${3}"
       local NUM_SERVICES_EXCLUDED=$((MAX_SERVICES_NUM/2))
       local NUM_SERVICES_EXCLUDED_FILTER_START=$((NUM_SERVICES_EXCLUDED+1))
-      reset_gantry_env "${SERVICE_NAME}"
+      reset_gantry_env "${SUITE_NAME}" "${SERVICE_NAME}"
       for NUM in $(seq 0 "${NUM_SERVICES_EXCLUDED}"); do
         local SERVICE_NAME_NUM="${SERVICE_NAME}-${NUM}"
         export GANTRY_SERVICES_EXCLUDED="${GANTRY_SERVICES_EXCLUDED} ${SERVICE_NAME_NUM}"
@@ -86,7 +86,7 @@ Describe 'filters'
         docker_service_update --label-add "${LABEL}=true" "${SERVICE_NAME_NUM}"
       done
       export GANTRY_SERVICES_EXCLUDED_FILTERS="label=${LABEL}=true"
-      run_gantry "${TEST_NAME}"
+      run_gantry "${SUITE_NAME}" "${TEST_NAME}"
     }
     BeforeEach "common_setup_new_image_multiple ${TEST_NAME} ${IMAGE_WITH_TAG} ${SERVICE_NAME} ${MAX_SERVICES_NUM}"
     AfterEach "common_cleanup_multiple ${TEST_NAME} ${IMAGE_WITH_TAG} ${SERVICE_NAME} ${MAX_SERVICES_NUM}"
@@ -131,14 +131,14 @@ Describe 'filters'
       local TEST_NAME="${1}"
       local SERVICE_NAME="${2}"
       local MAX_SERVICES_NUM="${3}"
-      reset_gantry_env "${SERVICE_NAME}"
+      reset_gantry_env "${SUITE_NAME}" "${SERVICE_NAME}"
       local LABEL="gantry.services.excluded"
       for NUM in $(seq 0 "${MAX_SERVICES_NUM}"); do
         local SERVICE_NAME_NUM="${SERVICE_NAME}-${NUM}"
         docker_service_update --label-add "${LABEL}=true" "${SERVICE_NAME_NUM}"
       done
       # Do not set GANTRY_SERVICES_EXCLUDED_FILTERS, check the default one is working.
-      run_gantry "${TEST_NAME}"
+      run_gantry "${SUITE_NAME}" "${TEST_NAME}"
     }
     BeforeEach "common_setup_new_image_multiple ${TEST_NAME} ${IMAGE_WITH_TAG} ${SERVICE_NAME} ${MAX_SERVICES_NUM}"
     AfterEach "common_cleanup_multiple ${TEST_NAME} ${IMAGE_WITH_TAG} ${SERVICE_NAME} ${MAX_SERVICES_NUM}"
@@ -180,9 +180,9 @@ Describe 'filters'
     test_SERVICES_EXCLUDED_FILTERS_bad() {
       local TEST_NAME="${1}"
       local SERVICE_NAME="${2}"
-      reset_gantry_env "${SERVICE_NAME}"
+      reset_gantry_env "${SUITE_NAME}" "${SERVICE_NAME}"
       export GANTRY_SERVICES_EXCLUDED_FILTERS="BadFilterValue"
-      run_gantry "${TEST_NAME}"
+      run_gantry "${SUITE_NAME}" "${TEST_NAME}"
     }
     BeforeEach "common_setup_new_image ${TEST_NAME} ${IMAGE_WITH_TAG} ${SERVICE_NAME}"
     AfterEach "common_cleanup ${TEST_NAME} ${IMAGE_WITH_TAG} ${SERVICE_NAME}"

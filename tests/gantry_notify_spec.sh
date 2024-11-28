@@ -77,10 +77,10 @@ Describe 'notify'
       local TEST_NAME="${1}"
       local SERVICE_NAME="${2}"
       local RETURN_VALUE=0
-      reset_gantry_env "${SERVICE_NAME}"
+      reset_gantry_env "${SUITE_NAME}" "${SERVICE_NAME}"
       export GANTRY_NOTIFICATION_APPRISE_URL="http://localhost:${APPRISE_PORT}/notify"
       export GANTRY_NOTIFICATION_TITLE="TEST_TITLE"
-      run_gantry "${TEST_NAME}"
+      run_gantry "${SUITE_NAME}" "${TEST_NAME}"
       RETURN_VALUE="${?}"
       _print_and_cleanup_emails
       return "${RETURN_VALUE}"
@@ -128,10 +128,10 @@ Describe 'notify'
       local TEST_NAME="${1}"
       local SERVICE_NAME="${2}"
       local RETURN_VALUE=0
-      reset_gantry_env "${SERVICE_NAME}"
+      reset_gantry_env "${SUITE_NAME}" "${SERVICE_NAME}"
       export GANTRY_NOTIFICATION_APPRISE_URL="http://localhost:${APPRISE_PORT}/notify"
       export GANTRY_NOTIFICATION_TITLE="TEST_TITLE"
-      run_gantry "${TEST_NAME}"
+      run_gantry "${SUITE_NAME}" "${TEST_NAME}"
       RETURN_VALUE="${?}"
       _print_and_cleanup_emails
       return "${RETURN_VALUE}"
@@ -179,9 +179,9 @@ Describe 'notify'
     test_notify_apprise_bad_url() {
       local TEST_NAME="${1}"
       local SERVICE_NAME="${2}"
-      reset_gantry_env "${SERVICE_NAME}"
+      reset_gantry_env "${SUITE_NAME}" "${SERVICE_NAME}"
       export GANTRY_NOTIFICATION_APPRISE_URL="http://bad-url/notify"
-      run_gantry "${TEST_NAME}"
+      run_gantry "${SUITE_NAME}" "${TEST_NAME}"
     }
     BeforeEach "common_setup_new_image ${TEST_NAME} ${IMAGE_WITH_TAG} ${SERVICE_NAME}"
     AfterEach "common_cleanup ${TEST_NAME} ${IMAGE_WITH_TAG} ${SERVICE_NAME}"
@@ -225,11 +225,11 @@ Describe 'notify'
       local TEST_NAME="${1}"
       local SERVICE_NAME="${2}"
       local RETURN_VALUE=0
-      reset_gantry_env "${SERVICE_NAME}"
+      reset_gantry_env "${SUITE_NAME}" "${SERVICE_NAME}"
       export GANTRY_NOTIFICATION_APPRISE_URL="http://localhost:${APPRISE_PORT}/notify"
       export GANTRY_NOTIFICATION_CONDITION="on-change"
       export GANTRY_NOTIFICATION_TITLE="TEST_TITLE"
-      run_gantry "${TEST_NAME}"
+      run_gantry "${SUITE_NAME}" "${TEST_NAME}"
       RETURN_VALUE="${?}"
       _print_and_cleanup_emails
       return "${RETURN_VALUE}"
@@ -277,10 +277,10 @@ Describe 'notify'
       local TEST_NAME="${1}"
       local SERVICE_NAME="${2}"
       local RETURN_VALUE=0
-      reset_gantry_env "${SERVICE_NAME}"
+      reset_gantry_env "${SUITE_NAME}" "${SERVICE_NAME}"
       export GANTRY_NOTIFICATION_CONDITION="on-change"
       export GANTRY_NOTIFICATION_TITLE="TEST_TITLE"
-      run_gantry "${TEST_NAME}"
+      run_gantry "${SUITE_NAME}" "${TEST_NAME}"
       RETURN_VALUE="${?}"
       return "${RETURN_VALUE}"
     }
@@ -328,12 +328,12 @@ Describe 'notify'
       local TEST_NAME="${1}"
       local SERVICE_NAME="${2}"
       local RETURN_VALUE=0
-      reset_gantry_env "${SERVICE_NAME}"
+      reset_gantry_env "${SUITE_NAME}" "${SERVICE_NAME}"
       export GANTRY_UPDATE_OPTIONS="--bad-options-that-causes-error"
       export GANTRY_NOTIFICATION_APPRISE_URL="http://localhost:${APPRISE_PORT}/notify"
       export GANTRY_NOTIFICATION_CONDITION="on-change"
       export GANTRY_NOTIFICATION_TITLE="TEST_TITLE"
-      run_gantry "${TEST_NAME}"
+      run_gantry "${SUITE_NAME}" "${TEST_NAME}"
       RETURN_VALUE="${?}"
       _print_and_cleanup_emails
       return "${RETURN_VALUE}"

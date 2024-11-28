@@ -31,8 +31,8 @@ Describe 'login-negative'
     test_login_no_login() {
       local TEST_NAME="${1}"
       local SERVICE_NAME="${2}"
-      reset_gantry_env "${SERVICE_NAME}"
-      run_gantry "${TEST_NAME}"
+      reset_gantry_env "${SUITE_NAME}" "${SERVICE_NAME}"
+      run_gantry "${SUITE_NAME}" "${TEST_NAME}"
     }
     BeforeEach "common_setup_new_image ${TEST_NAME} ${IMAGE_WITH_TAG} ${SERVICE_NAME}"
     AfterEach "common_cleanup ${TEST_NAME} ${IMAGE_WITH_TAG} ${SERVICE_NAME}"
@@ -94,13 +94,13 @@ Describe 'login-negative'
       local USER_FILE=; USER_FILE=$(mktemp); echo "${USERNAME}" > "${USER_FILE}";
       local PASS_FILE=; PASS_FILE=$(mktemp); echo "${INCORRECT_PASSWORD}" > "${PASS_FILE}";
       docker_service_update --label-add "${GANTRY_AUTH_CONFIG_LABEL}=${CONFIG}" "${SERVICE_NAME}"
-      reset_gantry_env "${SERVICE_NAME}"
+      reset_gantry_env "${SUITE_NAME}" "${SERVICE_NAME}"
       export GANTRY_REGISTRY_CONFIG="${CONFIG}"
       export GANTRY_REGISTRY_HOST="${REGISTRY}"
       export GANTRY_REGISTRY_PASSWORD_FILE="${PASS_FILE}"
       export GANTRY_REGISTRY_USER_FILE="${USER_FILE}"
       local RETURN_VALUE=
-      run_gantry "${TEST_NAME}"
+      run_gantry "${SUITE_NAME}" "${TEST_NAME}"
       RETURN_VALUE="${?}"
       rm "${USER_FILE}"
       rm "${PASS_FILE}"
@@ -166,7 +166,7 @@ Describe 'login-negative'
       local USER_FILE=; USER_FILE=$(mktemp); echo "${USERNAME}" > "${USER_FILE}";
       local PASS_FILE=; PASS_FILE=$(mktemp); echo "${PASSWORD}" > "${PASS_FILE}";
       docker_service_update --label-add "${GANTRY_AUTH_CONFIG_LABEL}=${CONFIG}" "${SERVICE_NAME}"
-      reset_gantry_env "${SERVICE_NAME}"
+      reset_gantry_env "${SUITE_NAME}" "${SERVICE_NAME}"
       # Use GANTRY_TEST_HOST_TO_CONTAINER to mount the file from host to the container.
       export GANTRY_TEST_HOST_TO_CONTAINER="${CONFIG}"
       export GANTRY_REGISTRY_CONFIG="${CONFIG}"
@@ -174,7 +174,7 @@ Describe 'login-negative'
       export GANTRY_REGISTRY_PASSWORD_FILE="${PASS_FILE}"
       export GANTRY_REGISTRY_USER_FILE="${USER_FILE}"
       local RETURN_VALUE=
-      run_gantry "${TEST_NAME}"
+      run_gantry "${SUITE_NAME}" "${TEST_NAME}"
       RETURN_VALUE="${?}"
       rm "${USER_FILE}"
       rm "${PASS_FILE}"
@@ -245,7 +245,7 @@ Describe 'login-negative'
       echo "${CONFIG} ${REGISTRY} ${USERNAME} ${PASSWORD}" >> "${CONFIGS_FILE}"
       # The config name on the service is different from the config name used in GANTRY_REGISTRY_CONFIG
       docker_service_update --label-add "${GANTRY_AUTH_CONFIG_LABEL}=${INCORRECT_CONFIG}" "${SERVICE_NAME}"
-      reset_gantry_env "${SERVICE_NAME}"
+      reset_gantry_env "${SUITE_NAME}" "${SERVICE_NAME}"
       # Do not set GANTRY_REGISTRY_CONFIG, login to the default config.
       # export GANTRY_REGISTRY_CONFIG="${CONFIG}"
       export GANTRY_REGISTRY_HOST="${REGISTRY}"
@@ -253,7 +253,7 @@ Describe 'login-negative'
       export GANTRY_REGISTRY_USER_FILE="${USER_FILE}"
       export GANTRY_REGISTRY_CONFIGS_FILE="${CONFIGS_FILE}"
       local RETURN_VALUE=
-      run_gantry "${TEST_NAME}"
+      run_gantry "${SUITE_NAME}" "${TEST_NAME}"
       RETURN_VALUE="${?}"
       rm "${USER_FILE}"
       rm "${PASS_FILE}"
@@ -329,14 +329,14 @@ Describe 'login-negative'
       local PASS_FILE=; PASS_FILE=$(mktemp); echo "${PASSWORD}" > "${PASS_FILE}";
       # The config name on the service is different from the config name used in GANTRY_REGISTRY_CONFIG
       docker_service_update --label-add "${GANTRY_AUTH_CONFIG_LABEL}=${INCORRECT_CONFIG}" "${SERVICE_NAME}"
-      reset_gantry_env "${SERVICE_NAME}"
+      reset_gantry_env "${SUITE_NAME}" "${SERVICE_NAME}"
       export GANTRY_REGISTRY_CONFIG="${CONFIG}"
       export GANTRY_REGISTRY_HOST="${REGISTRY}"
       export GANTRY_REGISTRY_PASSWORD_FILE="${PASS_FILE}"
       export GANTRY_REGISTRY_USER_FILE="${USER_FILE}"
       export GANTRY_REGISTRY_CONFIGS_FILE="${CONFIGS_FILE}"
       local RETURN_VALUE=
-      run_gantry "${TEST_NAME}"
+      run_gantry "${SUITE_NAME}" "${TEST_NAME}"
       RETURN_VALUE="${?}"
       rm "${USER_FILE}"
       rm "${PASS_FILE}"
@@ -435,7 +435,7 @@ Describe 'login-negative'
       # Inspection of SERVICE_NAME0 should fail, because GANTRY_AUTH_CONFIG_LABEL is not found.
       # Inspection of SERVICE_NAME1 should pass, because configuration is set via GANTRY_AUTH_CONFIG_LABEL.
       docker_service_update --label-add "${GANTRY_AUTH_CONFIG_LABEL}=${CONFIG}" "${SERVICE_NAME1}"
-      reset_gantry_env "${SERVICE_NAME}"
+      reset_gantry_env "${SUITE_NAME}" "${SERVICE_NAME}"
       export GANTRY_REGISTRY_CONFIG="${CONFIG}"
       export GANTRY_REGISTRY_HOST="${REGISTRY}"
       export GANTRY_REGISTRY_PASSWORD_FILE="${PASS_FILE}"
@@ -443,7 +443,7 @@ Describe 'login-negative'
       # Set GANTRY_CLEANUP_IMAGES="false" to speedup the test. We are not testing removing image here.
       export GANTRY_CLEANUP_IMAGES="false"
       local RETURN_VALUE=
-      run_gantry "${TEST_NAME}"
+      run_gantry "${SUITE_NAME}" "${TEST_NAME}"
       RETURN_VALUE="${?}"
       rm "${USER_FILE}"
       rm "${PASS_FILE}"
@@ -531,10 +531,10 @@ Describe 'login-negative'
       # Missing an item from the line.
       echo "The-Only-Item-In-The-Line" >> "${CONFIGS_FILE}"
       docker_service_update --label-add "${GANTRY_AUTH_CONFIG_LABEL}=${CONFIG}" "${SERVICE_NAME}"
-      reset_gantry_env "${SERVICE_NAME}"
+      reset_gantry_env "${SUITE_NAME}" "${SERVICE_NAME}"
       export GANTRY_REGISTRY_CONFIGS_FILE="${CONFIGS_FILE}"
       local RETURN_VALUE=
-      run_gantry "${TEST_NAME}"
+      run_gantry "${SUITE_NAME}" "${TEST_NAME}"
       RETURN_VALUE="${?}"
       rm "${CONFIGS_FILE}"
       [ -d "${CONFIG}" ] && rm -r "${CONFIG}"
@@ -599,14 +599,14 @@ Describe 'login-negative'
       check_login_input "${REGISTRY}" "${USERNAME}" "${PASSWORD}" || return 1;
       docker_service_update --label-add "${GANTRY_AUTH_CONFIG_LABEL}=${CONFIG}" "${SERVICE_NAME}"
       local FILE_NOT_EXIST="/tmp/${CONFIG}"
-      reset_gantry_env "${SERVICE_NAME}"
+      reset_gantry_env "${SUITE_NAME}" "${SERVICE_NAME}"
       export GANTRY_REGISTRY_CONFIG_FILE="${FILE_NOT_EXIST}"
       export GANTRY_REGISTRY_CONFIGS_FILE="${FILE_NOT_EXIST}"
       export GANTRY_REGISTRY_HOST_FILE="${FILE_NOT_EXIST}"
       export GANTRY_REGISTRY_PASSWORD_FILE="${FILE_NOT_EXIST}"
       export GANTRY_REGISTRY_USER_FILE="${FILE_NOT_EXIST}"
       local RETURN_VALUE=
-      run_gantry "${TEST_NAME}"
+      run_gantry "${SUITE_NAME}" "${TEST_NAME}"
       RETURN_VALUE="${?}"
       [ -d "${CONFIG}" ] && rm -r "${CONFIG}"
       return "${RETURN_VALUE}"

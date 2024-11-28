@@ -46,8 +46,8 @@ Describe "service-no-running-tasks"
     test_no_running_tasks_replicated() {
       local TEST_NAME="${1}"
       local SERVICE_NAME="${2}"
-      reset_gantry_env "${SERVICE_NAME}"
-      run_gantry "${TEST_NAME}"
+      reset_gantry_env "${SUITE_NAME}" "${SERVICE_NAME}"
+      run_gantry "${SUITE_NAME}" "${TEST_NAME}"
     }
     test_end() {
       local TEST_NAME="${1}"
@@ -120,8 +120,8 @@ Describe "service-no-running-tasks"
     test_no_running_tasks_global() {
       local TEST_NAME="${1}"
       local SERVICE_NAME="${2}"
-      reset_gantry_env "${SERVICE_NAME}"
-      run_gantry "${TEST_NAME}"
+      reset_gantry_env "${SUITE_NAME}" "${SERVICE_NAME}"
+      run_gantry "${SUITE_NAME}" "${TEST_NAME}"
     }
     BeforeEach "test_start ${TEST_NAME} ${IMAGE_WITH_TAG} ${SERVICE_NAME}"
     AfterEach "common_cleanup ${TEST_NAME} ${IMAGE_WITH_TAG} ${SERVICE_NAME}"

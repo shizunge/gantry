@@ -69,9 +69,6 @@ export DONE_REMOVING_IMAGES="Done removing images"
 export SCHEDULE_NEXT_UPDATE_AT="Schedule next update at"
 export SLEEP_SECONDS_BEFORE_NEXT_UPDATE="Sleep [0-9]+ seconds before next update"
 
-export TEST_IMAGE_REMOVER="ghcr.io/shizunge/gantry-development"
-export TEST_SERVICE_IMAGE="alpine:latest"
-
 test_log() {
   echo "${GANTRY_LOG_LEVEL}" | grep -q -i "^NONE$"  && return 0;
   echo "${GANTRY_LOG_LEVEL}" | grep -q -i "^ERROR$"  && return 0;
@@ -199,8 +196,17 @@ _init_swarm() {
 
 # Image for the software under test (SUT)
 _get_sut_image() {
+  local SUITE_NAME="${1}"
   local SUT_REPO_TAG="${GANTRY_TEST_CONTAINER_REPO_TAG:-""}"
-  echo "${SUT_REPO_TAG}"
+  if [ -n "${SUT_REPO_TAG}" ]; then
+    echo "${SUT_REPO_TAG}"
+    return 0
+  fi
+  local TEST_CONTAINER="${GANTRY_TEST_CONTAINER:-""}"
+  if ! is_true "${TEST_CONTAINER}"; then
+    return 0
+  fi
+  _get_gantry_image "${SUITE_NAME}"
 }
 
 _get_initial_port() {
@@ -229,7 +235,7 @@ _next_available_port() {
 _get_docker_config_file() {
   local REGISTRY="${1:?}"
   REGISTRY=$(echo "${REGISTRY}" | tr ':' '-')
-  echo "/tmp/TEST_DOCKER_CONFIG-${REGISTRY}"
+  echo "/tmp/gantry-test-docker-config-${REGISTRY}"
 }
 
 _get_docker_config_argument() {
@@ -385,6 +391,35 @@ _stop_registry() {
   return 0
 }
 
+_get_test_service_image() {
+  grep alpine Dockerfile | sed -E "s/.*(alpine:)/\1/"
+}
+
+_get_gantry_image() {
+  local SUITE_NAME="${1:?}"
+  echo "$(load_test_registry "${SUITE_NAME}")/gantry/iut:${SUITE_NAME}"
+}
+
+_build_and_push_gantry_image() {
+  local SUITE_NAME="${1:?}"
+  local IMAGE=
+  IMAGE="$(_get_gantry_image "${SUITE_NAME}")" || return 1
+  pull_image_if_not_exist "$(_get_test_service_image)"
+  echo "Building gantry image ${IMAGE}"
+  timeout 120 docker build --quiet -t "${IMAGE}" .
+  echo "Pushing gantry image ${IMAGE}"
+  # SC2046 (warning): Quote this to prevent word splitting.
+  # shellcheck disable=SC2046
+  docker $(_get_docker_config_argument "${IMAGE}") push --quiet "${IMAGE}"
+}
+
+_remove_gantry_image() {
+  local SUITE_NAME="${1:?}"
+  IMAGE="$(_get_gantry_image "${SUITE_NAME}")" || return 1
+  echo "Removing gantry image ${IMAGE}"
+  docker image rm "${IMAGE}"
+}
+
 initialize_all_tests() {
   local SUITE_NAME="${1:-"gantry"}"
   local ENFORCE_LOGIN="${2}"
@@ -397,7 +432,7 @@ initialize_all_tests() {
   echo "=============================="
   _init_swarm
   _start_registry "${SUITE_NAME}" "${ENFORCE_LOGIN}"
-  pull_image_if_not_exist "${TEST_IMAGE_REMOVER}"
+  _build_and_push_gantry_image "${SUITE_NAME}"
 }
 
 # finish_all_tests should return non zero when there are errors.
@@ -405,6 +440,7 @@ finish_all_tests() {
   local SUITE_NAME="${1:-"gantry"}"
   local ENFORCE_LOGIN="${2}"
   SUITE_NAME=$(echo "${SUITE_NAME}" | tr ' ' '-')
+  _remove_gantry_image "${SUITE_NAME}"
   _stop_registry "${SUITE_NAME}" "${ENFORCE_LOGIN}"
   echo "=============================="
   echo "== Finished all tests in ${SUITE_NAME}"
@@ -419,7 +455,8 @@ initialize_test() {
 }
 
 reset_gantry_env() {
-  local SERVICE_NAME="${1}"
+  local SUITE_NAME="${1}"
+  local SERVICE_NAME="${2}"
   export GANTRY_TEST_HOST_TO_CONTAINER=
   export GANTRY_TEST_DOCKER_CONFIG=
   export GANTRY_TEST_DOCKER_HOST=
@@ -455,7 +492,8 @@ reset_gantry_env() {
   export GANTRY_UPDATE_TIMEOUT_SECONDS=
   export GANTRY_CLEANUP_IMAGES=
   export GANTRY_CLEANUP_IMAGES_OPTIONS=
-  export GANTRY_CLEANUP_IMAGES_REMOVER="${TEST_IMAGE_REMOVER}"
+  export GANTRY_CLEANUP_IMAGES_REMOVER=
+  GANTRY_CLEANUP_IMAGES_REMOVER=$(_get_gantry_image "${SUITE_NAME}")
   export GANTRY_IMAGES_TO_REMOVE=
   export GANTRY_NOTIFICATION_APPRISE_URL=
   export GANTRY_NOTIFICATION_CONDITION=
@@ -572,9 +610,9 @@ build_test_image() {
   fi
   local FILE=
   FILE=$(mktemp)
-  echo "FROM ${TEST_SERVICE_IMAGE}" > "${FILE}"
+  echo "FROM $(_get_test_service_image)" > "${FILE}"
   echo "ENTRYPOINT [\"sh\", \"-c\", \"echo $(unique_id); trap \\\"${EXIT_CMD}\\\" HUP INT TERM; ${TASK_CMD}\"]" >> "${FILE}"
-  pull_image_if_not_exist "${TEST_SERVICE_IMAGE}"
+  pull_image_if_not_exist "$(_get_test_service_image)"
   echo "Building image ${IMAGE_WITH_TAG} from ${FILE}"
   timeout 120 docker build --quiet --tag "${IMAGE_WITH_TAG}" --file "${FILE}" .
   rm "${FILE}"
@@ -659,9 +697,10 @@ _location_constraints() {
 
 pull_image_if_not_exist() {
   local IMAGE="${1}"
-  if ! docker image inspect "${IMAGE}" > /dev/null 2>&1; then
-    docker pull "${IMAGE}" > /dev/null
+  if docker image inspect "${IMAGE}" > /dev/null 2>&1; then
+    return 0
   fi
+  docker pull "${IMAGE}" > /dev/null
 }
 
 _enforce_login_enabled() {
@@ -883,17 +922,21 @@ _add_file_to_mount_options() {
   echo "${MOUNT_OPTIONS}"
 }
 
-stop_gantry_container() {
+_get_gantry_sut_name() {
   local STACK="${1}"
-  local SUT_REPO_TAG=
-  SUT_REPO_TAG="$(_get_sut_image)"
-  if [ -z "${SUT_REPO_TAG}" ]; then
-    return 0;
-  fi
-  local RETURN_VALUE=0
   local SERVICE_NAME=
   SERVICE_NAME="gantry-test-SUT-${STACK}"
-  SERVICE_NAME=$(_sanitize_test_service_name "${SERVICE_NAME}")
+  _sanitize_test_service_name "${SERVICE_NAME}"
+}
+
+stop_gantry_container() {
+  local STACK="${1}"
+  local SERVICE_NAME=
+  SERVICE_NAME=$(_get_gantry_sut_name "${STACK}")
+  if ! docker service inspect --format '{{.ID}}' "${SERVICE_NAME}" >/dev/null 2>&1; then
+    return 0
+  fi
+  local RETURN_VALUE=0
   local CMD_OUTPUT=
   docker service logs --raw "${SERVICE_NAME}"
   if ! CMD_OUTPUT=$(docker service rm "${SERVICE_NAME}" 2>&1); then
@@ -908,8 +951,7 @@ _run_gantry_container() {
   local SUT_REPO_TAG="${2}"
   pull_image_if_not_exist "${SUT_REPO_TAG}"
   local SERVICE_NAME=
-  SERVICE_NAME="gantry-test-SUT-${STACK}"
-  SERVICE_NAME=$(_sanitize_test_service_name "${SERVICE_NAME}")
+  SERVICE_NAME=$(_get_gantry_sut_name "${STACK}")
   docker service rm "${SERVICE_NAME}" >/dev/null 2>&1;
   local MOUNT_OPTIONS=
   MOUNT_OPTIONS=$(_add_file_to_mount_options "${MOUNT_OPTIONS}" "${GANTRY_TEST_HOST_TO_CONTAINER}")
@@ -991,7 +1033,8 @@ _restore_env() {
 }
 
 run_gantry() {
-  local STACK="${1}"
+  local SUITE_NAME="${1}"
+  local STACK="${2}"
   local DOCKER_CONFIG_SET=0
   local OLD_DOCKER_CONFIG=
   local DOCKER_HOST_SET=0
@@ -1006,7 +1049,7 @@ run_gantry() {
   fi
   local RETURN_VALUE=1
   local SUT_REPO_TAG=
-  SUT_REPO_TAG="$(_get_sut_image)"
+  SUT_REPO_TAG="$(_get_sut_image "${SUITE_NAME}")"
   if [ -n "${SUT_REPO_TAG}" ]; then
     _run_gantry_container "${STACK}" "${SUT_REPO_TAG}"
     RETURN_VALUE=$?

@@ -41,10 +41,10 @@ Describe 'service-parallel'
       local TEST_NAME="${1}"
       local SERVICE_NAME="${2}"
       local MAX_SERVICES_NUM="${3}"
-      reset_gantry_env "${SERVICE_NAME}"
+      reset_gantry_env "${SUITE_NAME}" "${SERVICE_NAME}"
       export GANTRY_MANIFEST_NUM_WORKERS="${MANIFEST_NUM_WORKERS}"
       export GANTRY_UPDATE_NUM_WORKERS=$((MAX_SERVICES_NUM/2+1))
-      run_gantry "${TEST_NAME}"
+      run_gantry "${SUITE_NAME}" "${TEST_NAME}"
     }
     BeforeEach "test_start ${TEST_NAME} ${IMAGE_WITH_TAG} ${SERVICE_NAME} ${MAX_SERVICES_NUM} ${MAX_NO_NEW_IMAGE}"
     AfterEach "common_cleanup_multiple ${TEST_NAME} ${IMAGE_WITH_TAG} ${SERVICE_NAME} $((MAX_SERVICES_NUM+MAX_NO_NEW_IMAGE))"
@@ -95,10 +95,10 @@ Describe 'service-parallel'
       local TEST_NAME="${1}"
       local SERVICE_NAME="${2}"
       local MAX_SERVICES_NUM="${3}"
-      reset_gantry_env "${SERVICE_NAME}"
+      reset_gantry_env "${SUITE_NAME}" "${SERVICE_NAME}"
       export GANTRY_MANIFEST_NUM_WORKERS="${MANIFEST_NUM_WORKERS}"
       export GANTRY_UPDATE_NUM_WORKERS=$((MAX_SERVICES_NUM*3))
-      run_gantry "${TEST_NAME}"
+      run_gantry "${SUITE_NAME}" "${TEST_NAME}"
     }
     BeforeEach "common_setup_new_image_multiple ${TEST_NAME} ${IMAGE_WITH_TAG} ${SERVICE_NAME} ${MAX_SERVICES_NUM}"
     AfterEach "common_cleanup_multiple ${TEST_NAME} ${IMAGE_WITH_TAG} ${SERVICE_NAME} ${MAX_SERVICES_NUM}"
@@ -139,9 +139,9 @@ Describe 'service-parallel'
     test_parallel_GANTRY_MANIFEST_NUM_WORKERS_not_a_number() {
       local TEST_NAME="${1}"
       local SERVICE_NAME="${2}"
-      reset_gantry_env "${SERVICE_NAME}"
+      reset_gantry_env "${SUITE_NAME}" "${SERVICE_NAME}"
       export GANTRY_MANIFEST_NUM_WORKERS="NotANumber"
-      run_gantry "${TEST_NAME}"
+      run_gantry "${SUITE_NAME}" "${TEST_NAME}"
     }
     BeforeEach "common_setup_new_image ${TEST_NAME} ${IMAGE_WITH_TAG} ${SERVICE_NAME}"
     AfterEach "common_cleanup ${TEST_NAME} ${IMAGE_WITH_TAG} ${SERVICE_NAME}"
@@ -183,9 +183,9 @@ Describe 'service-parallel'
     test_parallel_GANTRY_UPDATE_NUM_WORKERS_not_a_number() {
       local TEST_NAME="${1}"
       local SERVICE_NAME="${2}"
-      reset_gantry_env "${SERVICE_NAME}"
+      reset_gantry_env "${SUITE_NAME}" "${SERVICE_NAME}"
       export GANTRY_UPDATE_NUM_WORKERS="NotANumber"
-      run_gantry "${TEST_NAME}"
+      run_gantry "${SUITE_NAME}" "${TEST_NAME}"
     }
     BeforeEach "common_setup_new_image ${TEST_NAME} ${IMAGE_WITH_TAG} ${SERVICE_NAME}"
     AfterEach "common_cleanup ${TEST_NAME} ${IMAGE_WITH_TAG} ${SERVICE_NAME}"

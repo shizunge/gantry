@@ -36,8 +36,6 @@ jobs:
         uses: actions/checkout@v4
       - name: Generate tests coverage reports
         run: |
-          export DOCKERHUB_PASSWORD=${{ secrets.DOCKERHUB_PASSWORD }}
-          export DOCKERHUB_USERNAME=${{ secrets.DOCKERHUB_USERNAME }}
           bash shellspec --kcov --jobs 50
       - name: Upload reports
         uses: actions/upload-artifact@v4

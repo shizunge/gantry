@@ -28,10 +28,10 @@ Describe 'rollback'
       local TEST_NAME="${1}"
       local SERVICE_NAME="${2}"
       local TIMEOUT="${3}"
-      reset_gantry_env "${SERVICE_NAME}"
+      reset_gantry_env "${SUITE_NAME}" "${SERVICE_NAME}"
       # Assume service update won't be done within TIMEOUT second.
       export GANTRY_UPDATE_TIMEOUT_SECONDS="${TIMEOUT}"
-      run_gantry "${TEST_NAME}"
+      run_gantry "${SUITE_NAME}" "${TEST_NAME}"
     }
     BeforeEach "common_setup_timeout ${TEST_NAME} ${IMAGE_WITH_TAG} ${SERVICE_NAME} ${TIMEOUT}"
     AfterEach "common_cleanup ${TEST_NAME} ${IMAGE_WITH_TAG} ${SERVICE_NAME}"
@@ -77,13 +77,13 @@ Describe 'rollback'
       local TEST_NAME="${1}"
       local SERVICE_NAME="${2}"
       local TIMEOUT="${3}"
-      reset_gantry_env "${SERVICE_NAME}"
+      reset_gantry_env "${SUITE_NAME}" "${SERVICE_NAME}"
       # Assume service update won't be done within TIMEOUT second.
       export GANTRY_UPDATE_TIMEOUT_SECONDS="${TIMEOUT}"
       # Rollback would fail due to the incorrect option.
       # --with-registry-auth cannot be combined with --rollback.
       export GANTRY_ROLLBACK_OPTIONS="--with-registry-auth"
-      run_gantry "${TEST_NAME}"
+      run_gantry "${SUITE_NAME}" "${TEST_NAME}"
     }
     BeforeEach "common_setup_timeout ${TEST_NAME} ${IMAGE_WITH_TAG} ${SERVICE_NAME} ${TIMEOUT}"
     AfterEach "common_cleanup ${TEST_NAME} ${IMAGE_WITH_TAG} ${SERVICE_NAME}"
@@ -129,11 +129,11 @@ Describe 'rollback'
       local TEST_NAME="${1}"
       local SERVICE_NAME="${2}"
       local TIMEOUT="${3}"
-      reset_gantry_env "${SERVICE_NAME}"
+      reset_gantry_env "${SUITE_NAME}" "${SERVICE_NAME}"
       # Assume service update won't be done within TIMEOUT second.
       export GANTRY_UPDATE_TIMEOUT_SECONDS="${TIMEOUT}"
       export GANTRY_ROLLBACK_ON_FAILURE="false"
-      run_gantry "${TEST_NAME}"
+      run_gantry "${SUITE_NAME}" "${TEST_NAME}"
     }
     BeforeEach "common_setup_timeout ${TEST_NAME} ${IMAGE_WITH_TAG} ${SERVICE_NAME} ${TIMEOUT}"
     AfterEach "common_cleanup ${TEST_NAME} ${IMAGE_WITH_TAG} ${SERVICE_NAME}"
@@ -179,7 +179,7 @@ Describe 'rollback'
       local TEST_NAME="${1}"
       local SERVICE_NAME="${2}"
       local TIMEOUT="${3}"
-      reset_gantry_env "${SERVICE_NAME}"
+      reset_gantry_env "${SUITE_NAME}" "${SERVICE_NAME}"
       # Assume service update won't be done within TIMEOUT second.
       export GANTRY_UPDATE_TIMEOUT_SECONDS="${TIMEOUT}"
       # label should override the global environment variable.
@@ -188,7 +188,7 @@ Describe 'rollback'
       # --with-registry-auth cannot be combined with --rollback.
       local LABEL_AND_VALUE="gantry.rollback.options=--with-registry-auth"
       docker_service_update --label-add "${LABEL_AND_VALUE}" "${SERVICE_NAME}"
-      run_gantry "${TEST_NAME}"
+      run_gantry "${SUITE_NAME}" "${TEST_NAME}"
     }
     BeforeEach "common_setup_timeout ${TEST_NAME} ${IMAGE_WITH_TAG} ${SERVICE_NAME} ${TIMEOUT}"
     AfterEach "common_cleanup ${TEST_NAME} ${IMAGE_WITH_TAG} ${SERVICE_NAME}"
@@ -234,13 +234,13 @@ Describe 'rollback'
       local TEST_NAME="${1}"
       local SERVICE_NAME="${2}"
       local TIMEOUT="${3}"
-      reset_gantry_env "${SERVICE_NAME}"
+      reset_gantry_env "${SUITE_NAME}" "${SERVICE_NAME}"
       # Assume service update won't be done within TIMEOUT second.
       export GANTRY_UPDATE_TIMEOUT_SECONDS="${TIMEOUT}"
       # label should override the global environment variable.
       local LABEL_AND_VALUE="gantry.rollback.on_failure=false"
       docker_service_update --label-add "${LABEL_AND_VALUE}" "${SERVICE_NAME}"
-      run_gantry "${TEST_NAME}"
+      run_gantry "${SUITE_NAME}" "${TEST_NAME}"
     }
     BeforeEach "common_setup_timeout ${TEST_NAME} ${IMAGE_WITH_TAG} ${SERVICE_NAME} ${TIMEOUT}"
     AfterEach "common_cleanup ${TEST_NAME} ${IMAGE_WITH_TAG} ${SERVICE_NAME}"
