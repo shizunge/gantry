@@ -155,7 +155,8 @@ Describe 'common-options'
     AfterEach "common_cleanup ${TEST_NAME} ${IMAGE_WITH_TAG} ${SERVICE_NAME}"
     It 'run_test'
       When run test_common_PRE_POST_RUN_CMD "${TEST_NAME}" "${SERVICE_NAME}"
-      The status should be success
+      # Updating should be successful, but post-run comamnd failed.
+      The status should be failure
       The stdout should satisfy display_output
       The stdout should satisfy spec_expect_no_message ".+"
       The stderr should satisfy display_output

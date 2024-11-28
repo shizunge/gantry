@@ -121,6 +121,7 @@ gantry() {
   local ACCUMULATED_ERRORS=0
 
   eval_cmd "pre-run" "${PRE_RUN_CMD}"
+  ACCUMULATED_ERRORS=$((ACCUMULATED_ERRORS + $?))
 
   log INFO "Starting."
   gantry_initialize "${STACK}"
@@ -152,6 +153,7 @@ gantry() {
   ACCUMULATED_ERRORS=$((ACCUMULATED_ERRORS + $?))
 
   eval_cmd "post-run" "${POST_RUN_CMD}"
+  ACCUMULATED_ERRORS=$((ACCUMULATED_ERRORS + $?))
 
   local TIME_ELAPSED=
   TIME_ELAPSED=$(time_elapsed_since "${START_TIME}")
