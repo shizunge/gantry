@@ -16,7 +16,7 @@
 #
 
 _curl_installed() {
-  curl --version 1>/dev/null 2>&1;
+  curl --version 1>/dev/null 2>/dev/null;
 }
 
 _docker_hub_rate_token() {
@@ -66,10 +66,10 @@ _docker_hub_echo_error() {
 docker_hub_rate() {
   local IMAGE="${1:-ratelimitpreview/test}"
   local USER_AND_PASS="${2}"
-  if ! type log 1>/dev/null 2>&1; then
+  if ! type log 1>/dev/null 2>/dev/null; then
     log() { echo "${*}" >&2; }
   fi
-  if ! type log_lines 1>/dev/null 2>&1; then
+  if ! type log_lines 1>/dev/null 2>/dev/null; then
     # Usage: echo "${LOGS}" | log_lines LEVLE
     log_lines() { local LEVEL="${1}"; while read -r LINE; do [ -z "${LINE}" ] && continue; log "${LEVEL}" "${LINE}"; done; }
   fi

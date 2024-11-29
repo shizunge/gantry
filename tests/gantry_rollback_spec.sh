@@ -55,6 +55,7 @@ Describe 'rollback'
       The stderr should satisfy spec_expect_no_message "${ADDING_OPTIONS}"
       The stderr should satisfy spec_expect_message    "${ROLLING_BACK}.*${SERVICE_NAME}"
       The stderr should satisfy spec_expect_no_message "${FAILED_TO_ROLLBACK}.*${SERVICE_NAME}"
+      The stderr should satisfy spec_expect_no_message "${FROM_DOCKER_DOES_NOT_HAVE_A_PREVIOUS_SPEC}"
       The stderr should satisfy spec_expect_message    "${ROLLED_BACK}.*${SERVICE_NAME}"
       The stderr should satisfy spec_expect_message    "${NO_SERVICES_UPDATED}"
       The stderr should satisfy spec_expect_no_message "${NUM_SERVICES_UPDATED}"
@@ -107,6 +108,7 @@ Describe 'rollback'
       The stderr should satisfy spec_expect_message    "${ADDING_OPTIONS}.*--with-registry-auth.*${SERVICE_NAME}"
       The stderr should satisfy spec_expect_message    "${ROLLING_BACK}.*${SERVICE_NAME}"
       The stderr should satisfy spec_expect_message    "${FAILED_TO_ROLLBACK}.*${SERVICE_NAME}"
+      The stderr should satisfy spec_expect_no_message "${FROM_DOCKER_DOES_NOT_HAVE_A_PREVIOUS_SPEC}"
       The stderr should satisfy spec_expect_no_message "${ROLLED_BACK}.*${SERVICE_NAME}"
       The stderr should satisfy spec_expect_message    "${NO_SERVICES_UPDATED}"
       The stderr should satisfy spec_expect_no_message "${NUM_SERVICES_UPDATED}"
@@ -157,6 +159,7 @@ Describe 'rollback'
       The stderr should satisfy spec_expect_no_message "${ADDING_OPTIONS}"
       The stderr should satisfy spec_expect_no_message "${ROLLING_BACK}.*${SERVICE_NAME}"
       The stderr should satisfy spec_expect_no_message "${FAILED_TO_ROLLBACK}.*${SERVICE_NAME}"
+      The stderr should satisfy spec_expect_no_message "${FROM_DOCKER_DOES_NOT_HAVE_A_PREVIOUS_SPEC}"
       The stderr should satisfy spec_expect_no_message "${ROLLED_BACK}.*${SERVICE_NAME}"
       The stderr should satisfy spec_expect_message    "${NO_SERVICES_UPDATED}"
       The stderr should satisfy spec_expect_no_message "${NUM_SERVICES_UPDATED}"
@@ -183,7 +186,7 @@ Describe 'rollback'
       # Assume service update won't be done within TIMEOUT second.
       export GANTRY_UPDATE_TIMEOUT_SECONDS="${TIMEOUT}"
       # label should override the global environment variable.
-      export GANTRY_ROLLBACK_OPTIONS="--insecure"
+      export GANTRY_ROLLBACK_OPTIONS="--incorrect-option"
       # Rollback would fail due to the incorrect option.
       # --with-registry-auth cannot be combined with --rollback.
       local LABEL_AND_VALUE="gantry.rollback.options=--with-registry-auth"
@@ -212,6 +215,7 @@ Describe 'rollback'
       The stderr should satisfy spec_expect_message    "${ADDING_OPTIONS}.*--with-registry-auth.*${SERVICE_NAME}"
       The stderr should satisfy spec_expect_message    "${ROLLING_BACK}.*${SERVICE_NAME}"
       The stderr should satisfy spec_expect_message    "${FAILED_TO_ROLLBACK}.*${SERVICE_NAME}"
+      The stderr should satisfy spec_expect_no_message "${FROM_DOCKER_DOES_NOT_HAVE_A_PREVIOUS_SPEC}"
       The stderr should satisfy spec_expect_no_message "${ROLLED_BACK}.*${SERVICE_NAME}"
       The stderr should satisfy spec_expect_message    "${NO_SERVICES_UPDATED}"
       The stderr should satisfy spec_expect_no_message "${NUM_SERVICES_UPDATED}"
@@ -264,6 +268,7 @@ Describe 'rollback'
       The stderr should satisfy spec_expect_no_message "${ADDING_OPTIONS}"
       The stderr should satisfy spec_expect_no_message "${ROLLING_BACK}.*${SERVICE_NAME}"
       The stderr should satisfy spec_expect_no_message "${FAILED_TO_ROLLBACK}.*${SERVICE_NAME}"
+      The stderr should satisfy spec_expect_no_message "${FROM_DOCKER_DOES_NOT_HAVE_A_PREVIOUS_SPEC}"
       The stderr should satisfy spec_expect_no_message "${ROLLED_BACK}.*${SERVICE_NAME}"
       The stderr should satisfy spec_expect_message    "${NO_SERVICES_UPDATED}"
       The stderr should satisfy spec_expect_no_message "${NUM_SERVICES_UPDATED}"

@@ -16,12 +16,12 @@
 #
 
 # This function calls read_env() underneath.
-# read_env() returns an empty string if ENV_VALUE is set to empty,
-# in which case we want to use the DEFAULT_VALUE.
 _read_env_default() {
   local ENV_NAME="${1}"
   local DEFAULT_VALUE="${2}"
   local READ_VALUE=
+  # read_env() returns an empty string if ENV_VALUE is set, but is empty,
+  # in which case we want to use the DEFAULT_VALUE.
   READ_VALUE=$(read_env "${ENV_NAME}" "${DEFAULT_VALUE}")
   local VALUE="${READ_VALUE}"
   [ -z "${VALUE}" ] && VALUE="${DEFAULT_VALUE}"
@@ -33,7 +33,7 @@ _read_env_default() {
 gantry_read_number() {
   local ENV_NAME="${1}"
   local DEFAULT_VALUE="${2}"
-  ! is_number "${DEFAULT_VALUE}" && log ERROR "DEFAULT_VALUE must be a number. Got \"${DEFAULT_VALUE}\"." && return 1
+  ! is_number "${DEFAULT_VALUE}" && log ERROR "DEFAULT_VALUE for ${ENV_NAME} must be a number. Got \"${DEFAULT_VALUE}\"." && return 1
   local VALUE=
   VALUE=$(_read_env_default "${ENV_NAME}" "${DEFAULT_VALUE}")
   if ! is_number "${VALUE}"; then
@@ -49,7 +49,7 @@ _get_label_from_service() {
   local SERVICE_NAME="${1}"
   local LABEL="${2}"
   local VALUE=
-  if ! VALUE=$(docker service inspect -f "{{index .Spec.Labels \"${LABEL}\"}}" "${SERVICE_NAME}" 2>&1); then
+  if ! VALUE=$(run_cmd docker service inspect -f "{{index .Spec.Labels \"${LABEL}\"}}" "${SERVICE_NAME}"); then
     log ERROR "Failed to obtain the value of label ${LABEL} from service ${SERVICE_NAME}. ${VALUE}"
     return 1
   fi
@@ -134,7 +134,7 @@ _login_registry() {
   local LOGIN_MSG=
   # SC2086: Double quote to prevent globbing and word splitting.
   # shellcheck disable=SC2086
-  if ! LOGIN_MSG=$(echo "${PASSWORD}" | docker ${AUTH_CONFIG} login --username="${USER}" --password-stdin "${HOST}" 2>&1); then
+  if ! LOGIN_MSG=$(echo "${PASSWORD}" | run_cmd docker ${AUTH_CONFIG} login --username="${USER}" --password-stdin "${HOST}"); then
     log ERROR "Failed to login to ${REGISTRY_CONFIG_MESSAGE}. ${LOGIN_MSG}"
     return 1
   fi
@@ -146,42 +146,24 @@ _login_registry() {
   return 0
 }
 
-gantry_read_registry_username() {
-  read_config GANTRY_REGISTRY_USER
-}
-
-gantry_read_registry_password() {
-  read_config GANTRY_REGISTRY_PASSWORD
-}
-
-gantry_read_registry_host() {
-  read_config GANTRY_REGISTRY_HOST
+gantry_read_config() {
+  local CONFIG_NAME="${1}"
+  local CONFIG_VALUE=
+  if ! CONFIG_VALUE=$(read_config "${CONFIG_NAME}" 2>&1); then
+    log ERROR "Failed to read ${CONFIG_NAME}: ${CONFIG_VALUE}"
+    return 1
+  fi
+  echo "${CONFIG_VALUE}"
 }
 
 _authenticate_to_registries() {
   local CONFIGS_FILE="${GANTRY_REGISTRY_CONFIGS_FILE:-""}"
   local ACCUMULATED_ERRORS=0
   local CONFIG HOST PASSWORD USER
-  if ! CONFIG=$(read_config GANTRY_REGISTRY_CONFIG 2>&1); then
-    log ERROR "Failed to read registry CONFIG: ${CONFIG}"
-    ACCUMULATED_ERRORS=$((ACCUMULATED_ERRORS + 1))
-    CONFIG=
-  fi
-  if ! HOST=$(gantry_read_registry_host 2>&1); then
-    log ERROR "Failed to read registry HOST: ${HOST}"
-    ACCUMULATED_ERRORS=$((ACCUMULATED_ERRORS + 1))
-    HOST=
-  fi
-  if ! PASSWORD=$(gantry_read_registry_password 2>&1); then
-    log ERROR "Failed to read registry PASSWORD: ${PASSWORD}"
-    ACCUMULATED_ERRORS=$((ACCUMULATED_ERRORS + 1))
-    PASSWORD=
-  fi
-  if ! USER=$(gantry_read_registry_username 2>&1); then
-    log ERROR "Failed to read registry USER: ${USER}"
-    ACCUMULATED_ERRORS=$((ACCUMULATED_ERRORS + 1))
-    USER=
-  fi
+  CONFIG=$(gantry_read_config "GANTRY_REGISTRY_CONFIG") || ACCUMULATED_ERRORS=$((ACCUMULATED_ERRORS + 1))
+  HOST=$(gantry_read_config "GANTRY_REGISTRY_HOST") || ACCUMULATED_ERRORS=$((ACCUMULATED_ERRORS + 1))
+  PASSWORD=$(gantry_read_config "GANTRY_REGISTRY_PASSWORD") || ACCUMULATED_ERRORS=$((ACCUMULATED_ERRORS + 1))
+  USER=$(gantry_read_config "GANTRY_REGISTRY_USER") || ACCUMULATED_ERRORS=$((ACCUMULATED_ERRORS + 1))
   if [ "${ACCUMULATED_ERRORS}" -gt 0 ]; then
     log ERROR "Skip logging in due to previous error(s)."
   else
@@ -229,9 +211,7 @@ _send_notification() {
   local TYPE="${1}"
   local TITLE="${2}"
   local BODY="${3}"
-  if ! type notify_summary >/dev/null 2>&1; then
-    return 0
-  fi
+  type notify_summary 1>/dev/null 2>/dev/null || return 0
   notify_summary "${TYPE}" "${TITLE}" "${BODY}"
 }
 
@@ -266,9 +246,9 @@ _get_static_variables_folder() {
 }
 
 _remove_static_variables_folder() {
-  [ -z "${STATIC_VARIABLES_FOLDER}" ] && return 0
   local TO_REMOVE_STATIC_VARIABLES_FOLDER=
   TO_REMOVE_STATIC_VARIABLES_FOLDER="$(_get_static_variables_folder_name)"
+  [ ! -d "${TO_REMOVE_STATIC_VARIABLES_FOLDER}" ] && return 0
   log DEBUG "Removing STATIC_VARIABLES_FOLDER ${TO_REMOVE_STATIC_VARIABLES_FOLDER}"
   unset STATIC_VARIABLES_FOLDER
   rm -r "${TO_REMOVE_STATIC_VARIABLES_FOLDER}"
@@ -286,14 +266,14 @@ _lock() {
   local NAME="${1}"
   local LOCK_NAME=
   LOCK_NAME="$(_get_static_variables_folder)/${NAME}-LOCK"
-  while ! mkdir "${LOCK_NAME}" >/dev/null 2>&1; do sleep 0.001; done
+  while ! mkdir "${LOCK_NAME}" 1>/dev/null 2>/dev/null; do sleep 0.001; done
 }
 
 _unlock() {
   local NAME="${1}"
   local LOCK_NAME=
   LOCK_NAME="$(_get_static_variables_folder)/${NAME}-LOCK"
-  rm -r "${LOCK_NAME}" >/dev/null 2>&1
+  rm -r "${LOCK_NAME}" 1>/dev/null 2>/dev/null
 }
 
 _static_variable_read_list_core() {
@@ -364,15 +344,15 @@ _remove_container() {
   local IMAGE="${1}";
   local STATUS="${2}";
   local CIDS=
-  if ! CIDS=$(docker container ls --all --filter "ancestor=${IMAGE}" --filter "status=${STATUS}" --format '{{.ID}}' 2>&1); then
+  if ! CIDS=$(run_cmd docker container ls --all --filter "ancestor=${IMAGE}" --filter "status=${STATUS}" --format '{{.ID}}'); then
     log ERROR "Failed to list ${STATUS} containers with image ${IMAGE}.";
     echo "${CIDS}" | log_lines ERROR
     return 1;
   fi
   local CID CNAME CRM_MSG
   for CID in ${CIDS}; do
-    CNAME=$(docker container inspect --format '{{.Name}}' "${CID}");
-    if ! CRM_MSG=$(docker container rm "${CID}" 2>&1); then
+    CNAME=$(run_cmd docker container inspect --format '{{.Name}}' "${CID}");
+    if ! CRM_MSG=$(run_cmd docker container rm "${CID}"); then
       log ERROR "Failed to remove ${STATUS} container ${CNAME}, which is using image ${IMAGE}.";
       echo "${CRM_MSG}" | log_lines ERROR
       continue;
@@ -387,13 +367,13 @@ gantry_remove_images() {
   log DEBUG "$(docker_version)"
   local IMAGE=
   for IMAGE in ${IMAGES_TO_REMOVE}; do
-    if ! docker image inspect "${IMAGE}" 1>/dev/null 2>&1 ; then
+    if ! run_cmd docker image inspect "${IMAGE}" 1>/dev/null; then
       log DEBUG "There is no image ${IMAGE} on the node.";
       continue;
     fi
     _remove_container "${IMAGE}" exited;
     _remove_container "${IMAGE}" dead;
-    if ! RMI_MSG=$(docker rmi "${IMAGE}" 2>&1); then
+    if ! RMI_MSG=$(run_cmd docker image rm "${IMAGE}"); then
       log ERROR "Failed to remove image ${IMAGE}.";
       echo "${RMI_MSG}" | log_lines ERROR
       continue;
@@ -446,6 +426,7 @@ _remove_images() {
   # shellcheck disable=SC2086
   docker_global_job --name "${SERVICE_NAME}" \
     --detach=true \
+    --with-registry-auth \
     --restart-condition on-failure \
     --restart-max-attempts 1 \
     --mount type=bind,source=/var/run/docker.sock,destination=/var/run/docker.sock \
@@ -616,7 +597,9 @@ gantry_current_service_name() {
   CNAME=$(_current_container_name) || return 1
   [ -z "${CNAME}" ] && return 0
   local SNAME=
-  SNAME=$(docker container inspect "${CNAME}" --format '{{range $key,$value := .Config.Labels}}{{$key}}={{println $value}}{{end}}' \
+  # SC2016 (info): Expressions don't expand in single quotes, use double quotes for that.
+  # shellcheck disable=SC2016
+  SNAME=$(run_cmd docker container inspect "${CNAME}" --format '{{range $key,$value := .Config.Labels}}{{$key}}={{println $value}}{{end}}' \
     | grep "com.docker.swarm.service.name" \
     | sed -n -E "s/com.docker.swarm.service.name=(.*)$/\1/p") || return 1
   _static_variable_add_unique_to_list STATIC_VAR_CURRENT_SERVICE_NAME "${SNAME}"
@@ -643,19 +626,37 @@ _service_is_self() {
 _get_service_image() {
   local SERVICE_NAME="${1}"
   [ -z "${SERVICE_NAME}" ] && return 1
-  docker service inspect -f '{{.Spec.TaskTemplate.ContainerSpec.Image}}' "${SERVICE_NAME}"
+  local RETURN_VALUE=
+  local IMAGE_WITH_DIGEST=
+  IMAGE_WITH_DIGEST=$(run_cmd docker service inspect -f '{{.Spec.TaskTemplate.ContainerSpec.Image}}' "${SERVICE_NAME}")
+  RETURN_VALUE=$?
+  if [ "${RETURN_VALUE}" != "0" ]; then
+    log ERROR "Failed to obtain image from service ${SERVICE_NAME}. ${IMAGE_WITH_DIGEST}"
+  else
+    echo "${IMAGE_WITH_DIGEST}"
+  fi
+  return "${RETURN_VALUE}"
 }
 
 _get_service_previous_image() {
   local SERVICE_NAME="${1}"
   [ -z "${SERVICE_NAME}" ] && return 1
-  docker service inspect -f '{{.PreviousSpec.TaskTemplate.ContainerSpec.Image}}' "${SERVICE_NAME}"
+  local RETURN_VALUE=
+  local IMAGE_WITH_DIGEST=
+  IMAGE_WITH_DIGEST=$(run_cmd docker service inspect -f '{{.PreviousSpec.TaskTemplate.ContainerSpec.Image}}' "${SERVICE_NAME}")
+  RETURN_VALUE=$?
+  if [ "${RETURN_VALUE}" != "0" ]; then
+    log ERROR "Failed to obtain previous image from service ${SERVICE_NAME}. ${IMAGE_WITH_DIGEST}"
+  else
+    echo "${IMAGE_WITH_DIGEST}"
+  fi
+  return "${RETURN_VALUE}"
 }
 
 _get_service_mode() {
   local SERVICE_NAME="${1}"
   local MODE=
-  if ! MODE=$(docker service ls --filter "name=${SERVICE_NAME}" --format '{{.Mode}} {{.Name}}' 2>&1); then
+  if ! MODE=$(run_cmd docker service ls --filter "name=${SERVICE_NAME}" --format '{{.Mode}} {{.Name}}'); then
     log ERROR "Failed to obtain the mode of the service ${SERVICE_NAME}: ${MODE}"
     return 1
   fi
@@ -751,13 +752,13 @@ _get_image_info() {
     [ -n "${MANIFEST_OPTIONS}" ] && log INFO "Adding options \"${MANIFEST_OPTIONS}\" to the command \"docker buildx imagetools inspect\"."
     # SC2086: Double quote to prevent globbing and word splitting.
     # shellcheck disable=SC2086
-    MSG=$(docker ${AUTH_CONFIG} buildx imagetools inspect ${MANIFEST_OPTIONS} "${IMAGE}" 2>&1);
+    MSG=$(run_cmd docker ${AUTH_CONFIG} buildx imagetools inspect ${MANIFEST_OPTIONS} "${IMAGE}");
     RETURN_VALUE=$?
   elif echo "${MANIFEST_CMD}" | grep_q_i "manifest"; then
     [ -n "${MANIFEST_OPTIONS}" ] && log INFO "Adding options \"${MANIFEST_OPTIONS}\" to the command \"docker manifest inspect\"."
     # SC2086: Double quote to prevent globbing and word splitting.
     # shellcheck disable=SC2086
-    MSG=$(docker ${AUTH_CONFIG} manifest inspect ${MANIFEST_OPTIONS} "${IMAGE}" 2>&1);
+    MSG=$(run_cmd docker ${AUTH_CONFIG} manifest inspect ${MANIFEST_OPTIONS} "${IMAGE}");
     RETURN_VALUE=$?
   elif echo "${MANIFEST_CMD}" | grep_q_i "none"; then
     # We should never reach here, the "none" command is already checked inside the function _inspect_image.
@@ -782,10 +783,7 @@ _inspect_image() {
   local MANIFEST_CMD=
   MANIFEST_CMD=$(_read_env_or_label "${SERVICE_NAME}" "GANTRY_MANIFEST_CMD" "gantry.manifest.cmd" "buildx")
   local IMAGE_WITH_DIGEST=
-  if ! IMAGE_WITH_DIGEST=$(_get_service_image "${SERVICE_NAME}" 2>&1); then
-    log ERROR "Failed to obtain image from service ${SERVICE_NAME}. ${IMAGE_WITH_DIGEST}"
-    return 1
-  fi
+  IMAGE_WITH_DIGEST=$(_get_service_image "${SERVICE_NAME}") || return $?
   local IMAGE=
   local DIGEST=
   IMAGE=$(extract_string "${IMAGE_WITH_DIGEST}" '@' 1)
@@ -869,7 +867,7 @@ _inspect_service() {
 _get_number_of_running_tasks() {
   local SERVICE_NAME="${1}"
   local REPLICAS=
-  if ! REPLICAS=$(docker service ls --filter "name=${SERVICE_NAME}" --format '{{.Replicas}} {{.Name}}' 2>&1); then
+  if ! REPLICAS=$(run_cmd docker service ls --filter "name=${SERVICE_NAME}" --format '{{.Replicas}} {{.Name}}'); then
     log ERROR "Failed to obtain task states of service ${SERVICE_NAME}: ${REPLICAS}"
     return 1
   fi
@@ -903,8 +901,8 @@ _get_service_update_additional_options() {
   local NUM_RUNS=
   NUM_RUNS=$(_get_number_of_running_tasks "${SERVICE_NAME}")
   ! is_number "${NUM_RUNS}" && log WARN "NUM_RUNS \"${NUM_RUNS}\" is not a number." && return 1
-  local OPTIONS=""
-  local SPACE=""
+  local OPTIONS=
+  local SPACE=
   if [ "${NUM_RUNS}" = "0" ]; then
     # Add "--detach=true" when there is no running tasks.
     # https://github.com/docker/cli/issues/627
@@ -950,18 +948,18 @@ _rollback_service() {
   # "service update --rollback" needs to take different options from "service update"
   local AUTOMATIC_OPTIONS=
   AUTOMATIC_OPTIONS=$(_get_service_rollback_additional_options "${SERVICE_NAME}" "${AUTH_CONFIG}")
-  [ -n "${AUTOMATIC_OPTIONS}" ] && log INFO "Adding options \"${AUTOMATIC_OPTIONS}\" automatically to the command \"docker service update --rollback\" for ${SERVICE_NAME}."
-  [ -n "${ROLLBACK_OPTIONS}" ] && log INFO "Adding options \"${ROLLBACK_OPTIONS}\" specified by user to the command \"docker service update --rollback\" for ${SERVICE_NAME}."
+  local CMD_STRING="\"docker service update --rollback\""
+  [ -n "${AUTH_CONFIG}" ] && log INFO "Adding options \"${AUTH_CONFIG}\" to the command ${CMD_STRING} for ${SERVICE_NAME}."
+  [ -n "${AUTOMATIC_OPTIONS}" ] && log INFO "Adding options \"${AUTOMATIC_OPTIONS}\" automatically to the command ${CMD_STRING} for ${SERVICE_NAME}."
+  [ -n "${ROLLBACK_OPTIONS}" ] && log INFO "Adding options \"${ROLLBACK_OPTIONS}\" specified by user to the command ${CMD_STRING} for ${SERVICE_NAME}."
   local ROLLBACK_MSG=
   # Add "-quiet" to suppress progress output.
   # SC2086: Double quote to prevent globbing and word splitting.
   # shellcheck disable=SC2086
-  if ! ROLLBACK_MSG=$(docker ${AUTH_CONFIG} service update --quiet ${AUTOMATIC_OPTIONS} ${ROLLBACK_OPTIONS} --rollback "${SERVICE_NAME}" 2>&1); then
+  if ! ROLLBACK_MSG=$(run_cmd docker ${AUTH_CONFIG} service update --quiet ${AUTOMATIC_OPTIONS} ${ROLLBACK_OPTIONS} --rollback "${SERVICE_NAME}"); then
     log ERROR "Failed to roll back ${SERVICE_NAME}. ${ROLLBACK_MSG}"
     return 1
   fi
-  # Usually the ROLLBACK_MSG is same as the SERVICE_NAME.
-  [ "${ROLLBACK_MSG}" != "${SERVICE_NAME}" ] && log WARN "There are additional messages from rolling back ${SERVICE_NAME}: ${ROLLBACK_MSG}"
   log INFO "Rolled back ${SERVICE_NAME}."
 }
 
@@ -976,7 +974,7 @@ _get_timeout_command() {
     _static_variable_add_unique_to_list STATIC_VAR_SERVICES_UPDATE_INPUT_ERROR "${SERVICE_NAME}"
     return 1
   fi
-  local TIMEOUT_COMMAND=""
+  local TIMEOUT_COMMAND=
   if [ "${UPDATE_TIMEOUT_SECONDS}" != "0" ]; then
     TIMEOUT_COMMAND="timeout ${UPDATE_TIMEOUT_SECONDS}"
     log INFO "Set timeout to ${UPDATE_TIMEOUT_SECONDS} for updating ${SERVICE_NAME}."
@@ -1005,19 +1003,23 @@ _update_single_service() {
   local AUTOMATIC_OPTIONS=
   AUTH_CONFIG=$(_get_auth_config_from_service "${SERVICE_NAME}")
   AUTOMATIC_OPTIONS=$(_get_service_update_additional_options "${SERVICE_NAME}" "${AUTH_CONFIG}")
-  [ -n "${AUTH_CONFIG}" ] && log INFO "Adding options \"${AUTH_CONFIG}\" to docker commands for ${SERVICE_NAME}."
-  [ -n "${AUTOMATIC_OPTIONS}" ] && log INFO "Adding options \"${AUTOMATIC_OPTIONS}\" automatically to the command \"docker service update\" for ${SERVICE_NAME}."
-  [ -n "${UPDATE_OPTIONS}" ] && log INFO "Adding options \"${UPDATE_OPTIONS}\" specified by user to the command \"docker service update\" for ${SERVICE_NAME}."
-  local TIMEOUT_COMMAND=""
+  local CMD_STRING="\"docker service update\""
+  [ -n "${AUTH_CONFIG}" ] && log INFO "Adding options \"${AUTH_CONFIG}\" to the command ${CMD_STRING} for ${SERVICE_NAME}."
+  [ -n "${AUTOMATIC_OPTIONS}" ] && log INFO "Adding options \"${AUTOMATIC_OPTIONS}\" automatically to the command ${CMD_STRING} for ${SERVICE_NAME}."
+  [ -n "${UPDATE_OPTIONS}" ] && log INFO "Adding options \"${UPDATE_OPTIONS}\" specified by user to the command ${CMD_STRING} for ${SERVICE_NAME}."
+  local TIMEOUT_COMMAND=
   TIMEOUT_COMMAND=$(_get_timeout_command "${SERVICE_NAME}") || return 1
-  local UPDATE_COMMAND="${TIMEOUT_COMMAND} docker ${AUTH_CONFIG} service update"
+  local SPACE_T=
+  [ -n "${TIMEOUT_COMMAND}" ] && SPACE_T=" "
+  local SPACE_C=
+  [ -n "${AUTH_CONFIG}" ] && SPACE_C=" "
+  local UPDATE_COMMAND="${TIMEOUT_COMMAND}${SPACE_T}docker ${AUTH_CONFIG}${SPACE_C}service update"
   local UPDATE_RETURN_VALUE=0
   local UPDATE_MSG=
-  # Add "2>/dev/null" outside the $(cmd) to suppress the "Terminated" message from "busybox timeout".
   # Add "-quiet" to suppress progress output.
   # SC2086: Double quote to prevent globbing and word splitting.
   # shellcheck disable=SC2086
-  UPDATE_MSG=$(${UPDATE_COMMAND} --quiet ${AUTOMATIC_OPTIONS} ${UPDATE_OPTIONS} --image="${IMAGE}" "${SERVICE_NAME}" 2>&1) 2>/dev/null;
+  UPDATE_MSG=$(run_cmd ${UPDATE_COMMAND} --quiet ${AUTOMATIC_OPTIONS} ${UPDATE_OPTIONS} --image="${IMAGE}" "${SERVICE_NAME}");
   UPDATE_RETURN_VALUE=$?
   if [ "${UPDATE_RETURN_VALUE}" != 0 ]; then
     # When there is a timeout:
@@ -1025,7 +1027,7 @@ _update_single_service() {
     # * busybox timeout returns 143
     local TIMEOUT_RETURN_CODE=124
     timeout --help 2>&1 | grep_q_i "BusyBox" && TIMEOUT_RETURN_CODE=143
-    local TIMEOUT_MSG=""
+    local TIMEOUT_MSG=
     if [ -n "${TIMEOUT_COMMAND}" ] && [ "${UPDATE_RETURN_VALUE}" = "${TIMEOUT_RETURN_CODE}" ]; then
       TIMEOUT_MSG="The return value ${UPDATE_RETURN_VALUE} indicates the job timed out."
     fi
@@ -1035,8 +1037,6 @@ _update_single_service() {
     _static_variable_add_unique_to_list STATIC_VAR_SERVICES_UPDATE_FAILED "${SERVICE_NAME}"
     return 1
   fi
-  # Usually the UPDATE_MSG is same as the SERVICE_NAME.
-  [ "${UPDATE_MSG}" != "${SERVICE_NAME}" ] && log WARN "There are additional messages from updating ${SERVICE_NAME}: ${UPDATE_MSG}"
   local TIME_ELAPSED=
   TIME_ELAPSED=$(time_elapsed_since "${START_TIME}")
   local PREVIOUS_IMAGE=
@@ -1090,15 +1090,17 @@ _run_parallel() {
 
 _get_services_filted() {
   local SERVICES_FILTERS="${1}"
-  local SERVICES=
   local FILTERS=
+  local SPACE=
   local F=
   for F in ${SERVICES_FILTERS}; do
-    FILTERS="${FILTERS} --filter ${F}"
+    FILTERS="${FILTERS}${SPACE}--filter ${F}"
+    SPACE=" "
   done
+  local SERVICES=
   # SC2086: Double quote to prevent globbing and word splitting.
   # shellcheck disable=SC2086
-  if ! SERVICES=$(docker service ls --quiet ${FILTERS} --format '{{.Name}}' 2>&1); then
+  if ! SERVICES=$(run_cmd docker service ls --quiet ${FILTERS} --format '{{.Name}}'); then
     log ERROR "Failed to obtain services list with \"${FILTERS}\". ${SERVICES}"
     return 1
   fi
@@ -1204,8 +1206,8 @@ gantry_finalize() {
   local STACK="${1:-gantry}"
   local NUM_ERRORS="${2:-0}"
   local RETURN_VALUE=0
-  ! _remove_images "${STACK}-image-remover" && RETURN_VALUE=1
-  ! _report_services "${STACK}" "${NUM_ERRORS}" && RETURN_VALUE=1
+  _remove_images "${STACK}-image-remover" || RETURN_VALUE=1
+  _report_services "${STACK}" "${NUM_ERRORS}" || RETURN_VALUE=1
   _remove_static_variables_folder
   return "${RETURN_VALUE}"
 }

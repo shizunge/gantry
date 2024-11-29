@@ -72,6 +72,8 @@ You can configure the most behaviors of *Gantry* via environment variables.
 | GANTRY_SERVICES_EXCLUDED_FILTERS | `label=gantry.services.excluded=true` | A space separated list of [filters](https://docs.docker.com/engine/reference/commandline/service_ls/#filter), e.g. `label=project=project-a`. Exclude services which match the given filters from updating. The default value allows you to add label `gantry.services.excluded=true` to services to exclude them from updating. Note that multiple filters will be logical **ANDED**. |
 | GANTRY_SERVICES_FILTERS          | | A space separated list of [filters](https://docs.docker.com/engine/reference/commandline/service_ls/#filter) that are accepted by `docker service ls --filter` to select services to update, e.g. `label=project=project-a`. Note that multiple filters will be logical **ANDED**. Also see [How to filters multiple services by name](docs/faq.md#how-to-filters-multiple-services-by-name). |
 
+> NOTE: *Gantry* reads labels on the services not on the containers. The labels need to go to the [deploy](https://docs.docker.com/reference/compose-file/deploy/#labels) section, if you are using docker compose files to setup your services.
+
 ### To check if new images are available
 
 | Environment Variable  | Default | Description |
@@ -105,6 +107,8 @@ You can configure the most behaviors of *Gantry* via environment variables.
 
 Labels can be added to services to modify the behavior of *Gantry* for particular services. When *Gantry* sees the following labels on a service, it will modify the Docker command line only for that service. The value on the label overrides the global environment variables.
 
+> NOTE: *Gantry* reads labels on the services not on the containers. The labels need to go to the [deploy](https://docs.docker.com/reference/compose-file/deploy/#labels) section, if you are using docker compose files to setup your services.
+
 | Label  | Description |
 |--------|-------------|
 | `gantry.auth.config=<configuration>`     | Override [`DOCKER_CONFIG`](https://docs.docker.com/engine/reference/commandline/cli/#environment-variables). See [Authentication](docs/authentication.md). |
@@ -116,8 +120,6 @@ Labels can be added to services to modify the behavior of *Gantry* for particula
 | `gantry.update.jobs=<boolean>`           | Override [`GANTRY_UPDATE_JOBS`](#to-add-options-to-services-update). |
 | `gantry.update.options=<string>`         | Override [`GANTRY_UPDATE_OPTIONS`](#to-add-options-to-services-update). |
 | `gantry.update.timeout_seconds=<number>` | Override [`GANTRY_UPDATE_TIMEOUT_SECONDS`](#to-add-options-to-services-update). |
-
-> NOTE: You must apply the labels to the services not the containers. If you are using docker compose files to setup your services, you need to add the label to the [deploy](https://docs.docker.com/reference/compose-file/deploy/#labels) section.
 
 ## FAQ
 

@@ -26,7 +26,7 @@ Describe 'login-negative'
     # When running with an Gantry image, docker buildx writes files to this folder which are owned by root.
     # Using a relative path, this the container will not write to the folder on the host.
     # So do not use an absolute path, otherwise we cannot remove this folder on the host.
-    AUTH_CONFIG="C$(unique_id)"
+    AUTH_CONFIG=$(get_config_name)
     TEST_REGISTRY=$(load_test_registry "${SUITE_NAME}") || return 1
     test_login_no_login() {
       local TEST_NAME="${1}"
@@ -55,7 +55,6 @@ Describe 'login-negative'
       The stderr should satisfy spec_expect_no_message "${NUM_SERVICES_UPDATING}"
       # No --with-registry-auth, because no login.
       The stderr should satisfy spec_expect_no_message "${ADDING_OPTIONS_WITH_REGISTRY_AUTH}.*${SERVICE_NAME}"
-      The stderr should satisfy spec_expect_no_message "${THERE_ARE_ADDITIONAL_MESSAGES}.*${SERVICE_NAME}.*"
       The stderr should satisfy spec_expect_no_message "${UPDATED}.*${SERVICE_NAME}"
       The stderr should satisfy spec_expect_no_message "${NO_UPDATES}.*${SERVICE_NAME}"
       The stderr should satisfy spec_expect_no_message "${ROLLING_BACK}.*${SERVICE_NAME}"
@@ -80,7 +79,7 @@ Describe 'login-negative'
     # When running with an Gantry image, docker buildx writes files to this folder which are owned by root.
     # Using a relative path, this the container will not write to the folder on the host.
     # So do not use an absolute path, otherwise we cannot remove this folder on the host.
-    AUTH_CONFIG="C$(unique_id)"
+    AUTH_CONFIG=$(get_config_name)
     TEST_REGISTRY=$(load_test_registry "${SUITE_NAME}") || return 1
     test_login_incorrect_password() {
       local TEST_NAME="${1}"
@@ -91,8 +90,8 @@ Describe 'login-negative'
       local PASSWORD="${6}"
       check_login_input "${REGISTRY}" "${USERNAME}" "${PASSWORD}" || return 1;
       local INCORRECT_PASSWORD="${PASSWORD}-incorrect-password"
-      local USER_FILE=; USER_FILE=$(mktemp); echo "${USERNAME}" > "${USER_FILE}";
-      local PASS_FILE=; PASS_FILE=$(mktemp); echo "${INCORRECT_PASSWORD}" > "${PASS_FILE}";
+      local USER_FILE=; USER_FILE=$(make_test_temp_file); echo "${USERNAME}" > "${USER_FILE}";
+      local PASS_FILE=; PASS_FILE=$(make_test_temp_file); echo "${INCORRECT_PASSWORD}" > "${PASS_FILE}";
       docker_service_update --label-add "${GANTRY_AUTH_CONFIG_LABEL}=${CONFIG}" "${SERVICE_NAME}"
       reset_gantry_env "${SUITE_NAME}" "${SERVICE_NAME}"
       export GANTRY_REGISTRY_CONFIG="${CONFIG}"
@@ -127,7 +126,6 @@ Describe 'login-negative'
       The stderr should satisfy spec_expect_no_message "${NUM_SERVICES_NO_NEW_IMAGES}"
       The stderr should satisfy spec_expect_no_message "${NUM_SERVICES_UPDATING}"
       The stderr should satisfy spec_expect_no_message "${ADDING_OPTIONS}"
-      The stderr should satisfy spec_expect_no_message "${THERE_ARE_ADDITIONAL_MESSAGES}.*${SERVICE_NAME}.*"
       The stderr should satisfy spec_expect_no_message "${UPDATED}.*${SERVICE_NAME}"
       The stderr should satisfy spec_expect_no_message "${NO_UPDATES}.*${SERVICE_NAME}"
       The stderr should satisfy spec_expect_no_message "${ROLLING_BACK}.*${SERVICE_NAME}"
@@ -149,7 +147,7 @@ Describe 'login-negative'
     TEST_NAME="test_login_read_only_file"
     IMAGE_WITH_TAG=$(get_image_with_tag "${SUITE_NAME}")
     SERVICE_NAME=$(get_test_service_name "${TEST_NAME}")
-    AUTH_CONFIG=$(mktemp -d)
+    AUTH_CONFIG=$(get_config_name)
     TEST_REGISTRY=$(load_test_registry "${SUITE_NAME}") || return 1
     test_login_read_only_file() {
       local TEST_NAME="${1}"
@@ -163,8 +161,8 @@ Describe 'login-negative'
       # So do not run the test with a container/image.
       mkdir -p "${CONFIG}"
       chmod 444 "${CONFIG}"
-      local USER_FILE=; USER_FILE=$(mktemp); echo "${USERNAME}" > "${USER_FILE}";
-      local PASS_FILE=; PASS_FILE=$(mktemp); echo "${PASSWORD}" > "${PASS_FILE}";
+      local USER_FILE=; USER_FILE=$(make_test_temp_file); echo "${USERNAME}" > "${USER_FILE}";
+      local PASS_FILE=; PASS_FILE=$(make_test_temp_file); echo "${PASSWORD}" > "${PASS_FILE}";
       docker_service_update --label-add "${GANTRY_AUTH_CONFIG_LABEL}=${CONFIG}" "${SERVICE_NAME}"
       reset_gantry_env "${SUITE_NAME}" "${SERVICE_NAME}"
       # Use GANTRY_TEST_HOST_TO_CONTAINER to mount the file from host to the container.
@@ -178,7 +176,7 @@ Describe 'login-negative'
       RETURN_VALUE="${?}"
       rm "${USER_FILE}"
       rm "${PASS_FILE}"
-      # [ -d "${CONFIG}" ] && chmod 777 "${CONFIG}" && rm -r "${CONFIG}"
+      [ -d "${CONFIG}" ] && chmod 777 "${CONFIG}" && rm -r "${CONFIG}"
       return "${RETURN_VALUE}"
     }
     BeforeEach "common_setup_new_image ${TEST_NAME} ${IMAGE_WITH_TAG} ${SERVICE_NAME}"
@@ -201,7 +199,6 @@ Describe 'login-negative'
       The stderr should satisfy spec_expect_no_message "${NUM_SERVICES_NO_NEW_IMAGES}"
       The stderr should satisfy spec_expect_no_message "${NUM_SERVICES_UPDATING}"
       The stderr should satisfy spec_expect_no_message "${ADDING_OPTIONS}"
-      The stderr should satisfy spec_expect_no_message "${THERE_ARE_ADDITIONAL_MESSAGES}.*${SERVICE_NAME}.*"
       The stderr should satisfy spec_expect_no_message "${UPDATED}.*${SERVICE_NAME}"
       The stderr should satisfy spec_expect_no_message "${NO_UPDATES}.*${SERVICE_NAME}"
       The stderr should satisfy spec_expect_no_message "${ROLLING_BACK}.*${SERVICE_NAME}"
@@ -226,7 +223,8 @@ Describe 'login-negative'
     # When running with an Gantry image, docker buildx writes files to this folder which are owned by root.
     # Using a relative path, this the container will not write to the folder on the host.
     # So do not use an absolute path, otherwise we cannot remove this folder on the host.
-    AUTH_CONFIG="C$(unique_id)"
+    AUTH_CONFIG=$(get_config_name)
+    INCORRECT_CONFIG=$(get_config_name "incorrect-")
     TEST_REGISTRY=$(load_test_registry "${SUITE_NAME}") || return 1
     test_login_config_mismatch_default() {
       local TEST_NAME="${1}"
@@ -235,13 +233,13 @@ Describe 'login-negative'
       local REGISTRY="${4}"
       local USERNAME="${5}"
       local PASSWORD="${6}"
+      local INCORRECT_CONFIG="${7}"
       check_login_input "${REGISTRY}" "${USERNAME}" "${PASSWORD}" || return 1;
-      local INCORRECT_CONFIG="incorrect-${CONFIG}"
-      local USER_FILE=; USER_FILE=$(mktemp); echo "${USERNAME}" > "${USER_FILE}";
-      local PASS_FILE=; PASS_FILE=$(mktemp); echo "${PASSWORD}" > "${PASS_FILE}";
+      local USER_FILE=; USER_FILE=$(make_test_temp_file); echo "${USERNAME}" > "${USER_FILE}";
+      local PASS_FILE=; PASS_FILE=$(make_test_temp_file); echo "${PASSWORD}" > "${PASS_FILE}";
       # Also use CONFIGS_FILE to test a explicitly-set config.
       local CONFIGS_FILE=
-      CONFIGS_FILE=$(mktemp)
+      CONFIGS_FILE=$(make_test_temp_file)
       echo "${CONFIG} ${REGISTRY} ${USERNAME} ${PASSWORD}" >> "${CONFIGS_FILE}"
       # The config name on the service is different from the config name used in GANTRY_REGISTRY_CONFIG
       docker_service_update --label-add "${GANTRY_AUTH_CONFIG_LABEL}=${INCORRECT_CONFIG}" "${SERVICE_NAME}"
@@ -258,7 +256,7 @@ Describe 'login-negative'
       rm "${USER_FILE}"
       rm "${PASS_FILE}"
       rm "${CONFIGS_FILE}"
-      docker logout "${REGISTRY}" > /dev/null
+      docker logout "${REGISTRY}" 1>/dev/null
       [ -d "${CONFIG}" ] && rm -r "${CONFIG}"
       [ -d "${INCORRECT_CONFIG}" ] && rm -r "${INCORRECT_CONFIG}"
       return "${RETURN_VALUE}"
@@ -266,7 +264,7 @@ Describe 'login-negative'
     BeforeEach "common_setup_new_image ${TEST_NAME} ${IMAGE_WITH_TAG} ${SERVICE_NAME}"
     AfterEach "common_cleanup ${TEST_NAME} ${IMAGE_WITH_TAG} ${SERVICE_NAME}"
     It 'run_test'
-      When run test_login_config_mismatch_default "${TEST_NAME}" "${SERVICE_NAME}" "${AUTH_CONFIG}" "${TEST_REGISTRY}" "${TEST_USERNAME}" "${TEST_PASSWORD}"
+      When run test_login_config_mismatch_default "${TEST_NAME}" "${SERVICE_NAME}" "${AUTH_CONFIG}" "${TEST_REGISTRY}" "${TEST_USERNAME}" "${TEST_PASSWORD}" "${INCORRECT_CONFIG}"
       The status should be failure
       The stdout should satisfy display_output
       The stdout should satisfy spec_expect_no_message ".+"
@@ -275,12 +273,12 @@ Describe 'login-negative'
       The stderr should satisfy spec_expect_message    "${LOGGED_INTO_REGISTRY}.*${TEST_REGISTRY}.*${DEFAULT_CONFIGURATION}"
       The stderr should satisfy spec_expect_message    "${LOGGED_INTO_REGISTRY}.*${TEST_REGISTRY}.*${AUTH_CONFIG}"
       The stderr should satisfy spec_expect_no_message "${FAILED_TO_LOGIN_TO_REGISTRY}"
-      The stderr should satisfy spec_expect_message    "incorrect-${AUTH_CONFIG}.*${CONFIG_IS_NOT_A_DIRECTORY}"
+      The stderr should satisfy spec_expect_message    "${INCORRECT_CONFIG}.*${CONFIG_IS_NOT_A_DIRECTORY}"
       # Check warnings
       The stderr should satisfy spec_expect_message    "${THERE_ARE_NUM_CONFIGURATIONS}.*"
       The stderr should satisfy spec_expect_message    "${USER_LOGGED_INTO_DEFAULT}.*"
       The stderr should satisfy spec_expect_no_message "${ADDING_OPTIONS}.*--config ${AUTH_CONFIG}.*"
-      The stderr should satisfy spec_expect_message    "${ADDING_OPTIONS}.*--config incorrect-${AUTH_CONFIG}.*${SERVICE_NAME}"
+      The stderr should satisfy spec_expect_message    "${ADDING_OPTIONS}.*--config ${INCORRECT_CONFIG}.*${SERVICE_NAME}"
       The stderr should satisfy spec_expect_message    "${SKIP_UPDATING}.*${SERVICE_NAME}.*${SKIP_REASON_MANIFEST_FAILURE}"
       The stderr should satisfy spec_expect_no_message "${PERFORM_UPDATING}.*${SERVICE_NAME}"
       The stderr should satisfy spec_expect_no_message "${NUM_SERVICES_SKIP_JOBS}"
@@ -289,7 +287,6 @@ Describe 'login-negative'
       The stderr should satisfy spec_expect_no_message "${NUM_SERVICES_UPDATING}"
       # No --with-registry-auth, due to the incorrect configuration, image inspection failed, we did not reach the updating step.
       The stderr should satisfy spec_expect_no_message "${ADDING_OPTIONS_WITH_REGISTRY_AUTH}.*${SERVICE_NAME}"
-      The stderr should satisfy spec_expect_no_message "${THERE_ARE_ADDITIONAL_MESSAGES}.*${SERVICE_NAME}.*"
       The stderr should satisfy spec_expect_no_message "${UPDATED}.*${SERVICE_NAME}"
       The stderr should satisfy spec_expect_no_message "${NO_UPDATES}.*${SERVICE_NAME}"
       The stderr should satisfy spec_expect_no_message "${ROLLING_BACK}.*${SERVICE_NAME}"
@@ -314,7 +311,8 @@ Describe 'login-negative'
     # When running with an Gantry image, docker buildx writes files to this folder which are owned by root.
     # Using a relative path, this the container will not write to the folder on the host.
     # So do not use an absolute path, otherwise we cannot remove this folder on the host.
-    AUTH_CONFIG="C$(unique_id)"
+    AUTH_CONFIG=$(get_config_name)
+    INCORRECT_CONFIG=$(get_config_name "incorrect-")
     TEST_REGISTRY=$(load_test_registry "${SUITE_NAME}") || return 1
     test_login_config_mismatch_no_default() {
       local TEST_NAME="${1}"
@@ -323,10 +321,10 @@ Describe 'login-negative'
       local REGISTRY="${4}"
       local USERNAME="${5}"
       local PASSWORD="${6}"
-      local INCORRECT_CONFIG="incorrect-${CONFIG}"
+      local INCORRECT_CONFIG="${7}"
       check_login_input "${REGISTRY}" "${USERNAME}" "${PASSWORD}" || return 1;
-      local USER_FILE=; USER_FILE=$(mktemp); echo "${USERNAME}" > "${USER_FILE}";
-      local PASS_FILE=; PASS_FILE=$(mktemp); echo "${PASSWORD}" > "${PASS_FILE}";
+      local USER_FILE=; USER_FILE=$(make_test_temp_file); echo "${USERNAME}" > "${USER_FILE}";
+      local PASS_FILE=; PASS_FILE=$(make_test_temp_file); echo "${PASSWORD}" > "${PASS_FILE}";
       # The config name on the service is different from the config name used in GANTRY_REGISTRY_CONFIG
       docker_service_update --label-add "${GANTRY_AUTH_CONFIG_LABEL}=${INCORRECT_CONFIG}" "${SERVICE_NAME}"
       reset_gantry_env "${SUITE_NAME}" "${SERVICE_NAME}"
@@ -347,7 +345,7 @@ Describe 'login-negative'
     BeforeEach "common_setup_new_image ${TEST_NAME} ${IMAGE_WITH_TAG} ${SERVICE_NAME}"
     AfterEach "common_cleanup ${TEST_NAME} ${IMAGE_WITH_TAG} ${SERVICE_NAME}"
     It 'run_test'
-      When run test_login_config_mismatch_no_default "${TEST_NAME}" "${SERVICE_NAME}" "${AUTH_CONFIG}" "${TEST_REGISTRY}" "${TEST_USERNAME}" "${TEST_PASSWORD}"
+      When run test_login_config_mismatch_no_default "${TEST_NAME}" "${SERVICE_NAME}" "${AUTH_CONFIG}" "${TEST_REGISTRY}" "${TEST_USERNAME}" "${TEST_PASSWORD}" "${INCORRECT_CONFIG}"
       The status should be failure
       The stdout should satisfy display_output
       The stdout should satisfy spec_expect_no_message ".+"
@@ -356,13 +354,13 @@ Describe 'login-negative'
       The stderr should satisfy spec_expect_no_message "${LOGGED_INTO_REGISTRY}.*${TEST_REGISTRY}.*${DEFAULT_CONFIGURATION}"
       The stderr should satisfy spec_expect_message    "${LOGGED_INTO_REGISTRY}.*${TEST_REGISTRY}.*${AUTH_CONFIG}"
       The stderr should satisfy spec_expect_no_message "${FAILED_TO_LOGIN_TO_REGISTRY}"
-      The stderr should satisfy spec_expect_message    "incorrect-${AUTH_CONFIG}.*${CONFIG_IS_NOT_A_DIRECTORY}"
+      The stderr should satisfy spec_expect_message    "${INCORRECT_CONFIG}.*${CONFIG_IS_NOT_A_DIRECTORY}"
       # Check warnings
       The stderr should satisfy spec_expect_message    "${THERE_ARE_NUM_CONFIGURATIONS}.*"
       # This message does not present, because we don't login with the default configuration.
       The stderr should satisfy spec_expect_no_message "${USER_LOGGED_INTO_DEFAULT}.*"
       The stderr should satisfy spec_expect_no_message "${ADDING_OPTIONS}.*--config ${AUTH_CONFIG}.*"
-      The stderr should satisfy spec_expect_message    "${ADDING_OPTIONS}.*--config incorrect-${AUTH_CONFIG}.*${SERVICE_NAME}"
+      The stderr should satisfy spec_expect_message    "${ADDING_OPTIONS}.*--config ${INCORRECT_CONFIG}.*${SERVICE_NAME}"
       The stderr should satisfy spec_expect_message    "${SKIP_UPDATING}.*${SERVICE_NAME}.*${SKIP_REASON_MANIFEST_FAILURE}"
       The stderr should satisfy spec_expect_no_message "${PERFORM_UPDATING}.*${SERVICE_NAME}"
       The stderr should satisfy spec_expect_no_message "${NUM_SERVICES_SKIP_JOBS}"
@@ -371,7 +369,6 @@ Describe 'login-negative'
       The stderr should satisfy spec_expect_no_message "${NUM_SERVICES_UPDATING}"
       # No --with-registry-auth, due to the incorrect configuration, image inspection failed, we did not reach the updating step.
       The stderr should satisfy spec_expect_no_message "${ADDING_OPTIONS_WITH_REGISTRY_AUTH}.*${SERVICE_NAME}"
-      The stderr should satisfy spec_expect_no_message "${THERE_ARE_ADDITIONAL_MESSAGES}.*${SERVICE_NAME}.*"
       The stderr should satisfy spec_expect_no_message "${UPDATED}.*${SERVICE_NAME}"
       The stderr should satisfy spec_expect_no_message "${NO_UPDATES}.*${SERVICE_NAME}"
       The stderr should satisfy spec_expect_no_message "${ROLLING_BACK}.*${SERVICE_NAME}"
@@ -401,7 +398,7 @@ Describe 'login-negative'
     # When running with an Gantry image, docker buildx writes files to this folder which are owned by root.
     # Using a relative path, this the container will not write to the folder on the host.
     # So do not use an absolute path, otherwise we cannot remove this folder on the host.
-    AUTH_CONFIG="C$(unique_id)"
+    AUTH_CONFIG=$(get_config_name)
     TEST_REGISTRY=$(load_test_registry "${SUITE_NAME}") || return 1
     test_start() {
       local TEST_NAME="${1}"
@@ -429,8 +426,8 @@ Describe 'login-negative'
       local SERVICE_NAME0="${SERVICE_NAME}-0"
       local SERVICE_NAME1="${SERVICE_NAME}-1"
       check_login_input "${REGISTRY}" "${USERNAME}" "${PASSWORD}" || return 1;
-      local USER_FILE=; USER_FILE=$(mktemp); echo "${USERNAME}" > "${USER_FILE}";
-      local PASS_FILE=; PASS_FILE=$(mktemp); echo "${PASSWORD}" > "${PASS_FILE}";
+      local USER_FILE=; USER_FILE=$(make_test_temp_file); echo "${USERNAME}" > "${USER_FILE}";
+      local PASS_FILE=; PASS_FILE=$(make_test_temp_file); echo "${PASSWORD}" > "${PASS_FILE}";
       # Set GANTRY_AUTH_CONFIG_LABEL on SERVICE_NAME1, but not on SERVICE_NAME0.
       # Inspection of SERVICE_NAME0 should fail, because GANTRY_AUTH_CONFIG_LABEL is not found.
       # Inspection of SERVICE_NAME1 should pass, because configuration is set via GANTRY_AUTH_CONFIG_LABEL.
@@ -486,8 +483,6 @@ Describe 'login-negative'
       The stderr should satisfy spec_expect_no_message "${ADDING_OPTIONS_WITH_REGISTRY_AUTH}.*${SERVICE_NAME0}"
       # Gantry adds --with-registry-auth for finding GANTRY_AUTH_CONFIG_LABEL on the service.
       The stderr should satisfy spec_expect_message    "${ADDING_OPTIONS_WITH_REGISTRY_AUTH}.*${SERVICE_NAME1}"
-      The stderr should satisfy spec_expect_no_message "${THERE_ARE_ADDITIONAL_MESSAGES}.*${SERVICE_NAME0}.*"
-      The stderr should satisfy spec_expect_no_message "${THERE_ARE_ADDITIONAL_MESSAGES}.*${SERVICE_NAME1}.*"
       The stderr should satisfy spec_expect_no_message "${UPDATED}.*${SERVICE_NAME0}"
       The stderr should satisfy spec_expect_message    "${UPDATED}.*${SERVICE_NAME1}"
       The stderr should satisfy spec_expect_no_message "${NO_UPDATES}.*${SERVICE_NAME0}"
@@ -514,7 +509,7 @@ Describe 'login-negative'
     # When running with an Gantry image, docker buildx writes files to this folder which are owned by root.
     # Using a relative path, this the container will not write to the folder on the host.
     # So do not use an absolute path, otherwise we cannot remove this folder on the host.
-    AUTH_CONFIG="C$(unique_id)"
+    AUTH_CONFIG=$(get_config_name)
     TEST_REGISTRY=$(load_test_registry "${SUITE_NAME}") || return 1
     test_login_REGISTRY_CONFIGS_FILE_bad_format() {
       local TEST_NAME="${1}"
@@ -525,7 +520,7 @@ Describe 'login-negative'
       local PASSWORD="${6}"
       check_login_input "${REGISTRY}" "${USERNAME}" "${PASSWORD}" || return 1;
       local CONFIGS_FILE=
-      CONFIGS_FILE=$(mktemp)
+      CONFIGS_FILE=$(make_test_temp_file)
       # Add an extra item to the line.
       echo "${CONFIG} ${REGISTRY} ${USERNAME} ${PASSWORD} Extra" >> "${CONFIGS_FILE}"
       # Missing an item from the line.
@@ -562,7 +557,6 @@ Describe 'login-negative'
       The stderr should satisfy spec_expect_no_message "${NUM_SERVICES_NO_NEW_IMAGES}"
       The stderr should satisfy spec_expect_no_message "${NUM_SERVICES_UPDATING}"
       The stderr should satisfy spec_expect_no_message "${ADDING_OPTIONS}.*--config.*"
-      The stderr should satisfy spec_expect_no_message "${THERE_ARE_ADDITIONAL_MESSAGES}.*${SERVICE_NAME}.*"
       The stderr should satisfy spec_expect_no_message "${UPDATED}.*${SERVICE_NAME}"
       The stderr should satisfy spec_expect_no_message "${NO_UPDATES}.*${SERVICE_NAME}"
       The stderr should satisfy spec_expect_no_message "${ROLLING_BACK}.*${SERVICE_NAME}"
@@ -587,7 +581,7 @@ Describe 'login-negative'
     # When running with an Gantry image, docker buildx writes files to this folder which are owned by root.
     # Using a relative path, this the container will not write to the folder on the host.
     # So do not use an absolute path, otherwise we cannot remove this folder on the host.
-    AUTH_CONFIG="C$(unique_id)"
+    AUTH_CONFIG=$(get_config_name)
     TEST_REGISTRY=$(load_test_registry "${SUITE_NAME}") || return 1
     test_login_file_not_exist() {
       local TEST_NAME="${1}"
@@ -631,7 +625,6 @@ Describe 'login-negative'
       The stderr should satisfy spec_expect_no_message "${NUM_SERVICES_NO_NEW_IMAGES}"
       The stderr should satisfy spec_expect_no_message "${NUM_SERVICES_UPDATING}"
       The stderr should satisfy spec_expect_no_message "${ADDING_OPTIONS}.*--config.*"
-      The stderr should satisfy spec_expect_no_message "${THERE_ARE_ADDITIONAL_MESSAGES}.*${SERVICE_NAME}.*"
       The stderr should satisfy spec_expect_no_message "${UPDATED}.*${SERVICE_NAME}"
       The stderr should satisfy spec_expect_no_message "${NO_UPDATES}.*${SERVICE_NAME}"
       The stderr should satisfy spec_expect_no_message "${ROLLING_BACK}.*${SERVICE_NAME}"

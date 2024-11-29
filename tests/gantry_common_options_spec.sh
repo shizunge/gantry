@@ -102,9 +102,9 @@ Describe 'common-options'
       local TEST_NAME="${1}"
       local SERVICE_NAME="${2}"
       local ENV_BEFORE_RUN=
-      ENV_BEFORE_RUN=$(mktemp)
+      ENV_BEFORE_RUN=$(make_test_temp_file)
       local ENV_AFTER_RUN=
-      ENV_AFTER_RUN=$(mktemp)
+      ENV_AFTER_RUN=$(make_test_temp_file)
 
       reset_gantry_env "${SUITE_NAME}" "${SERVICE_NAME}"
       # There should be no warnings or errors. So it should work the same as LOG_LEVLE=NONE.
@@ -113,7 +113,8 @@ Describe 'common-options'
       run_gantry "${SUITE_NAME}" "${TEST_NAME}"
       declare -p > "${ENV_AFTER_RUN}"
       # Allow the 3 mismatches LOG_LEVEL NODE_NAME LOG_SCOPE used in log() function.
-      # Allow the 2 mismatches LINENO _ for kcov coverage.
+      # Allow the 1 mismatch LINENO for kcov coverage.
+      # Allow the 1 mismatch _ for the previous command.
       for ALLOWED in LOG_LEVEL NODE_NAME LOG_SCOPE LINENO _; do
         sed -i "s/^declare .* ${ALLOWED}=.*//" "${ENV_BEFORE_RUN}"
         sed -i "s/^declare .* ${ALLOWED}=.*//" "${ENV_AFTER_RUN}"

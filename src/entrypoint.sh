@@ -63,7 +63,7 @@ load_libraries() {
 
 _run_on_node() {
   local HOST_NAME=
-  if ! HOST_NAME=$(docker node inspect self --format "{{.Description.Hostname}}" 2>&1); then
+  if ! HOST_NAME=$(run_cmd docker node inspect self --format "{{.Description.Hostname}}"); then
     log DEBUG "Failed to run \"docker node inspect self\": ${HOST_NAME}"
     return 1
   fi
@@ -73,18 +73,9 @@ _run_on_node() {
 
 _read_docker_hub_rate() {
   local HOST PASSWORD USER
-  if ! PASSWORD=$(gantry_read_registry_password 2>&1); then
-    log ERROR "Failed to read registry PASSWORD: ${PASSWORD}";
-    PASSWORD=
-  fi
-  if ! USER=$(gantry_read_registry_username 2>&1); then
-    log ERROR "Failed to read registry USER: ${USER}";
-    USER=
-  fi
-  if ! HOST=$(gantry_read_registry_host 2>&1); then
-    log ERROR "Failed to read registry HOST: ${HOST}";
-    HOST=
-  fi
+  USER=$(gantry_read_config "GANTRY_REGISTRY_USER")
+  PASSWORD=$(gantry_read_config "GANTRY_REGISTRY_PASSWORD")
+  HOST=$(gantry_read_config "GANTRY_REGISTRY_HOST")
   local USER_AND_PASS=
   if [ -n "${USER}" ] && [ -n "${PASSWORD}" ]; then
     if [ -z "${HOST}" ] || [ "${HOST}" = "docker.io" ]; then
@@ -107,6 +98,7 @@ gantry() {
   START_TIME=$(date +%s)
 
   [ -n "${DOCKER_HOST}" ] && log DEBUG "DOCKER_HOST=${DOCKER_HOST}"
+  [ -n "${DOCKER_CONFIG}" ] && log DEBUG "DOCKER_CONFIG=${DOCKER_CONFIG}"
   local RUN_ON_NODE=
   if ! RUN_ON_NODE=$(_run_on_node); then
     local HOST_STRING="${DOCKER_HOST:-"the current node"}"
@@ -123,7 +115,7 @@ gantry() {
   eval_cmd "pre-run" "${PRE_RUN_CMD}"
   ACCUMULATED_ERRORS=$((ACCUMULATED_ERRORS + $?))
 
-  log INFO "Starting."
+  log INFO "Starting Gantry."
   gantry_initialize "${STACK}"
   ACCUMULATED_ERRORS=$((ACCUMULATED_ERRORS + $?))
 

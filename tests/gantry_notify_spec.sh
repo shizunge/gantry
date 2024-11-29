@@ -34,8 +34,8 @@ _notify_before_all() {
   initialize_all_tests "${SUITE_NAME}"
   pull_image_if_not_exist caronc/apprise
   pull_image_if_not_exist axllent/mailpit
-  docker_remove "${SERVICE_NAME_APPRISE}" 1>/dev/null 2>&1
-  docker_remove "${SERVICE_NAME_MAILPIT}" 1>/dev/null 2>&1
+  docker_remove "${SERVICE_NAME_APPRISE}" 1>/dev/null 2>/dev/null
+  docker_remove "${SERVICE_NAME_MAILPIT}" 1>/dev/null 2>/dev/null
   # Use docker_run to improve coverage on lib-common.sh. `docker run` can do the same thing.
   docker_run -d --restart=on-failure:10 --name="${SERVICE_NAME_APPRISE}" --network=host \
     -e "APPRISE_STATELESS_URLS=mailto://localhost:${SMTP_PORT}?user=userid&pass=password" \
@@ -329,7 +329,8 @@ Describe 'notify'
       local SERVICE_NAME="${2}"
       local RETURN_VALUE=0
       reset_gantry_env "${SUITE_NAME}" "${SERVICE_NAME}"
-      export GANTRY_UPDATE_OPTIONS="--bad-options-that-causes-error"
+      # Bad options will cause an update failure.
+      export GANTRY_UPDATE_OPTIONS="--incorrect-option"
       export GANTRY_NOTIFICATION_APPRISE_URL="http://localhost:${APPRISE_PORT}/notify"
       export GANTRY_NOTIFICATION_CONDITION="on-change"
       export GANTRY_NOTIFICATION_TITLE="TEST_TITLE"
@@ -357,7 +358,8 @@ Describe 'notify'
       The stderr should satisfy spec_expect_no_message "${UPDATED}.*${SERVICE_NAME}"
       The stderr should satisfy spec_expect_no_message "${NO_UPDATES}.*${SERVICE_NAME}"
       The stderr should satisfy spec_expect_message    "${ROLLING_BACK}.*${SERVICE_NAME}"
-      The stderr should satisfy spec_expect_message    "${FAILED_TO_ROLLBACK}.*${SERVICE_NAME}"
+      # Rollback should fail due to FROM_DOCKER_DOES_NOT_HAVE_A_PREVIOUS_SPEC
+      The stderr should satisfy spec_expect_message    "${FAILED_TO_ROLLBACK}.*${SERVICE_NAME}.*${FROM_DOCKER_DOES_NOT_HAVE_A_PREVIOUS_SPEC}"
       The stderr should satisfy spec_expect_no_message "${ROLLED_BACK}.*${SERVICE_NAME}"
       The stderr should satisfy spec_expect_message    "${NO_SERVICES_UPDATED}"
       The stderr should satisfy spec_expect_no_message "${NUM_SERVICES_UPDATED}"

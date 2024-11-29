@@ -39,8 +39,8 @@ grep_q() {
   # "grep -q" will exit immediately when the first line of data matches, and leading to broken pipe errors.
   grep -q -- "${@}";
   local GREP_RETURN=$?;
-  # Add "cat > /dev/null" to avoid broken pipe errors.
-  cat >/dev/null;
+  # Add "cat 1>/dev/null" to avoid broken pipe errors.
+  cat 1>/dev/null;
   return "${GREP_RETURN}"
 }
 
@@ -49,7 +49,7 @@ grep_q() {
 grep_q_i() {
   grep -q -i -- "${@}";
   local GREP_RETURN=$?;
-  cat >/dev/null;
+  cat 1>/dev/null;
   return "${GREP_RETURN}"
 }
 
@@ -242,7 +242,7 @@ _log_docker_time() {
   # date -d "${TIME_INPUT}" +"$(_time_format)" 2>/dev/null && return 0
   local EPOCH=
   if EPOCH=$(busybox date -d "${TIME_INPUT}" -D "%Y-%m-%dT%H:%M:%S" -u +%s 2>/dev/null); then
-    date -d "@${EPOCH}" +"$(_time_format)" 2>&1
+    date -d "@${EPOCH}" +"$(_time_format)"
     return 0
   fi
   if [ -n "${TIME_INPUT}" ]; then
@@ -367,7 +367,7 @@ read_config() {
     cat "${CONFIG_FILE}"
     return $?
   elif [ -n "${CONFIG_FILE}" ]; then
-    echo "Failed to read ${CONFIG_FILE}" >&2
+    echo "Failed to read file ${CONFIG_FILE}" >&2
     return 1
   fi
   eval "local CONFIG=\${${CONFIG_NAME}}"
@@ -434,13 +434,36 @@ eval_cmd() {
   return "${RETURN_VALUE}"
 }
 
+# When the command returns 0:
+# Echo stdout and log stderr as a warning. Return 0.
+# When the command returns non-zero:
+# Echo stdout + stderr. Return the same value from the docker command.
+run_cmd() {
+  local STDERR_STR=
+  local RETURN_VALUE=
+  # Use "3>&2 2>&1 1>&3" to swap stdout and stderr
+  { STDERR_STR=$("${@}" 3>&2 2>&1 1>&3); } 2>&1
+  RETURN_VALUE=$?
+
+  if [ -n "${STDERR_STR}" ]; then
+    if [ "${RETURN_VALUE}" = 0 ]; then
+      log WARN "${STDERR_STR} (From command: ${*})"
+    else
+      echo "${STDERR_STR}"
+    fi
+  fi
+  return "${RETURN_VALUE}"
+}
+
 swarm_network_arguments() {
   if [ -z "${NETWORK_NAME}" ]; then
     echo ""
     return 0
   fi
-  NETWORK_NAME=$(docker network ls --filter "name=${NETWORK_NAME}" --format '{{.Name}}')
-  if [ -z "${NETWORK_NAME}" ]; then
+  local RETURN_VALUE=
+  NETWORK_NAME=$(run_cmd docker network ls --filter "name=${NETWORK_NAME}" --format '{{.Name}}')
+  RETURN_VALUE=$?
+  if [ "${RETURN_VALUE}" != "0" ] || [ -z "${NETWORK_NAME}" ]; then
     echo ""
     return 0
   fi
@@ -481,7 +504,7 @@ docker_service_logs() {
 
 _docker_service_exists() {
   local SERVICE_NAME="${1}"
-  docker service inspect --format '{{.ID}}' "${SERVICE_NAME}" >/dev/null 2>&1
+  docker service inspect --format '{{.ID}}' "${SERVICE_NAME}" 1>/dev/null 2>/dev/null
 }
 
 _docker_wait_until_service_removed() {
@@ -495,7 +518,7 @@ _docker_wait_until_service_removed() {
 # This function will check the status of the service and stop the "docker service logs" command.
 _docker_service_logs_follow_and_stop() {
   local SERVICE_NAME="${1}"
-  ! _docker_service_exists "${SERVICE_NAME}" && return 1;
+  _docker_service_exists "${SERVICE_NAME}" || return 1;
   local PID=
   docker service logs --timestamps --no-task-ids --follow "${SERVICE_NAME}" 2>&1 &
   PID="${!}"
@@ -513,8 +536,8 @@ _docker_service_task_states() {
   local SERVICE_NAME="${1}"
   # We won't get the return value of the command via $? if we use "local STATES=$(command)".
   local STATES=
-  if ! STATES=$(docker service ps --no-trunc --format '[{{.Name}}][{{.Node}}] {{.CurrentState}} {{.Error}}' "${SERVICE_NAME}" 2>&1); then
-    echo "${STATES}" >&2
+  if ! STATES=$(run_cmd docker service ps --no-trunc --format '[{{.Name}}][{{.Node}}] {{.CurrentState}} {{.Error}}' "${SERVICE_NAME}"); then
+    log ERROR "${STATES}"
     return 1
   fi
   local NAME_LIST=
@@ -591,7 +614,7 @@ wait_service_state() {
   local RETURN_VALUE=0
   local DOCKER_CMD_ERROR=1
   local STATES=
-  while STATES=$(_docker_service_task_states "${SERVICE_NAME}" 2>&1); do
+  while STATES=$(_docker_service_task_states "${SERVICE_NAME}"); do
     DOCKER_CMD_ERROR=0
     RETURN_VALUE=$(_all_tasks_reach_state "${WANT_STATE}" "${CHECK_FAILURES}" "${STATES}") && break
     local SECONDS_ELAPSED=
@@ -606,7 +629,7 @@ wait_service_state() {
     DOCKER_CMD_ERROR=1
   done
   if [ "${DOCKER_CMD_ERROR}" != "0" ]; then
-    log ERROR "Failed to obtain task states of service ${SERVICE_NAME}: ${STATES}"
+    log ERROR "Failed to obtain task states of service ${SERVICE_NAME}."
     return 1
   fi
   local LINE=
@@ -619,14 +642,12 @@ wait_service_state() {
 docker_service_remove() {
   local SERVICE_NAME="${1}"
   local POST_COMMAND="${2}"
-  ! _docker_service_exists "${SERVICE_NAME}" && return 0
+  _docker_service_exists "${SERVICE_NAME}" || return 0
   log DEBUG "Removing service ${SERVICE_NAME}."
-  local RETURN_VALUE=0
   local LOG=
-  if ! LOG=$(docker service rm "${SERVICE_NAME}" 2>&1); then
-    RETURN_VALUE=$?
+  if ! LOG=$(run_cmd docker service rm "${SERVICE_NAME}"); then
     log ERROR "Failed to remove docker service ${SERVICE_NAME}: ${LOG}"
-    return "${RETURN_VALUE}"
+    return 1
   fi
   if [ -n "${POST_COMMAND}" ]; then
     eval "${POST_COMMAND}"
@@ -654,7 +675,7 @@ docker_global_job() {
   SERVICE_NAME=$(_get_docker_command_name_arg "${@}")
   log INFO "Starting global-job ${SERVICE_NAME}."
   local LOG=
-  if ! LOG=$(docker service create --mode global-job "${@}"  2>&1); then
+  if ! LOG=$(run_cmd docker service create --mode global-job "${@}"); then
     log ERROR "Failed to create global-job ${SERVICE_NAME}: ${LOG}"
     return 1
   fi
@@ -669,7 +690,7 @@ docker_replicated_job() {
   # The Docker CLI does not exit on failures.
   log INFO "Starting replicated-job ${SERVICE_NAME}."
   local LOG=
-  if ! LOG=$(docker service create --mode replicated-job --detach "${@}" 2>&1); then
+  if ! LOG=$(run_cmd docker service create --mode replicated-job --detach "${@}"); then
     log ERROR "Failed to create replicated-job ${SERVICE_NAME}: ${LOG}"
     return 1
   fi
@@ -682,10 +703,10 @@ docker_replicated_job() {
 
 docker_version() {
   local cver capi sver sapi
-  if ! cver=$(docker version --format '{{.Client.Version}}' 2>&1);    then log ERROR "${cver}"; cver="error"; fi
-  if ! capi=$(docker version --format '{{.Client.APIVersion}}' 2>&1); then log ERROR "${capi}"; capi="error"; fi
-  if ! sver=$(docker version --format '{{.Server.Version}}' 2>&1);    then log ERROR "${sver}"; sver="error"; fi
-  if ! sapi=$(docker version --format '{{.Server.APIVersion}}' 2>&1); then log ERROR "${sapi}"; sapi="error"; fi
+  if ! cver=$(run_cmd docker version --format '{{.Client.Version}}');    then log ERROR "${cver}"; cver="error"; fi
+  if ! capi=$(run_cmd docker version --format '{{.Client.APIVersion}}'); then log ERROR "${capi}"; capi="error"; fi
+  if ! sver=$(run_cmd docker version --format '{{.Server.Version}}');    then log ERROR "${sver}"; sver="error"; fi
+  if ! sapi=$(run_cmd docker version --format '{{.Server.APIVersion}}'); then log ERROR "${sapi}"; sapi="error"; fi
   echo "Docker version client ${cver} (API ${capi}) server ${sver} (API ${sapi})"
 }
 
@@ -694,7 +715,7 @@ docker_version() {
 # return 1 when there is an error.
 docker_current_container_name() {
   local ALL_NETWORKS=
-  ALL_NETWORKS=$(docker network ls --format '{{.ID}}') || return 1;
+  ALL_NETWORKS=$(run_cmd docker network ls --format '{{.ID}}') || return 1;
   [ -z "${ALL_NETWORKS}" ] && return 0;
   local IPS=;
   # Get the string after "src":
@@ -702,8 +723,8 @@ docker_current_container_name() {
   IPS=$(ip route | grep src | sed -n -E "s/.* src (\S+).*$/\1/p");
   [ -z "${IPS}" ] && return 0;
   local GWBRIDGE_NETWORK HOST_NETWORK;
-  GWBRIDGE_NETWORK=$(docker network ls --format '{{.ID}}' --filter 'name=^docker_gwbridge$') || return 1;
-  HOST_NETWORK=$(docker network ls --format '{{.ID}}' --filter 'name=^host$') || return 1;
+  GWBRIDGE_NETWORK=$(run_cmd docker network ls --format '{{.ID}}' --filter 'name=^docker_gwbridge$') || return 1;
+  HOST_NETWORK=$(run_cmd docker network ls --format '{{.ID}}' --filter 'name=^host$') || return 1;
   local NID=;
   for NID in ${ALL_NETWORKS}; do
     # The output of gwbridge does not contain the container name. It looks like gateway_8f55496ce4f1/172.18.0.5/16.
@@ -711,7 +732,7 @@ docker_current_container_name() {
     # The output of host does not contain an IP.
     [ "${NID}" = "${HOST_NETWORK}" ] && continue;
     local ALL_LOCAL_NAME_AND_IP=;
-    ALL_LOCAL_NAME_AND_IP=$(docker network inspect "${NID}" --format "{{range .Containers}}{{.Name}}/{{println .IPv4Address}}{{end}}") || return 1;
+    ALL_LOCAL_NAME_AND_IP=$(run_cmd docker network inspect "${NID}" --format "{{range .Containers}}{{.Name}}/{{println .IPv4Address}}{{end}}") || return 1;
     local NAME_AND_IP=;
     for NAME_AND_IP in ${ALL_LOCAL_NAME_AND_IP}; do
       [ -z "${NAME_AND_IP}" ] && continue;
@@ -747,10 +768,10 @@ docker_remove() {
   fi
   log DEBUG "Removing container ${CNAME}."
   if [ "${STATUS}" = "running" ]; then
-    docker stop "${CNAME}" >/dev/null 2>/dev/null
+    docker container stop "${CNAME}" 1>/dev/null 2>/dev/null
   fi
   # If the container is created with "--rm", it will be removed automatically when being stopped.
-  docker rm -f "${CNAME}" >/dev/null;
+  docker container rm -f "${CNAME}" 1>/dev/null;
   log INFO "Removed container ${CNAME}."
 }
 
@@ -758,15 +779,15 @@ docker_run() {
   local RETRIES=0
   local MAX_RETRIES=5
   local SLEEP_SECONDS=10
-  local MSG=
-  while ! MSG=$(docker run "${@}" 2>&1); do
+  local LOG=
+  while ! LOG=$(run_cmd docker container run "${@}"); do
     if [ ${RETRIES} -ge ${MAX_RETRIES} ]; then
-      log ERROR "Failed to run docker. Reached the max retries ${MAX_RETRIES}. ${MSG}"
+      log ERROR "Failed to run docker. Reached the max retries ${MAX_RETRIES}. ${LOG}"
       return 1
     fi
     RETRIES=$((RETRIES + 1))
     sleep ${SLEEP_SECONDS}
-    log WARN "Retry docker run (${RETRIES}). ${MSG}"
+    log WARN "Retry docker container run (${RETRIES}). ${LOG}"
   done
-  echo "${MSG}"
+  echo "${LOG}"
 }
