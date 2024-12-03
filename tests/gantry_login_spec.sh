@@ -82,6 +82,7 @@ Describe 'login'
       The stderr should satisfy spec_expect_message    "${ADDING_OPTIONS_WITH_REGISTRY_AUTH}.*automatically.*${SERVICE_NAME}"
       The stderr should satisfy spec_expect_message    "${ADDING_OPTIONS_WITH_REGISTRY_AUTH}.*specified by user.*${SERVICE_NAME}"
       The stderr should satisfy spec_expect_no_message "${FROM_DOCKER_IMAGE_DIGEST_WARNING}.*${SERVICE_NAME}"
+      The stderr should satisfy spec_expect_no_message "${DOES_NOT_HAVE_A_DIGEST}"
       The stderr should satisfy spec_expect_message    "${UPDATED}.*${SERVICE_NAME}"
       The stderr should satisfy spec_expect_no_message "${NO_UPDATES}.*${SERVICE_NAME}"
       The stderr should satisfy spec_expect_no_message "${ROLLING_BACK}.*${SERVICE_NAME}"
@@ -152,6 +153,7 @@ Describe 'login'
       # Gantry adds --with-registry-auth for using the default configuration.
       The stderr should satisfy spec_expect_message    "${ADDING_OPTIONS_WITH_REGISTRY_AUTH}.*${SERVICE_NAME}"
       The stderr should satisfy spec_expect_no_message "${FROM_DOCKER_IMAGE_DIGEST_WARNING}.*${SERVICE_NAME}"
+      The stderr should satisfy spec_expect_no_message "${DOES_NOT_HAVE_A_DIGEST}"
       The stderr should satisfy spec_expect_message    "${UPDATED}.*${SERVICE_NAME}"
       The stderr should satisfy spec_expect_no_message "${NO_UPDATES}.*${SERVICE_NAME}"
       The stderr should satisfy spec_expect_no_message "${ROLLING_BACK}.*${SERVICE_NAME}"
@@ -230,6 +232,7 @@ Describe 'login'
       # Gantry adds --with-registry-auth for finding GANTRY_AUTH_CONFIG_LABEL on the service.
       The stderr should satisfy spec_expect_message    "${ADDING_OPTIONS_WITH_REGISTRY_AUTH}.*${SERVICE_NAME}"
       The stderr should satisfy spec_expect_no_message "${FROM_DOCKER_IMAGE_DIGEST_WARNING}.*${SERVICE_NAME}"
+      The stderr should satisfy spec_expect_no_message "${DOES_NOT_HAVE_A_DIGEST}"
       The stderr should satisfy spec_expect_message    "${UPDATED}.*${SERVICE_NAME}"
       The stderr should satisfy spec_expect_no_message "${NO_UPDATES}.*${SERVICE_NAME}"
       The stderr should satisfy spec_expect_no_message "${ROLLING_BACK}.*${SERVICE_NAME}"
@@ -302,6 +305,8 @@ Describe 'login'
       The stderr should satisfy spec_expect_no_message "${ADDING_OPTIONS_WITH_REGISTRY_AUTH}.*"
       # Check the warning due to missing --with-registry-auth.
       The stderr should satisfy spec_expect_message    "${FROM_DOCKER_IMAGE_DIGEST_WARNING}.*${SERVICE_NAME}"
+      The stderr should satisfy spec_expect_no_message "${AFTER_UPDATING_PREVIOUS_IMAGE}"
+      The stderr should satisfy spec_expect_message    "${AFTER_UPDATING_CURRENT_IMAGE}.*${SERVICE_NAME}.*${DOES_NOT_HAVE_A_DIGEST}"
       The stderr should satisfy spec_expect_message    "${UPDATED}.*${SERVICE_NAME}"
       The stderr should satisfy spec_expect_no_message "${NO_UPDATES}.*${SERVICE_NAME}"
       The stderr should satisfy spec_expect_no_message "${ROLLING_BACK}.*${SERVICE_NAME}"

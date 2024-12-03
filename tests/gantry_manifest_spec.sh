@@ -19,28 +19,28 @@ Describe 'manifest-command'
   SUITE_NAME="manifest-command"
   BeforeAll "initialize_all_tests ${SUITE_NAME}"
   AfterAll "finish_all_tests ${SUITE_NAME}"
-  Describe "test_MANIFEST_CMD_none"
-    TEST_NAME="test_MANIFEST_CMD_none"
+  Describe "test_MANIFEST_CMD_none_force"
+    TEST_NAME="test_MANIFEST_CMD_none_force"
     IMAGE_WITH_TAG=$(get_image_with_tag "${SUITE_NAME}")
     SERVICE_NAME=$(get_test_service_name "${TEST_NAME}")
-    test_MANIFEST_CMD_none() {
+    test_MANIFEST_CMD_none_force() {
       local TEST_NAME="${1}"
       local SERVICE_NAME="${2}"
       reset_gantry_env "${SUITE_NAME}" "${SERVICE_NAME}"
       export GANTRY_MANIFEST_CMD="none"
-      export GANTRY_UPDATE_OPTIONS="--force"
+      # Test that Gantry reports "no updates", when we don't add `--force` to GANTRY_UPDATE_OPTIONS while the image does not change.
       run_gantry "${SUITE_NAME}" "${TEST_NAME}"
     }
     BeforeEach "common_setup_no_new_image ${TEST_NAME} ${IMAGE_WITH_TAG} ${SERVICE_NAME}"
     AfterEach "common_cleanup ${TEST_NAME} ${IMAGE_WITH_TAG} ${SERVICE_NAME}"
     It 'run_test'
-      When run test_MANIFEST_CMD_none "${TEST_NAME}" "${SERVICE_NAME}"
+      When run test_MANIFEST_CMD_none_force "${TEST_NAME}" "${SERVICE_NAME}"
       The status should be success
       The stdout should satisfy display_output
       The stdout should satisfy spec_expect_no_message ".+"
       The stderr should satisfy display_output
       The stderr should satisfy spec_expect_no_message "${START_WITHOUT_A_SQUARE_BRACKET}"
-      # Do not set GANTRY_SERVICES_SELF, it should be set autoamtically
+      # Do not set GANTRY_SERVICES_SELF, it should be set automatically.
       # If we are not testing gantry inside a container, it should failed to find the service name.
       # To test gantry container, we need to use run_gantry_container.
       The stderr should satisfy spec_expect_no_message ".*GANTRY_SERVICES_SELF.*"
@@ -52,7 +52,8 @@ Describe 'manifest-command'
       The stderr should satisfy spec_expect_no_message "${NUM_SERVICES_INSPECT_FAILURE}"
       The stderr should satisfy spec_expect_no_message "${NUM_SERVICES_NO_NEW_IMAGES}"
       The stderr should satisfy spec_expect_message    "${NUM_SERVICES_UPDATING}"
-      The stderr should satisfy spec_expect_message    "${ADDING_OPTIONS}.*--force.*${SERVICE_NAME}"
+      The stderr should satisfy spec_expect_no_message "${ADDING_OPTIONS}"
+      # Gantry reports no updates, unless we add `--force` to the options.
       The stderr should satisfy spec_expect_no_message "${UPDATED}.*${SERVICE_NAME}"
       The stderr should satisfy spec_expect_message    "${NO_UPDATES}.*${SERVICE_NAME}"
       The stderr should satisfy spec_expect_no_message "${ROLLING_BACK}.*${SERVICE_NAME}"

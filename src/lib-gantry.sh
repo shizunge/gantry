@@ -1037,18 +1037,30 @@ _update_single_service() {
     _static_variable_add_unique_to_list STATIC_VAR_SERVICES_UPDATE_FAILED "${SERVICE_NAME}"
     return 1
   fi
+  local PREVIOUS_IMAGE PREVIOUS_DIGEST
+  PREVIOUS_IMAGE=$(_get_service_previous_image "${SERVICE_NAME}")
+  PREVIOUS_DIGEST=$(extract_string "${PREVIOUS_IMAGE}" '@' 2)
+  [ -z "${PREVIOUS_DIGEST}" ] && log DEBUG "After updating, the previous image ${PREVIOUS_IMAGE} of ${SERVICE_NAME} does not have a digest."
+  local CURRENT_IMAGE CURRENT_DIGEST
+  CURRENT_IMAGE=$(_get_service_image "${SERVICE_NAME}")
+  CURRENT_DIGEST=$(extract_string "${CURRENT_IMAGE}" '@' 2)
+  [ -z "${CURRENT_DIGEST}" ] && log WARN "After updating, the current image ${CURRENT_IMAGE} of ${SERVICE_NAME} does not have a digest."
   local TIME_ELAPSED=
   TIME_ELAPSED=$(time_elapsed_since "${START_TIME}")
-  local PREVIOUS_IMAGE=
-  local CURRENT_IMAGE=
-  PREVIOUS_IMAGE=$(_get_service_previous_image "${SERVICE_NAME}")
-  CURRENT_IMAGE=$(_get_service_image "${SERVICE_NAME}")
   if [ "${PREVIOUS_IMAGE}" = "${CURRENT_IMAGE}" ]; then
-    log INFO "No updates for ${SERVICE_NAME}. Use ${TIME_ELAPSED}."
-    return 0
+    # The same new and old images indicate that the image is still being used.
+    # Removing image would fail due to that.
+    if [ -z "${UPDATE_OPTIONS}" ]; then
+      # Unless we add more options like `--force`, docker may not really update the service due to no changes.
+      log INFO "No updates for ${SERVICE_NAME}. Use ${TIME_ELAPSED}."
+      return 0
+    fi
+    # This (e.g. no digest in both old and new image.) could happen when the service is updated to a local built image.
+  else
+    # Remove PREVIOUS_IMAGE only when it is no longer used.
+    _static_variable_add_unique_to_list STATIC_VAR_IMAGES_TO_REMOVE "${PREVIOUS_IMAGE}"
   fi
   _static_variable_add_unique_to_list STATIC_VAR_SERVICES_UPDATED "${SERVICE_NAME}"
-  _static_variable_add_unique_to_list STATIC_VAR_IMAGES_TO_REMOVE "${PREVIOUS_IMAGE}"
   log INFO "Updated ${SERVICE_NAME}. Use ${TIME_ELAPSED}."
   return 0
 }

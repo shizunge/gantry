@@ -1,4 +1,4 @@
-## Migration from shepherd
+# Migration from shepherd
 
 *Gantry* started to fix the following problems I found in [*shepherd*](https://github.com/containrrr/shepherd), then it became refactored and totally rewritten, with [abundant tests](../tests/README.md).
 
@@ -15,7 +15,7 @@ Although I have tried to keep backward compatibility, not all configurations in 
 
 This guide helps you migrate from *shepherd* to *gantry* by highlighting the difference between them. Please refer to the [README](../README.md) for the full description of the configurations.
 
-### Equivalent or similar configurations
+## Equivalent or similar configurations
 
 | *Shepherd* Env | Equivalent or similar *Gantry* Env  | Enhancement |
 |----------------|-------------------------------------|-------------|
@@ -37,7 +37,7 @@ This guide helps you migrate from *shepherd* to *gantry* by highlighting the dif
 
 The label on the services to select config to enable authentication is renamed to `gantry.auth.config`.
 
-### Deprecated configurations
+## Deprecated configurations
 
 | *Shepherd* Env | Workaround |
 |----------------|------------|
@@ -46,7 +46,7 @@ The label on the services to select config to enable authentication is renamed t
 | WITH_NO_RESOLVE_IMAGE  | Manually add `--no-resolve-image` to `GANTRY_UPDATE_OPTIONS`. |
 | RUN_ONCE_AND_EXIT      | Set `GANTRY_SLEEP_SECONDS` to 0. |
 
-### New configurations
+## New configurations
 
 You can enable these new features of *Gantry* through new configurations.
 
@@ -74,7 +74,7 @@ You can enable these new features of *Gantry* through new configurations.
 
 Besides the global configurations via environment variables, you can apply a different value to a particular service via [labels](../README.md#labels).
 
-### License
+## License
 
 *Shepherd* is under [MIT license](https://github.com/containrrr/shepherd/blob/master/LICENSE)
 

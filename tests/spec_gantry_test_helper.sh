@@ -50,6 +50,9 @@ export NUM_SERVICES_INSPECT_FAILURE="Failed to inspect [0-9]+ service\(s\)"
 export NUM_SERVICES_NO_NEW_IMAGES="No new images for [0-9]+ service\(s\)"
 export NUM_SERVICES_UPDATING="Updating [0-9]+ service\(s\)"
 export NO_UPDATES="No updates"
+export AFTER_UPDATING_CURRENT_IMAGE="After updating, the current image"
+export AFTER_UPDATING_PREVIOUS_IMAGE="After updating, the previous image"
+export DOES_NOT_HAVE_A_DIGEST="does not have a digest"
 export UPDATED="Updated"
 export ROLLING_BACK="Rolling back"
 export FAILED_TO_ROLLBACK="Failed to roll back"
@@ -642,14 +645,27 @@ build_test_image() {
   if [ -n "${EXIT_SECONDS}" ] && [ "${EXIT_SECONDS}" -gt "0" ]; then
     EXIT_CMD="sleep ${EXIT_SECONDS};"
   fi
-  local FILE=
-  FILE=$(make_test_temp_file)
-  echo "FROM $(_get_test_service_image)" > "${FILE}"
-  echo "ENTRYPOINT [\"sh\", \"-c\", \"echo $(unique_id); trap \\\"${EXIT_CMD}\\\" HUP INT TERM; ${TASK_CMD}\"]" >> "${FILE}"
-  pull_image_if_not_exist "$(_get_test_service_image)"
-  echo "Building image ${IMAGE_WITH_TAG} from ${FILE}"
-  docker build --quiet --tag "${IMAGE_WITH_TAG}" --file "${FILE}" .
-  rm "${FILE}"
+  local RETURN_VALUE=1
+  local TRIES=0
+  local MAX_RETRIES=60
+  while [ "${RETURN_VALUE}" != "0" ]; do
+    if [ "${TRIES}" -ge "${MAX_RETRIES}" ]; then
+      echo "build_test_image Reach MAX_RETRIES ${MAX_RETRIES}" >&2
+      return 1
+    fi
+    TRIES=$((TRIES+1))
+    local FILE=
+    FILE=$(make_test_temp_file)
+    echo "FROM $(_get_test_service_image)" > "${FILE}"
+    echo "ENTRYPOINT [\"sh\", \"-c\", \"echo $(unique_id); trap \\\"${EXIT_CMD}\\\" HUP INT TERM; ${TASK_CMD}\"]" >> "${FILE}"
+    pull_image_if_not_exist "$(_get_test_service_image)"
+    echo "Building image ${IMAGE_WITH_TAG} from ${FILE}"
+    docker build --quiet --tag "${IMAGE_WITH_TAG}" --file "${FILE}" . 2>&1
+    RETURN_VALUE=$?
+    rm "${FILE}"
+    [ "${RETURN_VALUE}" != "0" ] && sleep 1
+  done
+  return 0
 }
 
 build_and_push_test_image() {
@@ -666,7 +682,7 @@ build_and_push_test_image() {
 prune_local_test_image() {
   local IMAGE_WITH_TAG="${1}"
   echo "Removing image ${IMAGE_WITH_TAG}"
-  docker image rm "${IMAGE_WITH_TAG}" --force
+  docker image rm "${IMAGE_WITH_TAG}" --force 2>&1
 }
 
 docker_service_update() {
