@@ -15,20 +15,25 @@
 # along with this program.  If not, see <https://www.gnu.org/licenses/>.
 #
 
+_curl_installed() {
+  curl --version 1>/dev/null 2>/dev/null;
+}
+
 _docker_hub_rate_token() {
   local IMAGE="${1:-ratelimitpreview/test}"
   local USER_AND_PASS="${2}"
   local TOKEN_URL="https://auth.docker.io/token?service=registry.docker.io&scope=repository:${IMAGE}:pull"
-  if curl --version 1>/dev/null 2>&1; then
-    if [ -n "${USER_AND_PASS}" ]; then
-      curl --silent --show-error --user "${USER_AND_PASS}" "${TOKEN_URL}"
-      return $?
-    fi
-    curl --silent --show-error "${TOKEN_URL}"
+  if ! _curl_installed; then
+    [ -n "${USER_AND_PASS}" ] && log WARN "Cannot read docker hub rate for the given user because curl is not available."
+    wget -qO- "${TOKEN_URL}"
     return $?
   fi
-  [ -n "${USER_AND_PASS}" ] && log WARN "Cannot read docker hub rate for the given user because curl is not available."
-  wget -qO- "${TOKEN_URL}"
+  if [ -n "${USER_AND_PASS}" ]; then
+    curl --silent --show-error --user "${USER_AND_PASS}" "${TOKEN_URL}"
+    return $?
+  fi
+  curl --silent --show-error "${TOKEN_URL}"
+  return $?
 }
 
 _docker_hub_rate_read_rate() {
@@ -37,13 +42,13 @@ _docker_hub_rate_read_rate() {
   [ -z "${TOKEN}" ] && echo "[EMPTY TOKEN ERROR]" && return 1
   local HEADER="Authorization: Bearer ${TOKEN}"
   local URL="https://registry-1.docker.io/v2/${IMAGE}/manifests/latest"
-  if curl --version 1>/dev/null 2>&1; then
-    curl --silent --show-error --head -H "${HEADER}" "${URL}" 2>&1
+  if ! _curl_installed; then
+    # Add `--spider`` implies that you want to send a HEAD request (as opposed to GET or POST).
+    # The `busybox wget` does not send a HEAD request, thus it will consume a docker hub rate.
+    wget -qS --spider --header="${HEADER}" -O /dev/null "${URL}" 2>&1
     return $?
   fi
-  # Add `--spider`` implies that you want to send a HEAD request (as opposed to GET or POST).
-  # The `busybox wget` does not send a HEAD request, thus it will consume a docker hub rate.
-  wget -qS --spider --header="${HEADER}" -O /dev/null "${URL}" 2>&1
+  curl --silent --show-error --head -H "${HEADER}" "${URL}" 2>&1
 }
 
 _docker_hub_echo_error() {
@@ -61,10 +66,10 @@ _docker_hub_echo_error() {
 docker_hub_rate() {
   local IMAGE="${1:-ratelimitpreview/test}"
   local USER_AND_PASS="${2}"
-  if ! type log 1>/dev/null 2>&1; then
+  if ! type log 1>/dev/null 2>/dev/null; then
     log() { echo "${*}" >&2; }
   fi
-  if ! type log_lines 1>/dev/null 2>&1; then
+  if ! type log_lines 1>/dev/null 2>/dev/null; then
     # Usage: echo "${LOGS}" | log_lines LEVLE
     log_lines() { local LEVEL="${1}"; while read -r LINE; do [ -z "${LINE}" ] && continue; log "${LEVEL}" "${LINE}"; done; }
   fi
@@ -74,13 +79,14 @@ docker_hub_rate() {
     return 1
   fi
   local TOKEN=
-  TOKEN=$(echo "${RESPONSE}" | sed 's/.*"token":"\([^"]*\).*/\1/')
+  TOKEN=$(echo "${RESPONSE}" | sed -E 's/.*"token":"([^"]*).*/\1/')
   if [ -z "${TOKEN}" ]; then
     _docker_hub_echo_error "PARSE TOKEN ERROR" "${RESPONSE}"
     return 1
   fi
   if ! RESPONSE=$(_docker_hub_rate_read_rate "${IMAGE}" "${TOKEN}" 2>&1); then
     if echo "${RESPONSE}" | grep -q "Too Many Requests" ; then
+      # This occurs when we send request not via the HEAD method, i.e. using busybox wget.
       echo "0"
       return 0
     fi
@@ -88,10 +94,11 @@ docker_hub_rate() {
     return 1
   fi
   local RATE=
-  RATE=$(echo "${RESPONSE}" | sed -n 's/.*ratelimit-remaining: \([0-9]*\).*/\1/p' )
+  RATE=$(echo "${RESPONSE}" | sed -n -E 's/.*ratelimit-remaining: (-?[0-9]+);.*/\1/p' )
   if [ -z "${RATE}" ]; then
     _docker_hub_echo_error "PARSE RATE ERROR" "${RESPONSE}"
     return 1
   fi
+  [ "${RATE}" -lt 0 ] && RATE=0;
   echo "${RATE}"
 }

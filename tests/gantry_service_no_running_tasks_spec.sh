@@ -19,14 +19,14 @@ Describe "service-no-running-tasks"
   SUITE_NAME="service-no-running-tasks"
   BeforeAll "initialize_all_tests ${SUITE_NAME}"
   AfterAll "finish_all_tests ${SUITE_NAME}"
-  Describe "test_no_running_tasks_replicated" "container_test:true"
+  Describe "test_no_running_tasks_replicated"
     # For `docker service ls --filter`, the name filter matches on all or the prefix of a service's name
     # See https://docs.docker.com/engine/reference/commandline/service_ls/#name
     # It does not do the exact match of the name. See https://github.com/moby/moby/issues/32985
     # This test also checks whether we do an extra step to to perform the exact match.
     TEST_NAME="test_no_running_tasks_replicated"
     IMAGE_WITH_TAG=$(get_image_with_tag "${SUITE_NAME}")
-    SERVICE_NAME="gantry-test-$(unique_id)"
+    SERVICE_NAME=$(get_test_service_name "${TEST_NAME}")
     SERVICE_NAME_SUFFIX="${SERVICE_NAME}-suffix"
     test_start() {
       local TEST_NAME="${1}"
@@ -46,8 +46,8 @@ Describe "service-no-running-tasks"
     test_no_running_tasks_replicated() {
       local TEST_NAME="${1}"
       local SERVICE_NAME="${2}"
-      reset_gantry_env "${SERVICE_NAME}"
-      run_gantry "${TEST_NAME}"
+      reset_gantry_env "${SUITE_NAME}" "${SERVICE_NAME}"
+      run_gantry "${SUITE_NAME}" "${TEST_NAME}"
     }
     test_end() {
       local TEST_NAME="${1}"
@@ -67,7 +67,7 @@ Describe "service-no-running-tasks"
       The stdout should satisfy display_output
       The stdout should satisfy spec_expect_no_message ".+"
       The stderr should satisfy display_output
-      The stderr should satisfy spec_expect_no_message "${NOT_START_WITH_A_SQUARE_BRACKET}"
+      The stderr should satisfy spec_expect_no_message "${START_WITHOUT_A_SQUARE_BRACKET}"
       # Add "--detach=true" when there is no running tasks.
       # https://github.com/docker/cli/issues/627
       The stderr should satisfy spec_expect_message    "${ADDING_OPTIONS}.*--detach=true.*${SERVICE_NAME}\."
@@ -96,21 +96,23 @@ Describe "service-no-running-tasks"
       The stderr should satisfy spec_expect_no_message "${SKIP_REMOVING_IMAGES}"
       The stderr should satisfy spec_expect_message    "${REMOVED_IMAGE}.*${IMAGE_WITH_TAG}"
       The stderr should satisfy spec_expect_no_message "${FAILED_TO_REMOVE_IMAGE}.*${IMAGE_WITH_TAG}"
+      The stderr should satisfy spec_expect_message    "${DONE_REMOVING_IMAGES}"
     End
   End
-  Describe "test_no_running_tasks_global" "container_test:true"
+  Describe "test_no_running_tasks_global"
     TEST_NAME="test_no_running_tasks_global"
     IMAGE_WITH_TAG=$(get_image_with_tag "${SUITE_NAME}")
-    SERVICE_NAME="gantry-test-$(unique_id)"
+    SERVICE_NAME=$(get_test_service_name "${TEST_NAME}")
     test_start() {
       local TEST_NAME="${1}"
       local IMAGE_WITH_TAG="${2}"
       local SERVICE_NAME="${3}"
       local TASK_SECONDS=15
+      local TIMEOUT_SECONDS=1
       initialize_test "${TEST_NAME}"
       # The task will finish in ${TASK_SECONDS} seconds
       build_and_push_test_image "${IMAGE_WITH_TAG}" "${TASK_SECONDS}"
-      start_global_service "${SERVICE_NAME}" "${IMAGE_WITH_TAG}"
+      start_global_service "${SERVICE_NAME}" "${IMAGE_WITH_TAG}" "${TIMEOUT_SECONDS}"
       build_and_push_test_image "${IMAGE_WITH_TAG}"
       # The tasks should exit after TASK_SECONDS seconds sleep. Then it will have 0 running tasks.
       wait_zero_running_tasks "${SERVICE_NAME}"
@@ -118,8 +120,8 @@ Describe "service-no-running-tasks"
     test_no_running_tasks_global() {
       local TEST_NAME="${1}"
       local SERVICE_NAME="${2}"
-      reset_gantry_env "${SERVICE_NAME}"
-      run_gantry "${TEST_NAME}"
+      reset_gantry_env "${SUITE_NAME}" "${SERVICE_NAME}"
+      run_gantry "${SUITE_NAME}" "${TEST_NAME}"
     }
     BeforeEach "test_start ${TEST_NAME} ${IMAGE_WITH_TAG} ${SERVICE_NAME}"
     AfterEach "common_cleanup ${TEST_NAME} ${IMAGE_WITH_TAG} ${SERVICE_NAME}"
@@ -129,7 +131,7 @@ Describe "service-no-running-tasks"
       The stdout should satisfy display_output
       The stdout should satisfy spec_expect_no_message ".+"
       The stderr should satisfy display_output
-      The stderr should satisfy spec_expect_no_message "${NOT_START_WITH_A_SQUARE_BRACKET}"
+      The stderr should satisfy spec_expect_no_message "${START_WITHOUT_A_SQUARE_BRACKET}"
       # Add "--detach=true" when there is no running tasks.
       # https://github.com/docker/cli/issues/627
       The stderr should satisfy spec_expect_message    "${ADDING_OPTIONS}.*--detach=true.*${SERVICE_NAME}"
@@ -155,6 +157,7 @@ Describe "service-no-running-tasks"
       The stderr should satisfy spec_expect_no_message "${SKIP_REMOVING_IMAGES}"
       The stderr should satisfy spec_expect_message    "${REMOVED_IMAGE}.*${IMAGE_WITH_TAG}"
       The stderr should satisfy spec_expect_no_message "${FAILED_TO_REMOVE_IMAGE}.*${IMAGE_WITH_TAG}"
+      The stderr should satisfy spec_expect_message    "${DONE_REMOVING_IMAGES}"
     End
   End
 End # Describe "No Running Tasks"

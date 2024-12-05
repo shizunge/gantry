@@ -30,8 +30,8 @@ jobs:
           shellcheck src/*.sh tests/*.sh
           set +e
 
-  tests:
-    name: Test script
+  test_scripts:
+    name: Test scripts
     runs-on: ubuntu-latest
     strategy:
       fail-fast: false
@@ -40,6 +40,8 @@ jobs:
           - gantry_cleanup_images_spec.sh
           - gantry_common_options_spec.sh
           - gantry_filters_spec.sh
+          - gantry_jobs_spec.sh
+          - gantry_login_docker_config_spec.sh
           - gantry_login_negative_spec.sh
           - gantry_login_spec.sh
           - gantry_manifest_spec.sh
@@ -65,9 +67,31 @@ jobs:
         uses: actions/checkout@v4
       - name: Run tests
         run: |
-          export DOCKERHUB_PASSWORD=${{ secrets.DOCKERHUB_PASSWORD }}
-          export DOCKERHUB_USERNAME=${{ secrets.DOCKERHUB_USERNAME }}
           bash shellspec --pattern tests/${{ matrix.test_suit }}
+
+  test_container:
+    name: Test container
+    runs-on: ubuntu-latest
+    steps:
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3.7.1
+      - name: Install shellspec
+        run: |
+          mkdir -p ~/shellspec
+          cd ~/shellspec
+          git clone https://github.com/shellspec/shellspec.git
+          ln -s ~/shellspec/shellspec/shellspec /usr/local/bin/shellspec
+          echo -n "shellspec version: "
+          shellspec --version
+      - name: Checkout Code
+        uses: actions/checkout@v4
+      - name: Run container tests
+        run: |
+          export GANTRY_TEST_CONTAINER=true
+          export GANTRY_TEST_CONTAINER_REPO_TAG=
+          echo "GANTRY_TEST_CONTAINER=${GANTRY_TEST_CONTAINER}"
+          echo "GANTRY_TEST_CONTAINER_REPO_TAG=${GANTRY_TEST_CONTAINER_REPO_TAG}"
+          bash shellspec --jobs 50
 
   build_and_push:
     name: Build and push Docker image
@@ -75,7 +99,8 @@ jobs:
     if: ${{ github.actor != 'dependabot[bot]' }}
     needs:
       - shellcheck
-      - tests
+      - test_scripts
+      - test_container
     steps:
       - name: Checkout Code
         uses: actions/checkout@v4
@@ -114,50 +139,3 @@ jobs:
           tags: ${{ steps.meta.outputs.tags }}
           labels: ${{ steps.meta.outputs.labels }}
           provenance: false
-      - name: Extract tag
-        run: |
-          TAGS="${{ steps.meta.outputs.tags }}"
-          for TAG in ${TAGS}; do
-            if echo "${TAG}" | grep -q "ghcr.io/${{ github.repository }}-development:dev-"; then
-              echo "TAG=${TAG}"
-              echo "${TAG}" > tag.txt
-              break;   
-            fi
-          done
-      - name: Store tag
-        uses: actions/upload-artifact@v4
-        with:
-          name: tag
-          path: tag.txt
-          
-
-  container_tests:
-    name: Test container
-    runs-on: ubuntu-latest
-    if: ${{ github.actor != 'dependabot[bot]' }}
-    needs:
-      - build_and_push
-    steps:
-      - name: Set up Docker Buildx
-        uses: docker/setup-buildx-action@v3.7.1
-      - name: Install shellspec
-        run: |
-          mkdir -p ~/shellspec
-          cd ~/shellspec
-          git clone https://github.com/shellspec/shellspec.git
-          ln -s ~/shellspec/shellspec/shellspec /usr/local/bin/shellspec
-          echo -n "shellspec version: "
-          shellspec --version
-      - name: Checkout Code
-        uses: actions/checkout@v4
-      - name: Load tag
-        uses: actions/download-artifact@v4
-        with:
-          name: tag
-      - name: Run tests
-        run: |
-          export DOCKERHUB_PASSWORD=${{ secrets.DOCKERHUB_PASSWORD }}
-          export DOCKERHUB_USERNAME=${{ secrets.DOCKERHUB_USERNAME }}
-          export GANTRY_TEST_CONTAINER_REPO_TAG=$(cat tag.txt)
-          echo "GANTRY_TEST_CONTAINER_REPO_TAG=${GANTRY_TEST_CONTAINER_REPO_TAG}"
-          bash shellspec --jobs 50 --tag "container_test:true"

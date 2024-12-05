@@ -28,7 +28,7 @@ _get_lib_dir() {
   elif [ -r "./lib-gantry.sh" ]; then
     LIB_DIR="."
   fi
-  echo "${LIB_DIR}"
+  readlink -f "${LIB_DIR}"
 }
 
 _log_load_libraries() {
@@ -36,14 +36,19 @@ _log_load_libraries() {
   local IMAGES_TO_REMOVE="${GANTRY_IMAGES_TO_REMOVE:-""}"
   local LIB_DIR="${1}"
   # log function is not available before loading the library.
-  if echo "${LOG_LEVEL}" | grep -q -i "NONE"; then
+  local LOADING_MSG="Loading libraries from ${LIB_DIR}"
+  if [ -n "${IMAGES_TO_REMOVE}" ]; then
+    echo "DEBUG ${LOADING_MSG}" >&2
+    return 0;
+  fi
+  # DEBUG should be the lowest level.
+  if ! echo "${LOG_LEVEL}" | grep -q -i "^DEBUG$"; then
     return 0
   fi
   local TIMESTAMP=
-  if [ -z "${IMAGES_TO_REMOVE}" ]; then
-    TIMESTAMP="[$(date -Iseconds)] "
-  fi
-  echo "${TIMESTAMP}Loading libraries from ${LIB_DIR}" >&2
+  TIMESTAMP="[$(date -Iseconds)]"
+  local LEVEL="[DEBUG]"
+  echo "${TIMESTAMP}${LEVEL} ${LOADING_MSG}" >&2
 }
 
 load_libraries() {
@@ -58,7 +63,7 @@ load_libraries() {
 
 _run_on_node() {
   local HOST_NAME=
-  if ! HOST_NAME=$(docker node inspect self --format "{{.Description.Hostname}}" 2>&1); then
+  if ! HOST_NAME=$(run_cmd docker node inspect self --format "{{.Description.Hostname}}"); then
     log DEBUG "Failed to run \"docker node inspect self\": ${HOST_NAME}"
     return 1
   fi
@@ -68,18 +73,9 @@ _run_on_node() {
 
 _read_docker_hub_rate() {
   local HOST PASSWORD USER
-  if ! PASSWORD=$(gantry_read_registry_password 2>&1); then
-    log ERROR "Failed to read registry PASSWORD: ${PASSWORD}";
-    PASSWORD=
-  fi
-  if ! USER=$(gantry_read_registry_username 2>&1); then
-    log ERROR "Failed to read registry USER: ${USER}";
-    USER=
-  fi
-  if ! HOST=$(gantry_read_registry_host 2>&1); then
-    log ERROR "Failed to read registry HOST: ${HOST}";
-    HOST=
-  fi
+  USER=$(gantry_read_config "GANTRY_REGISTRY_USER")
+  PASSWORD=$(gantry_read_config "GANTRY_REGISTRY_PASSWORD")
+  HOST=$(gantry_read_config "GANTRY_REGISTRY_HOST")
   local USER_AND_PASS=
   if [ -n "${USER}" ] && [ -n "${PASSWORD}" ]; then
     if [ -z "${HOST}" ] || [ "${HOST}" = "docker.io" ]; then
@@ -102,6 +98,7 @@ gantry() {
   START_TIME=$(date +%s)
 
   [ -n "${DOCKER_HOST}" ] && log DEBUG "DOCKER_HOST=${DOCKER_HOST}"
+  [ -n "${DOCKER_CONFIG}" ] && log DEBUG "DOCKER_CONFIG=${DOCKER_CONFIG}"
   local RUN_ON_NODE=
   if ! RUN_ON_NODE=$(_run_on_node); then
     local HOST_STRING="${DOCKER_HOST:-"the current node"}"
@@ -116,8 +113,9 @@ gantry() {
   local ACCUMULATED_ERRORS=0
 
   eval_cmd "pre-run" "${PRE_RUN_CMD}"
+  ACCUMULATED_ERRORS=$((ACCUMULATED_ERRORS + $?))
 
-  log INFO "Starting."
+  log INFO "Starting Gantry."
   gantry_initialize "${STACK}"
   ACCUMULATED_ERRORS=$((ACCUMULATED_ERRORS + $?))
 
@@ -140,13 +138,14 @@ gantry() {
   local DOCKER_HUB_RATE_AFTER=
   local DOCKER_HUB_RATE_USED=
   DOCKER_HUB_RATE_AFTER=$(_read_docker_hub_rate)
-  DOCKER_HUB_RATE_USED=$(difference_between "${DOCKER_HUB_RATE_BEFORE}" "${DOCKER_HUB_RATE_AFTER}")
+  DOCKER_HUB_RATE_USED=$(first_minus_second "${DOCKER_HUB_RATE_BEFORE}" "${DOCKER_HUB_RATE_AFTER}")
   log INFO "After updating, Docker Hub rate remains ${DOCKER_HUB_RATE_AFTER}. Used rate ${DOCKER_HUB_RATE_USED}."
 
   gantry_finalize "${STACK}" "${ACCUMULATED_ERRORS}";
   ACCUMULATED_ERRORS=$((ACCUMULATED_ERRORS + $?))
 
   eval_cmd "post-run" "${POST_RUN_CMD}"
+  ACCUMULATED_ERRORS=$((ACCUMULATED_ERRORS + $?))
 
   local TIME_ELAPSED=
   TIME_ELAPSED=$(time_elapsed_since "${START_TIME}")

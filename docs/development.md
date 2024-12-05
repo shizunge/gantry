@@ -1,6 +1,6 @@
-## Development
+# Development
 
-### Internal Configurations
+## Internal Configurations
 
 The following configurations are set automatically by *Gantry* internally. User usually does not need to touch them.
 

@@ -19,10 +19,10 @@ Describe 'service-multiple-services'
   SUITE_NAME="service-multiple-services"
   BeforeAll "initialize_all_tests ${SUITE_NAME}"
   AfterAll "finish_all_tests ${SUITE_NAME}"
-  Describe "test_multiple_services_excluded_filters" "container_test:true"
+  Describe "test_multiple_services_excluded_filters"
     TEST_NAME="test_multiple_services_excluded_filters"
     IMAGE_WITH_TAG=$(get_image_with_tag "${SUITE_NAME}")
-    SERVICE_NAME="gantry-test-$(unique_id)"
+    SERVICE_NAME=$(get_test_service_name "${TEST_NAME}")
     SERVICE_NAME0="${SERVICE_NAME}-0"
     SERVICE_NAME1="${SERVICE_NAME}-1"
     SERVICE_NAME2="${SERVICE_NAME}-2"
@@ -33,50 +33,29 @@ Describe 'service-multiple-services'
       local TEST_NAME="${1}"
       local IMAGE_WITH_TAG="${2}"
       local SERVICE_NAME="${3}"
-      local SERVICE_NAME0="${SERVICE_NAME}-0"
-      local SERVICE_NAME1="${SERVICE_NAME}-1"
-      local SERVICE_NAME2="${SERVICE_NAME}-2"
-      local SERVICE_NAME3="${SERVICE_NAME}-3"
-      local SERVICE_NAME4="${SERVICE_NAME}-4"
-      local SERVICE_NAME5="${SERVICE_NAME}-5"
 
       initialize_test "${TEST_NAME}"
       build_and_push_test_image "${IMAGE_WITH_TAG}"
-      start_replicated_service "${SERVICE_NAME0}" "${IMAGE_WITH_TAG}"
-      start_replicated_service "${SERVICE_NAME1}" "${IMAGE_WITH_TAG}"
-      start_replicated_service "${SERVICE_NAME2}" "${IMAGE_WITH_TAG}"
-      start_replicated_service "${SERVICE_NAME3}" "${IMAGE_WITH_TAG}"
+      start_multiple_replicated_services "${SERVICE_NAME}" "${IMAGE_WITH_TAG}" 0 3
       build_and_push_test_image "${IMAGE_WITH_TAG}"
-      start_replicated_service "${SERVICE_NAME4}" "${IMAGE_WITH_TAG}"
-      start_replicated_service "${SERVICE_NAME5}" "${IMAGE_WITH_TAG}"
+      start_multiple_replicated_services "${SERVICE_NAME}" "${IMAGE_WITH_TAG}" 4 5
     }
     test_multiple_services_excluded_filters() {
       local TEST_NAME="${1}"
       local SERVICE_NAME="${2}"
       local SERVICE_NAME1="${SERVICE_NAME}-1"
       local SERVICE_NAME2="${SERVICE_NAME}-2"
-      reset_gantry_env "${SERVICE_NAME}"
+      reset_gantry_env "${SUITE_NAME}" "${SERVICE_NAME}"
       # test both the list of names and the filters
       export GANTRY_SERVICES_EXCLUDED="${SERVICE_NAME1}"
       export GANTRY_SERVICES_EXCLUDED_FILTERS="name=${SERVICE_NAME2}"
-      run_gantry "${TEST_NAME}"
+      run_gantry "${SUITE_NAME}" "${TEST_NAME}"
     }
     test_end() {
       local TEST_NAME="${1}"
       local IMAGE_WITH_TAG="${2}"
       local SERVICE_NAME="${3}"
-      local SERVICE_NAME0="${SERVICE_NAME}-0"
-      local SERVICE_NAME1="${SERVICE_NAME}-1"
-      local SERVICE_NAME2="${SERVICE_NAME}-2"
-      local SERVICE_NAME3="${SERVICE_NAME}-3"
-      local SERVICE_NAME4="${SERVICE_NAME}-4"
-      local SERVICE_NAME5="${SERVICE_NAME}-5"
-      stop_service "${SERVICE_NAME5}"
-      stop_service "${SERVICE_NAME4}"
-      stop_service "${SERVICE_NAME3}"
-      stop_service "${SERVICE_NAME2}"
-      stop_service "${SERVICE_NAME1}"
-      stop_service "${SERVICE_NAME0}"
+      stop_multiple_services "${SERVICE_NAME}" 0 5
       prune_local_test_image "${IMAGE_WITH_TAG}"
       finalize_test "${TEST_NAME}"
     }
@@ -88,7 +67,7 @@ Describe 'service-multiple-services'
       The stdout should satisfy display_output
       The stdout should satisfy spec_expect_no_message ".+"
       The stderr should satisfy display_output
-      The stderr should satisfy spec_expect_no_message "${NOT_START_WITH_A_SQUARE_BRACKET}"
+      The stderr should satisfy spec_expect_no_message "${START_WITHOUT_A_SQUARE_BRACKET}"
       # Service 0 and 3 should get updated.
       # Service 1 and 2 should be excluded.
       # Service 4 and 5 created with new image, no update.

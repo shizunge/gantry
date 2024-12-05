@@ -19,10 +19,10 @@ Describe 'service-parallel'
   SUITE_NAME="service-parallel"
   BeforeAll "initialize_all_tests ${SUITE_NAME}"
   AfterAll "finish_all_tests ${SUITE_NAME}"
-  Describe "test_parallel_less_workers" "container_test:true"
+  Describe "test_parallel_less_workers"
     TEST_NAME="test_parallel_less_workers"
     IMAGE_WITH_TAG=$(get_image_with_tag "${SUITE_NAME}")
-    SERVICE_NAME="gantry-test-$(unique_id)"
+    SERVICE_NAME=$(get_test_service_name "${TEST_NAME}")
     MANIFEST_NUM_WORKERS=2
     MAX_SERVICES_NUM=6
     MAX_NO_NEW_IMAGE=3
@@ -35,25 +35,16 @@ Describe 'service-parallel'
       common_setup_new_image_multiple "${TEST_NAME}" "${IMAGE_WITH_TAG}" "${SERVICE_NAME}" "${MAX_SERVICES_NUM}"
       local NO_NEW_IAMGE_START=$((MAX_SERVICES_NUM+1))
       local NO_NEW_IAMGE_END=$((MAX_SERVICES_NUM+MAX_NO_NEW_IMAGE))
-      local NUM=
-      local PIDS=
-      for NUM in $(seq "${NO_NEW_IAMGE_START}" "${NO_NEW_IAMGE_END}"); do
-        local SERVICE_NAME_NUM="${SERVICE_NAME}-${NUM}"
-        start_replicated_service "${SERVICE_NAME_NUM}" "${IMAGE_WITH_TAG}" &
-        PIDS="${!} ${PIDS}"
-      done
-      # SC2086 (info): Double quote to prevent globbing and word splitting.
-      # shellcheck disable=SC2086
-      wait ${PIDS}
+      start_multiple_replicated_services "${SERVICE_NAME}" "${IMAGE_WITH_TAG}" "${NO_NEW_IAMGE_START}" "${NO_NEW_IAMGE_END}"
     }
     test_parallel_less_workers() {
       local TEST_NAME="${1}"
       local SERVICE_NAME="${2}"
       local MAX_SERVICES_NUM="${3}"
-      reset_gantry_env "${SERVICE_NAME}"
+      reset_gantry_env "${SUITE_NAME}" "${SERVICE_NAME}"
       export GANTRY_MANIFEST_NUM_WORKERS="${MANIFEST_NUM_WORKERS}"
       export GANTRY_UPDATE_NUM_WORKERS=$((MAX_SERVICES_NUM/2+1))
-      run_gantry "${TEST_NAME}"
+      run_gantry "${SUITE_NAME}" "${TEST_NAME}"
     }
     BeforeEach "test_start ${TEST_NAME} ${IMAGE_WITH_TAG} ${SERVICE_NAME} ${MAX_SERVICES_NUM} ${MAX_NO_NEW_IMAGE}"
     AfterEach "common_cleanup_multiple ${TEST_NAME} ${IMAGE_WITH_TAG} ${SERVICE_NAME} $((MAX_SERVICES_NUM+MAX_NO_NEW_IMAGE))"
@@ -63,7 +54,7 @@ Describe 'service-parallel'
       The stdout should satisfy display_output
       The stdout should satisfy spec_expect_no_message ".+"
       The stderr should satisfy display_output
-      The stderr should satisfy spec_expect_no_message "${NOT_START_WITH_A_SQUARE_BRACKET}"
+      The stderr should satisfy spec_expect_no_message "${START_WITHOUT_A_SQUARE_BRACKET}"
       for NUM in $(seq 0 "${MAX_SERVICES_NUM}"); do
         SERVICE_NAME_NUM="${SERVICE_NAME}-${NUM}"
         The stderr should satisfy spec_expect_no_message "${SKIP_UPDATING}.* ${SERVICE_NAME_NUM} "
@@ -91,22 +82,23 @@ Describe 'service-parallel'
       The stderr should satisfy spec_expect_no_message "${SKIP_REMOVING_IMAGES}"
       The stderr should satisfy spec_expect_message    "${REMOVED_IMAGE}.*${IMAGE_WITH_TAG}"
       The stderr should satisfy spec_expect_no_message "${FAILED_TO_REMOVE_IMAGE}.*${IMAGE_WITH_TAG}"
+      The stderr should satisfy spec_expect_message    "${DONE_REMOVING_IMAGES}"
     End
   End
-  Describe "test_parallel_more_workers" "container_test:true"
+  Describe "test_parallel_more_workers"
     TEST_NAME="test_parallel_more_workers"
     IMAGE_WITH_TAG=$(get_image_with_tag "${SUITE_NAME}")
-    SERVICE_NAME="gantry-test-$(unique_id)"
+    SERVICE_NAME=$(get_test_service_name "${TEST_NAME}")
     MANIFEST_NUM_WORKERS=2
     MAX_SERVICES_NUM=10
     test_parallel_more_workers() {
       local TEST_NAME="${1}"
       local SERVICE_NAME="${2}"
       local MAX_SERVICES_NUM="${3}"
-      reset_gantry_env "${SERVICE_NAME}"
+      reset_gantry_env "${SUITE_NAME}" "${SERVICE_NAME}"
       export GANTRY_MANIFEST_NUM_WORKERS="${MANIFEST_NUM_WORKERS}"
       export GANTRY_UPDATE_NUM_WORKERS=$((MAX_SERVICES_NUM*3))
-      run_gantry "${TEST_NAME}"
+      run_gantry "${SUITE_NAME}" "${TEST_NAME}"
     }
     BeforeEach "common_setup_new_image_multiple ${TEST_NAME} ${IMAGE_WITH_TAG} ${SERVICE_NAME} ${MAX_SERVICES_NUM}"
     AfterEach "common_cleanup_multiple ${TEST_NAME} ${IMAGE_WITH_TAG} ${SERVICE_NAME} ${MAX_SERVICES_NUM}"
@@ -116,7 +108,7 @@ Describe 'service-parallel'
       The stdout should satisfy display_output
       The stdout should satisfy spec_expect_no_message ".+"
       The stderr should satisfy display_output
-      The stderr should satisfy spec_expect_no_message "${NOT_START_WITH_A_SQUARE_BRACKET}"
+      The stderr should satisfy spec_expect_no_message "${START_WITHOUT_A_SQUARE_BRACKET}"
       for NUM in $(seq 0 "${MAX_SERVICES_NUM}"); do
         SERVICE_NAME_NUM="${SERVICE_NAME}-${NUM}"
         The stderr should satisfy spec_expect_no_message "${SKIP_UPDATING}.* ${SERVICE_NAME_NUM} "
@@ -137,18 +129,19 @@ Describe 'service-parallel'
       The stderr should satisfy spec_expect_no_message "${SKIP_REMOVING_IMAGES}"
       The stderr should satisfy spec_expect_message    "${REMOVED_IMAGE}.*${IMAGE_WITH_TAG}"
       The stderr should satisfy spec_expect_no_message "${FAILED_TO_REMOVE_IMAGE}.*${IMAGE_WITH_TAG}"
+      The stderr should satisfy spec_expect_message    "${DONE_REMOVING_IMAGES}"
     End
   End
-  Describe "test_parallel_GANTRY_MANIFEST_NUM_WORKERS_not_a_number" "container_test:false"
+  Describe "test_parallel_GANTRY_MANIFEST_NUM_WORKERS_not_a_number"
     TEST_NAME="test_parallel_GANTRY_MANIFEST_NUM_WORKERS_not_a_number"
     IMAGE_WITH_TAG=$(get_image_with_tag "${SUITE_NAME}")
-    SERVICE_NAME="gantry-test-$(unique_id)"
+    SERVICE_NAME=$(get_test_service_name "${TEST_NAME}")
     test_parallel_GANTRY_MANIFEST_NUM_WORKERS_not_a_number() {
       local TEST_NAME="${1}"
       local SERVICE_NAME="${2}"
-      reset_gantry_env "${SERVICE_NAME}"
+      reset_gantry_env "${SUITE_NAME}" "${SERVICE_NAME}"
       export GANTRY_MANIFEST_NUM_WORKERS="NotANumber"
-      run_gantry "${TEST_NAME}"
+      run_gantry "${SUITE_NAME}" "${TEST_NAME}"
     }
     BeforeEach "common_setup_new_image ${TEST_NAME} ${IMAGE_WITH_TAG} ${SERVICE_NAME}"
     AfterEach "common_cleanup ${TEST_NAME} ${IMAGE_WITH_TAG} ${SERVICE_NAME}"
@@ -158,7 +151,7 @@ Describe 'service-parallel'
       The stdout should satisfy display_output
       The stdout should satisfy spec_expect_no_message ".+"
       The stderr should satisfy display_output
-      The stderr should satisfy spec_expect_no_message "${NOT_START_WITH_A_SQUARE_BRACKET}"
+      The stderr should satisfy spec_expect_no_message "${START_WITHOUT_A_SQUARE_BRACKET}"
       The stderr should satisfy spec_expect_message    "GANTRY_MANIFEST_NUM_WORKERS ${MUST_BE_A_NUMBER}.*"
       The stderr should satisfy spec_expect_no_message "${SKIP_UPDATING}.*${SERVICE_NAME}"
       The stderr should satisfy spec_expect_no_message "${PERFORM_UPDATING}.*${SERVICE_NAME}.*${PERFORM_REASON_HAS_NEWER_IMAGE}"
@@ -180,18 +173,19 @@ Describe 'service-parallel'
       The stderr should satisfy spec_expect_no_message "${SKIP_REMOVING_IMAGES}"
       The stderr should satisfy spec_expect_no_message "${REMOVED_IMAGE}.*${IMAGE_WITH_TAG}"
       The stderr should satisfy spec_expect_no_message "${FAILED_TO_REMOVE_IMAGE}.*${IMAGE_WITH_TAG}"
+      The stderr should satisfy spec_expect_no_message "${DONE_REMOVING_IMAGES}"
     End
   End
-  Describe "test_parallel_GANTRY_UPDATE_NUM_WORKERS_not_a_number" "container_test:false"
+  Describe "test_parallel_GANTRY_UPDATE_NUM_WORKERS_not_a_number"
     TEST_NAME="test_parallel_GANTRY_UPDATE_NUM_WORKERS_not_a_number"
     IMAGE_WITH_TAG=$(get_image_with_tag "${SUITE_NAME}")
-    SERVICE_NAME="gantry-test-$(unique_id)"
+    SERVICE_NAME=$(get_test_service_name "${TEST_NAME}")
     test_parallel_GANTRY_UPDATE_NUM_WORKERS_not_a_number() {
       local TEST_NAME="${1}"
       local SERVICE_NAME="${2}"
-      reset_gantry_env "${SERVICE_NAME}"
+      reset_gantry_env "${SUITE_NAME}" "${SERVICE_NAME}"
       export GANTRY_UPDATE_NUM_WORKERS="NotANumber"
-      run_gantry "${TEST_NAME}"
+      run_gantry "${SUITE_NAME}" "${TEST_NAME}"
     }
     BeforeEach "common_setup_new_image ${TEST_NAME} ${IMAGE_WITH_TAG} ${SERVICE_NAME}"
     AfterEach "common_cleanup ${TEST_NAME} ${IMAGE_WITH_TAG} ${SERVICE_NAME}"
@@ -201,7 +195,7 @@ Describe 'service-parallel'
       The stdout should satisfy display_output
       The stdout should satisfy spec_expect_no_message ".+"
       The stderr should satisfy display_output
-      The stderr should satisfy spec_expect_no_message "${NOT_START_WITH_A_SQUARE_BRACKET}"
+      The stderr should satisfy spec_expect_no_message "${START_WITHOUT_A_SQUARE_BRACKET}"
       The stderr should satisfy spec_expect_message    "GANTRY_UPDATE_NUM_WORKERS ${MUST_BE_A_NUMBER}.*"
       The stderr should satisfy spec_expect_no_message "${SKIP_UPDATING}.*${SERVICE_NAME}"
       The stderr should satisfy spec_expect_no_message "${PERFORM_UPDATING}.*${SERVICE_NAME}.*${PERFORM_REASON_HAS_NEWER_IMAGE}"
@@ -223,6 +217,7 @@ Describe 'service-parallel'
       The stderr should satisfy spec_expect_no_message "${SKIP_REMOVING_IMAGES}"
       The stderr should satisfy spec_expect_no_message "${REMOVED_IMAGE}.*${IMAGE_WITH_TAG}"
       The stderr should satisfy spec_expect_no_message "${FAILED_TO_REMOVE_IMAGE}.*${IMAGE_WITH_TAG}"
+      The stderr should satisfy spec_expect_no_message "${DONE_REMOVING_IMAGES}"
     End
   End
 End # Describe 'Multiple services'

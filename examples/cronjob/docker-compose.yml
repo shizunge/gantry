@@ -7,8 +7,6 @@ services:
       - /var/run/docker.sock:/var/run/docker.sock
     environment:
       - "GANTRY_NODE_NAME={{.Node.Hostname}}"
-      # The gantry service is able to find the name of itself service. Use GANTRY_SERVICES_SELF when you want to set a different value.
-      # - "GANTRY_SERVICES_SELF=${STACK}_gantry"
       - "GANTRY_SLEEP_SECONDS=0"
     deploy:
       replicas: 0
