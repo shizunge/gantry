@@ -16,7 +16,7 @@
 #
 
 # Constant strings for checks.
-# START_WITHOUT_A_SQUARE_BRACKET ignores color codes. Use test_log not to trigger this check.
+# START_WITHOUT_A_SQUARE_BRACKET ignores color codes. Use _test_log not to trigger this check in tests.
 export START_WITHOUT_A_SQUARE_BRACKET="^(?!(?:\x1b\[[0-9;]*[mG])?\[)"
 export GANTRY_AUTH_CONFIG_LABEL="gantry.auth.config"
 export MUST_BE_A_NUMBER="must be a number"
@@ -75,12 +75,30 @@ export SLEEP_SECONDS_BEFORE_NEXT_UPDATE="Sleep [0-9]+ seconds before next update
 
 export GANTRY_TEST_TEMP_DIR="gantry-test-tmp"
 
-test_log() {
+_test_log() {
   echo "${GANTRY_LOG_LEVEL}" | grep -q -i "^NONE$"  && return 0;
   echo "${GANTRY_LOG_LEVEL}" | grep -q -i "^ERROR$"  && return 0;
   echo "${GANTRY_LOG_LEVEL}" | grep -q -i "^WARN$"  && return 0;
   [ -n "${GANTRY_IMAGES_TO_REMOVE}" ] && echo "${*}" >&2 && return 0;
   echo "[$(date -Iseconds)] Test: ${*}" >&2
+}
+
+# Return 0 if not timeout
+# Return 1 if timeout
+# Return 2 if error
+_test_check_timeout() {
+  local TIMEOUT_SECONDS="${1}"
+  local START_TIME="${2}"
+  local MESSAGE="${3:-_test_check_timeout}"
+  ! is_number "${TIMEOUT_SECONDS}" && echo "TIMEOUT_SECONDS is not a number." 1>&2 && return 2
+  ! is_number "${START_TIME}" && echo "START_TIME is not a number." 1>&2 && return 2
+  local SECONDS_ELAPSED=
+  SECONDS_ELAPSED=$(first_minus_second "$(date +%s)" "${START_TIME}")
+  if [ "${SECONDS_ELAPSED}" -ge "${TIMEOUT_SECONDS}" ]; then
+    echo "${MESSAGE} timeout after ${SECONDS_ELAPSED}s" 1>&2
+    return 1
+  fi
+  return 0
 }
 
 display_output() {
@@ -337,8 +355,8 @@ _start_registry() {
   export TEST_USERNAME="gantry"
   export TEST_PASSWORD="gantry"
   local REGISTRY_IMAGE="docker.io/registry"
-  local TRIES=0
-  local MAX_RETRIES=50
+  local START_TIME=
+  START_TIME=$(date +%s)
   local PORT_LIMIT=500
   pull_image_if_not_exist "${REGISTRY_IMAGE}"
   while true; do
@@ -350,45 +368,39 @@ _start_registry() {
       echo "_start_registry _next_available_port error: REGISTRY_PORT is empty." >&2
       return 1
     fi
-    docker container stop "${REGISTRY_SERVICE_NAME}" 1>/dev/null 2>/dev/null;
-    docker container rm -f "${REGISTRY_SERVICE_NAME}" 1>/dev/null 2>/dev/null;
+    docker_remove "${REGISTRY_SERVICE_NAME}" 1>/dev/null 2>/dev/null;
     TEST_REGISTRY="${REGISTRY_BASE}:${REGISTRY_PORT}"
     echo "Suite \"${SUITE_NAME}\" starts registry ${TEST_REGISTRY} "
     local CID=
     # SC2046 (warning): Quote this to prevent word splitting.
     # SC2086 (info): Double quote to prevent globbing and word splitting.
     # shellcheck disable=SC2046,SC2086
-    if CID=$(docker container run -d --rm \
+    if CID=$(docker_run -d --rm \
       --name "${REGISTRY_SERVICE_NAME}" \
       --network=host \
+      --label gantry.test=true \
       -e "REGISTRY_HTTP_ADDR=${TEST_REGISTRY}" \
       -e "REGISTRY_HTTP_HOST=http://${TEST_REGISTRY}" \
       --stop-timeout "${TIMEOUT_SECONDS}" \
       $(_add_htpasswd "${SUITE_NAME}" "${ENFORCE_LOGIN}" "${TEST_USERNAME}" "${TEST_PASSWORD}") \
       "${REGISTRY_IMAGE}" 2>&1); then
-      local STATUS=
-      while [ "${STATUS}" != "running" ]; do
+      while true; do
+        local STATUS=
         STATUS=$(docker container inspect "${CID}" --format '{{.State.Status}}')
+        [ "${STATUS}" = "running" ] && break
+        _test_check_timeout "60" "${START_TIME}" "_start_registry wait registry running" || return 1
+        sleep 1
       done
       break;
     fi
-    echo "docker container run: ${CID}";
-    if [ "${TRIES}" -ge "${MAX_RETRIES}" ]; then
-      echo "_start_registry Reach MAX_RETRIES ${MAX_RETRIES}" >&2
-      return 1
-    fi
+    echo "docker_run: ${CID}";
     REGISTRY_PORT=$((REGISTRY_PORT+1))
-    TRIES=$((TRIES+1))
+    _test_check_timeout "60" "${START_TIME}" "_start_registry start registry" || return 1
     sleep 1
   done
   _store_test_registry "${SUITE_NAME}" "${TEST_REGISTRY}" || return 1;
-  TRIES=0
   while ! _login_test_registry "${ENFORCE_LOGIN}" "${TEST_REGISTRY}" "${TEST_USERNAME}" "${TEST_PASSWORD}"; do
-    if [ "${TRIES}" -ge "${MAX_RETRIES}" ]; then
-      echo "_login_test_registry Reach MAX_RETRIES ${MAX_RETRIES}" >&2
-      return 1
-    fi
-    TRIES=$((TRIES+1))
+    _test_check_timeout "60" "${START_TIME}" "_start_registry login registry" || return 1
     sleep 1
   done
 }
@@ -401,8 +413,7 @@ _stop_registry() {
   local REGISTRY=
   REGISTRY=$(load_test_registry "${SUITE_NAME}") || return 1
   echo "Removing registry ${REGISTRY} "
-  docker container stop "${REGISTRY_SERVICE_NAME}" 1>/dev/null 2>/dev/null;
-  docker container rm -f "${REGISTRY_SERVICE_NAME}" 1>/dev/null 2>/dev/null;
+  docker_remove "${REGISTRY_SERVICE_NAME}" 1>/dev/null 2>/dev/null;
   local RETURN_VALUE=0
   _logout_test_registry "${ENFORCE_LOGIN}" "${REGISTRY}" || RETURN_VALUE=1
   _remove_test_registry_file "${SUITE_NAME}" || RETURN_VALUE=1
@@ -425,7 +436,7 @@ _build_and_push_gantry_image() {
   IMAGE="$(_get_gantry_image "${SUITE_NAME}")" || return 1
   pull_image_if_not_exist "$(_get_test_service_image)"
   echo "Building gantry image ${IMAGE}"
-  docker build --quiet --tag "${IMAGE}" .
+  docker build --quiet --label gantry.test=true --tag "${IMAGE}" .
   echo "Pushing gantry image ${IMAGE}"
   # SC2046 (warning): Quote this to prevent word splitting.
   # shellcheck disable=SC2046
@@ -645,25 +656,22 @@ build_test_image() {
   if [ -n "${EXIT_SECONDS}" ] && [ "${EXIT_SECONDS}" -gt "0" ]; then
     EXIT_CMD="sleep ${EXIT_SECONDS};"
   fi
-  local RETURN_VALUE=1
-  local TRIES=0
-  local MAX_RETRIES=60
-  while [ "${RETURN_VALUE}" != "0" ]; do
-    if [ "${TRIES}" -ge "${MAX_RETRIES}" ]; then
-      echo "build_test_image Reach MAX_RETRIES ${MAX_RETRIES}" >&2
-      return 1
-    fi
-    TRIES=$((TRIES+1))
+  local RETURN_VALUE=
+  local START_TIME=
+  START_TIME=$(date +%s)
+  while true; do
     local FILE=
     FILE=$(make_test_temp_file)
     echo "FROM $(_get_test_service_image)" > "${FILE}"
     echo "ENTRYPOINT [\"sh\", \"-c\", \"echo $(unique_id); trap \\\"${EXIT_CMD}\\\" HUP INT TERM; ${TASK_CMD}\"]" >> "${FILE}"
     pull_image_if_not_exist "$(_get_test_service_image)"
     echo "Building image ${IMAGE_WITH_TAG} from ${FILE}"
-    docker build --quiet --tag "${IMAGE_WITH_TAG}" --file "${FILE}" . 2>&1
+    docker build --quiet --label gantry.test=true --tag "${IMAGE_WITH_TAG}" --file "${FILE}" . 2>&1
     RETURN_VALUE=$?
     rm "${FILE}"
-    [ "${RETURN_VALUE}" != "0" ] && sleep 1
+    [ "${RETURN_VALUE}" = "0" ] && return 0
+    _test_check_timeout "60" "${START_TIME}" "build_test_image" || return 1
+    sleep 1
   done
   return 0
 }
@@ -692,17 +700,11 @@ docker_service_update() {
 wait_zero_running_tasks() {
   local SERVICE_NAME="${1}"
   local TIMEOUT_SECONDS="${2}"
-  local NUM_RUNS=1
-  local REPLICAS=
-  local USED_SECONDS=0
-  local TRIES=0
-  local MAX_RETRIES=60
+  local START_TIME=
+  START_TIME=$(date +%s)
   echo "Wait until ${SERVICE_NAME} has zero running tasks."
-  while [ "${NUM_RUNS}" -ne 0 ]; do
-    if [ -n "${TIMEOUT_SECONDS}" ] && [ "${USED_SECONDS}" -ge "${TIMEOUT_SECONDS}" ]; then
-      _handle_failure "Services ${SERVICE_NAME} does not stop after ${TIMEOUT_SECONDS} seconds."
-      return 1
-    fi
+  while true; do
+    local REPLICAS=
     if ! REPLICAS=$(docker service ls --filter "name=${SERVICE_NAME}" --format '{{.Replicas}} {{.Name}}' 2>&1); then
       _handle_failure "Failed to obtain task states of service ${SERVICE_NAME}: ${REPLICAS}"
       return 1
@@ -712,17 +714,14 @@ wait_zero_running_tasks() {
     # It does not do the exact match of the name. See https://github.com/moby/moby/issues/32985
     # We do an extra step to to perform the exact match.
     REPLICAS=$(echo "${REPLICAS}" | sed -n -E "s/(.*) ${SERVICE_NAME}$/\1/p")
-    if [ "${TRIES}" -ge "${MAX_RETRIES}" ]; then
-      echo "wait_zero_running_tasks Reach MAX_RETRIES ${MAX_RETRIES}" >&2
-      return 1
-    fi
-    TRIES=$((TRIES+1))
     # https://docs.docker.com/engine/reference/commandline/service_ls/#examples
     # The REPLICAS is like "5/5" or "1/1 (3/5 completed)"
     # Get the number before the first "/".
+    local NUM_RUNS=
     NUM_RUNS=$(echo "${REPLICAS}/" | cut -d '/' -f 1)
+    [ "${NUM_RUNS}" = "0" ] && return 0
+    _test_check_timeout "60" "${START_TIME}" "wait_zero_running_tasks" || return 1
     sleep 1
-    USED_SECONDS=$((USED_SECONDS+1))
   done
 }
 
@@ -771,7 +770,7 @@ _add_htpasswd() {
   local PASSWORD_FILE=
   PASSWORD_FILE=$(_get_test_registry_password_file "${SUITE_NAME}") || return 1
   pull_image_if_not_exist "${HTTPD_IMAGE}"
-  docker_run --entrypoint htpasswd "${HTTPD_IMAGE}" -Bbn "${USER}" "${PASS}" > "${PASSWORD_FILE}"
+  docker_run --rm --label gantry.test=true --entrypoint htpasswd "${HTTPD_IMAGE}" -Bbn "${USER}" "${PASS}" > "${PASSWORD_FILE}"
   echo "--mount type=bind,source=${PASSWORD_FILE},target=${PASSWORD_FILE} \
         -e REGISTRY_AUTH=htpasswd \
         -e REGISTRY_AUTH_HTPASSWD_REALM=RegistryRealm \
@@ -820,6 +819,7 @@ start_replicated_service() {
   # shellcheck disable=SC2046
   timeout 60 docker $(_get_docker_config_argument "${IMAGE_WITH_TAG}") service create --quiet \
     --name "${SERVICE_NAME}" \
+    --label gantry.test=true \
     --restart-condition "on-failure" \
     --restart-max-attempts 5 \
     --with-registry-auth \
@@ -861,6 +861,7 @@ start_global_service() {
   # shellcheck disable=SC2046
   timeout 60 docker $(_get_docker_config_argument "${IMAGE_WITH_TAG}") service create --quiet \
     --name "${SERVICE_NAME}" \
+    --label gantry.test=true \
     --restart-condition "on-failure" \
     --restart-max-attempts 5 \
     --with-registry-auth \
@@ -884,6 +885,7 @@ _start_replicated_job() {
   # shellcheck disable=SC2046
   timeout 60 docker $(_get_docker_config_argument "${IMAGE_WITH_TAG}") service create --quiet \
     --name "${SERVICE_NAME}" \
+    --label gantry.test=true \
     --restart-condition "on-failure" \
     --restart-max-attempts 5 \
     --with-registry-auth \
@@ -1013,14 +1015,15 @@ _run_gantry_container() {
   MOUNT_OPTIONS=$(_add_file_to_mount_options "${MOUNT_OPTIONS}" "${GANTRY_REGISTRY_HOST_FILE}")
   MOUNT_OPTIONS=$(_add_file_to_mount_options "${MOUNT_OPTIONS}" "${GANTRY_REGISTRY_PASSWORD_FILE}")
   MOUNT_OPTIONS=$(_add_file_to_mount_options "${MOUNT_OPTIONS}" "${GANTRY_REGISTRY_USER_FILE}")
-  test_log "Starting SUT service ${SERVICE_NAME} with image ${SUT_REPO_TAG}."
-  test_log "MOUNT_OPTIONS=${MOUNT_OPTIONS}"
+  _test_log "Starting SUT service ${SERVICE_NAME} with image ${SUT_REPO_TAG}."
+  _test_log "MOUNT_OPTIONS=${MOUNT_OPTIONS}"
   local RETURN_VALUE=0
   local CMD_OUTPUT=
   # SC2086 (info): Double quote to prevent globbing and word splitting.
   # shellcheck disable=SC2086
   if ! CMD_OUTPUT=$(docker service create --name "${SERVICE_NAME}" \
     --detach=true \
+    --label gantry.test=true \
     --mode replicated-job --restart-condition=none --network host \
     --constraint "node.role==manager" \
     --mount type=bind,source=/var/run/docker.sock,target=/var/run/docker.sock \

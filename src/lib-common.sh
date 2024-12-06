@@ -349,6 +349,24 @@ time_elapsed_since() {
   _time_elapsed_between "$(date +%s)" "${START_TIME}"
 }
 
+# Return 0 if not timeout
+# Return 1 if timeout
+# Return 2 if error
+_check_timeout() {
+  local TIMEOUT_SECONDS="${1}"
+  local START_TIME="${2}"
+  local MESSAGE="${3}"
+  ! is_number "${TIMEOUT_SECONDS}" && log ERROR "TIMEOUT_SECONDS must be a number." && return 2
+  ! is_number "${START_TIME}" && log ERROR "START_TIME must be a number." && return 2
+  local SECONDS_ELAPSED=
+  SECONDS_ELAPSED=$(first_minus_second "$(date +%s)" "${START_TIME}")
+  if [ "${SECONDS_ELAPSED}" -ge "${TIMEOUT_SECONDS}" ]; then
+    [ -n "${MESSAGE}" ] && log ERROR "${MESSAGE} timeout after ${SECONDS_ELAPSED} seconds."
+    return 1
+  fi
+  return 0
+}
+
 add_unique_to_list() {
   local OLD_LIST="${1}"
   local NEW_ITEM="${2}"
@@ -617,14 +635,8 @@ wait_service_state() {
   while STATES=$(_docker_service_task_states "${SERVICE_NAME}"); do
     DOCKER_CMD_ERROR=0
     RETURN_VALUE=$(_all_tasks_reach_state "${WANT_STATE}" "${CHECK_FAILURES}" "${STATES}") && break
-    local SECONDS_ELAPSED=
-    if is_number "${TIMEOUT_SECONDS}" \
-        && SECONDS_ELAPSED=$(first_minus_second "$(date +%s)" "${START_TIME}") \
-        && [ "${SECONDS_ELAPSED}" -ge "${TIMEOUT_SECONDS}" ]; then
-      log ERROR "wait_service_state ${SERVICE_NAME} ${WANT_STATE} timeout after ${SECONDS_ELAPSED}s."
-      RETURN_VALUE=2
-      break
-    fi
+    local TIMEOUT_MESSAGE="wait_service_state ${SERVICE_NAME} ${WANT_STATE}"
+    [ -n "${TIMEOUT_SECONDS}" ] && ! _check_timeout "${TIMEOUT_SECONDS}" "${START_TIME}" "${TIMEOUT_MESSAGE}" && RETURN_VALUE=2 && break;
     sleep "${SLEEP_SECONDS}"
     DOCKER_CMD_ERROR=1
   done
@@ -776,18 +788,15 @@ docker_remove() {
 }
 
 docker_run() {
-  local RETRIES=0
-  local MAX_RETRIES=5
-  local SLEEP_SECONDS=10
+  local TIMEOUT_SECONDS=10
+  local SLEEP_SECONDS=1
+  local START_TIME=
+  START_TIME=$(date +%s)
   local LOG=
   while ! LOG=$(run_cmd docker container run "${@}"); do
-    if [ ${RETRIES} -ge ${MAX_RETRIES} ]; then
-      log ERROR "Failed to run docker. Reached the max retries ${MAX_RETRIES}. ${LOG}"
-      return 1
-    fi
-    RETRIES=$((RETRIES + 1))
+    _check_timeout "${TIMEOUT_SECONDS}" "${START_TIME}" "docker_run" || return 1
     sleep ${SLEEP_SECONDS}
-    log WARN "Retry docker container run (${RETRIES}). ${LOG}"
+    log WARN "Retry docker container run (${SECONDS_ELAPSED}s). ${LOG}"
   done
   echo "${LOG}"
 }
