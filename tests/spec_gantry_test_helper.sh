@@ -378,6 +378,7 @@ _start_registry() {
     if CID=$(docker_run -d --rm \
       --name "${REGISTRY_SERVICE_NAME}" \
       --network=host \
+      --label gantry.test=true \
       -e "REGISTRY_HTTP_ADDR=${TEST_REGISTRY}" \
       -e "REGISTRY_HTTP_HOST=http://${TEST_REGISTRY}" \
       --stop-timeout "${TIMEOUT_SECONDS}" \
@@ -435,7 +436,7 @@ _build_and_push_gantry_image() {
   IMAGE="$(_get_gantry_image "${SUITE_NAME}")" || return 1
   pull_image_if_not_exist "$(_get_test_service_image)"
   echo "Building gantry image ${IMAGE}"
-  docker build --quiet --tag "${IMAGE}" .
+  docker build --quiet --label gantry.test=true --tag "${IMAGE}" .
   echo "Pushing gantry image ${IMAGE}"
   # SC2046 (warning): Quote this to prevent word splitting.
   # shellcheck disable=SC2046
@@ -665,7 +666,7 @@ build_test_image() {
     echo "ENTRYPOINT [\"sh\", \"-c\", \"echo $(unique_id); trap \\\"${EXIT_CMD}\\\" HUP INT TERM; ${TASK_CMD}\"]" >> "${FILE}"
     pull_image_if_not_exist "$(_get_test_service_image)"
     echo "Building image ${IMAGE_WITH_TAG} from ${FILE}"
-    docker build --quiet --tag "${IMAGE_WITH_TAG}" --file "${FILE}" . 2>&1
+    docker build --quiet --label gantry.test=true --tag "${IMAGE_WITH_TAG}" --file "${FILE}" . 2>&1
     RETURN_VALUE=$?
     rm "${FILE}"
     [ "${RETURN_VALUE}" = "0" ] && return 0
@@ -769,7 +770,7 @@ _add_htpasswd() {
   local PASSWORD_FILE=
   PASSWORD_FILE=$(_get_test_registry_password_file "${SUITE_NAME}") || return 1
   pull_image_if_not_exist "${HTTPD_IMAGE}"
-  docker_run --entrypoint htpasswd "${HTTPD_IMAGE}" -Bbn "${USER}" "${PASS}" > "${PASSWORD_FILE}"
+  docker_run --rm --label gantry.test=true --entrypoint htpasswd "${HTTPD_IMAGE}" -Bbn "${USER}" "${PASS}" > "${PASSWORD_FILE}"
   echo "--mount type=bind,source=${PASSWORD_FILE},target=${PASSWORD_FILE} \
         -e REGISTRY_AUTH=htpasswd \
         -e REGISTRY_AUTH_HTPASSWD_REALM=RegistryRealm \
@@ -818,6 +819,7 @@ start_replicated_service() {
   # shellcheck disable=SC2046
   timeout 60 docker $(_get_docker_config_argument "${IMAGE_WITH_TAG}") service create --quiet \
     --name "${SERVICE_NAME}" \
+    --label gantry.test=true \
     --restart-condition "on-failure" \
     --restart-max-attempts 5 \
     --with-registry-auth \
@@ -859,6 +861,7 @@ start_global_service() {
   # shellcheck disable=SC2046
   timeout 60 docker $(_get_docker_config_argument "${IMAGE_WITH_TAG}") service create --quiet \
     --name "${SERVICE_NAME}" \
+    --label gantry.test=true \
     --restart-condition "on-failure" \
     --restart-max-attempts 5 \
     --with-registry-auth \
@@ -882,6 +885,7 @@ _start_replicated_job() {
   # shellcheck disable=SC2046
   timeout 60 docker $(_get_docker_config_argument "${IMAGE_WITH_TAG}") service create --quiet \
     --name "${SERVICE_NAME}" \
+    --label gantry.test=true \
     --restart-condition "on-failure" \
     --restart-max-attempts 5 \
     --with-registry-auth \
@@ -1019,6 +1023,7 @@ _run_gantry_container() {
   # shellcheck disable=SC2086
   if ! CMD_OUTPUT=$(docker service create --name "${SERVICE_NAME}" \
     --detach=true \
+    --label gantry.test=true \
     --mode replicated-job --restart-condition=none --network host \
     --constraint "node.role==manager" \
     --mount type=bind,source=/var/run/docker.sock,target=/var/run/docker.sock \
