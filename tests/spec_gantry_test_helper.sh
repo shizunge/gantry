@@ -386,8 +386,7 @@ _start_registry() {
       "${REGISTRY_IMAGE}" 2>&1); then
       local STATUS=
       while true; do
-        STATUS=$(docker container inspect "${CID}" --format '{{.State.Status}}' 2>&1)
-        [ "$?" != "0" ] && break;
+        STATUS=$(docker container inspect "${CID}" --format '{{.State.Status}}' 2>&1) || break;
         [ "${STATUS}" = "running" ] && break;
         _test_check_timeout "60" "${START_TIME}" "_start_registry wait registry running" || return 1
         sleep 1
