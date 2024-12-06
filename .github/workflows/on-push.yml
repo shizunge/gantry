@@ -30,6 +30,7 @@ jobs:
           shellcheck src/*.sh tests/*.sh
           set +e
 
+  # Use a matrix to make it easier to find which test fails.
   test_scripts:
     name: Test scripts
     runs-on: ubuntu-latest
@@ -69,6 +70,26 @@ jobs:
         run: |
           bash shellspec --pattern tests/${{ matrix.test_suit }}
 
+  test_scripts_parallel:
+    name: Test scripts running in parallel
+    runs-on: ubuntu-latest
+    steps:
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3.7.1
+      - name: Install shellspec
+        run: |
+          mkdir -p ~/shellspec
+          cd ~/shellspec
+          git clone https://github.com/shellspec/shellspec.git
+          ln -s ~/shellspec/shellspec/shellspec /usr/local/bin/shellspec
+          echo -n "shellspec version: "
+          shellspec --version
+      - name: Checkout Code
+        uses: actions/checkout@v4
+      - name: Run container tests
+        run: |
+          bash shellspec --jobs 50
+
   test_container:
     name: Test container
     runs-on: ubuntu-latest
@@ -100,6 +121,7 @@ jobs:
     needs:
       - shellcheck
       - test_scripts
+      - test_scripts_parallel
       - test_container
     steps:
       - name: Checkout Code

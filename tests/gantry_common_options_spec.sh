@@ -203,7 +203,10 @@ Describe 'common-options'
       local TEST_NAME="${1}"
       local SERVICE_NAME="${2}"
       reset_gantry_env "${SUITE_NAME}" "${SERVICE_NAME}"
-      export GANTRY_SLEEP_SECONDS="7"
+      # Assume that the inspect will be done within the following time.
+      # Based on the tests on github action, it could take 8 seconds to just finish the filter services.
+      # Then it could takes another 7 seconds to finish inspection due the many tests are running in parallel.
+      export GANTRY_SLEEP_SECONDS="15"
       # Run run_gantry in background.
       run_gantry "${SUITE_NAME}" "${TEST_NAME}" &
       local PID="${!}"
