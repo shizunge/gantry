@@ -89,7 +89,7 @@ _test_log() {
 _test_check_timeout() {
   local TIMEOUT_SECONDS="${1}"
   local START_TIME="${2}"
-  local MESSAGE="${3:-_test_check_timeout}"
+  local MESSAGE="${3:-"_test_check_timeout"}"
   ! is_number "${TIMEOUT_SECONDS}" && echo "TIMEOUT_SECONDS is not a number." 1>&2 && return 2
   ! is_number "${START_TIME}" && echo "START_TIME is not a number." 1>&2 && return 2
   local SECONDS_ELAPSED=
@@ -384,14 +384,15 @@ _start_registry() {
       --stop-timeout "${TIMEOUT_SECONDS}" \
       $(_add_htpasswd "${SUITE_NAME}" "${ENFORCE_LOGIN}" "${TEST_USERNAME}" "${TEST_PASSWORD}") \
       "${REGISTRY_IMAGE}" 2>&1); then
+      local STATUS=
       while true; do
-        local STATUS=
-        STATUS=$(docker container inspect "${CID}" --format '{{.State.Status}}')
-        [ "${STATUS}" = "running" ] && break
+        STATUS=$(docker container inspect "${CID}" --format '{{.State.Status}}' 2>&1)
+        [ "$?" != "0" ] && break;
+        [ "${STATUS}" = "running" ] && break;
         _test_check_timeout "60" "${START_TIME}" "_start_registry wait registry running" || return 1
         sleep 1
       done
-      break;
+      [ "${STATUS}" = "running" ] && break;
     fi
     echo "docker_run: ${CID}";
     REGISTRY_PORT=$((REGISTRY_PORT+1))
