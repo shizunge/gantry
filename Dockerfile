@@ -1,4 +1,4 @@
-FROM alpine:3.20.3
+FROM alpine:3.21.0
 
 LABEL org.opencontainers.image.title=gantry
 LABEL org.opencontainers.image.description="Updating docker swarm services"
@@ -9,7 +9,11 @@ RUN mkdir -p /gantry
 
 WORKDIR /gantry
 
-RUN apk add --update --no-cache curl tzdata docker-cli docker-cli-buildx
+# * Add curl to report docker hub rate and for notification.
+# * Add tzdata to log timezone correctly.
+# * Add coreutils for command `timeout`.
+#   The timeout command from coreutils and busybox exhibit different behaviors. Notably, busybox timeout may not reliably report the timeout status of a `docker service update` in some cases, leading to potential inaccuracies.
+RUN apk add --update --no-cache curl tzdata coreutils docker-cli docker-cli-buildx
 
 COPY src/* /gantry
 
