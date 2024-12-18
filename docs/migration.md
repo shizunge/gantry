@@ -25,7 +25,7 @@ This guide helps you migrate from *shepherd* to *gantry* by highlighting the dif
 | IGNORELIST_SERVICES   | GANTRY_SERVICES_EXCLUDED        | |
 | FILTER_SERVICES       | GANTRY_SERVICES_FILTERS         | |
 | UPDATE_OPTIONS        | GANTRY_UPDATE_OPTIONS           | |
-| TIMEOUT               | GANTRY_UPDATE_TIMEOUT_SECONDS   | |
+| TIMEOUT               | GANTRY_UPDATE_TIMEOUT_SECONDS   | Allow to use 0 to disable the timeout. |
 | ROLLBACK_OPTIONS      | GANTRY_ROLLBACK_OPTIONS         | |
 | ROLLBACK_ON_FAILURE   | GANTRY_ROLLBACK_ON_FAILURE      | |
 | APPRISE_SIDECAR_URL   | GANTRY_NOTIFICATION_APPRISE_URL | |
