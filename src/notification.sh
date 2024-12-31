@@ -38,7 +38,7 @@ _notify_via_apprise() {
   TITLE=$(_replace_newline "${TITLE}")
   BODY=$(_replace_newline "${BODY}")
   local LOG=
-  if LOG=$(curl --silent --show-error -X POST -H "Content-Type: application/json" --data "{\"title\": \"${TITLE}\", \"body\": \"${BODY}\", \"type\": \"${TYPE}\"}" "${URL}" 2>&1); then
+  if LOG=$(curl --silent --show-error -X POST -H "Content-Type: application/json" --data "{\"title\": \"${TITLE}\", \"body\": \"${BODY}\", \"notify_type\": \"${TYPE}\"}" "${URL}" 2>&1); then
     log INFO "Sent notification via Apprise:"
     echo "${LOG}" | log_lines INFO
   else
