@@ -29,7 +29,14 @@ jobs:
           shellspec --version
       - name: Install kcov
         run: |
-          sudo apt install -y kcov
+          sudo apt -y install binutils-dev libssl-dev libcurl4-openssl-dev libelf-dev libstdc++-12-dev zlib1g-dev libdw-dev libiberty-dev
+          git clone https://github.com/SimonKagstrom/kcov.git
+          cd kcov
+          mkdir build
+          cd build
+          cmake ..
+          make
+          sudo make install
           echo -n "kcov version: "
           kcov --version
       - name: Checkout Code
