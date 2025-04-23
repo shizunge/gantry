@@ -354,7 +354,7 @@ _start_registry() {
   local TEST_REGISTRY="${REGISTRY_BASE}:${REGISTRY_PORT}"
   export TEST_USERNAME="gantry"
   export TEST_PASSWORD="gantry"
-  local REGISTRY_IMAGE="docker.io/registry"
+  local REGISTRY_IMAGE="docker.io/registry:2"
   local START_TIME=
   START_TIME=$(date +%s)
   local PORT_LIMIT=500
