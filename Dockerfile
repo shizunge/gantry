@@ -1,4 +1,4 @@
-FROM alpine:3.21.3
+FROM alpine:3.22.0
 
 LABEL org.opencontainers.image.title=gantry
 LABEL org.opencontainers.image.description="Updating docker swarm services"
