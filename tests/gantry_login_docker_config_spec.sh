@@ -21,15 +21,18 @@
 # C: Whether Configuration is named or not. (i.e. GANTRY_REGISTRY_CONFIG or GANTRY_REGISTRY_CONFIGS_FILE is set or not.)
 # L: Whether GANTRY_AUTH_CONFIG_LABEL is set on the service or not.
 # (N): This is a negative test.
+# (A): Gantry automatically finds the Docker client configuration.
 # The coverage is:
 # D=0 C=0 L=0 test_login_default_config
 # D=0 C=0 L=1 test_login_config_mismatch (N)
-# D=0 C=1 L=0 test_login_multi_services_no_label SERVICE_NAME0 (N)
+# D=0 C=1 L=0 test_login_multi_services_no_label SERVICE_NAME0 (A)
+# D=0 C=1 L=0 test_login_multi_services_no_label_multi_config SERVICE_NAME0 (N)
 # D=0 C=1 L=1 test_login_config
 # D=1 C=0 L=0 test_login_docker_config_default_config
 # D=1 C=0 L=1 test_login_docker_config_label_override SERVICE_NAME0 (N)
-# D=1 C=1 L=0 test_login_docker_config_no_label
+# D=1 C=1 L=0 test_login_docker_config_no_label (A)
 # D=1 C=1 L=1 test_login_docker_config_label_override SERVICE_NAME1
+# D=1 C=1 L=1 test_login_docker_config_label_override SERVICE_NAME2 (A)
 
 Describe 'login-docker-config'
   SUITE_NAME="login-docker-config"
@@ -87,8 +90,8 @@ Describe 'login-docker-config'
       The stderr should satisfy spec_expect_no_message "${NUM_SERVICES_INSPECT_FAILURE}"
       The stderr should satisfy spec_expect_no_message "${NUM_SERVICES_NO_NEW_IMAGES}"
       The stderr should satisfy spec_expect_message    "${NUM_SERVICES_UPDATING}"
-      # No --config, due to GANTRY_AUTH_CONFIG_LABEL is not found on the service.
-      The stderr should satisfy spec_expect_no_message "${ADDING_OPTIONS}.*--config.*"
+      # Gantry automatically add --config based on the host on the image, though there is no GANTRY_AUTH_CONFIG_LABEL on the service.
+      The stderr should satisfy spec_expect_message    "${ADDING_OPTIONS}.*--config.*"
       # Gantry adds --with-registry-auth, because DOCKER_CONFIG and the configuration name are same (default location).
       The stderr should satisfy spec_expect_message    "${ADDING_OPTIONS_WITH_REGISTRY_AUTH}"
       The stderr should satisfy spec_expect_message    "${UPDATED}.*${SERVICE_NAME}"
@@ -221,7 +224,7 @@ Describe 'login-docker-config'
       # Set GANTRY_AUTH_CONFIG_LABEL on SERVICE_NAME1, but not on SERVICE_NAME0.
       # Inspection of SERVICE_NAME0 should fail (incorrect label overrides DOCKER_CONFIG).
       # Inspection of SERVICE_NAME1 should pass (correct label overrides DOCKER_CONFIG).
-      # Inspection of SERVICE_NAME2 should pass (use DOCKER_CONFIG).
+      # Inspection of SERVICE_NAME2 should pass (Gantry automatically finds the config).
       docker_service_update --label-add "${GANTRY_AUTH_CONFIG_LABEL}=${INCORRECT_CONFIG}" "${SERVICE_NAME0}"
       docker_service_update --label-add "${GANTRY_AUTH_CONFIG_LABEL}=${CONFIG}" "${SERVICE_NAME1}"
       reset_gantry_env "${SUITE_NAME}" "${SERVICE_NAME}"
@@ -263,7 +266,7 @@ Describe 'login-docker-config'
       The stderr should satisfy spec_expect_message    "${USER_LOGGED_INTO_DEFAULT}.*"
       The stderr should satisfy spec_expect_message    "${ADDING_OPTIONS}.*--config ${INCORRECT_CONFIG}.*${SERVICE_NAME0}"
       The stderr should satisfy spec_expect_message    "${ADDING_OPTIONS}.*--config ${AUTH_CONFIG}.*${SERVICE_NAME1}"
-      The stderr should satisfy spec_expect_no_message "${ADDING_OPTIONS}.*--config ${AUTH_CONFIG}.*${SERVICE_NAME2}"
+      The stderr should satisfy spec_expect_message    "${ADDING_OPTIONS}.*--config ${AUTH_CONFIG}.*${SERVICE_NAME2}"
       The stderr should satisfy spec_expect_no_message "${PERFORM_UPDATING}.*${SERVICE_NAME0}.*"
       The stderr should satisfy spec_expect_message    "${SKIP_UPDATING}.*${SERVICE_NAME0}.*${SKIP_REASON_MANIFEST_FAILURE}"
       The stderr should satisfy spec_expect_message    "${PERFORM_UPDATING}.*${SERVICE_NAME1}.*${PERFORM_REASON_HAS_NEWER_IMAGE}"
@@ -278,7 +281,7 @@ Describe 'login-docker-config'
       The stderr should satisfy spec_expect_no_message "${ADDING_OPTIONS_WITH_REGISTRY_AUTH}.*${SERVICE_NAME0}"
       # Gantry adds --with-registry-auth for finding GANTRY_AUTH_CONFIG_LABEL on the service.
       The stderr should satisfy spec_expect_message    "${ADDING_OPTIONS_WITH_REGISTRY_AUTH}.*${SERVICE_NAME1}"
-      # Gantry adds --with-registry-auth, because DOCKER_CONFIG and the configuration name are same (default location).
+      # Gantry adds --with-registry-auth, because Gantry automatically finds the config.
       The stderr should satisfy spec_expect_message    "${ADDING_OPTIONS_WITH_REGISTRY_AUTH}.*${SERVICE_NAME2}"
       The stderr should satisfy spec_expect_no_message "${UPDATED}.*${SERVICE_NAME0}"
       The stderr should satisfy spec_expect_message    "${UPDATED}.*${SERVICE_NAME1}"

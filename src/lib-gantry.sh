@@ -109,6 +109,11 @@ _docker_default_config_is_used() {
   echo "${DOCKER_CONFIG_DEFAULT}"
 }
 
+_get_docker_config_static_var_from_host() {
+  local HOST="${1}"
+  echo "STATIC_VAR_DOCKER_CONFIG_${HOST}" | tr ":" "_"
+}
+
 _login_registry() {
   local USER="${1}"
   local PASSWORD="${2}"
@@ -141,6 +146,11 @@ _login_registry() {
   log INFO "Logged into ${REGISTRY_CONFIG_MESSAGE}. ${LOGIN_MSG}"
   if [ -n "${CONFIG}" ]; then
     _static_variable_add_unique_to_list STATIC_VAR_DOCKER_CONFIGS "${CONFIG}"
+    if [ -n "${HOST}" ]; then
+      local DOCKER_CONFIG_STATIC_VARIABLE_NAME=
+      DOCKER_CONFIG_STATIC_VARIABLE_NAME=$(_get_docker_config_static_var_from_host "${HOST}")
+      _static_variable_add_unique_to_list "${DOCKER_CONFIG_STATIC_VARIABLE_NAME}" "${CONFIG}"
+    fi
   fi
   _check_if_it_is_docker_default_config "${CONFIG}"
   return 0
@@ -711,14 +721,50 @@ _check_auth_config_folder() {
   return 1
 }
 
-_get_auth_config_from_service() {
+_get_host_from_image() {
+  local IMAGE="${1}"
+  # https://docs.docker.com/reference/cli/docker/image/tag/
+  # A Docker image reference consists of [HOST[:PORT]/]NAMESPACE/REPOSITORY[:TAG]
+  # Assume there is no "/" in the host, namespace or repository.
+  # If there is no HOST[:PORT], there will be only a single "/", the third part will be empty.
+  # If there is HOST[:PORT], there will be two "/", the third part will be REPOSITORY.
+  local THIRD=
+  THIRD=$(extract_string "${IMAGE}" '/' 3)
+  [ -z "${THIRD}" ] && return 0
+  local FIRST=
+  FIRST=$(extract_string "${IMAGE}" '/' 1)
+  echo "${FIRST}"
+}
+
+_get_auth_config_from_service_or_image() {
   local SERVICE_NAME="${1}"
+  local IMAGE="${2}"
   local AUTH_CONFIG_LABEL="gantry.auth.config"
   local AUTH_CONFIG=
+  # Read auth config from the service
   AUTH_CONFIG=$(_get_label_from_service "${SERVICE_NAME}" "${AUTH_CONFIG_LABEL}")
-  [ -z "${AUTH_CONFIG}" ] && return 0
+  if [ -z "${AUTH_CONFIG}" ]; then
+    # Read auth config from the image
+    local HOST=
+    HOST=$(_get_host_from_image "${IMAGE}")
+    [ -z "${HOST}" ] && return 0;
+    local DOCKER_CONFIG_STATIC_VARIABLE_NAME=
+    DOCKER_CONFIG_STATIC_VARIABLE_NAME=$(_get_docker_config_static_var_from_host "${HOST}")
+    AUTH_CONFIG=$(_static_variable_read_list "${DOCKER_CONFIG_STATIC_VARIABLE_NAME}")
+    [ -z "${AUTH_CONFIG}" ] && return 0
+    local NUM=
+    NUM=$(_get_number_of_elements "${AUTH_CONFIG}")
+    if [ "${NUM}" -gt 1 ]; then
+      local MSG="configuration(s) for ${HOST} set via GANTRY_REGISTRY_CONFIG or GANTRY_REGISTRY_CONFIGS_FILE"
+      MSG="${MSG}. No \"--config\" will be added to Docker commands"
+      MSG="${MSG}. Please add label \"${AUTH_CONFIG_LABEL}=<configuration>\" to the service ${SERVICE_NAME} to select one of the followings"
+      _report_from_static_variable "${DOCKER_CONFIG_STATIC_VARIABLE_NAME}" "There are" "${MSG}" "There are no ${MSG}." | log_lines WARN
+      return 1
+    fi
+  fi
   _check_auth_config_folder "${AUTH_CONFIG}"
   echo "--config ${AUTH_CONFIG}"
+  return 0
 }
 
 _skip_jobs() {
@@ -743,7 +789,7 @@ _get_image_info() {
   local MANIFEST_CMD="${2}"
   local IMAGE="${3}"
   local AUTH_CONFIG=
-  AUTH_CONFIG=$(_get_auth_config_from_service "${SERVICE_NAME}")
+  AUTH_CONFIG=$(_get_auth_config_from_service_or_image "${SERVICE_NAME}" "${IMAGE}")
   [ -n "${AUTH_CONFIG}" ] && log INFO "Adding options \"${AUTH_CONFIG}\" to docker commands for ${SERVICE_NAME}."
   local MSG=
   local RETURN_VALUE=0
@@ -1001,7 +1047,7 @@ _update_single_service() {
   log INFO "Updating ${SERVICE_NAME} with image ${IMAGE}"
   local AUTH_CONFIG=
   local AUTOMATIC_OPTIONS=
-  AUTH_CONFIG=$(_get_auth_config_from_service "${SERVICE_NAME}")
+  AUTH_CONFIG=$(_get_auth_config_from_service_or_image "${SERVICE_NAME}" "${IMAGE}")
   AUTOMATIC_OPTIONS=$(_get_service_update_additional_options "${SERVICE_NAME}" "${AUTH_CONFIG}")
   local CMD_STRING="\"docker service update\""
   [ -n "${AUTH_CONFIG}" ] && log INFO "Adding options \"${AUTH_CONFIG}\" to the command ${CMD_STRING} for ${SERVICE_NAME}."

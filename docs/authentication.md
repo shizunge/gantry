@@ -36,12 +36,14 @@ You can login to multiple registries using the same Docker client configuration.
 
 *Gantry* creates or updates the [Docker client configurations](https://docs.docker.com/engine/reference/commandline/cli/#configuration-files) based on the values set via `GANTRY_REGISTRY_CONFIG`, `GANTRY_REGISTRY_CONFIG_FILE` or `GANTRY_REGISTRY_CONFIGS_FILE`. Technically, these values are the locations of the client configuration files, which could be either a relative path or an absolute path, where authentication stores.
 
-Usually you need to add the label `gantry.auth.config=<configuration>` on the particular services to tell which Docker client configuration to use for authentication, where `<configuration>` is the value you set in `GANTRY_REGISTRY_CONFIG`, `GANTRY_REGISTRY_CONFIG_FILE` or `GANTRY_REGISTRY_CONFIGS_FILE`. When *Gantry* finds the label `gantry.auth.config=<configuration>` on services, it adds `--config <configuration>` to the Docker commands for the corresponding services to overrides the default Docker client configuration location. This allows you to use different client configurations for different services, for example when you want to login to the same registry with different user names.
+In general, you need to add the label `gantry.auth.config=<configuration>` on the particular services to explicitly tell which Docker client configuration to use for authentication, where `<configuration>` is the value set in `GANTRY_REGISTRY_CONFIG`, `GANTRY_REGISTRY_CONFIG_FILE` or `GANTRY_REGISTRY_CONFIGS_FILE`. When *Gantry* finds the label `gantry.auth.config=<configuration>` on services, it adds `--config <configuration>` to the Docker commands for the corresponding services to overrides the default Docker client configuration location. This allows you to use different Docker client configurations for different services, for example when you want to login to the same registry with multiple user names.
 
-You don't need to set `gantry.auth.config=<configuration>` on services for authentication, when using the default Docker client configuration. The default docker client configuration will be used in the following cases.
+You don't need to set `gantry.auth.config=<configuration>` on services for authentication, when the there is only a single Docker client configuration (e.g. an entry in `GANTRY_REGISTRY_CONFIGS_FILE`) for a certain host. *Gantry* will try to automatically find the corresponding Docker client configuration based on the host on the image of the services. Then it adds `--config <configuration>` to the Docker commands for the corresponding services.
 
-* when logging in to a single registry using `GANTRY_REGISTRY_USER`, `GANTRY_REGISTRY_PASSWORD` and `GANTRY_REGISTRY_HOST` **without** setting `GANTRY_REGISTRY_CONFIG`.
-* when the values in `GANTRY_REGISTRY_CONFIG`, `GANTRY_REGISTRY_CONFIG_FILE` or `GANTRY_REGISTRY_CONFIGS_FILE` are same as the the default Docker client configuration location.
+You also don't need to set `gantry.auth.config=<configuration>` on services for authentication, when using the default Docker client configuration, as mentioned in the following cases. In these cases, *Gantry* does not add `--config <configuration>` to the Docker commands.
+
+* when `GANTRY_REGISTRY_USER`, `GANTRY_REGISTRY_PASSWORD` are set, while `GANTRY_REGISTRY_CONFIG` is empty.
+* when the values in `GANTRY_REGISTRY_CONFIG`, `GANTRY_REGISTRY_CONFIG_FILE` or `GANTRY_REGISTRY_CONFIGS_FILE` is same as the default Docker client configuration location `${HOME}/.docker/` or the location specified by `DOCKER_CONFIG`.
 
 The default Docker client configuration location is `/root/.docker/` inside the container created based on the image built from this repository, because the default user is `root`. You can use environment variable [`DOCKER_CONFIG`](https://docs.docker.com/engine/reference/commandline/cli/#environment-variables) to explicitly set the default Docker client configuration location, which applies to all Docker commands, i.e. to all services.
 
@@ -50,9 +52,8 @@ The default Docker client configuration location is `/root/.docker/` inside the 
 *Gantry* automatically adds `--with-registry-auth` to the `docker service update` command for services for the following cases.
 
 * when *Gantry* finds the label `gantry.auth.config=<configuration>` on the service.
-* when *Gantry* logs in with the default Docker client configuration.
-  * when `GANTRY_REGISTRY_USER`, `GANTRY_REGISTRY_PASSWORD` are set, while `GANTRY_REGISTRY_CONFIG` is empty.
-  * when the configuration from `GANTRY_REGISTRY_CONFIG` or `GANTRY_REGISTRY_CONFIGS_FILE` is same as the default Docker client configuration location `${HOME}/.docker/` or the location specified by `DOCKER_CONFIG`.
+* when *Gantry* finds Docker client configuration based on the host on the image of the services.
+* when *Gantry* logs in with the default Docker client configuration. See [Selecting Docker client configurations for services](#selecting-docker-client-configurations-for-services).
 
 You can manually add `--with-registry-auth` to `GANTRY_UPDATE_OPTIONS` if it is not added automatically for your case. When `--with-registry-auth` is missing but the registry requires authentication, the service will be [updated to an image without digest](https://github.com/shizunge/gantry/issues/53#issuecomment-2348376336), and you will get a warning *"image \<image\> could not be accessed on a registry to record its digest. Each node will access \<image\> independently, possibly leading to different nodes running different versions of the image."*
 

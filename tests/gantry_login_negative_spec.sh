@@ -386,9 +386,8 @@ Describe 'login-negative'
       The stderr should satisfy spec_expect_no_message "${DONE_REMOVING_IMAGES}"
     End
   End
-  Describe "test_login_multi_services_no_label"
-    # To test https://github.com/shizunge/gantry/issues/64#issuecomment-2475499085
-    TEST_NAME="test_login_multi_services_no_label"
+  Describe "test_login_multi_services_no_label_multi_config"
+    TEST_NAME="test_login_multi_services_no_label_multi_config"
     IMAGE_WITH_TAG=$(get_image_with_tag "${SUITE_NAME}")
     SERVICE_NAME=$(get_test_service_name "${TEST_NAME}")
     IMAGE_WITH_TAG0="${IMAGE_WITH_TAG}-0"
@@ -416,7 +415,7 @@ Describe 'login-negative'
       build_and_push_test_image "${IMAGE_WITH_TAG0}"
       build_and_push_test_image "${IMAGE_WITH_TAG1}"
     }
-    test_login_multi_services_no_label() {
+    test_login_multi_services_no_label_multi_config() {
       local TEST_NAME="${1}"
       local SERVICE_NAME="${2}"
       local CONFIG="${3}"
@@ -425,25 +424,27 @@ Describe 'login-negative'
       local PASSWORD="${6}"
       local SERVICE_NAME0="${SERVICE_NAME}-0"
       local SERVICE_NAME1="${SERVICE_NAME}-1"
+      local CONFIG_EXTRA="${CONFIG}-extra"
       check_login_input "${REGISTRY}" "${USERNAME}" "${PASSWORD}" || return 1;
-      local USER_FILE=; USER_FILE=$(make_test_temp_file); echo "${USERNAME}" > "${USER_FILE}";
-      local PASS_FILE=; PASS_FILE=$(make_test_temp_file); echo "${PASSWORD}" > "${PASS_FILE}";
+      local CONFIGS_FILE=
+      CONFIGS_FILE=$(make_test_temp_file)
+      # SC2129: Consider using { cmd1; cmd2; } >> file instead of individual redirects.
+      # shellcheck disable=SC2129
+      echo "# Test comments: CONFIG REGISTRY USERNAME PASSWORD" >> "${CONFIGS_FILE}"
+      echo "${CONFIG} ${REGISTRY} ${USERNAME} ${PASSWORD}" >> "${CONFIGS_FILE}"
+      echo "${CONFIG_EXTRA} ${REGISTRY} ${USERNAME} ${PASSWORD}" >> "${CONFIGS_FILE}"
       # Set GANTRY_AUTH_CONFIG_LABEL on SERVICE_NAME1, but not on SERVICE_NAME0.
-      # Inspection of SERVICE_NAME0 should fail, because GANTRY_AUTH_CONFIG_LABEL is not found.
+      # Inspection of SERVICE_NAME0 should fail, because GANTRY_AUTH_CONFIG_LABEL is not found, while there are multiple configs for the same host.
       # Inspection of SERVICE_NAME1 should pass, because configuration is set via GANTRY_AUTH_CONFIG_LABEL.
       docker_service_update --label-add "${GANTRY_AUTH_CONFIG_LABEL}=${CONFIG}" "${SERVICE_NAME1}"
       reset_gantry_env "${SUITE_NAME}" "${SERVICE_NAME}"
-      export GANTRY_REGISTRY_CONFIG="${CONFIG}"
-      export GANTRY_REGISTRY_HOST="${REGISTRY}"
-      export GANTRY_REGISTRY_PASSWORD_FILE="${PASS_FILE}"
-      export GANTRY_REGISTRY_USER_FILE="${USER_FILE}"
+      export GANTRY_REGISTRY_CONFIGS_FILE="${CONFIGS_FILE}"
       # Set GANTRY_CLEANUP_IMAGES="false" to speedup the test. We are not testing removing image here.
       export GANTRY_CLEANUP_IMAGES="false"
       local RETURN_VALUE=
       run_gantry "${SUITE_NAME}" "${TEST_NAME}"
       RETURN_VALUE="${?}"
-      rm "${USER_FILE}"
-      rm "${PASS_FILE}"
+      rm "${CONFIGS_FILE}"
       [ -d "${CONFIG}" ] && rm -r "${CONFIG}"
       return "${RETURN_VALUE}"
     }
@@ -461,7 +462,7 @@ Describe 'login-negative'
     BeforeEach "test_start ${TEST_NAME} ${IMAGE_WITH_TAG} ${SERVICE_NAME}"
     AfterEach "test_end ${TEST_NAME} ${IMAGE_WITH_TAG} ${SERVICE_NAME}"
     It 'run_test'
-      When run test_login_multi_services_no_label "${TEST_NAME}" "${SERVICE_NAME}" "${AUTH_CONFIG}" "${TEST_REGISTRY}" "${TEST_USERNAME}" "${TEST_PASSWORD}"
+      When run test_login_multi_services_no_label_multi_config "${TEST_NAME}" "${SERVICE_NAME}" "${AUTH_CONFIG}" "${TEST_REGISTRY}" "${TEST_USERNAME}" "${TEST_PASSWORD}"
       The status should be failure
       The stdout should satisfy display_output
       The stdout should satisfy spec_expect_no_message ".+"
@@ -479,7 +480,8 @@ Describe 'login-negative'
       The stderr should satisfy spec_expect_message    "${NUM_SERVICES_INSPECT_FAILURE}"
       The stderr should satisfy spec_expect_no_message "${NUM_SERVICES_NO_NEW_IMAGES}"
       The stderr should satisfy spec_expect_message    "${NUM_SERVICES_UPDATING}"
-      # No --with-registry-auth, for 1. no label on the SERVICE_NAME0. 2. GANTRY_REGISTRY_CONFIG is set but it is not same as the default location.
+      The stderr should satisfy spec_expect_message    "${PLEASE_ADD_LABEL_GANTRY_AUTH_CONFIG}.*${SERVICE_NAME0}"
+      # No --with-registry-auth, for (1) no label on the SERVICE_NAME0. (2) GANTRY_REGISTRY_CONFIG is set but it is not same as the default location. (3) multiple configuration for the same host.
       The stderr should satisfy spec_expect_no_message "${ADDING_OPTIONS_WITH_REGISTRY_AUTH}.*${SERVICE_NAME0}"
       # Gantry adds --with-registry-auth for finding GANTRY_AUTH_CONFIG_LABEL on the service.
       The stderr should satisfy spec_expect_message    "${ADDING_OPTIONS_WITH_REGISTRY_AUTH}.*${SERVICE_NAME1}"
