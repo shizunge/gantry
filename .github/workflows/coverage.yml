@@ -41,7 +41,7 @@ jobs:
           echo -n "kcov version: "
           kcov --version
       - name: Checkout Code
-        uses: actions/checkout@v4
+        uses: actions/checkout@v5
       - name: Generate tests coverage reports
         run: |
           bash shellspec --kcov --jobs 50
