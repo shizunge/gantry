@@ -35,7 +35,7 @@ This guide helps you migrate from *shepherd* to *gantry* by highlighting the dif
 | REGISTRIES_FILE       | GANTRY_REGISTRY_CONFIGS_FILE    | |
 | IMAGE_AUTOCLEAN_LIMIT | GANTRY_CLEANUP_IMAGES           | *Gantry* only cleans up the images being updated, thus a limit is not used now. |
 
-The label on the services to select config to enable authentication is renamed to `gantry.auth.config`.
+We rename the label `shepherd.auth.config` on the services  to `gantry.auth.config` to select configuration for authentication. The label `gantry.auth.config` is also optional, when the there is only a single Docker client configuration (e.g. an entry in `GANTRY_REGISTRY_CONFIGS_FILE`) for a certain host.
 
 ## Deprecated configurations
 

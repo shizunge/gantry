@@ -195,6 +195,55 @@ Describe 'common-options'
       The stderr should satisfy spec_expect_no_message "${SLEEP_SECONDS_BEFORE_NEXT_UPDATE}"
     End
   End
+  Describe "test_common_PRE_RUN_CMD_failure_skip_updating"
+    TEST_NAME="test_common_PRE_POST_RUN_CMD"
+    IMAGE_WITH_TAG=$(get_image_with_tag "${SUITE_NAME}")
+    SERVICE_NAME=$(get_test_service_name "${TEST_NAME}")
+    test_common_PRE_POST_RUN_CMD() {
+      local TEST_NAME="${1}"
+      local SERVICE_NAME="${2}"
+      reset_gantry_env "${SUITE_NAME}" "${SERVICE_NAME}"
+      export GANTRY_UPDATE_OPTIONS=
+      export GANTRY_CLEANUP_IMAGES=
+      # Test that pre-run command return a non-zero value.
+      export GANTRY_PRE_RUN_CMD="echo \"Pre update\"; false;"
+      run_gantry "${SUITE_NAME}" "${TEST_NAME}"
+    }
+    BeforeEach "common_setup_new_image ${TEST_NAME} ${IMAGE_WITH_TAG} ${SERVICE_NAME}"
+    AfterEach "common_cleanup ${TEST_NAME} ${IMAGE_WITH_TAG} ${SERVICE_NAME}"
+    It 'run_test'
+      When run test_common_PRE_POST_RUN_CMD "${TEST_NAME}" "${SERVICE_NAME}"
+      # Skip updating due to pre-run comamnd failed.
+      The status should be failure
+      The stdout should satisfy display_output
+      The stdout should satisfy spec_expect_no_message ".+"
+      The stderr should satisfy display_output
+      The stderr should satisfy spec_expect_no_message "${START_WITHOUT_A_SQUARE_BRACKET}"
+      The stderr should satisfy spec_expect_message    "Pre update$"
+      The stderr should satisfy spec_expect_message    "${SKIP_UPDATING_ALL}"
+      The stderr should satisfy spec_expect_no_message "${PERFORM_UPDATING}"
+      The stderr should satisfy spec_expect_no_message "${NUM_SERVICES_SKIP_JOBS}"
+      The stderr should satisfy spec_expect_no_message "${NUM_SERVICES_INSPECT_FAILURE}"
+      The stderr should satisfy spec_expect_no_message "${NUM_SERVICES_NO_NEW_IMAGES}"
+      The stderr should satisfy spec_expect_no_message "${NUM_SERVICES_UPDATING}"
+      The stderr should satisfy spec_expect_no_message "${UPDATED}.*${SERVICE_NAME}"
+      The stderr should satisfy spec_expect_no_message "${NO_UPDATES}.*${SERVICE_NAME}"
+      The stderr should satisfy spec_expect_no_message "${ROLLING_BACK}.*${SERVICE_NAME}"
+      The stderr should satisfy spec_expect_no_message "${FAILED_TO_ROLLBACK}.*${SERVICE_NAME}"
+      The stderr should satisfy spec_expect_no_message "${ROLLED_BACK}.*${SERVICE_NAME}"
+      The stderr should satisfy spec_expect_message    "${NO_SERVICES_UPDATED}"
+      The stderr should satisfy spec_expect_no_message "${NUM_SERVICES_UPDATE_FAILED}"
+      The stderr should satisfy spec_expect_no_message "${NUM_SERVICES_ERRORS}"
+      The stderr should satisfy spec_expect_message    "${NO_IMAGES_TO_REMOVE}"
+      The stderr should satisfy spec_expect_no_message "${REMOVING_NUM_IMAGES}"
+      The stderr should satisfy spec_expect_no_message "${SKIP_REMOVING_IMAGES}"
+      The stderr should satisfy spec_expect_no_message "${REMOVED_IMAGE}.*"
+      The stderr should satisfy spec_expect_no_message "${FAILED_TO_REMOVE_IMAGE}.*"
+      The stderr should satisfy spec_expect_no_message "${DONE_REMOVING_IMAGES}"
+      The stderr should satisfy spec_expect_no_message "${SCHEDULE_NEXT_UPDATE_AT}"
+      The stderr should satisfy spec_expect_no_message "${SLEEP_SECONDS_BEFORE_NEXT_UPDATE}"
+    End
+  End
   Describe "test_common_SLEEP_SECONDS"
     TEST_NAME="test_common_SLEEP_SECONDS"
     IMAGE_WITH_TAG=$(get_image_with_tag "${SUITE_NAME}")
