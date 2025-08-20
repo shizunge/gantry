@@ -196,10 +196,10 @@ Describe 'common-options'
     End
   End
   Describe "test_common_PRE_RUN_CMD_failure_skip_updating"
-    TEST_NAME="test_common_PRE_POST_RUN_CMD"
+    TEST_NAME="test_common_PRE_RUN_CMD_failure_skip_updating"
     IMAGE_WITH_TAG=$(get_image_with_tag "${SUITE_NAME}")
     SERVICE_NAME=$(get_test_service_name "${TEST_NAME}")
-    test_common_PRE_POST_RUN_CMD() {
+    test_common_PRE_RUN_CMD_failure_skip_updating() {
       local TEST_NAME="${1}"
       local SERVICE_NAME="${2}"
       reset_gantry_env "${SUITE_NAME}" "${SERVICE_NAME}"
@@ -212,7 +212,7 @@ Describe 'common-options'
     BeforeEach "common_setup_new_image ${TEST_NAME} ${IMAGE_WITH_TAG} ${SERVICE_NAME}"
     AfterEach "common_cleanup ${TEST_NAME} ${IMAGE_WITH_TAG} ${SERVICE_NAME}"
     It 'run_test'
-      When run test_common_PRE_POST_RUN_CMD "${TEST_NAME}" "${SERVICE_NAME}"
+      When run test_common_PRE_RUN_CMD_failure_skip_updating "${TEST_NAME}" "${SERVICE_NAME}"
       # Skip updating due to pre-run comamnd failed.
       The status should be failure
       The stdout should satisfy display_output
