@@ -65,6 +65,55 @@ Describe 'common-options'
       The stderr should satisfy spec_expect_no_message "${SLEEP_SECONDS_BEFORE_NEXT_UPDATE}"
     End
   End
+  Describe "test_common_LOG_FORMAT_json"
+    TEST_NAME="test_common_LOG_FORMAT_json"
+    IMAGE_WITH_TAG=$(get_image_with_tag "${SUITE_NAME}")
+    SERVICE_NAME=$(get_test_service_name "${TEST_NAME}")
+    test_common_LOG_FORMAT_json() {
+      local TEST_NAME="${1}"
+      local SERVICE_NAME="${2}"
+      reset_gantry_env "${SUITE_NAME}" "${SERVICE_NAME}"
+      # Same as test_new_image_yes, except set LOG_FORMAT to json
+      export GANTRY_LOG_FORMAT=json
+      run_gantry "${SUITE_NAME}" "${TEST_NAME}"
+    }
+    BeforeEach "common_setup_new_image ${TEST_NAME} ${IMAGE_WITH_TAG} ${SERVICE_NAME}"
+    AfterEach "common_cleanup ${TEST_NAME} ${IMAGE_WITH_TAG} ${SERVICE_NAME}"
+    It 'run_test'
+      When run test_common_LOG_FORMAT_json "${TEST_NAME}" "${SERVICE_NAME}"
+      The status should be success
+      The stdout should satisfy display_output
+      The stdout should satisfy spec_expect_no_message ".+"
+      The stderr should satisfy display_output
+      The stderr should satisfy spec_expect_message    "${START_WITHOUT_A_SQUARE_BRACKET}"
+      The stderr should satisfy spec_expect_no_message "${SKIP_UPDATING}.*${SERVICE_NAME}"
+      The stderr should satisfy spec_expect_message    "${PERFORM_UPDATING}.*${SERVICE_NAME}.*${PERFORM_REASON_HAS_NEWER_IMAGE}"
+      The stderr should satisfy spec_expect_no_message "${NUM_SERVICES_SKIP_JOBS}"
+      The stderr should satisfy spec_expect_no_message "${NUM_SERVICES_INSPECT_FAILURE}"
+      The stderr should satisfy spec_expect_no_message "${NUM_SERVICES_NO_NEW_IMAGES}"
+      The stderr should satisfy spec_expect_message    "${NUM_SERVICES_UPDATING}"
+      The stderr should satisfy spec_expect_no_message "${ADDING_OPTIONS}"
+      The stderr should satisfy spec_expect_no_message "${SET_TIMEOUT_TO}"
+      The stderr should satisfy spec_expect_no_message "${RETURN_VALUE_INDICATES_TIMEOUT}"
+      The stderr should satisfy spec_expect_no_message "${DOES_NOT_HAVE_A_DIGEST}"
+      The stderr should satisfy spec_expect_message    "${UPDATED}.*${SERVICE_NAME}"
+      The stderr should satisfy spec_expect_no_message "${NO_UPDATES}.*${SERVICE_NAME}"
+      The stderr should satisfy spec_expect_no_message "${ROLLING_BACK}.*${SERVICE_NAME}"
+      The stderr should satisfy spec_expect_no_message "${FAILED_TO_ROLLBACK}.*${SERVICE_NAME}"
+      The stderr should satisfy spec_expect_no_message "${ROLLED_BACK}.*${SERVICE_NAME}"
+      The stderr should satisfy spec_expect_no_message "${NO_SERVICES_UPDATED}"
+      The stderr should satisfy spec_expect_message    "1 ${SERVICES_UPDATED}"
+      The stderr should satisfy spec_expect_no_message "${NUM_SERVICES_UPDATE_FAILED}"
+      The stderr should satisfy spec_expect_no_message "${NUM_SERVICES_ERRORS}"
+      The stderr should satisfy spec_expect_no_message "${NO_IMAGES_TO_REMOVE}"
+      The stderr should satisfy spec_expect_message    "${REMOVING_NUM_IMAGES}"
+      The stderr should satisfy spec_expect_no_message "${SKIP_REMOVING_IMAGES}"
+      The stderr should satisfy spec_expect_message    "${REMOVED_IMAGE}.*${IMAGE_WITH_TAG}"
+      The stderr should satisfy spec_expect_no_message "${FAILED_TO_REMOVE_IMAGE}.*${IMAGE_WITH_TAG}"
+      The stderr should satisfy spec_expect_message    "${DONE_REMOVING_IMAGES}"
+      The stderr should satisfy spec_expect_no_message "${SCHEDULE_NEXT_UPDATE_AT}"
+    End
+  End
   Describe "test_common_LOG_LEVEL_none"
     TEST_NAME="test_common_LOG_LEVEL_none"
     IMAGE_WITH_TAG=$(get_image_with_tag "${SUITE_NAME}")
@@ -81,6 +130,30 @@ Describe 'common-options'
     AfterEach "common_cleanup ${TEST_NAME} ${IMAGE_WITH_TAG} ${SERVICE_NAME}"
     It 'run_test'
       When run test_common_LOG_LEVEL_none "${TEST_NAME}" "${SERVICE_NAME}"
+      The status should be success
+      The stdout should satisfy display_output
+      The stdout should satisfy spec_expect_no_message ".+"
+      The stderr should satisfy display_output
+      The stderr should satisfy spec_expect_no_message ".+"
+    End
+  End
+  Describe "test_common_LOG_FORMAT_json_LEVEL_none"
+    TEST_NAME="test_common_LOG_FORMAT_json_LEVEL_none"
+    IMAGE_WITH_TAG=$(get_image_with_tag "${SUITE_NAME}")
+    SERVICE_NAME=$(get_test_service_name "${TEST_NAME}")
+    test_common_LOG_FORMAT_json_LEVEL_none() {
+      local TEST_NAME="${1}"
+      local SERVICE_NAME="${2}"
+      reset_gantry_env "${SUITE_NAME}" "${SERVICE_NAME}"
+      # Same as test_new_image_yes, except set LOG_FORMAT to json and LOG_LEVEL to NONE
+      export GANTRY_LOG_FORMAT=json
+      export GANTRY_LOG_LEVEL=NONE
+      run_gantry "${SUITE_NAME}" "${TEST_NAME}"
+    }
+    BeforeEach "common_setup_new_image ${TEST_NAME} ${IMAGE_WITH_TAG} ${SERVICE_NAME}"
+    AfterEach "common_cleanup ${TEST_NAME} ${IMAGE_WITH_TAG} ${SERVICE_NAME}"
+    It 'run_test'
+      When run test_common_LOG_FORMAT_json_LEVEL_none "${TEST_NAME}" "${SERVICE_NAME}"
       The status should be success
       The stdout should satisfy display_output
       The stdout should satisfy spec_expect_no_message ".+"
@@ -112,10 +185,10 @@ Describe 'common-options'
       declare -p > "${ENV_BEFORE_RUN}"
       run_gantry "${SUITE_NAME}" "${TEST_NAME}"
       declare -p > "${ENV_AFTER_RUN}"
-      # Allow the 3 mismatches LOG_LEVEL NODE_NAME LOG_SCOPE used in log() function.
+      # Allow the 4 mismatches LOG_FORMAT LOG_LEVEL NODE_NAME LOG_SCOPE used in log() function.
       # Allow the 1 mismatch LINENO for kcov coverage.
       # Allow the 1 mismatch _ for the previous command.
-      for ALLOWED in LOG_LEVEL NODE_NAME LOG_SCOPE LINENO _; do
+      for ALLOWED in LOG_FORMAT LOG_LEVEL NODE_NAME LOG_SCOPE LINENO _; do
         sed -i "s/^declare .* ${ALLOWED}=.*//" "${ENV_BEFORE_RUN}"
         sed -i "s/^declare .* ${ALLOWED}=.*//" "${ENV_AFTER_RUN}"
       done

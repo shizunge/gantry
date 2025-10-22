@@ -30,8 +30,23 @@ _pipe_name() {
   echo "${PIPE_NAME}"
 }
 
+# Usage: echo "multiple-line string" | _remove_newline
+_remove_newline() {
+  # sed to remove \n
+  # :a - Creates a label a for looping.
+  # N - Appends the next line to the pattern space.
+  # $!ba - Loops back to the label a if not the last line ($! means "not last line").
+  # s/\n/ /g - Substitutes all newline characters with a space.
+  sed ':a;N;$!ba;s/\n/ /g'
+  # Here are a few alternatives to "sed"
+  # "echo without quotes" remove carriage returns, tabs and multiple spaces.
+  # "echo" is faster than "tr", but it does not preserve the leading space.
+  # That is why we don't use "echo" here.
+  # "tr '\n' ' '" is slow and adds a space to the end of the string.
+}
+
 _get_first_word() {
-  echo "${*}" | sed -n -E "s/^(\S+).*/\1/p";
+  echo "${*}" | _remove_newline | sed -n -E "s/^(\S+).*/\1/p";
 }
 
 # Run "grep -q" and avoid broken pipe errors.
@@ -55,9 +70,11 @@ grep_q_i() {
 
 # Extract ${POSITION}th part of the string from a single line ${SINGLE_LINE}, separated by ${DELIMITER}.
 extract_string() {
-  local SINGLE_LINE="${1}"
+  local LINE="${1}"
   local DELIMITER="${2}"
   local POSITION="${3}"
+  local SINGLE_LINE=
+  SINGLE_LINE=$(echo "${LINE}" | _remove_newline)
   # When the input contains no ${DELIMITER}, there are the expect outputs
   # * ${POSITION} is 1 -> the ${SINGLE_LINE}
   # * Other ${POSITION} -> an empty string
@@ -165,8 +182,9 @@ _log_skip_echo_color() {
 
 _log_formatter() {
   local TARGET_LEVEL="${LOG_LEVEL:-}";
+  local FORMAT="${LOG_FORMAT:-}";
   local LEVEL="${1}";
-  local TIME_WITH_COLOR="${2}";
+  local EPOCH="${2}";
   local LOCATION="${3}";
   local SCOPE="${4}";
   TARGET_LEVEL=$(_log_level_to_upper "${TARGET_LEVEL}")
@@ -174,31 +192,31 @@ _log_formatter() {
   local LEVEL_COLOR=
   LEVEL_COLOR=$(_log_skip_echo_color "${TARGET_LEVEL}" "${LEVEL}") && return 0;
   shift 4;
-  # Faster for not using local variables. (tested in a micro benchmark)
-  # local DGRAY='\033[1;30m'
-  # local NO_COLOR='\033[0m'
-  # Formatting time logically should be done inside this function.
-  # But we let caller do it to reduce the number of calls of "date" to increase performance.
-  local TIME_STR="\033[1;30m[${TIME_WITH_COLOR}\033[1;30m]\033[0m"
-  local LEVEL_STR="${LEVEL_COLOR}[${LEVEL}]\033[0m "
-  local LOC_STR SCOPE_STR
-  if [ -n "${LOCATION}" ]; then
-    LOC_STR="\033[1;30m[${LOCATION}]\033[0m"
+  local MSG_LINE
+  if [ "${FORMAT}" = "json" ]; then
+    [ -z "${*}" ] && return 0
+    local TIME_STR LEVEL_STR LOC_STR SCOPE_STR MSG_STR
+    LEVEL_STR="\"level\":\"${LEVEL}\","
+    [ -n "${LOCATION}" ] && LOC_STR="\"location\":\"${LOCATION}\","
+    [ -n "${SCOPE}" ] && SCOPE_STR="\"scope\":\"${SCOPE}\","
+    MSG_STR="\"message\":\"$(echo "${*}" | sed -E 's/"/\\"/g')\","
+    TIME_STR="\"time\":\"$(date -d "@${EPOCH}" -Isecond)\""
+    MSG_LINE="{${LEVEL_STR}${LOC_STR}${MSG_STR}${SCOPE_STR}${TIME_STR}}"
+  else
+    local TIME_WITH_COLOR TIME_STR LEVEL_STR LOC_STR SCOPE_STR
+    TIME_WITH_COLOR=$(date -d "@${EPOCH}" +"$(_time_format)")
+    # Faster for not using local variables. (tested in a micro benchmark)
+    # local DGRAY='\033[1;30m'
+    # local NO_COLOR='\033[0m'
+    # Formatting time logically should be done inside this function.
+    # But we let caller do it to reduce the number of calls of "date" to increase performance.
+    TIME_STR="\033[1;30m[${TIME_WITH_COLOR}\033[1;30m]\033[0m"
+    LEVEL_STR="${LEVEL_COLOR}[${LEVEL}]\033[0m "
+    [ -n "${LOCATION}" ] && LOC_STR="\033[1;30m[${LOCATION}]\033[0m"
+    [ -n "${SCOPE}" ] && SCOPE_STR="\033[1;30m${SCOPE}:\033[0m "
+    MSG_LINE="${TIME_STR}${LOC_STR}${LEVEL_STR}${SCOPE_STR}${*}"
   fi
-  if [ -n "${SCOPE}" ]; then
-    SCOPE_STR="\033[1;30m${SCOPE}:\033[0m "
-  fi
-  # sed to remove \n
-  # :a - Creates a label a for looping.
-  # N - Appends the next line to the pattern space.
-  # $!ba - Loops back to the label a if not the last line ($! means "not last line").
-  # s/\n/ /g - Substitutes all newline characters with a space.
-  echo -e "${TIME_STR}${LOC_STR}${LEVEL_STR}${SCOPE_STR}${*}" | sed ':a;N;$!ba;s/\n/ /g' >&2
-  # Here are a few alternatives to "sed"
-  # "echo without quotes" remove carriage returns, tabs and multiple spaces.
-  # "echo" is faster than "tr", but it does not preserve the leading space.
-  # That is why we don't use "echo" here.
-  # "tr '\n' ' '" is slow and adds a space to the end of the string.
+  echo -e "${MSG_LINE}" | _remove_newline >&2
 }
 
 _time_format() {
@@ -221,13 +239,14 @@ log() {
   local LOCAL_NODE="${NODE_NAME:-}"
   local LOCAL_SCOPE="${LOG_SCOPE:-}"
   local LEVEL="INFO";
+  local MESSAGE="${*}"
   if _first_word_is_level "${1}"; then
-    LEVEL="${1}";
-    shift;
+    LEVEL=$(_get_first_word "${MESSAGE}");
+    MESSAGE=$(extract_string "${MESSAGE}" ' ' 2-);
   fi
-  local TIME_WITH_COLOR=
-  TIME_WITH_COLOR="$(date +"$(_time_format)")"
-  _log_formatter "${LEVEL}" "${TIME_WITH_COLOR}" "${LOCAL_NODE}" "${LOCAL_SCOPE}" "${@}";
+  local EPOCH=
+  EPOCH=$(date +%s)
+  _log_formatter "${LEVEL}" "${EPOCH}" "${LOCAL_NODE}" "${LOCAL_SCOPE}" "${MESSAGE}";
 }
 
 _log_docker_time() {
@@ -242,13 +261,13 @@ _log_docker_time() {
   # date -d "${TIME_INPUT}" +"$(_time_format)" 2>/dev/null && return 0
   local EPOCH=
   if EPOCH=$(busybox date -d "${TIME_INPUT}" -D "%Y-%m-%dT%H:%M:%S" -u +%s 2>/dev/null); then
-    date -d "@${EPOCH}" +"$(_time_format)"
+    echo "${EPOCH}"
     return 0
   fi
   if [ -n "${TIME_INPUT}" ]; then
     echo "${TIME_INPUT}"
   else
-    date +"$(_time_format)"
+    date +%s
   fi
   return 1
 }
@@ -264,8 +283,8 @@ _log_docker_line() {
   local TIME_DOCKER TASK_DOCKER NODE_DOCKER MESSAGE
   # Add a "+" before the last part to ensure we preserve the leading spaces in the message.
   read -r TIME_DOCKER TASK_DOCKER NODE_DOCKER MESSAGE < <(echo "${*}" | sed -n -E "s/^(\S+) +(\S+)@(\S+) +\| ?/\1 \2 \3 +/p");
-  local TIME_WITH_COLOR=
-  TIME_WITH_COLOR=$(_log_docker_time "${TIME_DOCKER}");
+  local EPOCH=
+  EPOCH=$(_log_docker_time "${TIME_DOCKER}");
   if [ -n "${TASK_DOCKER}" ] || [ -n "${NODE_DOCKER}" ] || [ -n "${MESSAGE}" ]; then
     NODE="${NODE_DOCKER}"
     SCOPE="${TASK_DOCKER}"
@@ -281,7 +300,7 @@ _log_docker_line() {
     LEVEL="ERROR"
     MESSAGE="${*}"
   fi
-  _log_formatter "${LEVEL}" "${TIME_WITH_COLOR}" "${NODE}" "${SCOPE}" "${MESSAGE}";
+  _log_formatter "${LEVEL}" "${EPOCH}" "${NODE}" "${SCOPE}" "${MESSAGE}";
 }
 
 _log_docker_multiple_lines() {
@@ -295,10 +314,17 @@ _log_docker_multiple_lines() {
 log_lines() {
   local LEVEL="${1}";
   local LINE=;
-  while read -r LINE; do
-    [ -z "${LINE}" ] && continue;
-    log "${LEVEL}" "${LINE}";
-  done
+  if [ -z "${LEVEL}" ]; then
+    while read -r LINE; do
+      [ -z "${LINE}" ] && continue;
+      log "${LINE}";
+    done
+  else
+    while read -r LINE; do
+      [ -z "${LINE}" ] && continue;
+      log "${LEVEL}" "${LINE}";
+    done
+  fi
 }
 
 is_number() {
@@ -649,6 +675,12 @@ wait_service_state() {
     log INFO "Service ${SERVICE_NAME}: ${LINE}."
   done
   return "${RETURN_VALUE}"
+}
+
+sanitize_service_name() {
+  local SERVICE_NAME="${1}"
+  [ "${#SERVICE_NAME}" -gt 63 ] && SERVICE_NAME=${SERVICE_NAME:0:63}
+  echo "${SERVICE_NAME}" | sed -E 's/[^0-9a-zA-Z]/_/g' | sed -E 's/^[0-9]/A/' | sed -E 's/^_/B/'
 }
 
 docker_service_remove() {

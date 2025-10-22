@@ -393,13 +393,6 @@ gantry_remove_images() {
   log INFO "Done removing images.";
 }
 
-_sanitize_service_name() {
-  local SERVICE_NAME="${1}"
-  SERVICE_NAME=$(echo "${SERVICE_NAME}" | tr ' ' '-')
-  [ "${#SERVICE_NAME}" -gt 63 ] && SERVICE_NAME="g${SERVICE_NAME:0-62}"
-  echo "${SERVICE_NAME}"
-}
-
 _remove_images() {
   local CLEANUP_IMAGES="${GANTRY_CLEANUP_IMAGES:-"true"}"
   local CLEANUP_IMAGES_OPTIONS="${GANTRY_CLEANUP_IMAGES_OPTIONS:-""}"
@@ -410,7 +403,7 @@ _remove_images() {
     return 0
   fi
   local SERVICE_NAME="${1:-"gantry-image-remover"}"
-  SERVICE_NAME=$(_sanitize_service_name "${SERVICE_NAME}")
+  SERVICE_NAME=$(sanitize_service_name "${SERVICE_NAME}")
   docker_service_remove "${SERVICE_NAME}"
   local IMAGES_TO_REMOVE=
   IMAGES_TO_REMOVE=$(_static_variable_read_list STATIC_VAR_IMAGES_TO_REMOVE)
@@ -423,7 +416,7 @@ _remove_images() {
   log INFO "Removing ${IMAGE_NUM} image(s):"
   local I=
   for I in $(echo "${IMAGES_TO_REMOVE}" | tr '\n' ' '); do
-    log INFO "- ${I}"
+    log INFO "Removing image ${I}"
   done
   local IMAGES_REMOVER=
   IMAGES_REMOVER=$(_get_service_image "$(gantry_current_service_name)")
@@ -457,11 +450,7 @@ _report_list() {
   [ -n "${PRE}" ] && TITLE="${PRE} "
   TITLE="${TITLE}${NUM}"
   [ -n "${POST}" ] && TITLE="${TITLE} ${POST}"
-  echo "${TITLE}:"
-  local ITEM=
-  for ITEM in ${LIST}; do
-    echo "- ${ITEM}"
-  done
+  echo "${TITLE}: ${LIST}" | tr '\n' ' ' && echo ''
 }
 
 _report_from_static_variable() {
@@ -525,7 +514,7 @@ _report_services() {
   echo "${FAILED_MSG}" | log_lines ERROR
 
   local ERROR_MSG=
-  ERROR_MSG=$(_report_services_from_static_variable STATIC_VAR_SERVICES_UPDATE_INPUT_ERROR "Skip updating" "due to error(s)")
+  ERROR_MSG=$(_report_services_from_static_variable STATIC_VAR_SERVICES_UPDATE_INPUT_ERROR "Skipped updating" "due to error(s)")
   echo "${ERROR_MSG}" | log_lines ERROR
 
   # Send notification

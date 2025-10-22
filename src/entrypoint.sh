@@ -32,7 +32,8 @@ _get_lib_dir() {
 }
 
 _log_load_libraries() {
-  local LOG_LEVEL="${GANTRY_LOG_LEVEL:-""}"
+  local LOG_FORMAT="${GANTRY_LOG_FORMAT:-${LOG_FORMAT}}"
+  local LOG_LEVEL="${GANTRY_LOG_LEVEL:-${LOG_LEVEL}}"
   local IMAGES_TO_REMOVE="${GANTRY_IMAGES_TO_REMOVE:-""}"
   local LIB_DIR="${1}"
   # log function is not available before loading the library.
@@ -46,9 +47,14 @@ _log_load_libraries() {
     return 0
   fi
   local TIMESTAMP=
-  TIMESTAMP="[$(date -Iseconds)]"
-  local LEVEL="[DEBUG]"
-  echo "${TIMESTAMP}${LEVEL} ${LOADING_MSG}" >&2
+  TIMESTAMP="$(date -Iseconds)"
+  local LEVEL="DEBUG"
+  local MSG_LINE=
+  case "${LOG_FORMAT}" in
+    "json") MSG_LINE="{\"level\":\"${LEVEL}\",\"msg\":\"${LOADING_MSG}\",\"time\":\"${TIMESTAMP}\"}" ;;
+    *) MSG_LINE="[${TIMESTAMP}][${LEVEL}] ${LOADING_MSG}" ;;
+  esac
+  echo -e "${MSG_LINE}" >&2
 }
 
 load_libraries() {
@@ -162,9 +168,10 @@ gantry() {
 }
 
 main() {
+  LOG_FORMAT="${GANTRY_LOG_FORMAT:-${LOG_FORMAT}}"
   LOG_LEVEL="${GANTRY_LOG_LEVEL:-${LOG_LEVEL}}"
   NODE_NAME="${GANTRY_NODE_NAME:-${NODE_NAME}}"
-  export LOG_LEVEL NODE_NAME
+  export LOG_FORMAT LOG_LEVEL NODE_NAME
   local INTERVAL_SECONDS=
   INTERVAL_SECONDS=$(gantry_read_number GANTRY_SLEEP_SECONDS 0) || return 1
   local IMAGES_TO_REMOVE="${GANTRY_IMAGES_TO_REMOVE:-""}"

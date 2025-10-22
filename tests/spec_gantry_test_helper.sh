@@ -64,7 +64,7 @@ export NO_SERVICES_UPDATED="No services updated"
 export NUM_SERVICES_UPDATED="[0-9]+ service\(s\) updated"
 export SERVICES_UPDATED="service\(s\) updated"
 export NUM_SERVICES_UPDATE_FAILED="[0-9]+ service\(s\) update failed"
-export NUM_SERVICES_ERRORS="Skip updating [0-9]+ service\(s\) due to error\(s\)"
+export NUM_SERVICES_ERRORS="Skipped updating [0-9]+ service\(s\) due to error\(s\)"
 export NO_IMAGES_TO_REMOVE="No images to remove"
 export REMOVING_NUM_IMAGES="Removing [0-9]+ image\(s\)"
 export SKIP_REMOVING_IMAGES="Skip removing images"
@@ -494,6 +494,7 @@ reset_gantry_env() {
   export GANTRY_TEST_HOST_TO_CONTAINER=
   export GANTRY_TEST_DOCKER_CONFIG=
   export GANTRY_TEST_DOCKER_HOST=
+  export GANTRY_LOG_FORMAT=
   export GANTRY_LOG_LEVEL="DEBUG"
   export GANTRY_NODE_NAME=
   export GANTRY_POST_RUN_CMD=
@@ -1031,6 +1032,7 @@ _run_gantry_container() {
     ${MOUNT_OPTIONS} \
     --env "DOCKER_CONFIG=${GANTRY_TEST_DOCKER_CONFIG}" \
     --env "DOCKER_HOST=${GANTRY_TEST_DOCKER_HOST}" \
+    --env "GANTRY_LOG_FORMAT=${GANTRY_LOG_FORMAT}" \
     --env "GANTRY_LOG_LEVEL=${GANTRY_LOG_LEVEL}" \
     --env "GANTRY_NODE_NAME=${GANTRY_NODE_NAME}" \
     --env "GANTRY_POST_RUN_CMD=${GANTRY_POST_RUN_CMD}" \
