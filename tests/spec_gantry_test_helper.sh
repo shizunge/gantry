@@ -369,14 +369,15 @@ _start_registry() {
       echo "_start_registry _next_available_port error: REGISTRY_PORT is empty." >&2
       return 1
     fi
-    docker_remove "${REGISTRY_SERVICE_NAME}" 1>/dev/null 2>/dev/null;
+    docker stop "${REGISTRY_SERVICE_NAME}" 1>/dev/null 2>/dev/null;
+    docker remove "${REGISTRY_SERVICE_NAME}" 1>/dev/null 2>/dev/null;
     TEST_REGISTRY="${REGISTRY_BASE}:${REGISTRY_PORT}"
     echo "Suite \"${SUITE_NAME}\" starts registry ${TEST_REGISTRY} "
     local CID=
     # SC2046 (warning): Quote this to prevent word splitting.
     # SC2086 (info): Double quote to prevent globbing and word splitting.
     # shellcheck disable=SC2046,SC2086
-    if CID=$(docker_run -d --rm \
+    if CID=$(docker run -d --rm \
       --name "${REGISTRY_SERVICE_NAME}" \
       --network=host \
       --label gantry.test=true \
@@ -394,7 +395,7 @@ _start_registry() {
       done
       [ "${STATUS}" = "running" ] && break;
     fi
-    echo "docker_run: ${CID}";
+    echo "docker run: ${CID}";
     REGISTRY_PORT=$((REGISTRY_PORT+1))
     _test_check_timeout "60" "${START_TIME}" "_start_registry start registry" || return 1
     sleep 1
@@ -414,7 +415,8 @@ _stop_registry() {
   local REGISTRY=
   REGISTRY=$(load_test_registry "${SUITE_NAME}") || return 1
   echo "Removing registry ${REGISTRY} "
-  docker_remove "${REGISTRY_SERVICE_NAME}" 1>/dev/null 2>/dev/null;
+  docker stop "${REGISTRY_SERVICE_NAME}" 1>/dev/null 2>/dev/null;
+  docker remove "${REGISTRY_SERVICE_NAME}" 1>/dev/null 2>/dev/null;
   local RETURN_VALUE=0
   _logout_test_registry "${ENFORCE_LOGIN}" "${REGISTRY}" || RETURN_VALUE=1
   _remove_test_registry_file "${SUITE_NAME}" || RETURN_VALUE=1
@@ -772,7 +774,7 @@ _add_htpasswd() {
   local PASSWORD_FILE=
   PASSWORD_FILE=$(_get_test_registry_password_file "${SUITE_NAME}") || return 1
   pull_image_if_not_exist "${HTTPD_IMAGE}"
-  docker_run --rm --label gantry.test=true --entrypoint htpasswd "${HTTPD_IMAGE}" -Bbn "${USER}" "${PASS}" > "${PASSWORD_FILE}"
+  docker run --rm --label gantry.test=true --entrypoint htpasswd "${HTTPD_IMAGE}" -Bbn "${USER}" "${PASS}" > "${PASSWORD_FILE}"
   echo "--mount type=bind,source=${PASSWORD_FILE},target=${PASSWORD_FILE} \
         -e REGISTRY_AUTH=htpasswd \
         -e REGISTRY_AUTH_HTPASSWD_REALM=RegistryRealm \

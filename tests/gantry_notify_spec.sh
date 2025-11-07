@@ -33,15 +33,16 @@ _notify_before_all() {
   local SUITE_NAME="${1}"
   initialize_all_tests "${SUITE_NAME}"
   pull_image_if_not_exist caronc/apprise
-  pull_image_if_not_exist axllent/mailpit
-  docker_remove "${SERVICE_NAME_APPRISE}" 1>/dev/null 2>/dev/null
-  docker_remove "${SERVICE_NAME_MAILPIT}" 1>/dev/null 2>/dev/null
-  # Use docker_run to improve coverage on lib-common.sh. `docker run` can do the same thing.
-  docker_run -d --restart=on-failure:10 --name="${SERVICE_NAME_APPRISE}" --network=host \
+  docker stop "${SERVICE_NAME_APPRISE}" 1>/dev/null 2>/dev/null
+  docker remove "${SERVICE_NAME_APPRISE}" 1>/dev/null 2>/dev/null
+  docker run -d --restart=on-failure:10 --name="${SERVICE_NAME_APPRISE}" --network=host \
     --label gantry.test=true \
     -e "APPRISE_STATELESS_URLS=mailto://localhost:${SMTP_PORT}?user=userid&pass=password" \
     caronc/apprise
-  docker_run -d --restart=on-failure:10 --name="${SERVICE_NAME_MAILPIT}" --network=host \
+  pull_image_if_not_exist axllent/mailpit
+  docker stop "${SERVICE_NAME_MAILPIT}" 1>/dev/null 2>/dev/null
+  docker remove "${SERVICE_NAME_MAILPIT}" 1>/dev/null 2>/dev/null
+  docker run -d --restart=on-failure:10 --name="${SERVICE_NAME_MAILPIT}" --network=host \
     --label gantry.test=true \
     axllent/mailpit \
     --smtp "localhost:${SMTP_PORT}" --listen "localhost:${EMAIL_API_PORT}" \
@@ -52,10 +53,12 @@ _notify_after_all() {
   local SUITE_NAME="${1}"
   echo "Print Apprise log:"
   docker logs "${SERVICE_NAME_APPRISE}" 2>&1
-  docker_remove "${SERVICE_NAME_APPRISE}" 2>&1
+  docker stop "${SERVICE_NAME_APPRISE}" 2>&1
+  docker remove "${SERVICE_NAME_APPRISE}" 2>&1
   echo "Print Mailpit log:"
   docker logs "${SERVICE_NAME_MAILPIT}" 2>&1
-  docker_remove "${SERVICE_NAME_MAILPIT}" 2>&1
+  docker stop "${SERVICE_NAME_MAILPIT}" 2>&1
+  docker remove "${SERVICE_NAME_MAILPIT}" 2>&1
   finish_all_tests "${SUITE_NAME}"
 }
 

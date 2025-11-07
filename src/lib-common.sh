@@ -500,23 +500,21 @@ run_cmd() {
 }
 
 swarm_network_arguments() {
-  if [ -z "${NETWORK_NAME}" ]; then
-    echo ""
+  if [ -z "${SWARM_NETWORK_NAME}" ]; then
     return 0
   fi
   local RETURN_VALUE=
-  NETWORK_NAME=$(run_cmd docker network ls --filter "name=${NETWORK_NAME}" --format '{{.Name}}')
+  SWARM_NETWORK_NAME=$(run_cmd docker network ls --filter "name=${SWARM_NETWORK_NAME}" --format '{{.Name}}')
   RETURN_VALUE=$?
-  if [ "${RETURN_VALUE}" != "0" ] || [ -z "${NETWORK_NAME}" ]; then
-    echo ""
+  if [ "${RETURN_VALUE}" != "0" ] || [ -z "${SWARM_NETWORK_NAME}" ]; then
     return 0
   fi
-  local NETWORK_ARG="--network=${NETWORK_NAME}"
-  if [ -z "${NETWORK_DNS_IP:-""}" ]; then
+  local NETWORK_ARG="--network=${SWARM_NETWORK_NAME}"
+  if [ -z "${SWARM_NETWORK_DNS_IP:-""}" ]; then
     echo "${NETWORK_ARG}"
     return 0
   fi
-  echo "${NETWORK_ARG} --dns=${NETWORK_DNS_IP}"
+  echo "${NETWORK_ARG} --dns=${SWARM_NETWORK_DNS_IP}"
 }
 
 timezone_arguments() {
@@ -672,7 +670,11 @@ wait_service_state() {
   fi
   local LINE=
   echo "${STATES}" | while read -r LINE; do
-    log INFO "Service ${SERVICE_NAME}: ${LINE}."
+    local LEVEL="INFO"
+    if echo "${LINE}" | grep_q "non-zero exit"; then
+      LEVEL="ERROR"
+    fi
+    log "${LEVEL}" "Service ${SERVICE_NAME}: ${LINE}."
   done
   return "${RETURN_VALUE}"
 }
@@ -680,7 +682,7 @@ wait_service_state() {
 sanitize_service_name() {
   local SERVICE_NAME="${1}"
   [ "${#SERVICE_NAME}" -gt 63 ] && SERVICE_NAME=${SERVICE_NAME:0:63}
-  echo "${SERVICE_NAME}" | sed -E 's/[^0-9a-zA-Z]/_/g' | sed -E 's/^[0-9]/A/' | sed -E 's/^_/B/'
+  echo "${SERVICE_NAME}" | sed -E 's/[^0-9a-zA-Z]/_/g' | sed -E 's/^_/S/' | sed -E 's/_$/E/'
 }
 
 docker_service_remove() {
@@ -798,37 +800,3 @@ docker_current_container_name() {
   done
 }
 
-_container_status() {
-  local CNAME="${1}"
-  docker container inspect --format '{{.State.Status}}' "${CNAME}" 2>/dev/null
-}
-
-docker_remove() {
-  local CNAME="${1}"
-  local STATUS=
-  STATUS=$(_container_status "${CNAME}")
-  if [ -z "${STATUS}" ]; then
-    return 0
-  fi
-  log DEBUG "Removing container ${CNAME}."
-  if [ "${STATUS}" = "running" ]; then
-    docker container stop "${CNAME}" 1>/dev/null 2>/dev/null
-  fi
-  # If the container is created with "--rm", it will be removed automatically when being stopped.
-  docker container rm -f "${CNAME}" 1>/dev/null;
-  log INFO "Removed container ${CNAME}."
-}
-
-docker_run() {
-  local TIMEOUT_SECONDS=10
-  local SLEEP_SECONDS=1
-  local START_TIME=
-  START_TIME=$(date +%s)
-  local LOG=
-  while ! LOG=$(run_cmd docker container run "${@}"); do
-    _check_timeout "${TIMEOUT_SECONDS}" "${START_TIME}" "docker_run" || return 1
-    sleep ${SLEEP_SECONDS}
-    log WARN "Retry docker container run (${SECONDS_ELAPSED}s). ${LOG}"
-  done
-  echo "${LOG}"
-}
