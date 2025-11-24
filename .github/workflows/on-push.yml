@@ -21,7 +21,7 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout Code
-        uses: actions/checkout@v5
+        uses: actions/checkout@v6
       - name: Install shellcheck
         run: sudo apt-get install -y bash shellcheck
       - name: Analyse with shellcheck
@@ -66,7 +66,7 @@ jobs:
           echo -n "shellspec version: "
           shellspec --version
       - name: Checkout Code
-        uses: actions/checkout@v5
+        uses: actions/checkout@v6
       - name: Run tests
         run: |
           bash shellspec --pattern tests/${{ matrix.test_suit }}
@@ -86,7 +86,7 @@ jobs:
           echo -n "shellspec version: "
           shellspec --version
       - name: Checkout Code
-        uses: actions/checkout@v5
+        uses: actions/checkout@v6
       - name: Run container tests
         run: |
           bash shellspec --jobs 50
@@ -106,7 +106,7 @@ jobs:
           echo -n "shellspec version: "
           shellspec --version
       - name: Checkout Code
-        uses: actions/checkout@v5
+        uses: actions/checkout@v6
       - name: Run container tests
         run: |
           export GANTRY_TEST_CONTAINER=true
@@ -126,7 +126,7 @@ jobs:
       - test_container
     steps:
       - name: Checkout Code
-        uses: actions/checkout@v5
+        uses: actions/checkout@v6
       - name: Set up QEMU
         uses: docker/setup-qemu-action@v3
       - name: Set up Docker Buildx
