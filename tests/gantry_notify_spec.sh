@@ -34,14 +34,14 @@ _notify_before_all() {
   initialize_all_tests "${SUITE_NAME}"
   pull_image_if_not_exist caronc/apprise
   docker stop "${SERVICE_NAME_APPRISE}" 1>/dev/null 2>/dev/null
-  docker remove "${SERVICE_NAME_APPRISE}" 1>/dev/null 2>/dev/null
+  docker container remove "${SERVICE_NAME_APPRISE}" 1>/dev/null 2>/dev/null
   docker run -d --restart=on-failure:10 --name="${SERVICE_NAME_APPRISE}" --network=host \
     --label gantry.test=true \
     -e "APPRISE_STATELESS_URLS=mailto://localhost:${SMTP_PORT}?user=userid&pass=password" \
     caronc/apprise
   pull_image_if_not_exist axllent/mailpit
   docker stop "${SERVICE_NAME_MAILPIT}" 1>/dev/null 2>/dev/null
-  docker remove "${SERVICE_NAME_MAILPIT}" 1>/dev/null 2>/dev/null
+  docker container remove "${SERVICE_NAME_MAILPIT}" 1>/dev/null 2>/dev/null
   docker run -d --restart=on-failure:10 --name="${SERVICE_NAME_MAILPIT}" --network=host \
     --label gantry.test=true \
     axllent/mailpit \
@@ -54,11 +54,11 @@ _notify_after_all() {
   echo "Print Apprise log:"
   docker logs "${SERVICE_NAME_APPRISE}" 2>&1
   docker stop "${SERVICE_NAME_APPRISE}" 2>&1
-  docker remove "${SERVICE_NAME_APPRISE}" 2>&1
+  docker container remove "${SERVICE_NAME_APPRISE}" 2>&1
   echo "Print Mailpit log:"
   docker logs "${SERVICE_NAME_MAILPIT}" 2>&1
   docker stop "${SERVICE_NAME_MAILPIT}" 2>&1
-  docker remove "${SERVICE_NAME_MAILPIT}" 2>&1
+  docker container remove "${SERVICE_NAME_MAILPIT}" 2>&1
   finish_all_tests "${SUITE_NAME}"
 }
 

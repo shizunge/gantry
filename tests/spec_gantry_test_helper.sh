@@ -355,11 +355,12 @@ _start_registry() {
   local TEST_REGISTRY="${REGISTRY_BASE}:${REGISTRY_PORT}"
   export TEST_USERNAME="gantry"
   export TEST_PASSWORD="gantry"
-  local REGISTRY_IMAGE="docker.io/registry:2"
+  local REGISTRY_IMAGE="docker.io/registry:3"
   local START_TIME=
   START_TIME=$(date +%s)
   local PORT_LIMIT=500
   pull_image_if_not_exist "${REGISTRY_IMAGE}"
+  local CID=
   while true; do
     if ! REGISTRY_PORT=$(_next_available_port "${REGISTRY_PORT}" "${PORT_LIMIT}" 2>&1); then
       echo "_start_registry _next_available_port error: ${REGISTRY_PORT}" >&2
@@ -370,10 +371,9 @@ _start_registry() {
       return 1
     fi
     docker stop "${REGISTRY_SERVICE_NAME}" 1>/dev/null 2>/dev/null;
-    docker remove "${REGISTRY_SERVICE_NAME}" 1>/dev/null 2>/dev/null;
+    docker container remove "${REGISTRY_SERVICE_NAME}" 1>/dev/null 2>/dev/null;
     TEST_REGISTRY="${REGISTRY_BASE}:${REGISTRY_PORT}"
     echo "Suite \"${SUITE_NAME}\" starts registry ${TEST_REGISTRY} "
-    local CID=
     # SC2046 (warning): Quote this to prevent word splitting.
     # SC2086 (info): Double quote to prevent globbing and word splitting.
     # shellcheck disable=SC2046,SC2086
@@ -383,6 +383,7 @@ _start_registry() {
       --label gantry.test=true \
       -e "REGISTRY_HTTP_ADDR=${TEST_REGISTRY}" \
       -e "REGISTRY_HTTP_HOST=http://${TEST_REGISTRY}" \
+      -e "REGISTRY_HTTP_DEBUG=" \
       --stop-timeout "${TIMEOUT_SECONDS}" \
       $(_add_htpasswd "${SUITE_NAME}" "${ENFORCE_LOGIN}" "${TEST_USERNAME}" "${TEST_PASSWORD}") \
       "${REGISTRY_IMAGE}" 2>&1); then
@@ -416,7 +417,7 @@ _stop_registry() {
   REGISTRY=$(load_test_registry "${SUITE_NAME}") || return 1
   echo "Removing registry ${REGISTRY} "
   docker stop "${REGISTRY_SERVICE_NAME}" 1>/dev/null 2>/dev/null;
-  docker remove "${REGISTRY_SERVICE_NAME}" 1>/dev/null 2>/dev/null;
+  docker container remove "${REGISTRY_SERVICE_NAME}" 1>/dev/null 2>/dev/null;
   local RETURN_VALUE=0
   _logout_test_registry "${ENFORCE_LOGIN}" "${REGISTRY}" || RETURN_VALUE=1
   _remove_test_registry_file "${SUITE_NAME}" || RETURN_VALUE=1
