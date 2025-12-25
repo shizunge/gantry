@@ -28,7 +28,9 @@ Describe 'manifest-command'
       local SERVICE_NAME="${2}"
       reset_gantry_env "${SUITE_NAME}" "${SERVICE_NAME}"
       export GANTRY_MANIFEST_CMD="none"
-      # Test that Gantry reports "no updates", when we don't add `--force` to GANTRY_UPDATE_OPTIONS while the image does not change.
+      # Test Gantry, when we don't add `--force` to GANTRY_UPDATE_OPTIONS while the image does not change.
+      # Before Docker client 29, it reports "no-update"
+      # After Docker client 29, it reports "updated"
       run_gantry "${SUITE_NAME}" "${TEST_NAME}"
     }
     BeforeEach "common_setup_no_new_image ${TEST_NAME} ${IMAGE_WITH_TAG} ${SERVICE_NAME}"
@@ -45,7 +47,6 @@ Describe 'manifest-command'
       # To test gantry container, we need to use run_gantry_container.
       The stderr should satisfy spec_expect_no_message ".*GANTRY_SERVICES_SELF.*"
       # Gantry is still trying to update the service.
-      # But it will see no new images.
       The stderr should satisfy spec_expect_no_message "${SKIP_UPDATING}.*${SERVICE_NAME}"
       The stderr should satisfy spec_expect_message    "${PERFORM_UPDATING}.*${SERVICE_NAME}.*${PERFORM_REASON_MANIFEST_CMD_IS_NONE}"
       The stderr should satisfy spec_expect_no_message "${NUM_SERVICES_SKIP_JOBS}"
@@ -53,22 +54,26 @@ Describe 'manifest-command'
       The stderr should satisfy spec_expect_no_message "${NUM_SERVICES_NO_NEW_IMAGES}"
       The stderr should satisfy spec_expect_message    "${NUM_SERVICES_UPDATING}"
       The stderr should satisfy spec_expect_no_message "${ADDING_OPTIONS}"
-      # Gantry reports no updates, unless we add `--force` to the options.
-      The stderr should satisfy spec_expect_no_message "${UPDATED}.*${SERVICE_NAME}"
-      The stderr should satisfy spec_expect_message    "${NO_UPDATES}.*${SERVICE_NAME}"
+      # When GANTRY_MANIFEST_CMD is none, we won't get the digest of the latest image.
+      # Before Docker 29, Gantry reports no updates, unless we add `--force` to the options.
+      # After Docker 29, Docker no longer automatically add digest of the image to the service info.
+      # Thus Gantry reads two different digests before and after the updating. Then Gantry considers the image is updated.
+      # Here we comment out these checks (with ##), to make this test passes both Docker 28 and 29.
+      ## The stderr should satisfy spec_expect_no_message "${UPDATED}.*${SERVICE_NAME}"
+      ## The stderr should satisfy spec_expect_message    "${NO_UPDATES}.*${SERVICE_NAME}"
       The stderr should satisfy spec_expect_no_message "${ROLLING_BACK}.*${SERVICE_NAME}"
       The stderr should satisfy spec_expect_no_message "${FAILED_TO_ROLLBACK}.*${SERVICE_NAME}"
       The stderr should satisfy spec_expect_no_message "${ROLLED_BACK}.*${SERVICE_NAME}"
-      The stderr should satisfy spec_expect_message    "${NO_SERVICES_UPDATED}"
-      The stderr should satisfy spec_expect_no_message "${NUM_SERVICES_UPDATED}"
+      ## The stderr should satisfy spec_expect_message    "${NO_SERVICES_UPDATED}"
+      ## The stderr should satisfy spec_expect_no_message "${NUM_SERVICES_UPDATED}"
       The stderr should satisfy spec_expect_no_message "${NUM_SERVICES_UPDATE_FAILED}"
       The stderr should satisfy spec_expect_no_message "${NUM_SERVICES_ERRORS}"
-      The stderr should satisfy spec_expect_message    "${NO_IMAGES_TO_REMOVE}"
-      The stderr should satisfy spec_expect_no_message "${REMOVING_NUM_IMAGES}"
+      ## The stderr should satisfy spec_expect_message    "${NO_IMAGES_TO_REMOVE}"
+      ## The stderr should satisfy spec_expect_no_message "${REMOVING_NUM_IMAGES}"
       The stderr should satisfy spec_expect_no_message "${SKIP_REMOVING_IMAGES}"
       The stderr should satisfy spec_expect_no_message "${REMOVED_IMAGE}.*${IMAGE_WITH_TAG}"
-      The stderr should satisfy spec_expect_no_message "${FAILED_TO_REMOVE_IMAGE}.*${IMAGE_WITH_TAG}"
-      The stderr should satisfy spec_expect_no_message "${DONE_REMOVING_IMAGES}"
+      ## The stderr should satisfy spec_expect_no_message "${FAILED_TO_REMOVE_IMAGE}.*${IMAGE_WITH_TAG}"
+      ## The stderr should satisfy spec_expect_no_message "${DONE_REMOVING_IMAGES}"
     End
   End
   Describe "test_MANIFEST_CMD_none_SERVICES_SELF"
