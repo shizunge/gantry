@@ -810,6 +810,23 @@ _get_image_info() {
   echo "${MSG}"
 }
 
+_get_image_with_digest_from_image_info() {
+  local SERVICE_NAME="${1}"
+  local MANIFEST_CMD="${2}"
+  # IMAGE_INFO from function _get_image_info.
+  local IMAGE_INFO="${3}"
+  [ -z "${IMAGE_INFO}" ] && log DEBUG "IMAGE_INFO is empty for service ${SERVICE_NAME}." && return 1
+  if echo "${MANIFEST_CMD}" | grep_q_i "buildx"; then
+    local NAME DIGEST
+    NAME=$(echo "${IMAGE_INFO}" | sed -n -E 's/^Name: +(.*)/\1/p')
+    DIGEST=$(echo "${IMAGE_INFO}" | sed -n -E 's/^Digest: +(.*)/\1/p')
+    if [ -n "${NAME}" ] && [ -n "${DIGEST}" ]; then
+      echo "${NAME}@${DIGEST}"
+      return 0
+    fi
+  fi
+}
+
 # echo nothing if we found no new images.
 # echo the image if we found a new image.
 # return the number of errors.
@@ -817,58 +834,72 @@ _inspect_image() {
   local SERVICE_NAME="${1}"
   local MANIFEST_CMD=
   MANIFEST_CMD=$(_read_env_or_label "${SERVICE_NAME}" "GANTRY_MANIFEST_CMD" "gantry.manifest.cmd" "buildx")
-  local IMAGE_WITH_DIGEST=
-  IMAGE_WITH_DIGEST=$(_get_service_image "${SERVICE_NAME}") || return $?
-  local IMAGE=
-  local DIGEST=
-  IMAGE=$(extract_string "${IMAGE_WITH_DIGEST}" '@' 1)
-  DIGEST=$(extract_string "${IMAGE_WITH_DIGEST}" '@' 2)
+  local CURRENT_IMAGE_WITH_DIGEST CURRENT_IMAGE CURRENT_DIGEST IMAGE_UPDATE_TO
+  CURRENT_IMAGE_WITH_DIGEST=$(_get_service_image "${SERVICE_NAME}") || return $?
+  CURRENT_IMAGE=$(extract_string "${CURRENT_IMAGE_WITH_DIGEST}" '@' 1)
+  CURRENT_DIGEST=$(extract_string "${CURRENT_IMAGE_WITH_DIGEST}" '@' 2)
+  IMAGE_UPDATE_TO="${CURRENT_IMAGE}"
   if echo "${MANIFEST_CMD}" | grep_q_i "none"; then
     if _service_is_self "${SERVICE_NAME}"; then
       # Always inspecting self, never skipping.
       MANIFEST_CMD="buildx"
     else
       log INFO "Perform updating ${SERVICE_NAME} because MANIFEST_CMD is \"none\"."
-      echo "${IMAGE}"
+      echo "${IMAGE_UPDATE_TO}"
       return 0
     fi
   fi
   local NO_NEW_IMAGES=
   NO_NEW_IMAGES=$(_static_variable_read_list STATIC_VAR_NO_NEW_IMAGES)
-  if _in_list "${NO_NEW_IMAGES}" "${DIGEST}"; then
-    log INFO "Skip updating ${SERVICE_NAME} because there is no known newer version of image ${IMAGE_WITH_DIGEST}."
+  if _in_list "${NO_NEW_IMAGES}" "${CURRENT_DIGEST}"; then
+    log INFO "Skip updating ${SERVICE_NAME} because there is no known newer version of image ${CURRENT_IMAGE_WITH_DIGEST}."
     return 0
   fi
   local HAS_NEW_IMAGES=
   HAS_NEW_IMAGES=$(_static_variable_read_list STATIC_VAR_NEW_IMAGES)
-  if _in_list "${HAS_NEW_IMAGES}" "${DIGEST}"; then
-    log INFO "Perform updating ${SERVICE_NAME} because there is a known newer version of image ${IMAGE_WITH_DIGEST}."
-    echo "${IMAGE}"
+  if _in_list "${HAS_NEW_IMAGES}" "${CURRENT_DIGEST}"; then
+    local NEW_IMAGE_UPDATE_TO
+    NEW_IMAGE_UPDATE_TO=$(_static_variable_read_list "STATIC_VAR_${CURRENT_DIGEST}")
+    if [ -n "${NEW_IMAGE_UPDATE_TO}" ]; then
+      IMAGE_UPDATE_TO="${NEW_IMAGE_UPDATE_TO}"
+    fi
+    log INFO "Perform updating ${SERVICE_NAME} because there is a known newer version of image ${CURRENT_IMAGE_WITH_DIGEST}. The new image is ${IMAGE_UPDATE_TO}."
+    echo "${IMAGE_UPDATE_TO}"
     return 0
   fi
   local IMAGE_INFO=
-  if ! IMAGE_INFO=$(_get_image_info "${SERVICE_NAME}" "${MANIFEST_CMD}" "${IMAGE}"); then
-    log INFO "Skip updating ${SERVICE_NAME} because there is a failure to obtain the manifest from the registry of image ${IMAGE}."
+  if ! IMAGE_INFO=$(_get_image_info "${SERVICE_NAME}" "${MANIFEST_CMD}" "${CURRENT_IMAGE}"); then
+    log INFO "Skip updating ${SERVICE_NAME} because there is a failure to obtain the manifest from the registry of image ${CURRENT_IMAGE}."
     return 1
   fi
-  [ -z "${IMAGE_INFO}" ] && log WARN "IMAGE_INFO is empty for ${SERVICE_NAME}."
-  if [ -z "${DIGEST}" ]; then
+  if [ -z "${IMAGE_INFO}" ]; then
+    log WARN "IMAGE_INFO is empty for service ${SERVICE_NAME}."
+  else
+    local IMAGE_WITH_DIGEST_FROM_IMAGE_INFO
+    IMAGE_WITH_DIGEST_FROM_IMAGE_INFO=$(_get_image_with_digest_from_image_info "${SERVICE_NAME}" "${MANIFEST_CMD}" "${IMAGE_INFO}")
+    if [ -n "${IMAGE_WITH_DIGEST_FROM_IMAGE_INFO}" ]; then
+      IMAGE_UPDATE_TO="${IMAGE_WITH_DIGEST_FROM_IMAGE_INFO}"
+    fi
+  fi
+  if [ -z "${CURRENT_DIGEST}" ]; then
     # The image may not contain the digest for the following reasons:
     # 1. The image has not been push to or pulled from a V2 registry
     # 2. The image has been pulled from a V1 registry
     # 3. The service is updated without --with-registry-auth when registry requests authentication.
-    log INFO "Perform updating ${SERVICE_NAME} because DIGEST is empty in ${IMAGE_WITH_DIGEST}, assume there is a new image."
-    echo "${IMAGE}"
+    # 4. Since docker client 29.1.2, docker update image-without-digest will not automatically add the digest to the service.
+    log INFO "Perform updating ${SERVICE_NAME} because DIGEST is empty in ${CURRENT_IMAGE_WITH_DIGEST}, assume there is a new image."
+    echo "${IMAGE_UPDATE_TO}"
     return 0
   fi
-  if [ -n "${DIGEST}" ] && echo "${IMAGE_INFO}" | grep_q "${DIGEST}"; then
-    _static_variable_add_unique_to_list STATIC_VAR_NO_NEW_IMAGES "${DIGEST}"
-    log INFO "Skip updating ${SERVICE_NAME} because the current version is the latest of image ${IMAGE_WITH_DIGEST}."
+  if [ -n "${CURRENT_DIGEST}" ] && echo "${IMAGE_INFO}" | grep_q "${CURRENT_DIGEST}"; then
+    _static_variable_add_unique_to_list STATIC_VAR_NO_NEW_IMAGES "${CURRENT_DIGEST}"
+    log INFO "Skip updating ${SERVICE_NAME} because the current version is the latest of image ${CURRENT_IMAGE_WITH_DIGEST}."
     return 0
   fi
-  _static_variable_add_unique_to_list STATIC_VAR_NEW_IMAGES "${DIGEST}"
-  log INFO "Perform updating ${SERVICE_NAME} because there is a newer version of image ${IMAGE_WITH_DIGEST}."
-  echo "${IMAGE}"
+  _static_variable_add_unique_to_list STATIC_VAR_NEW_IMAGES "${CURRENT_DIGEST}"
+  _static_variable_add_unique_to_list "STATIC_VAR_${CURRENT_DIGEST}" "${IMAGE_UPDATE_TO}"
+  log INFO "Perform updating ${SERVICE_NAME} because there is a newer version of image ${CURRENT_IMAGE_WITH_DIGEST}. The new image is ${IMAGE_UPDATE_TO}."
+  echo "${IMAGE_UPDATE_TO}"
   return 0
 }
 

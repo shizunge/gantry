@@ -304,7 +304,8 @@ Describe 'login'
       # No --with-registry-auth.
       The stderr should satisfy spec_expect_no_message "${ADDING_OPTIONS_WITH_REGISTRY_AUTH}.*"
       # Check the warning due to missing --with-registry-auth.
-      The stderr should satisfy spec_expect_message    "${FROM_DOCKER_IMAGE_DIGEST_WARNING}.*${SERVICE_NAME}"
+      # Since docker 29.1.2 (Apline 3.23.0), it does not generate this warning message. We might remove all checks related to FROM_DOCKER_IMAGE_DIGEST_WARNING
+      # The stderr should satisfy spec_expect_message    "${FROM_DOCKER_IMAGE_DIGEST_WARNING}.*${SERVICE_NAME}"
       The stderr should satisfy spec_expect_no_message "${AFTER_UPDATING_PREVIOUS_IMAGE}"
       The stderr should satisfy spec_expect_message    "${AFTER_UPDATING_CURRENT_IMAGE}.*${SERVICE_NAME}.*${DOES_NOT_HAVE_A_DIGEST}"
       The stderr should satisfy spec_expect_message    "${UPDATED}.*${SERVICE_NAME}"
