@@ -26,7 +26,7 @@ You can start *Gantry* as a docker swarm service and use [`swarm-cronjob`](https
 
 ## How to update services with no running tasks?
 
-As discussed [here](https://github.com/docker/cli/issues/627), the CLI will hang when running `docker service update` on a service with no running tasks. We must add `--detach=true` option to the `docker service update`.
+As discussed in [docker/cli/issues/627](https://github.com/docker/cli/issues/627), the CLI will hang when running `docker service update` on a service with no running tasks. We must add `--detach=true` option to the `docker service update`.
 
 *Gantry* will check whether there are running tasks in a service. If there is no running task, *Gantry* automatically adds the option `--detach=true`. In addition to the detach option, *Gantry* also adds `--replicas=0` for services in replicated mode. You don't need to add these options manually.
 
@@ -34,11 +34,11 @@ As discussed [here](https://github.com/docker/cli/issues/627), the CLI will hang
 
 Before updating a service, *Gantry* will try to obtain the image's meta data to decide whether there is a new image. If there is no new image, *Gantry* skips calling `docker service update`, leading to a speedup of the overall process.
 
-`buildx`, the default value, should work in most cases. [`docker buildx imagetools inspect`](https://docs.docker.com/engine/reference/commandline/buildx_imagetools_inspect/) is selected as the default, because `docker manifest inspect` could [fail on some registries](https://github.com/orgs/community/discussions/45779). Additionally, `docker buildx imagetools` can obtain the digest of multi-arch images, which could help reduce the number of calling the `docker service update` CLI when there is no new images.
+`buildx`, the default value, should work in most cases. [`docker buildx imagetools inspect`](https://docs.docker.com/engine/reference/commandline/buildx_imagetools_inspect/) is selected as the default, because `docker manifest inspect` could [fail on some registries](https://github.com/orgs/community/discussions/45779). Additionally, `docker buildx imagetools` can obtain the index digest of multi-arch images, which could help reduce the number of calling the `docker service update` CLI when there is no new images.
 
 `manifest` is kept for debugging purpose. The only known advantage of [`docker manifest inspect`](https://docs.docker.com/engine/reference/commandline/manifest_inspect/) is that it does not require the write permission to the [Docker configuration folder](https://docs.docker.com/engine/reference/commandline/cli/#configuration-files). If the Docker configuration folder is read-only, you need to use `manifest` to avoid permission deny errors.
 
-`none` can be used to disable the image inspection. One use case of `none` is that you want to update services using local built images that are not available on a registry, in which case you want to add `--force` to the `docker service update` command via `GANTRY_UPDATE_OPTIONS`. `none` can also be used to debug image inspection.
+`none` can be used to disable the image inspection. One use case of `none` is that you want to update services using local built images that are not available on a registry, in which case you want to add `--force` to the `docker service update` command via `GANTRY_UPDATE_OPTIONS`. `none` can also be used to debug image inspection. When using `none`, *Gantry* may not remove the previous images automatically after updating services.
 
 ## Can *Gantry* report Docker Hub rate for non-anonymous account?
 

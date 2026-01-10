@@ -9,27 +9,27 @@ The tests will create a local registry, testing images, and services. Testing im
 
 Use the following commands to run all the tests locally. The tests run *Gantry* scripts on the host, but it should not affect any running docker swarm services on the host.
 ```
-bash shellspec
+shellspec -s bash
 ```
 
 To run only selected tests
 ```
 # Filter tests by name.
-bash shellspec --example <example_name>
+shellspec -s bash --example <example_name>
 # Run tests within a file.
-bash shellspec --pattern tests/<file_name>
+shellspec -s bash --pattern tests/<file_name>
 # Or combination of both
-bash shellspec --pattern tests/<file_name> --example <example_within_the_file>
+shellspec -s bash --pattern tests/<file_name> --example <example_within_the_file>
 ```
 
 To run multiple tests in parallel
 ```
-bash shellspec --jobs 50
+shellspec -s bash --jobs 50
 ```
 
 To generate coverage (require [kcov](https://github.com/SimonKagstrom/kcov) installed):
 ```
-bash shellspec --kcov
+shellspec -s bash --kcov
 ```
 
 The above commands test *Gantry* as a script running on the host directly. We also want to test *Gantry* running inside a container in case the environments are different between the host and the container.
@@ -38,12 +38,12 @@ To test *Gantry* running inside a container, set the environment variable `GANTR
 
 ```
 export GANTRY_TEST_CONTAINER=true
-bash shellspec --jobs 50
+shellspec -s bash --jobs 50
 ```
 
 If you want to test a specific image of *Gantry*, you need to set the image of *Gantry* explicitly via the environment variable `GANTRY_TEST_CONTAINER_REPO_TAG`.
 
 ```
 export GANTRY_TEST_CONTAINER_REPO_TAG=<gantry image>:<tag>
-bash shellspec --jobs 50
+shellspec -s bash --jobs 50
 ```

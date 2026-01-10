@@ -19,24 +19,26 @@ Describe 'manifest-command'
   SUITE_NAME="manifest-command"
   BeforeAll "initialize_all_tests ${SUITE_NAME}"
   AfterAll "finish_all_tests ${SUITE_NAME}"
-  Describe "test_MANIFEST_CMD_none_force"
-    TEST_NAME="test_MANIFEST_CMD_none_force"
+  Describe "test_MANIFEST_CMD_none_twice"
+    TEST_NAME="test_MANIFEST_CMD_none_twice"
     IMAGE_WITH_TAG=$(get_image_with_tag "${SUITE_NAME}")
     SERVICE_NAME=$(get_test_service_name "${TEST_NAME}")
-    test_MANIFEST_CMD_none_force() {
+    test_MANIFEST_CMD_none_twice() {
       local TEST_NAME="${1}"
       local SERVICE_NAME="${2}"
       reset_gantry_env "${SUITE_NAME}" "${SERVICE_NAME}"
       export GANTRY_MANIFEST_CMD="none"
+      run_gantry "${SUITE_NAME}" "${TEST_NAME}"
+      # Try to update twice, but no new image.
       # Test Gantry, when we don't add `--force` to GANTRY_UPDATE_OPTIONS while the image does not change.
       # Before Docker client 29, it reports "no-update"
-      # After Docker client 29, it reports "updated"
+      # After Docker client 29, it reports "updated", because Gantry will automatically adds "--force" to the update command.
       run_gantry "${SUITE_NAME}" "${TEST_NAME}"
     }
-    BeforeEach "common_setup_no_new_image ${TEST_NAME} ${IMAGE_WITH_TAG} ${SERVICE_NAME}"
+    BeforeEach "common_setup_new_image ${TEST_NAME} ${IMAGE_WITH_TAG} ${SERVICE_NAME}"
     AfterEach "common_cleanup ${TEST_NAME} ${IMAGE_WITH_TAG} ${SERVICE_NAME}"
     It 'run_test'
-      When run test_MANIFEST_CMD_none_force "${TEST_NAME}" "${SERVICE_NAME}"
+      When run test_MANIFEST_CMD_none_twice "${TEST_NAME}" "${SERVICE_NAME}"
       The status should be success
       The stdout should satisfy display_output
       The stdout should satisfy spec_expect_no_message ".+"
@@ -53,27 +55,28 @@ Describe 'manifest-command'
       The stderr should satisfy spec_expect_no_message "${NUM_SERVICES_INSPECT_FAILURE}"
       The stderr should satisfy spec_expect_no_message "${NUM_SERVICES_NO_NEW_IMAGES}"
       The stderr should satisfy spec_expect_message    "${NUM_SERVICES_UPDATING}"
-      The stderr should satisfy spec_expect_no_message "${ADDING_OPTIONS}"
       # When GANTRY_MANIFEST_CMD is none, we won't get the digest of the latest image.
-      # Before Docker 29, Gantry reports no updates, unless we add `--force` to the options.
-      # After Docker 29, Docker no longer automatically add digest of the image to the service info.
-      # Thus Gantry reads two different digests before and after the updating. Then Gantry considers the image is updated.
+      # Before Docker client 29, it reports "no-update"
+      # After Docker client 29, it reports "updated", because Gantry will automatically adds "--force" to the update command.
       # Here we comment out these checks (with ##), to make this test passes both Docker 28 and 29.
-      ## The stderr should satisfy spec_expect_no_message "${UPDATED}.*${SERVICE_NAME}"
-      ## The stderr should satisfy spec_expect_message    "${NO_UPDATES}.*${SERVICE_NAME}"
+      ## The stderr should satisfy spec_expect_message    "${ADDING_OPTIONS}.*--force.*"
+      The stderr should satisfy spec_expect_message    "${UPDATED}.*${SERVICE_NAME}"
+      ## The stderr should satisfy spec_expect_no_message "${NO_UPDATES}.*${SERVICE_NAME}"
       The stderr should satisfy spec_expect_no_message "${ROLLING_BACK}.*${SERVICE_NAME}"
       The stderr should satisfy spec_expect_no_message "${FAILED_TO_ROLLBACK}.*${SERVICE_NAME}"
       The stderr should satisfy spec_expect_no_message "${ROLLED_BACK}.*${SERVICE_NAME}"
-      ## The stderr should satisfy spec_expect_message    "${NO_SERVICES_UPDATED}"
-      ## The stderr should satisfy spec_expect_no_message "${NUM_SERVICES_UPDATED}"
+      ## The stderr should satisfy spec_expect_no_message "${NO_SERVICES_UPDATED}"
+      The stderr should satisfy spec_expect_message    "${NUM_SERVICES_UPDATED}"
       The stderr should satisfy spec_expect_no_message "${NUM_SERVICES_UPDATE_FAILED}"
       The stderr should satisfy spec_expect_no_message "${NUM_SERVICES_ERRORS}"
-      ## The stderr should satisfy spec_expect_message    "${NO_IMAGES_TO_REMOVE}"
-      ## The stderr should satisfy spec_expect_no_message "${REMOVING_NUM_IMAGES}"
       The stderr should satisfy spec_expect_no_message "${SKIP_REMOVING_IMAGES}"
-      The stderr should satisfy spec_expect_no_message "${REMOVED_IMAGE}.*${IMAGE_WITH_TAG}"
-      ## The stderr should satisfy spec_expect_no_message "${FAILED_TO_REMOVE_IMAGE}.*${IMAGE_WITH_TAG}"
-      ## The stderr should satisfy spec_expect_no_message "${DONE_REMOVING_IMAGES}"
+      # "No image to remove" from the 2nd update.
+      The stderr should satisfy spec_expect_message    "${NO_IMAGES_TO_REMOVE}"
+      # "Removing images" from the 1st update.
+      The stderr should satisfy spec_expect_message    "${REMOVING_NUM_IMAGES}"
+      The stderr should satisfy spec_expect_message    "${REMOVED_IMAGE}.*${IMAGE_WITH_TAG}"
+      The stderr should satisfy spec_expect_no_message "${FAILED_TO_REMOVE_IMAGE}.*${IMAGE_WITH_TAG}"
+      The stderr should satisfy spec_expect_message    "${DONE_REMOVING_IMAGES}"
     End
   End
   Describe "test_MANIFEST_CMD_none_SERVICES_SELF"

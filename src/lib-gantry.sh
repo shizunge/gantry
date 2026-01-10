@@ -727,7 +727,7 @@ _get_host_from_image() {
 
 _get_auth_config_from_service_or_image() {
   local SERVICE_NAME="${1}"
-  local IMAGE="${2}"
+  local IMAGE_UPDATE_TO="${2}"
   local AUTH_CONFIG_LABEL="gantry.auth.config"
   local AUTH_CONFIG=
   # Read auth config from the service
@@ -735,7 +735,7 @@ _get_auth_config_from_service_or_image() {
   if [ -z "${AUTH_CONFIG}" ]; then
     # Read auth config from the image
     local HOST=
-    HOST=$(_get_host_from_image "${IMAGE}")
+    HOST=$(_get_host_from_image "${IMAGE_UPDATE_TO}")
     [ -z "${HOST}" ] && return 0;
     local DOCKER_CONFIG_STATIC_VARIABLE_NAME=
     DOCKER_CONFIG_STATIC_VARIABLE_NAME=$(_get_docker_config_static_var_from_host "${HOST}")
@@ -882,11 +882,11 @@ _inspect_image() {
     fi
   fi
   if [ -z "${CURRENT_DIGEST}" ]; then
-    # The image may not contain the digest for the following reasons:
+    # The image has no digest for one of the following reasons:
     # 1. The image has not been push to or pulled from a V2 registry
     # 2. The image has been pulled from a V1 registry
     # 3. The service is updated without --with-registry-auth when registry requests authentication.
-    # 4. Since docker client 29.1.2, docker update image-without-digest will not automatically add the digest to the service.
+    # 4. Since docker client 29, docker update image-without-digest will not automatically add the digest to the service.
     log INFO "Perform updating ${SERVICE_NAME} because DIGEST is empty in ${CURRENT_IMAGE_WITH_DIGEST}, assume there is a new image."
     echo "${IMAGE_UPDATE_TO}"
     return 0
@@ -963,7 +963,8 @@ _get_with_registry_auth() {
 
 _get_service_update_additional_options() {
   local SERVICE_NAME="${1}"
-  local AUTH_CONFIG="${2}"
+  local IMAGE_UPDATE_TO="${2}"
+  local AUTH_CONFIG="${3}"
   local NUM_RUNS=
   NUM_RUNS=$(_get_number_of_running_tasks "${SERVICE_NAME}")
   ! is_number "${NUM_RUNS}" && log WARN "NUM_RUNS \"${NUM_RUNS}\" is not a number." && return 1
@@ -988,6 +989,16 @@ _get_service_update_additional_options() {
     OPTIONS="${OPTIONS}${SPACE}${WITH_REGISTRY_AUTH}"
     SPACE=" "
   fi
+  # When CURRENT_IMAGE and IMAGE_UPDATE_TO are same (e.g. both have no digests), add "--force" to the service command.
+  # No digests in both old and new images could happen due to one of the following reasons:
+  # * when the service is updated to a local built image.
+  # * when the MANIFEST_CMD is none (Since Docker 29).
+  local CURRENT_IMAGE
+  CURRENT_IMAGE=$(_get_service_image "${SERVICE_NAME}")
+  if [ "${IMAGE_UPDATE_TO}" = "${CURRENT_IMAGE}" ]; then
+    OPTIONS="${OPTIONS}${SPACE}--force"
+    SPACE=" "
+  fi
   echo "${OPTIONS}"
 }
 
@@ -995,7 +1006,7 @@ _get_service_rollback_additional_options() {
   local SERVICE_NAME="${1}"
   local AUTH_CONFIG="${2}"
   local OPTIONS=
-  # Place holder function. Nothing to do here yet.
+  # This is a place holder function. Nothing to do here yet.
   # --with-registry-auth cannot be combined with --rollback.
   echo "${OPTIONS}"
 }
@@ -1054,21 +1065,21 @@ _update_single_service() {
   local SERVICE_NAME="${1}"
   local UPDATE_OPTIONS=
   UPDATE_OPTIONS=$(_read_env_or_label "${SERVICE_NAME}" "GANTRY_UPDATE_OPTIONS" "gantry.update.options" "")
-  local IMAGE="${2}"
+  local IMAGE_UPDATE_TO="${2}"
   local INPUT_ERROR=0
   [ -z "${SERVICE_NAME}" ] && log ERROR "Updating service: SERVICE_NAME must not be empty." && INPUT_ERROR=1 && SERVICE_NAME="unknown-service-name"
-  [ -z "${IMAGE}" ] && log ERROR "Updating ${SERVICE_NAME}: IMAGE must not be empty." && INPUT_ERROR=1
+  [ -z "${IMAGE_UPDATE_TO}" ] && log ERROR "Updating ${SERVICE_NAME}: IMAGE_UPDATE_TO must not be empty." && INPUT_ERROR=1
   if [ "${INPUT_ERROR}" != "0" ]; then
     _static_variable_add_unique_to_list STATIC_VAR_SERVICES_UPDATE_INPUT_ERROR "${SERVICE_NAME}"
     return 1;
   fi
   local START_TIME=
   START_TIME=$(date +%s)
-  log INFO "Updating ${SERVICE_NAME} with image ${IMAGE}"
+  log INFO "Updating ${SERVICE_NAME} with image ${IMAGE_UPDATE_TO}"
   local AUTH_CONFIG=
   local AUTOMATIC_OPTIONS=
-  AUTH_CONFIG=$(_get_auth_config_from_service_or_image "${SERVICE_NAME}" "${IMAGE}")
-  AUTOMATIC_OPTIONS=$(_get_service_update_additional_options "${SERVICE_NAME}" "${AUTH_CONFIG}")
+  AUTH_CONFIG=$(_get_auth_config_from_service_or_image "${SERVICE_NAME}" "${IMAGE_UPDATE_TO}")
+  AUTOMATIC_OPTIONS=$(_get_service_update_additional_options "${SERVICE_NAME}" "${IMAGE_UPDATE_TO}" "${AUTH_CONFIG}")
   local CMD_STRING="\"docker service update\""
   [ -n "${AUTH_CONFIG}" ] && log INFO "Adding options \"${AUTH_CONFIG}\" to the command ${CMD_STRING} for ${SERVICE_NAME}."
   [ -n "${AUTOMATIC_OPTIONS}" ] && log INFO "Adding options \"${AUTOMATIC_OPTIONS}\" automatically to the command ${CMD_STRING} for ${SERVICE_NAME}."
@@ -1085,7 +1096,7 @@ _update_single_service() {
   # Add "-quiet" to suppress progress output.
   # SC2086: Double quote to prevent globbing and word splitting.
   # shellcheck disable=SC2086
-  UPDATE_MSG=$(run_cmd ${UPDATE_COMMAND} --quiet ${AUTOMATIC_OPTIONS} ${UPDATE_OPTIONS} --image="${IMAGE}" "${SERVICE_NAME}");
+  UPDATE_MSG=$(run_cmd ${UPDATE_COMMAND} --quiet ${AUTOMATIC_OPTIONS} ${UPDATE_OPTIONS} --image="${IMAGE_UPDATE_TO}" "${SERVICE_NAME}");
   UPDATE_RETURN_VALUE=$?
   if [ "${UPDATE_RETURN_VALUE}" != 0 ]; then
     # When there is a timeout:
@@ -1114,16 +1125,14 @@ _update_single_service() {
   local TIME_ELAPSED=
   TIME_ELAPSED=$(time_elapsed_since "${START_TIME}")
   if [ "${PREVIOUS_IMAGE}" = "${CURRENT_IMAGE}" ]; then
-    # The same new and old images indicate that the image is still being used.
-    # Removing image would fail due to that.
-    if [ -z "${UPDATE_OPTIONS}" ]; then
+    if ! echo "${UPDATE_OPTIONS} ${AUTOMATIC_OPTIONS}" | grep_q "--force" ; then
       # Unless we add more options like `--force`, docker may not really update the service due to no changes.
       log INFO "No updates for ${SERVICE_NAME}. Use ${TIME_ELAPSED}."
       return 0
     fi
-    # This (e.g. no digest in both old and new image.) could happen when the service is updated to a local built image.
-  else
-    # Remove PREVIOUS_IMAGE only when it is no longer used.
+  elif [ -n "${PREVIOUS_DIGEST}" ]; then
+    # Remove PREVIOUS_IMAGE only when it is no longer used and has a digest.
+    # Removing image would fail, when the old images are still being used.
     _static_variable_add_unique_to_list STATIC_VAR_IMAGES_TO_REMOVE "${PREVIOUS_IMAGE}"
   fi
   _static_variable_add_unique_to_list STATIC_VAR_SERVICES_UPDATED "${SERVICE_NAME}"
