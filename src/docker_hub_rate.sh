@@ -23,11 +23,6 @@ _docker_hub_rate_token() {
   local IMAGE="${1:-ratelimitpreview/test}"
   local USER_AND_PASS="${2}"
   local TOKEN_URL="https://auth.docker.io/token?service=registry.docker.io&scope=repository:${IMAGE}:pull"
-  if ! _curl_installed; then
-    [ -n "${USER_AND_PASS}" ] && log WARN "Cannot read docker hub rate for the given user because curl is not available."
-    wget -qO- "${TOKEN_URL}"
-    return $?
-  fi
   if [ -n "${USER_AND_PASS}" ]; then
     curl --silent --show-error --user "${USER_AND_PASS}" "${TOKEN_URL}"
     return $?
@@ -42,12 +37,6 @@ _docker_hub_rate_read_rate() {
   [ -z "${TOKEN}" ] && echo "[EMPTY TOKEN ERROR]" && return 1
   local HEADER="Authorization: Bearer ${TOKEN}"
   local URL="https://registry-1.docker.io/v2/${IMAGE}/manifests/latest"
-  if ! _curl_installed; then
-    # Add `--spider`` implies that you want to send a HEAD request (as opposed to GET or POST).
-    # The `busybox wget` does not send a HEAD request, thus it will consume a docker hub rate.
-    wget -qS --spider --header="${HEADER}" -O /dev/null "${URL}" 2>&1
-    return $?
-  fi
   curl --silent --show-error --head -H "${HEADER}" "${URL}" 2>&1
 }
 
@@ -73,6 +62,13 @@ docker_hub_rate() {
     # Usage: echo "${LOGS}" | log_lines LEVLE
     log_lines() { local LEVEL="${1}"; while read -r LINE; do [ -z "${LINE}" ] && continue; log "${LEVEL}" "${LINE}"; done; }
   fi
+  if ! _curl_installed; then
+    # wget has the following limitation:
+    # 1. The `busybox wget` does not send a HEAD request (even with `--spider`), thus it will consume a docker hub rate.
+    # 2. I did not figure out how to pass user name and password using wget.
+    echo "[NO CURL]"
+    return 1
+  fi
   local RESPONSE=
   if ! RESPONSE=$(_docker_hub_rate_token "${IMAGE}" "${USER_AND_PASS}" 2>&1); then
     _docker_hub_echo_error "GET TOKEN RESPONSE ERROR" "${RESPONSE}"
@@ -86,7 +82,7 @@ docker_hub_rate() {
   fi
   if ! RESPONSE=$(_docker_hub_rate_read_rate "${IMAGE}" "${TOKEN}" 2>&1); then
     if echo "${RESPONSE}" | grep -q "Too Many Requests" ; then
-      # This occurs when we send request not via the HEAD method, i.e. using busybox wget.
+      # This occurs when we send request not via the HEAD method.
       echo "0"
       return 0
     fi
