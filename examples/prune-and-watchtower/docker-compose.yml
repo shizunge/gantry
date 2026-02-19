@@ -12,7 +12,7 @@ services:
                             docker service create --mode global-job --name $${SERVICE_NAME}
                               --mount type=bind,source=/var/run/docker.sock,destination=/var/run/docker.sock
                               --entrypoint docker
-                              alpinelinux/docker-cli
+                              docker:cli
                               system prune -f;
                             docker service logs $${SERVICE_NAME};
                             docker service remove $${SERVICE_NAME};
