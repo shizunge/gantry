@@ -2,13 +2,16 @@
 
 *Gantry* started to fix the following problems I found in [*shepherd*](https://github.com/containrrr/shepherd), then it became refactored and totally rewritten, with [abundant tests](../tests/README.md).
 
-* `docker manifest` CLI failed to get the image meta data for some registries.
-* High usage of Docker Hub rate. Getting manifest and then pulling the image double the usage.
-* Running `docker service update` command when there is no new image slows down the overall process.
+* Inspecting images related
+  * `docker manifest` CLI failed to get the image meta data for some registries.
+  * High usage of Docker Hub rate. Getting manifest and then pulling the image double the usage.
+* Updating images related
+  * Running `docker service update` command when there is no new image slows down the overall process.
+  * `docker service update` CLI hangs when updating services without running tasks.
+  * Failure of updating will exit and block subsequent updating.
 * Removing images related
   * Failure of removing old images will exit and block subsequent updating.
   * `docker rmi` only works for the current host.
-* `docker service update` CLI hangs when updating services without running tasks.
 * Other UX issues when running it as a script outside the provided container.
 
 Although I have tried to keep backward compatibility, not all configurations in *shepherd* are supported.
