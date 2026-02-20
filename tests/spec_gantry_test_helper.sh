@@ -554,12 +554,12 @@ finalize_test() {
 
 get_image_with_tag() {
   local SUITE_NAME="${1:?}"
+  local INDEX="${2}"
   SUITE_NAME=$(echo "${SUITE_NAME}" | tr ' ' '-')
-  local IMAGE="gantry/test"
+  local IMAGE="gantry/test${INDEX}"
   local REGISTRY=
-  REGISTRY=$(load_test_registry "${SUITE_NAME}") || return 1
-  if [ -z "${IMAGE}" ]; then
-    echo "IMAGE is empty." >&2
+  if ! REGISTRY=$(load_test_registry "${SUITE_NAME}"); then
+    echo "load_test_registry failed." >&2
     return 1
   fi
   [ "${REGISTRY}" = "docker.io" ] && REGISTRY=""
