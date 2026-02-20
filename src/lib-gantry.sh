@@ -350,21 +350,51 @@ _static_variable_pop_list() {
   return "${RETURN_VALUE}"
 }
 
+_extract_image_name() {
+  local IMAGE_WITH_DIGEST="${1}"
+  extract_string "${IMAGE_WITH_DIGEST}" '@' 1
+}
+
+_extract_image_digest() {
+  local IMAGE_WITH_DIGEST="${1}"
+  extract_string "${IMAGE_WITH_DIGEST}" '@' 2
+}
+
+_get_name_of_image_to_remove() {
+  # The SERVICE_IMAGE (from _get_service_previous_image) contains both tag and digest. e.g.
+  # - SERVICE_IMAGE: <registry>/docker:cli@sha256:1d6d751f1d68d1a5142c23c730ef5ecc976a8e050fa08c3cdb09f7e2e54a4439
+  # We want to remove the tag from SERVICE_IMAGE, to convert it to a RepoDigests (a field from `docker image inspect`), e.g.
+  # - RepoTag: <registry>/docker:cli
+  # - RepoDigests: <registry>/docker@sha256:1d6d751f1d68d1a5142c23c730ef5ecc976a8e050fa08c3cdb09f7e2e54a4439
+  # Because `docker image` commands work with RepoDigests, but not SERVICE_IMAGE.
+  local SERVICE_IMAGE="${1}"
+  local NAME_AND_TAG DIGEST
+  NAME_AND_TAG=$(_extract_image_name "${SERVICE_IMAGE}")
+  DIGEST=$(_extract_image_digest "${SERVICE_IMAGE}")
+  if [ -z "${DIGEST}" ]; then
+    echo "${NAME_AND_TAG}"
+    return 0
+  fi
+  # To remove string after the last ":". Note that <registry> could contain a ":".
+  local NAME_ONLY="${NAME_AND_TAG%:*}"
+  echo "${NAME_ONLY}@${DIGEST}"
+}
+
 _remove_container() {
   local IMAGE="${1}";
   local STATUS="${2}";
   local CIDS=
   if ! CIDS=$(run_cmd docker container ls --all --filter "ancestor=${IMAGE}" --filter "status=${STATUS}" --format '{{.ID}}'); then
-    log ERROR "Failed to list ${STATUS} containers with image ${IMAGE}.";
     echo "${CIDS}" | log_lines ERROR
+    log ERROR "Failed to list ${STATUS} containers with image ${IMAGE}.";
     return 1;
   fi
   local CID CNAME CRM_MSG
   for CID in ${CIDS}; do
     CNAME=$(run_cmd docker container inspect --format '{{.Name}}' "${CID}");
     if ! CRM_MSG=$(run_cmd docker container rm "${CID}"); then
-      log ERROR "Failed to remove ${STATUS} container ${CNAME}, which is using image ${IMAGE}.";
       echo "${CRM_MSG}" | log_lines ERROR
+      log ERROR "Failed to remove ${STATUS} container ${CNAME}, which is using image ${IMAGE}.";
       continue;
     fi
     log INFO "Removed ${STATUS} container ${CNAME}. It was using image ${IMAGE}.";
@@ -373,22 +403,24 @@ _remove_container() {
 
 gantry_remove_images() {
   local IMAGES_TO_REMOVE="${1}"
-  local IMAGE RMI_MSG
+  local IMAGE_TO_REMOVE SERVICE_IMAGE
+  local INSPECT_MSG RMI_MSG
   log DEBUG "$(docker_version)"
-  local IMAGE=
-  for IMAGE in ${IMAGES_TO_REMOVE}; do
-    if ! run_cmd docker image inspect "${IMAGE}" 1>/dev/null; then
-      log DEBUG "There is no image ${IMAGE} on the node.";
+  for SERVICE_IMAGE in ${IMAGES_TO_REMOVE}; do
+    IMAGE_TO_REMOVE=$(_get_name_of_image_to_remove "${SERVICE_IMAGE}")
+    if ! INSPECT_MSG=$(run_cmd docker image inspect "${IMAGE_TO_REMOVE}"); then
+      echo "${INSPECT_MSG}" | log_lines DEBUG
+      log DEBUG "There is no image ${SERVICE_IMAGE} on the node.";
       continue;
     fi
-    _remove_container "${IMAGE}" exited;
-    _remove_container "${IMAGE}" dead;
-    if ! RMI_MSG=$(run_cmd docker image rm "${IMAGE}"); then
-      log ERROR "Failed to remove image ${IMAGE}.";
+    _remove_container "${IMAGE_TO_REMOVE}" exited;
+    _remove_container "${IMAGE_TO_REMOVE}" dead;
+    if ! RMI_MSG=$(run_cmd docker image rm "${IMAGE_TO_REMOVE}"); then
       echo "${RMI_MSG}" | log_lines ERROR
+      log ERROR "Failed to remove image ${SERVICE_IMAGE}.";
       continue;
     fi
-    log INFO "Removed image ${IMAGE}.";
+    log INFO "Removed image ${SERVICE_IMAGE}.";
   done
   log INFO "Done removing images.";
 }
@@ -836,8 +868,8 @@ _inspect_image() {
   MANIFEST_CMD=$(_read_env_or_label "${SERVICE_NAME}" "GANTRY_MANIFEST_CMD" "gantry.manifest.cmd" "buildx")
   local CURRENT_IMAGE_WITH_DIGEST CURRENT_IMAGE CURRENT_DIGEST IMAGE_UPDATE_TO
   CURRENT_IMAGE_WITH_DIGEST=$(_get_service_image "${SERVICE_NAME}") || return $?
-  CURRENT_IMAGE=$(extract_string "${CURRENT_IMAGE_WITH_DIGEST}" '@' 1)
-  CURRENT_DIGEST=$(extract_string "${CURRENT_IMAGE_WITH_DIGEST}" '@' 2)
+  CURRENT_IMAGE=$(_extract_image_name "${CURRENT_IMAGE_WITH_DIGEST}")
+  CURRENT_DIGEST=$(_extract_image_digest "${CURRENT_IMAGE_WITH_DIGEST}")
   IMAGE_UPDATE_TO="${CURRENT_IMAGE}"
   if echo "${MANIFEST_CMD}" | grep_q_i "none"; then
     if _service_is_self "${SERVICE_NAME}"; then
@@ -1116,11 +1148,11 @@ _update_single_service() {
   fi
   local PREVIOUS_IMAGE PREVIOUS_DIGEST
   PREVIOUS_IMAGE=$(_get_service_previous_image "${SERVICE_NAME}")
-  PREVIOUS_DIGEST=$(extract_string "${PREVIOUS_IMAGE}" '@' 2)
+  PREVIOUS_DIGEST=$(_extract_image_digest "${PREVIOUS_IMAGE}")
   [ -z "${PREVIOUS_DIGEST}" ] && log DEBUG "After updating, the previous image ${PREVIOUS_IMAGE} of ${SERVICE_NAME} does not have a digest."
   local CURRENT_IMAGE CURRENT_DIGEST
   CURRENT_IMAGE=$(_get_service_image "${SERVICE_NAME}")
-  CURRENT_DIGEST=$(extract_string "${CURRENT_IMAGE}" '@' 2)
+  CURRENT_DIGEST=$(_extract_image_digest "${CURRENT_IMAGE}")
   [ -z "${CURRENT_DIGEST}" ] && log WARN "After updating, the current image ${CURRENT_IMAGE} of ${SERVICE_NAME} does not have a digest."
   local TIME_ELAPSED=
   TIME_ELAPSED=$(time_elapsed_since "${START_TIME}")
