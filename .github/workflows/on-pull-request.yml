@@ -49,6 +49,7 @@ jobs:
           - gantry_service_multiple_spec.sh
           - gantry_service_no_running_tasks_spec.sh
           - gantry_service_single_spec.sh
+          - gantry_trigger_spec.sh
           - gantry_update_options_spec.sh
     steps:
       - name: Set up Docker Buildx
@@ -85,7 +86,8 @@ jobs:
         uses: actions/checkout@v6
       - name: Run container tests
         run: |
-          bash shellspec --jobs 50
+          NUM_JOBS=$(ls -1 | wc -l)
+          bash shellspec --jobs "${NUM_JOBS}"
 
   test_container:
     name: Test container
@@ -109,4 +111,5 @@ jobs:
           export GANTRY_TEST_CONTAINER_REPO_TAG=
           echo "GANTRY_TEST_CONTAINER=${GANTRY_TEST_CONTAINER}"
           echo "GANTRY_TEST_CONTAINER_REPO_TAG=${GANTRY_TEST_CONTAINER_REPO_TAG}"
-          bash shellspec --jobs 50
+          NUM_JOBS=$(ls -1 | wc -l)
+          bash shellspec --jobs "${NUM_JOBS}"
