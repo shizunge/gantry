@@ -46,7 +46,7 @@ jobs:
         run: |
           bash shellspec --kcov --jobs 50
       - name: Upload reports
-        uses: actions/upload-artifact@v6
+        uses: actions/upload-artifact@v7
         with:
           name: coverage
           path: coverage
