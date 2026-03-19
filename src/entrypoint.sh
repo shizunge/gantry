@@ -167,6 +167,48 @@ gantry() {
   return "${RETURN_VALUE}"
 }
 
+# Return 0: run the next update.
+# Return 1: break.
+wait_for_next_event() {
+  local TRIGGER_PATH="${GANTRY_TRIGGER_PATH:-}"
+  local START_TIME="${1}"
+  local INTERVAL_SECONDS="${2}"
+  if [ "${INTERVAL_SECONDS}" -le 0 ] && [ -z "${TRIGGER_PATH}" ]; then
+    return 1
+  fi
+  local TIMEOUT_ARG=
+  local SLEEP_SECONDS=
+  if [ "${INTERVAL_SECONDS}" -gt 0 ]; then
+    local NEXT_RUN_TARGET_TIME=$((START_TIME + INTERVAL_SECONDS))
+    SLEEP_SECONDS=$((NEXT_RUN_TARGET_TIME - $(date +%s)))
+    log INFO "Schedule next update at $(busybox date -d "@${NEXT_RUN_TARGET_TIME}" -Iseconds)."
+    if [ "${SLEEP_SECONDS}" -le 0 ]; then
+      log INFO "Already times up. Run next update."
+      return 0
+    fi
+    log INFO "Sleep ${SLEEP_SECONDS} seconds before next update."
+    if [ -z "${TRIGGER_PATH}" ]; then
+      sleep "${SLEEP_SECONDS}"
+      return 0
+    fi
+    TIMEOUT_ARG="--timeout"
+  fi
+  log INFO "Watch changes in ${TRIGGER_PATH}."
+  local LOG=
+  if LOG=$(inotifywait -q -r -e modify -e attrib -e move -e create -e delete "${TIMEOUT_ARG}" "${SLEEP_SECONDS}" "${TRIGGER_PATH}" 2>&1); then
+    # Return value from inotifywait:
+    # 0 - An event you asked to watch for was received.
+    log INFO "Found changes in ${TRIGGER_PATH}. Run next update."
+  else
+    # Return value from inotifywait:
+    # 1 - An event you did not ask to watch for was received (usually delete_self or unmount), or some error occurred.
+    # 2 - The --timeout option was given and no events occurred in the specified interval of time.
+    log INFO "Running scheduled update."
+  fi
+  echo "${LOG}" | log_lines DEBUG
+  return 0
+}
+
 main() {
   LOG_FORMAT="${GANTRY_LOG_FORMAT:-${LOG_FORMAT}}"
   LOG_LEVEL="${GANTRY_LOG_LEVEL:-${LOG_LEVEL}}"
@@ -184,16 +226,11 @@ main() {
   fi
   local RETURN_VALUE=0
   while true; do
-    local NEXT_RUN_TARGET_TIME=$(($(date +%s) + INTERVAL_SECONDS))
+    local START_TIME=
+    START_TIME=$(date +%s)
     gantry "${@}"
     RETURN_VALUE=$?
-    [ "${INTERVAL_SECONDS}" -le 0 ] && break;
-    log INFO "Schedule next update at $(busybox date -d "@${NEXT_RUN_TARGET_TIME}" -Iseconds)."
-    local SLEEP_SECONDS=$((NEXT_RUN_TARGET_TIME - $(date +%s)))
-    if [ "${SLEEP_SECONDS}" -gt 0 ]; then
-      log INFO "Sleep ${SLEEP_SECONDS} seconds before next update."
-      sleep "${SLEEP_SECONDS}"
-    fi
+    wait_for_next_event "${START_TIME}" "${INTERVAL_SECONDS}" || break;
   done
   return "${RETURN_VALUE}"
 }

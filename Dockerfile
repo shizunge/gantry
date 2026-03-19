@@ -12,8 +12,9 @@ WORKDIR /gantry
 # * Add curl to report docker hub rate and for notification.
 # * Add tzdata to log timezone correctly.
 # * Add coreutils for command `timeout`.
+# * Add inotify-tools for command `inotifywait`.
 #   The timeout command from coreutils and busybox exhibit different behaviors. Notably, busybox timeout may not reliably report the timeout status of a `docker service update` in some cases, leading to potential inaccuracies.
-RUN apk add --update --no-cache curl tzdata coreutils docker-cli docker-cli-buildx
+RUN apk add --update --no-cache docker-cli docker-cli-buildx curl tzdata coreutils inotify-tools
 
 COPY src/* /gantry
 
