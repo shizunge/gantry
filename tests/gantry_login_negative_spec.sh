@@ -157,8 +157,6 @@ Describe 'login-negative'
       local USERNAME="${5}"
       local PASSWORD="${6}"
       check_login_input "${REGISTRY}" "${USERNAME}" "${PASSWORD}" || return 1;
-      # When running with an image, we are not changing the folder inside the contianer.
-      # So do not run the test with a container/image.
       mkdir -p "${CONFIG}"
       chmod 444 "${CONFIG}"
       local USER_FILE=; USER_FILE=$(make_test_temp_file); echo "${USERNAME}" > "${USER_FILE}";

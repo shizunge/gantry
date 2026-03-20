@@ -72,7 +72,7 @@ export REMOVED_IMAGE="Removed image"
 export FAILED_TO_REMOVE_IMAGE="Failed to remove image"
 export DONE_REMOVING_IMAGES="Done removing images"
 export SCHEDULE_NEXT_UPDATE_AT="Schedule next update at"
-export SLEEP_SECONDS_BEFORE_NEXT_UPDATE="Sleep [0-9]+ seconds before next update"
+export WATCH_CHANGES_IN="Watch changes in "
 
 export GANTRY_TEST_TEMP_DIR="gantry-test-tmp"
 
@@ -503,6 +503,7 @@ reset_gantry_env() {
   export GANTRY_POST_RUN_CMD=
   export GANTRY_PRE_RUN_CMD=
   export GANTRY_SLEEP_SECONDS=
+  export GANTRY_TRIGGER_PATH=
   export GANTRY_ROLLBACK_ON_FAILURE=
   export GANTRY_REGISTRY_CONFIG=
   export GANTRY_REGISTRY_CONFIG_FILE=
@@ -1042,6 +1043,7 @@ _run_gantry_container() {
     --env "GANTRY_POST_RUN_CMD=${GANTRY_POST_RUN_CMD}" \
     --env "GANTRY_PRE_RUN_CMD=${GANTRY_PRE_RUN_CMD}" \
     --env "GANTRY_SLEEP_SECONDS=${GANTRY_SLEEP_SECONDS}" \
+    --env "GANTRY_TRIGGER_PATH=${GANTRY_TRIGGER_PATH}" \
     --env "GANTRY_REGISTRY_CONFIG=${GANTRY_REGISTRY_CONFIG}" \
     --env "GANTRY_REGISTRY_CONFIG_FILE=${GANTRY_REGISTRY_CONFIG_FILE}" \
     --env "GANTRY_REGISTRY_CONFIGS_FILE=${GANTRY_REGISTRY_CONFIGS_FILE}" \

@@ -62,7 +62,7 @@ Describe 'common-options'
       The stderr should satisfy spec_expect_no_message "${FAILED_TO_REMOVE_IMAGE}.*${IMAGE_WITH_TAG}"
       The stderr should satisfy spec_expect_no_message "${DONE_REMOVING_IMAGES}"
       The stderr should satisfy spec_expect_no_message "${SCHEDULE_NEXT_UPDATE_AT}"
-      The stderr should satisfy spec_expect_no_message "${SLEEP_SECONDS_BEFORE_NEXT_UPDATE}"
+      The stderr should satisfy spec_expect_no_message "${WATCH_CHANGES_IN}"
     End
   End
   Describe "test_common_LOG_FORMAT_json"
@@ -265,7 +265,7 @@ Describe 'common-options'
       The stderr should satisfy spec_expect_message    "TEST_OUTPUT_MULTIPLE_LINES=5$"
       The stderr should satisfy spec_expect_message    "Finish post-run command with a non-zero return value 1.$"
       The stderr should satisfy spec_expect_no_message "${SCHEDULE_NEXT_UPDATE_AT}"
-      The stderr should satisfy spec_expect_no_message "${SLEEP_SECONDS_BEFORE_NEXT_UPDATE}"
+      The stderr should satisfy spec_expect_no_message "${WATCH_CHANGES_IN}"
     End
   End
   Describe "test_common_PRE_RUN_CMD_failure_skip_updating"
@@ -314,7 +314,7 @@ Describe 'common-options'
       The stderr should satisfy spec_expect_no_message "${FAILED_TO_REMOVE_IMAGE}.*"
       The stderr should satisfy spec_expect_no_message "${DONE_REMOVING_IMAGES}"
       The stderr should satisfy spec_expect_no_message "${SCHEDULE_NEXT_UPDATE_AT}"
-      The stderr should satisfy spec_expect_no_message "${SLEEP_SECONDS_BEFORE_NEXT_UPDATE}"
+      The stderr should satisfy spec_expect_no_message "${WATCH_CHANGES_IN}"
     End
   End
 End # Describe 'Single service'

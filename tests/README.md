@@ -24,7 +24,8 @@ shellspec -s bash --pattern tests/<file_name> --example <example_within_the_file
 
 To run multiple tests in parallel
 ```
-shellspec -s bash --jobs 50
+NUM_JOBS=$(ls -1 | wc -l)
+shellspec -s bash --jobs "${NUM_JOBS}"
 ```
 
 To generate coverage (require [kcov](https://github.com/SimonKagstrom/kcov) installed):
@@ -38,12 +39,14 @@ To test *Gantry* running inside a container, set the environment variable `GANTR
 
 ```
 export GANTRY_TEST_CONTAINER=true
-shellspec -s bash --jobs 50
+NUM_JOBS=$(ls -1 | wc -l)
+shellspec -s bash --jobs "${NUM_JOBS}"
 ```
 
 If you want to test a specific image of *Gantry*, you need to set the image of *Gantry* explicitly via the environment variable `GANTRY_TEST_CONTAINER_REPO_TAG`.
 
 ```
 export GANTRY_TEST_CONTAINER_REPO_TAG=<gantry image>:<tag>
-shellspec -s bash --jobs 50
+NUM_JOBS=$(ls -1 | wc -l)
+shellspec -s bash --jobs "${NUM_JOBS}"
 ```

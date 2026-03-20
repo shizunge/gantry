@@ -40,11 +40,15 @@ jobs:
           sudo make install
           echo -n "kcov version: "
           kcov --version
+      - name: Install libraries
+        run: |
+          sudo apt install -y inotify-tools
       - name: Checkout Code
         uses: actions/checkout@v6
       - name: Generate tests coverage reports
         run: |
-          bash shellspec --kcov --jobs 50
+          NUM_JOBS=$(ls -1 | wc -l)
+          shellspec -s bash --jobs "${NUM_JOBS}"
       - name: Upload reports
         uses: actions/upload-artifact@v7
         with:
