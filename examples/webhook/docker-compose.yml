@@ -17,38 +17,39 @@ services:
         mode: 0550
     volumes:
       - /var/run/docker.sock:/var/run/docker.sock
+      - gantry_test:/gantry_test
+    environment:
+      - "TRIGGER_FILE=/gantry_test/trigger"
+      - "UPDATE_START=/gantry_test/start"
     deploy:
       placement:
         constraints:
           - node.role==manager
 
-  # Note: run_gantry.sh does not use this service by default.
-  # This service is left here to demonstrate a potential approach for reusing the same service
-  # by scaling its replicas instead of starting a new service each webhook request.
-  # See function resume_gantry in run_gantry.sh.
-  # Pros:
-  #   * This approach can work together with other launching methods like crazymax/swarm-cronjob.
-  # Cons:
-  #   * Concurrency Issues: Sending webhook requests too frequently can increase the chance of the
-  #     webhook failing to launch Gantry correctly for some requests due to the existing service
-  #     potentially handling a previous command.
   gantry:
     image: shizunge/gantry:latest
     volumes:
       - /var/run/docker.sock:/var/run/docker.sock
+      - gantry_test:/gantry_test
     environment:
       - "GANTRY_NODE_NAME={{.Node.Hostname}}"
       - "GANTRY_SLEEP_SECONDS=0"
+      - "GANTRY_TRIGGER_PATH=/gantry_test/trigger"
+      # Use a shared file /gantry_test/start to indicate that when we start a new update.
+      # Also load parameters passed from webhook in /gantry_test/trigger.
+      - "GANTRY_PRE_RUN_CMD=\
+          date +%s > /gantry_test/start; \
+          [ -f /gantry_test/trigger ] && source /gantry_test/trigger || touch /gantry_test/trigger; \
+        "
     deploy:
-      replicas: 0
+      replicas: 1
       placement:
+        # Running on the same node as webhook to access the shared volume.
         constraints:
           - node.role==manager
       restart_policy:
         condition: none
       labels:
-        # The label can be used to find this service.
-        # This can be used together with resume_gantry function in the run_gantry.sh
         - webhook.run-gantry=true
 
 configs:
@@ -58,3 +59,7 @@ configs:
   run_gantry:
     name: run_gantry
     file: ./run_gantry.sh
+
+volumes:
+  gantry_test:
+    name: gantry_test
