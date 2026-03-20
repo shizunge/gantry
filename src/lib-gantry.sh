@@ -541,23 +541,32 @@ _report_services() {
   UPDATED_MSG=$(_report_services_from_static_variable STATIC_VAR_SERVICES_UPDATED "" "updated" "No services updated.")
   echo "${UPDATED_MSG}" | log_lines INFO
 
+  local INSPECT_FAILURE_MSG=
+  INSPECT_FAILURE_MSG=$(_report_services_from_static_variable STATIC_VAR_SERVICES_INSPECT_FAILED "" "inspection failed")
+  echo "${INSPECT_FAILURE_MSG}" | log_lines ERROR
+
   local FAILED_MSG=
   FAILED_MSG=$(_report_services_from_static_variable STATIC_VAR_SERVICES_UPDATE_FAILED "" "update failed")
   echo "${FAILED_MSG}" | log_lines ERROR
+
+  local ROLLBACK_FAILURE_MSG=
+  ROLLBACK_FAILURE_MSG=$(_report_services_from_static_variable STATIC_VAR_SERVICES_ROLLBACK_FAILED "" "rollback failed")
+  echo "${ROLLBACK_FAILURE_MSG}" | log_lines ERROR
 
   local ERROR_MSG=
   ERROR_MSG=$(_report_services_from_static_variable STATIC_VAR_SERVICES_UPDATE_INPUT_ERROR "Skipped updating" "due to error(s)")
   echo "${ERROR_MSG}" | log_lines ERROR
 
   # Send notification
-  local NUM_UPDATED NUM_FAILED NUM_ERRORS
+  local NUM_UPDATED NUM_INSPECT NUM_FAILED NUM_ERRORS
   NUM_UPDATED=$(_get_number_of_elements_in_static_variable STATIC_VAR_SERVICES_UPDATED)
+  NUM_INSPECT=$(_get_number_of_elements_in_static_variable STATIC_VAR_SERVICES_INSPECT_FAILED)
   NUM_FAILED=$(_get_number_of_elements_in_static_variable STATIC_VAR_SERVICES_UPDATE_FAILED)
   NUM_ERRORS=$(_get_number_of_elements_in_static_variable STATIC_VAR_SERVICES_UPDATE_INPUT_ERROR)
-  if [ "${NUM_FAILED}" = "0" ] && [ "${NUM_ERRORS}" = "0" ]; then
+  if [ "${NUM_INSPECT}" = "0" ] && [ "${NUM_FAILED}" = "0" ] && [ "${NUM_ERRORS}" = "0" ]; then
     NUM_ERRORS="${ACCUMULATED_ERRORS}"
   fi
-  local NUM_FAILED_PLUS_ERRORS=$((NUM_FAILED+NUM_ERRORS))
+  local NUM_FAILED_PLUS_ERRORS=$((NUM_INSPECT+NUM_FAILED+NUM_ERRORS))
   local SEND_NOTIFICATION="true"
   case "${CONDITION}" in
     "on-change")
@@ -574,12 +583,17 @@ _report_services() {
     return 0
   fi
   local TYPE="success"
-  [ "${NUM_FAILED_PLUS_ERRORS}" != "0" ] && TYPE="failure"
-  local ERROR_STRING=
-  [ "${NUM_ERRORS}" != "0" ] && ERROR_STRING=" ${NUM_ERRORS} error(s)"
-  local TITLE BODY
-  TITLE="[${STACK}] ${NUM_UPDATED} services updated ${NUM_FAILED} failed${ERROR_STRING}"
-  BODY=$(echo -e "${UPDATED_MSG}\n${FAILED_MSG}\n${ERROR_MSG}")
+  local TITLE="[${STACK}] ${NUM_UPDATED} service(s) updated"
+  if [ "${NUM_FAILED_PLUS_ERRORS}" = "0" ]; then
+    TITLE="${TITLE}, no failures or errors"
+  else
+    TYPE="failure"
+    [ "${NUM_INSPECT}" != "0" ] && TITLE="${TITLE}, ${NUM_INSPECT} inspection failed"
+    [ "${NUM_FAILED}" != "0" ] && TITLE="${TITLE}, ${NUM_FAILED} update failed"
+    [ "${NUM_ERRORS}" != "0" ] && TITLE="${TITLE}, ${NUM_ERRORS} error(s)"
+  fi
+  local BODY=
+  BODY=$(echo -e "${UPDATED_MSG}\n${INSPECT_FAILURE_MSG}\n${FAILED_MSG}\n${ROLLBACK_FAILURE_MSG}\n${ERROR_MSG}")
   _send_notification "${TYPE}" "${TITLE}" "${BODY}"
 }
 
@@ -946,7 +960,7 @@ _inspect_service() {
   fi
   local IMAGE=
   if ! IMAGE=$(_inspect_image "${SERVICE_NAME}"); then
-    _static_variable_add_unique_to_list STATIC_VAR_SERVICES_UPDATE_FAILED "${SERVICE_NAME}"
+    _static_variable_add_unique_to_list STATIC_VAR_SERVICES_INSPECT_FAILED "${SERVICE_NAME}"
     return 1
   fi
   if [ -z "${IMAGE}" ]; then
@@ -1142,8 +1156,10 @@ _update_single_service() {
     fi
     log ERROR "Command \"${UPDATE_COMMAND}\" returns ${UPDATE_RETURN_VALUE}. ${TIMEOUT_MSG}"
     log ERROR "docker service update failed. ${UPDATE_MSG}"
-    _rollback_service "${SERVICE_NAME}" "${AUTH_CONFIG}"
     _static_variable_add_unique_to_list STATIC_VAR_SERVICES_UPDATE_FAILED "${SERVICE_NAME}"
+    if ! _rollback_service "${SERVICE_NAME}" "${AUTH_CONFIG}"; then
+      _static_variable_add_unique_to_list STATIC_VAR_SERVICES_ROLLBACK_FAILED "${SERVICE_NAME}"
+    fi
     return 1
   fi
   local PREVIOUS_IMAGE PREVIOUS_DIGEST
@@ -1305,16 +1321,19 @@ gantry_update_services_list() {
   _run_parallel _inspect_service "${MANIFEST_NUM_WORKERS}" STATIC_VAR_SERVICES_TO_INSPECT
 
   _report_services_from_static_variable STATIC_VAR_SERVICES_SKIP_JOB "Skip updating" "due to they are job(s)" | log_lines INFO
-  _report_services_from_static_variable STATIC_VAR_SERVICES_UPDATE_FAILED "Failed to inspect" | log_lines ERROR
+  _report_services_from_static_variable STATIC_VAR_SERVICES_INSPECT_FAILED "Failed to inspect" | log_lines ERROR
   _report_services_from_static_variable STATIC_VAR_SERVICES_NO_NEW_IMAGE "No new images for" | log_lines INFO
   _report_services_from_static_variable STATIC_VAR_SERVICES_TO_UPDATE "Updating" | log_lines INFO
 
   _run_parallel _update_single_service "${UPDATE_NUM_WORKERS}" STATIC_VAR_SERVICES_AND_IMAGES_TO_UPDATE
 
   local RETURN_VALUE=0
-  local FAILED_NUM=
-  FAILED_NUM=$(_get_number_of_elements_in_static_variable STATIC_VAR_SERVICES_UPDATE_FAILED)
-  [ "${FAILED_NUM}" != "0" ] && RETURN_VALUE=1
+  local INSPECT_FAILURE_NUM=
+  INSPECT_FAILURE_NUM=$(_get_number_of_elements_in_static_variable STATIC_VAR_SERVICES_INSPECT_FAILED)
+  [ "${INSPECT_FAILURE_NUM}" != "0" ] && RETURN_VALUE=1
+  local UPDATE_FAILURE_NUM=
+  UPDATE_FAILURE_NUM=$(_get_number_of_elements_in_static_variable STATIC_VAR_SERVICES_UPDATE_FAILED)
+  [ "${UPDATE_FAILURE_NUM}" != "0" ] && RETURN_VALUE=1
   local ERROR_NUM=
   ERROR_NUM=$(_get_number_of_elements_in_static_variable STATIC_VAR_SERVICES_UPDATE_INPUT_ERROR)
   [ "${ERROR_NUM}" != "0" ] && RETURN_VALUE=1

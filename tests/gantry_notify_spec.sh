@@ -96,7 +96,10 @@ Describe 'notify'
       When run test_notify_apprise "${TEST_NAME}" "${SERVICE_NAME}"
       The status should be success
       The stdout should satisfy display_output
-      The stdout should satisfy spec_expect_message    "Subject.*1 services updated 0 failed TEST_TITLE"
+      The stdout should satisfy spec_expect_message    "Subject.*1 service\(s\) updated, no failures or errors TEST_TITLE"
+      The stdout should satisfy spec_expect_no_message "Snippet.*${NO_SERVICES_UPDATED}"
+      The stdout should satisfy spec_expect_message    "Snippet.*1 ${SERVICES_UPDATED}"
+      The stdout should satisfy spec_expect_no_message "Snippet.*failed"
       The stdout should satisfy spec_expect_message    "${TOTAL_EMAIL_COUNT_IS_ONE}"
       The stderr should satisfy display_output
       The stderr should satisfy spec_expect_no_message "${START_WITHOUT_A_SQUARE_BRACKET}"
@@ -114,6 +117,8 @@ Describe 'notify'
       The stderr should satisfy spec_expect_no_message "${NO_SERVICES_UPDATED}"
       The stderr should satisfy spec_expect_message    "1 ${SERVICES_UPDATED}"
       The stderr should satisfy spec_expect_no_message "${NUM_SERVICES_UPDATE_FAILED}"
+      The stderr should satisfy spec_expect_no_message "${NUM_SERVICES_INSPECT_FAILED}"
+      The stderr should satisfy spec_expect_no_message "${NUM_SERVICES_ROLLBACK_FAILED}"
       The stderr should satisfy spec_expect_no_message "${NUM_SERVICES_ERRORS}"
       The stderr should satisfy spec_expect_no_message "${NO_IMAGES_TO_REMOVE}"
       The stderr should satisfy spec_expect_message    "${REMOVING_NUM_IMAGES}"
@@ -121,6 +126,77 @@ Describe 'notify'
       The stderr should satisfy spec_expect_message    "${REMOVED_IMAGE}.*${IMAGE_WITH_TAG}"
       The stderr should satisfy spec_expect_no_message "${FAILED_TO_REMOVE_IMAGE}.*${IMAGE_WITH_TAG}"
       The stderr should satisfy spec_expect_message    "${DONE_REMOVING_IMAGES}"
+      The stderr should satisfy spec_expect_no_message "${SKIP_NOTIFY_APPRISE}"
+      The stderr should satisfy spec_expect_message    "${SEND_NOTIFY_APPRISE}"
+    End
+  End
+  Describe "test_notify_apprise_inspection_failure"
+    TEST_NAME="test_notify_apprise_inspection_failure"
+    IMAGE_WITH_TAG=$(get_image_with_tag "${SUITE_NAME}")
+    SERVICE_NAME=$(get_test_service_name "${TEST_NAME}")
+    test_start() {
+      # This test assumes that the IMAGE_WITH_TAG does not exist on the registry.
+      # get_image_with_tag should return an image with a unique tag.
+      local TEST_NAME="${1}"
+      local IMAGE_WITH_TAG="${2}"
+      local SERVICE_NAME="${3}"
+      initialize_test "${TEST_NAME}"
+      # No push image to the registry. Checking new image would fail.
+      build_test_image "${IMAGE_WITH_TAG}"
+      start_replicated_service "${SERVICE_NAME}" "${IMAGE_WITH_TAG}" 2>&1
+    }
+    test_notify_apprise_inspection_failure() {
+      local TEST_NAME="${1}"
+      local SERVICE_NAME="${2}"
+      local RETURN_VALUE=0
+      reset_gantry_env "${SUITE_NAME}" "${SERVICE_NAME}"
+      export GANTRY_NOTIFICATION_APPRISE_URL="http://localhost:${APPRISE_PORT}/notify"
+      export GANTRY_NOTIFICATION_TITLE="TEST_TITLE"
+      run_gantry "${SUITE_NAME}" "${TEST_NAME}"
+      RETURN_VALUE="${?}"
+      _print_and_cleanup_emails
+      return "${RETURN_VALUE}"
+    }
+    BeforeEach "test_start ${TEST_NAME} ${IMAGE_WITH_TAG} ${SERVICE_NAME}"
+    AfterEach "common_cleanup ${TEST_NAME} ${IMAGE_WITH_TAG} ${SERVICE_NAME}"
+    It 'run_test'
+      When run test_notify_apprise_inspection_failure "${TEST_NAME}" "${SERVICE_NAME}"
+      The status should be failure
+      The stdout should satisfy display_output
+      The stdout should satisfy spec_expect_message    "Subject.*0 service\(s\) updated, 1 inspection failed TEST_TITLE"
+      The stdout should satisfy spec_expect_message    "Snippet.*${NO_SERVICES_UPDATED}"
+      The stdout should satisfy spec_expect_no_message "Snippet.*${NUM_SERVICES_UPDATED}"
+      The stdout should satisfy spec_expect_message    "Snippet.*${NUM_SERVICES_INSPECT_FAILED}"
+      The stdout should satisfy spec_expect_no_message "Snippet.*${NUM_SERVICES_UPDATE_FAILED}"
+      The stdout should satisfy spec_expect_no_message "Snippet.*${NUM_SERVICES_ROLLBACK_FAILED}"
+      The stdout should satisfy spec_expect_message    "${TOTAL_EMAIL_COUNT_IS_ONE}"
+      The stderr should satisfy display_output
+      The stderr should satisfy spec_expect_no_message "${START_WITHOUT_A_SQUARE_BRACKET}"
+      The stderr should satisfy spec_expect_no_message "${ADDING_OPTIONS}"
+      The stderr should satisfy spec_expect_message    "Image.*${IMAGE_WITH_TAG}.*${IMAGE_NOT_EXIST}"
+      The stderr should satisfy spec_expect_message    "${SKIP_UPDATING}.*${SERVICE_NAME}.*${SKIP_REASON_MANIFEST_FAILURE}"
+      The stderr should satisfy spec_expect_no_message "${PERFORM_UPDATING}.*${SERVICE_NAME}"
+      The stderr should satisfy spec_expect_no_message "${NUM_SERVICES_SKIP_JOBS}"
+      The stderr should satisfy spec_expect_message    "${NUM_SERVICES_INSPECT_FAILURE}"
+      The stderr should satisfy spec_expect_no_message "${NUM_SERVICES_NO_NEW_IMAGES}"
+      The stderr should satisfy spec_expect_no_message "${NUM_SERVICES_UPDATING}"
+      The stderr should satisfy spec_expect_no_message "${UPDATED}.*${SERVICE_NAME}"
+      The stderr should satisfy spec_expect_no_message "${NO_UPDATES}.*${SERVICE_NAME}"
+      The stderr should satisfy spec_expect_no_message "${ROLLING_BACK}.*${SERVICE_NAME}"
+      The stderr should satisfy spec_expect_no_message "${FAILED_TO_ROLLBACK}.*${SERVICE_NAME}"
+      The stderr should satisfy spec_expect_no_message "${ROLLED_BACK}.*${SERVICE_NAME}"
+      The stderr should satisfy spec_expect_message    "${NO_SERVICES_UPDATED}"
+      The stderr should satisfy spec_expect_no_message "${NUM_SERVICES_UPDATED}"
+      The stderr should satisfy spec_expect_no_message "${NUM_SERVICES_UPDATE_FAILED}"
+      The stderr should satisfy spec_expect_message    "${NUM_SERVICES_INSPECT_FAILED}"
+      The stderr should satisfy spec_expect_no_message "${NUM_SERVICES_ROLLBACK_FAILED}"
+      The stderr should satisfy spec_expect_no_message "${NUM_SERVICES_ERRORS}"
+      The stderr should satisfy spec_expect_message    "${NO_IMAGES_TO_REMOVE}"
+      The stderr should satisfy spec_expect_no_message "${REMOVING_NUM_IMAGES}"
+      The stderr should satisfy spec_expect_no_message "${SKIP_REMOVING_IMAGES}"
+      The stderr should satisfy spec_expect_no_message "${REMOVED_IMAGE}.*${IMAGE_WITH_TAG}"
+      The stderr should satisfy spec_expect_no_message "${FAILED_TO_REMOVE_IMAGE}.*${IMAGE_WITH_TAG}"
+      The stderr should satisfy spec_expect_no_message "${DONE_REMOVING_IMAGES}"
       The stderr should satisfy spec_expect_no_message "${SKIP_NOTIFY_APPRISE}"
       The stderr should satisfy spec_expect_message    "${SEND_NOTIFY_APPRISE}"
     End
@@ -147,7 +223,10 @@ Describe 'notify'
       When run test_notify_apprise_no_new_image "${TEST_NAME}" "${SERVICE_NAME}"
       The status should be success
       The stdout should satisfy display_output
-      The stdout should satisfy spec_expect_message    "Subject.*0 services updated 0 failed TEST_TITLE"
+      The stdout should satisfy spec_expect_message    "Subject.*0 service\(s\) updated, no failures or errors TEST_TITLE"
+      The stdout should satisfy spec_expect_message    "Snippet.*${NO_SERVICES_UPDATED}"
+      The stdout should satisfy spec_expect_no_message "Snippet.*${NUM_SERVICES_UPDATED}"
+      The stdout should satisfy spec_expect_no_message "Snippet.*failed"
       The stdout should satisfy spec_expect_message    "${TOTAL_EMAIL_COUNT_IS_ONE}"
       The stderr should satisfy display_output
       The stderr should satisfy spec_expect_no_message "${START_WITHOUT_A_SQUARE_BRACKET}"
@@ -166,6 +245,8 @@ Describe 'notify'
       The stderr should satisfy spec_expect_message    "${NO_SERVICES_UPDATED}"
       The stderr should satisfy spec_expect_no_message "${NUM_SERVICES_UPDATED}"
       The stderr should satisfy spec_expect_no_message "${NUM_SERVICES_UPDATE_FAILED}"
+      The stderr should satisfy spec_expect_no_message "${NUM_SERVICES_INSPECT_FAILED}"
+      The stderr should satisfy spec_expect_no_message "${NUM_SERVICES_ROLLBACK_FAILED}"
       The stderr should satisfy spec_expect_no_message "${NUM_SERVICES_ERRORS}"
       The stderr should satisfy spec_expect_message    "${NO_IMAGES_TO_REMOVE}"
       The stderr should satisfy spec_expect_no_message "${REMOVING_NUM_IMAGES}"
@@ -211,6 +292,8 @@ Describe 'notify'
       The stderr should satisfy spec_expect_no_message "${NO_SERVICES_UPDATED}"
       The stderr should satisfy spec_expect_message    "1 ${SERVICES_UPDATED}"
       The stderr should satisfy spec_expect_no_message "${NUM_SERVICES_UPDATE_FAILED}"
+      The stderr should satisfy spec_expect_no_message "${NUM_SERVICES_INSPECT_FAILED}"
+      The stderr should satisfy spec_expect_no_message "${NUM_SERVICES_ROLLBACK_FAILED}"
       The stderr should satisfy spec_expect_no_message "${NUM_SERVICES_ERRORS}"
       The stderr should satisfy spec_expect_no_message "${NO_IMAGES_TO_REMOVE}"
       The stderr should satisfy spec_expect_message    "${REMOVING_NUM_IMAGES}"
@@ -245,7 +328,10 @@ Describe 'notify'
       When run test_notify_on_change_new_image "${TEST_NAME}" "${SERVICE_NAME}"
       The status should be success
       The stdout should satisfy display_output
-      The stdout should satisfy spec_expect_message    "Subject.*1 services updated 0 failed TEST_TITLE"
+      The stdout should satisfy spec_expect_message    "Subject.*1 service\(s\) updated, no failures or errors TEST_TITLE"
+      The stdout should satisfy spec_expect_no_message "Snippet.*${NO_SERVICES_UPDATED}"
+      The stdout should satisfy spec_expect_message    "Snippet.*1 ${SERVICES_UPDATED}"
+      The stdout should satisfy spec_expect_no_message "Snippet.*failed"
       The stdout should satisfy spec_expect_message    "${TOTAL_EMAIL_COUNT_IS_ONE}"
       The stderr should satisfy display_output
       The stderr should satisfy spec_expect_no_message "${START_WITHOUT_A_SQUARE_BRACKET}"
@@ -263,6 +349,8 @@ Describe 'notify'
       The stderr should satisfy spec_expect_no_message "${NO_SERVICES_UPDATED}"
       The stderr should satisfy spec_expect_message    "1 ${SERVICES_UPDATED}"
       The stderr should satisfy spec_expect_no_message "${NUM_SERVICES_UPDATE_FAILED}"
+      The stderr should satisfy spec_expect_no_message "${NUM_SERVICES_INSPECT_FAILED}"
+      The stderr should satisfy spec_expect_no_message "${NUM_SERVICES_ROLLBACK_FAILED}"
       The stderr should satisfy spec_expect_no_message "${NUM_SERVICES_ERRORS}"
       The stderr should satisfy spec_expect_no_message "${NO_IMAGES_TO_REMOVE}"
       The stderr should satisfy spec_expect_message    "${REMOVING_NUM_IMAGES}"
@@ -314,6 +402,8 @@ Describe 'notify'
       The stderr should satisfy spec_expect_message    "${NO_SERVICES_UPDATED}"
       The stderr should satisfy spec_expect_no_message "${NUM_SERVICES_UPDATED}"
       The stderr should satisfy spec_expect_no_message "${NUM_SERVICES_UPDATE_FAILED}"
+      The stderr should satisfy spec_expect_no_message "${NUM_SERVICES_INSPECT_FAILED}"
+      The stderr should satisfy spec_expect_no_message "${NUM_SERVICES_ROLLBACK_FAILED}"
       The stderr should satisfy spec_expect_no_message "${NUM_SERVICES_ERRORS}"
       The stderr should satisfy spec_expect_message    "${NO_IMAGES_TO_REMOVE}"
       The stderr should satisfy spec_expect_no_message "${REMOVING_NUM_IMAGES}"
@@ -350,7 +440,12 @@ Describe 'notify'
       When run test_notify_on_change_errors "${TEST_NAME}" "${SERVICE_NAME}"
       The status should be failure
       The stdout should satisfy display_output
-      The stdout should satisfy spec_expect_message    "Subject.*0 services updated 1 failed TEST_TITLE"
+      The stdout should satisfy spec_expect_message    "Subject.*0 service\(s\) updated, 1 update failed TEST_TITLE"
+      The stdout should satisfy spec_expect_message    "Snippet.*No services updated"
+      The stdout should satisfy spec_expect_no_message "Snippet.*service\(s\) updated"
+      The stdout should satisfy spec_expect_no_message "Snippet.*${NUM_SERVICES_INSPECT_FAILED}"
+      The stdout should satisfy spec_expect_message    "Snippet.*${NUM_SERVICES_UPDATE_FAILED}"
+      The stdout should satisfy spec_expect_message    "Snippet.*${NUM_SERVICES_ROLLBACK_FAILED}"
       The stdout should satisfy spec_expect_message    "${TOTAL_EMAIL_COUNT_IS_ONE}"
       The stderr should satisfy display_output
       The stderr should satisfy spec_expect_no_message "${START_WITHOUT_A_SQUARE_BRACKET}"
@@ -369,6 +464,8 @@ Describe 'notify'
       The stderr should satisfy spec_expect_message    "${NO_SERVICES_UPDATED}"
       The stderr should satisfy spec_expect_no_message "${NUM_SERVICES_UPDATED}"
       The stderr should satisfy spec_expect_message    "${NUM_SERVICES_UPDATE_FAILED}"
+      The stderr should satisfy spec_expect_no_message "${NUM_SERVICES_INSPECT_FAILED}"
+      The stderr should satisfy spec_expect_message    "${NUM_SERVICES_ROLLBACK_FAILED}"
       The stderr should satisfy spec_expect_no_message "${NUM_SERVICES_ERRORS}"
       The stderr should satisfy spec_expect_message    "${NO_IMAGES_TO_REMOVE}"
       The stderr should satisfy spec_expect_no_message "${REMOVING_NUM_IMAGES}"
