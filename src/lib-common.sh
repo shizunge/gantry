@@ -748,55 +748,44 @@ docker_replicated_job() {
 }
 
 docker_version() {
-  local cver capi sver sapi
-  if ! cver=$(run_cmd docker version --format '{{.Client.Version}}');    then log ERROR "${cver}"; cver="error"; fi
-  if ! capi=$(run_cmd docker version --format '{{.Client.APIVersion}}'); then log ERROR "${capi}"; capi="error"; fi
-  if ! sver=$(run_cmd docker version --format '{{.Server.Version}}');    then log ERROR "${sver}"; sver="error"; fi
-  if ! sapi=$(run_cmd docker version --format '{{.Server.APIVersion}}'); then log ERROR "${sapi}"; sapi="error"; fi
-  echo "Docker version client ${cver} (API ${capi}) server ${sver} (API ${sapi})"
+  local DV_STRING
+  if ! DV_STRING=$(run_cmd docker version --format 'Docker version client {{.Client.Version}} (API {{.Client.APIVersion}}) server {{.Server.Version}} (API {{.Server.APIVersion}})'); then
+    log ERROR "${DV_STRING}"
+    echo "Failed to get Docker version"
+    return 1
+  fi
+  echo "${DV_STRING}"
+  return 0
 }
 
 # echo the name of the current container.
 # echo nothing if unable to find the name.
 # return 1 when there is an error.
 docker_current_container_name() {
-  local ALL_NETWORKS=
-  ALL_NETWORKS=$(run_cmd docker network ls --format '{{.ID}}') || return 1;
-  [ -z "${ALL_NETWORKS}" ] && return 0;
   local IPS=;
   # Get the string after "src":
   # 172.17.0.0/16 dev docker0 proto kernel scope link src 172.17.0.1 linkdown
   IPS=$(ip route | grep src | sed -n -E "s/.* src (\S+).*$/\1/p");
   [ -z "${IPS}" ] && return 0;
-  local GWBRIDGE_NETWORK HOST_NETWORK;
-  GWBRIDGE_NETWORK=$(run_cmd docker network ls --format '{{.ID}}' --filter 'name=^docker_gwbridge$') || return 1;
-  HOST_NETWORK=$(run_cmd docker network ls --format '{{.ID}}' --filter 'name=^host$') || return 1;
-  local NID=;
-  for NID in ${ALL_NETWORKS}; do
-    # The output of gwbridge does not contain the container name. It looks like gateway_8f55496ce4f1/172.18.0.5/16.
-    [ "${NID}" = "${GWBRIDGE_NETWORK}" ] && continue;
-    # The output of host does not contain an IP.
-    [ "${NID}" = "${HOST_NETWORK}" ] && continue;
-    local ALL_LOCAL_NAME_AND_IP=;
-    ALL_LOCAL_NAME_AND_IP=$(run_cmd docker network inspect "${NID}" --format "{{range .Containers}}{{.Name}}/{{println .IPv4Address}}{{end}}") || return 1;
-    local NAME_AND_IP=;
-    for NAME_AND_IP in ${ALL_LOCAL_NAME_AND_IP}; do
-      [ -z "${NAME_AND_IP}" ] && continue;
-      # NAME_AND_IP will be in one of the following formats:
-      # '<container name>/<ip>/<mask>'
-      # '<container name>/' (when network mode is host)
-      local CNAME CIP
-      CNAME=$(extract_string "${NAME_AND_IP}" '/' 1);
-      CIP=$(extract_string "${NAME_AND_IP}" '/' 2);
-      # Unable to find the container IP when network mode is host.
-      [ -z "${CIP}" ] && continue;
-      local IP=;
-      for IP in ${IPS}; do
-        [ "${IP}" != "${CIP}" ] && continue;
-        echo "${CNAME}";
-        return 0;
-      done
-    done
+  local ALL_CONTAINER_IDS=
+  # docker ps -a : show all containers
+  # docker ps -q : only display container IDs
+  ALL_CONTAINER_IDS=$(run_cmd docker ps -aq) || return 1;
+  [ -z "${ALL_CONTAINER_IDS}" ] && return 0;
+  local ALL_CNAME_AND_IPS=
+  # SC2086 (info): Double quote to prevent globbing and word splitting.
+  # shellcheck disable=SC2086
+  ALL_CNAME_AND_IPS=$(run_cmd docker inspect --format '{{range .NetworkSettings.Networks}}{{$.Name}}/{{.IPAddress}}/{{println}}{{end}}' ${ALL_CONTAINER_IDS} | sort | uniq) || return 1;
+  [ -z "${ALL_CNAME_AND_IPS}" ] && return 0;
+  local IP=
+  for IP in ${IPS}; do
+    local CNAME_AND_IP=
+    CNAME_AND_IP=$(echo "${ALL_CNAME_AND_IPS}" | grep "/${IP}/")
+    [ "${CNAME_AND_IP}" = "" ] && continue;
+    # CNAME_AND_IP will be in one of the following formats:
+    # '/<container name>/<ip>/'
+    echo "${CNAME_AND_IP}" | sed -n -E "s/^\/(.*)\/(.*)\/$/\1/p"
+    return 0
   done
 }
 

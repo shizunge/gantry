@@ -603,13 +603,8 @@ _in_list() {
   local LIST="${1}"
   local SEARCHED_ITEM="${2}"
   [ -z "${SEARCHED_ITEM}" ] && return 1
-  local ITEM=
-  for ITEM in ${LIST}; do
-    if [ "${ITEM}" = "${SEARCHED_ITEM}" ]; then
-      return 0
-    fi
-  done
-  return 1
+  [ -z "${LIST}" ] && return 1
+  echo "${LIST}" | grep_q "^${SEARCHED_ITEM}$"
 }
 
 # echo the name of the current container.
@@ -1260,18 +1255,24 @@ gantry_get_services_list() {
   if ! SERVICES=$(_get_services_filted "${SERVICES_FILTERS}"); then
     return 1
   fi
+  local ALL_EXCLUDED=
+  local S=
+  for S in ${SERVICES_EXCLUDED}; do
+    ALL_EXCLUDED=$(add_unique_to_list "${ALL_EXCLUDED}" "${S}")
+  done
   if [ -n "${SERVICES_EXCLUDED_FILTERS}" ]; then
     local SERVICES_FROM_EXCLUDED_FILTERS=
     if ! SERVICES_FROM_EXCLUDED_FILTERS=$(_get_services_filted "${SERVICES_EXCLUDED_FILTERS}"); then
       return 1
     fi
-    SERVICES_EXCLUDED="${SERVICES_EXCLUDED} ${SERVICES_FROM_EXCLUDED_FILTERS}"
+    for S in ${SERVICES_FROM_EXCLUDED_FILTERS}; do
+      ALL_EXCLUDED=$(add_unique_to_list "${ALL_EXCLUDED}" "${S}")
+    done
   fi
   local LIST=
   local HAS_SELF=
-  local S=
   for S in ${SERVICES} ; do
-    if _in_list "${SERVICES_EXCLUDED}" "${S}" ; then
+    if _in_list "${ALL_EXCLUDED}" "${S}" ; then
       log INFO "Exclude service ${S} from updating."
       continue
     fi
