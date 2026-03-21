@@ -92,7 +92,7 @@ jobs:
         uses: actions/checkout@v6
       - name: Run container tests
         run: |
-          NUM_JOBS=$(ls -1 | wc -l)
+          NUM_JOBS=$(ls -1 tests | wc -l)
           shellspec -s bash --jobs "${NUM_JOBS}"
 
   test_container:
@@ -117,5 +117,5 @@ jobs:
           export GANTRY_TEST_CONTAINER_REPO_TAG=
           echo "GANTRY_TEST_CONTAINER=${GANTRY_TEST_CONTAINER}"
           echo "GANTRY_TEST_CONTAINER_REPO_TAG=${GANTRY_TEST_CONTAINER_REPO_TAG}"
-          NUM_JOBS=$(ls -1 | wc -l)
+          NUM_JOBS=$(ls -1 tests | wc -l)
           shellspec -s bash --jobs "${NUM_JOBS}"
