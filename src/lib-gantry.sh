@@ -404,22 +404,24 @@ _remove_container() {
 gantry_remove_images() {
   local IMAGES_TO_REMOVE="${1}"
   local IMAGE_TO_REMOVE SERVICE_IMAGE
-  local INSPECT_MSG RMI_MSG
   log DEBUG "$(docker_version)"
   for SERVICE_IMAGE in ${IMAGES_TO_REMOVE}; do
     IMAGE_TO_REMOVE=$(_get_name_of_image_to_remove "${SERVICE_IMAGE}")
-    if ! INSPECT_MSG=$(run_cmd docker image inspect "${IMAGE_TO_REMOVE}"); then
-      echo "${INSPECT_MSG}" | log_lines DEBUG
+    local IMAGE_ID=
+    if ! IMAGE_ID=$(run_cmd docker image inspect "${IMAGE_TO_REMOVE}" --format '{{.ID}}'); then
+      echo "${IMAGE_ID}" | log_lines DEBUG
       log DEBUG "There is no image ${SERVICE_IMAGE} on the node.";
       continue;
     fi
     _remove_container "${IMAGE_TO_REMOVE}" exited;
     _remove_container "${IMAGE_TO_REMOVE}" dead;
-    if ! RMI_MSG=$(run_cmd docker image rm "${IMAGE_TO_REMOVE}"); then
+    local RMI_MSG=
+    if ! RMI_MSG=$(run_cmd docker image rm "${IMAGE_ID}"); then
       echo "${RMI_MSG}" | log_lines ERROR
       log ERROR "Failed to remove image ${SERVICE_IMAGE}.";
       continue;
     fi
+    echo "${RMI_MSG}" | log_lines DEBUG
     log INFO "Removed image ${SERVICE_IMAGE}.";
   done
   log INFO "Done removing images.";
