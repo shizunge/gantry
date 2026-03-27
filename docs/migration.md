@@ -72,6 +72,7 @@ You can enable these new features of *Gantry* through new configurations.
 | GANTRY_REGISTRY_PASSWORD_FILE    | To pass sensitive information via [docker secret](https://docs.docker.com/engine/swarm/secrets/). |
 | GANTRY_REGISTRY_USER_FILE        | To pass sensitive information via [docker secret](https://docs.docker.com/engine/swarm/secrets/). |
 | GANTRY_SERVICES_EXCLUDED_FILTERS | To provide an additional method to exclude services from being updated, in companion with `GANTRY_SERVICES_EXCLUDED`. |
+| GANTRY_TRIGGER_PATH              | To be triggered by a webhook. |
 | GANTRY_UPDATE_JOBS               | *Gantry* can distinguish `replicated-job` and `global-job` from other services. *Gantry* automatically adds more options to [update services with no running tasks](faq.md#how-to-update-services-with-no-running-tasks) to avoid hanging. |
 | GANTRY_UPDATE_NUM_WORKERS        | To run multiple update commands in parallel to accelerate the updating process. |
 
