@@ -739,8 +739,9 @@ _service_is_replicated() {
 # Return 1 if AUTH_CONFIG is not a directory that contains Docker configuration files
 _check_auth_config_folder() {
   local AUTH_CONFIG="${1}"
-  # We only check whether it is a folder, thus it is not a complete check whether the folder contains valid Docker configuration files.
-  if [ -d "${AUTH_CONFIG}" ]; then
+  # We only check whether it is a folder and it contains config.json,
+  # thus it is not a complete check whether the Docker configuration files are valid.
+  if [ -f "${AUTH_CONFIG}"/config.json ]; then
     return 0
   fi
   log WARN "${AUTH_CONFIG} is not a directory that contains Docker configuration files."
