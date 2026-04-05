@@ -1,5 +1,9 @@
 # Examples
 
+## [authentication](./authentication)
+
+Examples about authentication.
+
 ## [cronjob](./cronjob)
 
 Run *Gantry* at a specific time.

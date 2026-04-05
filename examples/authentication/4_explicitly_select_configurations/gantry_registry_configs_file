@@ -1,0 +1,5 @@
+# Select a random string as configuration ID.
+my_config_id_1 registry.example.com username_place_holder_1 password_place_holder_1
+# You can login to the the same registry with different credentials.
+# In this case, the configuration ID must be different too.
+my_config_id_2 registry.example.com username_place_holder_2 password_place_holder_2

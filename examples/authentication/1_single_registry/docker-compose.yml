@@ -1,0 +1,28 @@
+services:
+  gantry:
+    image: shizunge/gantry
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock
+    environment:
+      - "GANTRY_REGISTRY_HOST=registry.example.com"
+      - "GANTRY_REGISTRY_PASSWORD=password_place_holder"
+      - "GANTRY_REGISTRY_USER=username_place_holder"
+    deploy:
+      replicas: 1
+      placement:
+        constraints:
+          - node.role==manager
+
+  service_to_be_updated_1:
+    image: registry.example.com/my_organization/my_image:latest
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock
+
+  service_to_be_updated_2:
+    image: docker.io/my_organization/my_image:latest
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock
+    deploy:
+      placement:
+        constraints:
+          - node.role==manager

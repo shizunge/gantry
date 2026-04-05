@@ -1,0 +1,31 @@
+services:
+  gantry:
+    image: shizunge/gantry
+    # Do not set user name, or the default docekr configuration location `/root/.docker` will change.
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock
+    secrets:
+      - gantry_registry_configs_file
+    environment:
+      - "GANTRY_REGISTRY_CONFIGS_FILE=/run/secrets/gantry_registry_configs_file"
+      # DOCKER_CONFIG is optional, when we are using the defualt Docekr configuration location `/root/.docker`.
+      # - "DOCKER_CONFIG=/root/.docker"
+    deploy:
+      replicas: 1
+      placement:
+        constraints:
+          - node.role==manager
+
+  service_to_be_updated_1:
+    image: registry.example.com/my_organization/my_image:latest
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock
+
+  service_to_be_updated_2:
+    image: docker.io/my_organization/my_image:latest
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock
+
+secrets:
+  gantry_registry_configs_file:
+    file: gantry_registry_configs_file

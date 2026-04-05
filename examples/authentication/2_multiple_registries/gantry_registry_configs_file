@@ -1,0 +1,13 @@
+# Select a random string as configuration ID.
+my_config_id registry.example.com username_place_holder password_place_holder
+# Select another random string as configuration ID.
+another_config_id another_registry.com another_username another_password
+# Use the default Docker configuration location as ID.
+# This will save provided credentials to `/root/.docker/config.json`.
+# If you specify a user id to run the container, the default Docker configuration location will change. You may use environment variable `DOCKER_CONFIG` to explicitly set the default location.
+/root/.docker default_registry.com default_username default_password
+# You can save multiple credentials in the same configuration, yet registries must be different.
+# Assuming that Docker allows to store credentials of different registries into a single client configuration.
+/root/.docker 3rd_registry.com 3rd_username 3rd_password
+/root/.docker 4th_registry.com 4th_username 4th_password
+/root/.docker 5th_registry.com 5th_username 5th_password

@@ -1,0 +1,36 @@
+services:
+  gantry:
+    image: shizunge/gantry
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock
+    secrets:
+      - gantry_registry_configs_file
+    environment:
+      - "GANTRY_REGISTRY_CONFIGS_FILE=/run/secrets/gantry_registry_configs_file"
+    deploy:
+      replicas: 1
+      placement:
+        constraints:
+          - node.role==manager
+
+  service_to_be_updated_1:
+    image: registry.example.com/my_organization/my_image:latest
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock
+    deploy:
+      # Gantry reads labels on the service.
+      labels:
+        - gantry.auth.config=my_config_id_1
+
+  service_to_be_updated_2:
+    image: registry.example.com/another_organization/another_image:latest
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock
+    deploy:
+      # Gantry reads labels on the service.
+      labels:
+        - gantry.auth.config=my_config_id_2
+
+secrets:
+  gantry_registry_configs_file:
+    file: gantry_registry_configs_file

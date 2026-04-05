@@ -1,0 +1,41 @@
+services:
+  gantry:
+    image: shizunge/gantry
+    # The default user is root. The default Docekr configuration location is `/root/.docker`.
+    # Do not set the user name. Changing user will also change the default Docker configuration location.
+    # user: 0:0
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock
+    secrets:
+      # Mount the Docker configuration file from host to the container.
+      - source: docker_config_file
+        target: /root/.docker/config.json
+    environment:
+      # DOCKER_CONFIG is optional, when we are using the defualt Docekr configuration location `/root/.docker`.
+      # - "DOCKER_CONFIG=/root/.docker"
+      - "GANTRY_UPDATE_OPTIONS=--with-registry-auth"
+    deploy:
+      replicas: 1
+      placement:
+        constraints:
+          - node.role==manager
+
+  service_to_be_updated_1:
+    image: registry.example.com/my_organization/my_image:latest
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock
+    deploy:
+      # Gantry reads labels on the service.
+      # Optionally explicitly set `<configuration>` on the service.
+      # `<configuration>` is the directory inside the Gantry container containing `config.json`.
+      labels:
+        - gantry.auth.config=/root/.docker
+
+  service_to_be_updated_2:
+    image: docker.io/my_organization/my_image:latest
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock
+
+secrets:
+  docker_config_file:
+    file: ${DOCKER_CONFIG_ON_HOST}/config.json

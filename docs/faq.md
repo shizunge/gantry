@@ -22,7 +22,7 @@ Setting `GANTRY_SERVICES_FILTERS` to an empty string means no filters, as a resu
 
 ## How to run *Gantry* on a cron schedule?
 
-You can start *Gantry* as a docker swarm service and use [`swarm-cronjob`](https://github.com/crazy-max/swarm-cronjob) to run it at a given time. When use `swarm-cronjob`, you need to set `GANTRY_SLEEP_SECONDS` to 0. See the [example](../examples/cronjob).
+You can start *Gantry* as a docker swarm service and use [`swarm-cronjob`](https://github.com/crazy-max/swarm-cronjob) to run it at a given time. When use `swarm-cronjob`, you need to set `GANTRY_SLEEP_SECONDS` to 0 and set `GANTRY_TRIGGER_PATH` to an empty string. See the [example](../examples/cronjob).
 
 ## How to update services with no running tasks?
 
@@ -48,4 +48,4 @@ If you need to login to multiple registries, you can use `GANTRY_REGISTRY_CONFIG
 
 ## How to use authorization from the host machines?
 
-See [using an existing Docker configuration](../docs/authentication.md#using-an-existing-docker-configuration).
+See [using an existing Docker configuration](../docs/authentication.md#13-using-an-existing-docker-configuration).
