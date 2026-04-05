@@ -484,7 +484,11 @@ _report_list() {
   [ -n "${PRE}" ] && TITLE="${PRE} "
   TITLE="${TITLE}${NUM}"
   [ -n "${POST}" ] && TITLE="${TITLE} ${POST}"
-  echo "${TITLE}: ${LIST}" | tr '\n' ' ' && echo ''
+  # :a        # Define a label called "a" (used for looping)
+  # N         # Append the Next line to the current pattern space (with \n between)
+  # $!ba      # If not ($!) the last line ($), Branch back to label a (ba)
+  # s/\n/, /g # Once all lines are loaded, substitute all \n with ", "
+  echo "${TITLE}: ${LIST}" | sed -E ':a; N; $!ba; s/\n/, /g'
 }
 
 _report_from_static_variable() {
