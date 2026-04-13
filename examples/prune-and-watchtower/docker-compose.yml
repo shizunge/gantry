@@ -20,7 +20,7 @@ services:
                             docker service remove $${SERVICE_NAME} 2>/dev/null;
                             docker service create --mode global-job --name $${SERVICE_NAME}
                               --mount type=bind,source=/var/run/docker.sock,destination=/var/run/docker.sock
-                              ghcr.io/containrrr/watchtower
+                              ghcr.io/nicholas-fedor/watchtower
                               --cleanup=true
                               --label-enable
                               --run-once=true
@@ -39,9 +39,9 @@ services:
       restart_policy:
         condition: none
       labels:
-        - swarm.cronjob.enable=true
-        - swarm.cronjob.schedule=45 23 0 * * *
-        - swarm.cronjob.skip-running=true
+        - "swarm.cronjob.enable=true"
+        - "swarm.cronjob.schedule=45 23 0 * * *"
+        - "swarm.cronjob.skip-running=true"
 
   cronjob:
     image: crazymax/swarm-cronjob:latest
