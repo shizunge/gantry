@@ -26,9 +26,11 @@ You can start *Gantry* as a docker swarm service and use [`swarm-cronjob`](https
 
 ## How to update services with no running tasks?
 
-As discussed in [docker/cli/issues/627](https://github.com/docker/cli/issues/627), the CLI will hang when running `docker service update` on a service with no running tasks. We must add `--detach=true` option to the `docker service update`.
+As discussed in [docker/cli/issues/627](https://github.com/docker/cli/issues/627), the Docker CLI hangs when `docker service update` is running on a service with no running tasks, requiring the option `--detach=true` to be added.
 
-*Gantry* will check whether there are running tasks in a service. If there is no running task, *Gantry* automatically adds the option `--detach=true`. In addition to the detach option, *Gantry* also adds `--replicas=0` for services in replicated mode. You don't need to add these options manually.
+*Gantry* checks whether a service has running tasks. When none are found, it automatically adds the option `--detach=true`.
+
+To keep replicas at zero after an update, which prevents tasks from starting, add the [label](../README.md#labels) `gantry.update.options=--replicas=0` to the service. Note that `--replicas=0` only applies to services in replicated mode, it causes errors in global mode. See the [example](../examples/cronjob).
 
 ## Which `GANTRY_MANIFEST_CMD` to use?
 

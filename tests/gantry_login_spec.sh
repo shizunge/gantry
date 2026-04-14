@@ -79,8 +79,8 @@ Describe 'login'
       The stderr should satisfy spec_expect_message    "${NUM_SERVICES_UPDATING}"
       The stderr should satisfy spec_expect_message    "${ADDING_OPTIONS}.*--config ${AUTH_CONFIG}.*${SERVICE_NAME}"
       # 2 "--with-registry-auth" for SERVICE_NAME. One is automatically added. The other is from user.
-      The stderr should satisfy spec_expect_message    "${ADDING_OPTIONS_WITH_REGISTRY_AUTH}.*automatically.*${SERVICE_NAME}"
-      The stderr should satisfy spec_expect_message    "${ADDING_OPTIONS_WITH_REGISTRY_AUTH}.*specified by user.*${SERVICE_NAME}"
+      The stderr should satisfy spec_expect_message    "${ADDING_OPTIONS_WITH_REGISTRY_AUTH}.*${AUTOMATICALLY}.*${SERVICE_NAME}"
+      The stderr should satisfy spec_expect_message    "${ADDING_OPTIONS_WITH_REGISTRY_AUTH}.*${SPECIFIED_BY_USER}.*${SERVICE_NAME}"
       The stderr should satisfy spec_expect_no_message "${FROM_DOCKER_IMAGE_DIGEST_WARNING}.*${SERVICE_NAME}"
       The stderr should satisfy spec_expect_no_message "${DOES_NOT_HAVE_A_DIGEST}"
       The stderr should satisfy spec_expect_message    "${UPDATED}.*${SERVICE_NAME}"

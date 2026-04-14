@@ -16,9 +16,9 @@ services:
       restart_policy:
         condition: none
       labels:
-        - swarm.cronjob.enable=true
-        - swarm.cronjob.schedule=45 23 0 * * *
-        - swarm.cronjob.skip-running=true
+        - "swarm.cronjob.enable=true"
+        - "swarm.cronjob.schedule=45 23 0 * * *"
+        - "swarm.cronjob.skip-running=true"
 
   cronjob:
     image: crazymax/swarm-cronjob:latest
@@ -28,3 +28,25 @@ services:
       placement:
         constraints:
           - node.role==manager
+
+  # Another service to be updated.
+  service_to_be_updated:
+    image: docker
+    command: ["docker", "system", "prune", "-f"]
+    volumes:
+      - "/var/run/docker.sock:/var/run/docker.sock"
+    deploy:
+      replicas: 0
+      placement:
+        constraints:
+          - node.role==manager
+      restart_policy:
+        condition: none
+      labels:
+        - "swarm.cronjob.enable=true"
+        - "swarm.cronjob.schedule=0 */5 * * * *"
+        - "swarm.cronjob.skip-running=false"
+        # Add "gantry.update.options=--replicas=0" to prevent tasks from starting after the update.
+        # Start the tasks via cronjob only.
+        # "--replicas=0" only applies to services in replicated mode, it cannot be used with services in global mode.
+        - "gantry.update.options=--replicas=0"

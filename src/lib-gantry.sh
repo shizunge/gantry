@@ -1013,22 +1013,20 @@ _get_service_update_additional_options() {
   local SERVICE_NAME="${1}"
   local IMAGE_UPDATE_TO="${2}"
   local AUTH_CONFIG="${3}"
-  local NUM_RUNS=
-  NUM_RUNS=$(_get_number_of_running_tasks "${SERVICE_NAME}")
-  ! is_number "${NUM_RUNS}" && log WARN "NUM_RUNS \"${NUM_RUNS}\" is not a number." && return 1
+  local RETURN_VALUE=0
   local OPTIONS=
   local SPACE=
-  if [ "${NUM_RUNS}" = "0" ]; then
-    # Add "--detach=true" when there is no running tasks.
-    # https://github.com/docker/cli/issues/627
-    OPTIONS="${OPTIONS}${SPACE}--detach=true"
-    SPACE=" "
-    local MODE=
-    # Do not start a new task. Only works for replicated, not global.
-    if MODE=$(_service_is_replicated "${SERVICE_NAME}"); then
-      OPTIONS="${OPTIONS}${SPACE}--replicas=0"
+  local NUM_RUNS=
+  NUM_RUNS=$(_get_number_of_running_tasks "${SERVICE_NAME}")
+  if is_number "${NUM_RUNS}"; then
+    if [ "${NUM_RUNS}" = "0" ]; then
+      # Add "--detach=true" when there is no running tasks.
+      # https://github.com/docker/cli/issues/627
+      OPTIONS="${OPTIONS}${SPACE}--detach=true"
       SPACE=" "
     fi
+  else
+    log WARN "NUM_RUNS \"${NUM_RUNS}\" is not a number." && RETURN_VALUE=1
   fi
   # Add `--with-registry-auth` if needed.
   local WITH_REGISTRY_AUTH=
@@ -1048,6 +1046,31 @@ _get_service_update_additional_options() {
     SPACE=" "
   fi
   echo "${OPTIONS}"
+  return "${RETURN_VALUE}"
+}
+
+_warn_no_running_task() {
+  local SERVICE_NAME="${1}"
+  local OPTIONS="${2}"
+  local NUM_RUNS=
+  NUM_RUNS=$(_get_number_of_running_tasks "${SERVICE_NAME}")
+  ! is_number "${NUM_RUNS}" && log WARN "NUM_RUNS \"${NUM_RUNS}\" is not a number." && return 1
+  if [ "${NUM_RUNS}" != "0" ]; then
+    return 0
+  fi
+  # Warning for replicated, not global, as "--replicas" only works on replicated, not global.
+  local MODE=
+  if MODE=$(! _service_is_replicated "${SERVICE_NAME}"); then
+    return 0
+  fi
+  # Now, the number of running task is 0, the mode is replicated.
+  # If "--replicas=" is already part of the option, no warning.
+  if [ -n "${OPTIONS}" ] && echo "${OPTIONS}" | grep_q "--replicas="; then
+    return 0
+  fi
+  local MSG="Service ${SERVICE_NAME} is in ${MODE} mode and has no running task before updating."
+  MSG="${MSG} Adding label \"gantry.update.options=--replicas=0\" to the service to prevent tasks from starting after the update."
+  log WARN "${MSG}"
 }
 
 _get_service_rollback_additional_options() {
@@ -1132,6 +1155,7 @@ _update_single_service() {
   [ -n "${AUTH_CONFIG}" ] && log INFO "Adding options \"${AUTH_CONFIG}\" to the command ${CMD_STRING} for ${SERVICE_NAME}."
   [ -n "${AUTOMATIC_OPTIONS}" ] && log INFO "Adding options \"${AUTOMATIC_OPTIONS}\" automatically to the command ${CMD_STRING} for ${SERVICE_NAME}."
   [ -n "${UPDATE_OPTIONS}" ] && log INFO "Adding options \"${UPDATE_OPTIONS}\" specified by user to the command ${CMD_STRING} for ${SERVICE_NAME}."
+  _warn_no_running_task "${SERVICE_NAME}" "${AUTOMATIC_OPTIONS} ${UPDATE_OPTIONS}"
   local TIMEOUT_COMMAND=
   TIMEOUT_COMMAND=$(_get_timeout_command "${SERVICE_NAME}") || return 1
   local SPACE_T=
