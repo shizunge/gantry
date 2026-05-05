@@ -1269,13 +1269,14 @@ _get_services_filted() {
   return 0
 }
 
-gantry_initialize() {
+_gantry_initialize() {
   local STACK="${1:-gantry}"
+  log INFO "Starting Gantry."
   _create_static_variables_folder
   _authenticate_to_registries
 }
 
-gantry_get_services_list() {
+_gantry_get_services_list() {
   local SERVICES_EXCLUDED="${GANTRY_SERVICES_EXCLUDED:-""}"
   local SERVICES_EXCLUDED_FILTERS="${GANTRY_SERVICES_EXCLUDED_FILTERS:-"label=gantry.services.excluded=true"}"
   local SERVICES_FILTERS="${GANTRY_SERVICES_FILTERS:-""}"
@@ -1321,7 +1322,7 @@ gantry_get_services_list() {
   echo "${LIST}"
 }
 
-gantry_update_services_list() {
+_gantry_update_services_list() {
   local UPDATE_NUM_WORKERS=
   if ! UPDATE_NUM_WORKERS=$(gantry_read_number GANTRY_UPDATE_NUM_WORKERS 1); then
     local ERROR_SERVICE="GANTRY_UPDATE_NUM_WORKERS-is-not-a-number"
@@ -1372,12 +1373,39 @@ gantry_update_services_list() {
   return "${RETURN_VALUE}"
 }
 
-gantry_finalize() {
+_gantry_finalize() {
   local STACK="${1:-gantry}"
-  local NUM_ERRORS="${2:-0}"
+  local ACCUMULATED_ERRORS="${2:-0}"
   local RETURN_VALUE=0
   _remove_images "${STACK}-image-remover" || RETURN_VALUE=1
-  _report_services "${STACK}" "${NUM_ERRORS}" || RETURN_VALUE=1
+  _report_services "${STACK}" "${ACCUMULATED_ERRORS}" || RETURN_VALUE=1
   _remove_static_variables_folder
   return "${RETURN_VALUE}"
+}
+
+gantry_main() {
+  local STACK="${1}"
+  local ACCUMULATED_ERRORS="${2:-0}"
+  ! is_number "${ACCUMULATED_ERRORS}" && log WARN "ACCUMULATED_ERRORS \"${ACCUMULATED_ERRORS}\" is not a number." && ACCUMULATED_ERRORS=0;
+
+  _gantry_initialize "${STACK}"
+  ACCUMULATED_ERRORS=$((ACCUMULATED_ERRORS + $?))
+
+  local SERVICES_LIST=
+  SERVICES_LIST=$(_gantry_get_services_list)
+  ACCUMULATED_ERRORS=$((ACCUMULATED_ERRORS + $?))
+
+  if [ "${ACCUMULATED_ERRORS}" -eq 0 ]; then
+    log INFO "Starting updating."
+    _gantry_update_services_list "${SERVICES_LIST}"
+    ACCUMULATED_ERRORS=$((ACCUMULATED_ERRORS + $?))
+  else
+    log WARN "Skip updating all services due to previous error(s)."
+  fi
+
+  _gantry_finalize "${STACK}" "${ACCUMULATED_ERRORS}"
+  ACCUMULATED_ERRORS=$((ACCUMULATED_ERRORS + $?))
+
+  # Do not simple return ACCUMULATED_ERRORS, in case it is larger than 255.
+  test "${ACCUMULATED_ERRORS}" = "0"
 }

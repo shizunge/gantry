@@ -67,14 +67,24 @@ load_libraries() {
   . "${LIB_DIR}/lib-gantry.sh"
 }
 
-_run_on_node() {
+_get_stack() {
+  local STACK="${1}"
+  [ -z "${STACK}" ] && STACK=$(gantry_current_service_name)
+  [ -z "${STACK}" ] && STACK="gantry"
+  echo "${STACK}"
+}
+
+_get_host_name() {
+  [ -n "${DOCKER_HOST}" ] && log DEBUG "DOCKER_HOST=${DOCKER_HOST}"
+  [ -n "${DOCKER_CONFIG}" ] && log DEBUG "DOCKER_CONFIG=${DOCKER_CONFIG}"
   local HOST_NAME=
   if ! HOST_NAME=$(run_cmd docker node inspect self --format "{{.Description.Hostname}}"); then
+    local HOST_STRING="${DOCKER_HOST:-"the current node"}"
     log DEBUG "Failed to run \"docker node inspect self\": ${HOST_NAME}"
+    log ERROR "Skip updating all services because ${HOST_STRING} is not a swarm manager.";
     return 1
   fi
   echo "${HOST_NAME}"
-  return 0
 }
 
 _read_docker_hub_rate() {
@@ -97,58 +107,38 @@ gantry() {
   local PRE_RUN_CMD="${GANTRY_PRE_RUN_CMD:-""}"
   local POST_RUN_CMD="${GANTRY_POST_RUN_CMD:-""}"
   local STACK="${1}"
-  [ -z "${STACK}" ] && STACK=$(gantry_current_service_name)
-  [ -z "${STACK}" ] && STACK="gantry"
-  export LOG_SCOPE="${STACK}"
+
   local START_TIME=
   START_TIME=$(date +%s)
 
-  [ -n "${DOCKER_HOST}" ] && log DEBUG "DOCKER_HOST=${DOCKER_HOST}"
-  [ -n "${DOCKER_CONFIG}" ] && log DEBUG "DOCKER_CONFIG=${DOCKER_CONFIG}"
-  local RUN_ON_NODE=
-  if ! RUN_ON_NODE=$(_run_on_node); then
-    local HOST_STRING="${DOCKER_HOST:-"the current node"}"
-    log ERROR "Skip updating all services because ${HOST_STRING} is not a swarm manager.";
-    return 1
-  elif [ -z "${NODE_NAME}" ]; then
-    log DEBUG "Set NODE_NAME=${RUN_ON_NODE}"
-    export NODE_NAME="${RUN_ON_NODE}"
+  STACK=$(_get_stack "${STACK}")
+  export LOG_SCOPE="${STACK}"
+
+  local HOST_NAME=
+  HOST_NAME=$(_get_host_name) || return 1
+  log INFO "Run on Docker host ${HOST_NAME}. $(docker_version)"
+  if [ -z "${NODE_NAME}" ]; then
+    log DEBUG "Set NODE_NAME=${HOST_NAME}"
+    export NODE_NAME="${HOST_NAME}"
   fi
-  log INFO "Run on Docker host ${RUN_ON_NODE}. $(docker_version)"
 
   local ACCUMULATED_ERRORS=0
 
   eval_cmd "pre-run" "${PRE_RUN_CMD}"
   ACCUMULATED_ERRORS=$((ACCUMULATED_ERRORS + $?))
 
-  log INFO "Starting Gantry."
-  gantry_initialize "${STACK}"
-  ACCUMULATED_ERRORS=$((ACCUMULATED_ERRORS + $?))
-
   local DOCKER_HUB_RATE_BEFORE=
   DOCKER_HUB_RATE_BEFORE=$(_read_docker_hub_rate)
   log INFO "Before updating, Docker Hub rate remains ${DOCKER_HUB_RATE_BEFORE}."
 
-  local SERVICES_LIST=
-  SERVICES_LIST=$(gantry_get_services_list)
+  gantry_main "${STACK}" "${ACCUMULATED_ERRORS}"
   ACCUMULATED_ERRORS=$((ACCUMULATED_ERRORS + $?))
-
-  if [ "${ACCUMULATED_ERRORS}" -eq 0 ]; then
-    log INFO "Starting updating."
-    gantry_update_services_list "${SERVICES_LIST}"
-    ACCUMULATED_ERRORS=$((ACCUMULATED_ERRORS + $?))
-  else
-    log WARN "Skip updating all services due to previous error(s)."
-  fi
 
   local DOCKER_HUB_RATE_AFTER=
   local DOCKER_HUB_RATE_USED=
   DOCKER_HUB_RATE_AFTER=$(_read_docker_hub_rate)
   DOCKER_HUB_RATE_USED=$(first_minus_second "${DOCKER_HUB_RATE_BEFORE}" "${DOCKER_HUB_RATE_AFTER}")
   log INFO "After updating, Docker Hub rate remains ${DOCKER_HUB_RATE_AFTER}. Used rate ${DOCKER_HUB_RATE_USED}."
-
-  gantry_finalize "${STACK}" "${ACCUMULATED_ERRORS}";
-  ACCUMULATED_ERRORS=$((ACCUMULATED_ERRORS + $?))
 
   eval_cmd "post-run" "${POST_RUN_CMD}"
   ACCUMULATED_ERRORS=$((ACCUMULATED_ERRORS + $?))
