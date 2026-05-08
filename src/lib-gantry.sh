@@ -719,9 +719,7 @@ _get_service_mode() {
 _service_is_job() {
   local SERVICE_NAME="${1}"
   local MODE=
-  if ! MODE=$(_get_service_mode "${SERVICE_NAME}"); then
-    return 1
-  fi
+  MODE=$(_get_service_mode "${SERVICE_NAME}") || return 1
   # Looking for replicated-job or global-job
   echo "${MODE}" | grep "job"
 }
@@ -729,9 +727,7 @@ _service_is_job() {
 _service_is_replicated() {
   local SERVICE_NAME="${1}"
   local MODE=
-  if ! MODE=$(_get_service_mode "${SERVICE_NAME}"); then
-    return 1
-  fi
+  MODE=$(_get_service_mode "${SERVICE_NAME}") || return 1
   # Looking for replicated, not replicated-job
   if [ "${MODE}" != "replicated" ]; then
     return 1
