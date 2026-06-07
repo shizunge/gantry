@@ -84,7 +84,7 @@ Describe 'notify'
       local RETURN_VALUE=0
       reset_gantry_env "${SUITE_NAME}" "${SERVICE_NAME}"
       export GANTRY_NOTIFICATION_APPRISE_URL="http://localhost:${APPRISE_PORT}/notify"
-      export GANTRY_NOTIFICATION_TITLE="TEST_TITLE"
+      export GANTRY_NOTIFICATION_TITLE="TEST_\"\\TITLE"
       run_gantry "${SUITE_NAME}" "${TEST_NAME}"
       RETURN_VALUE="${?}"
       _print_and_cleanup_emails
@@ -96,7 +96,7 @@ Describe 'notify'
       When run test_notify_apprise "${TEST_NAME}" "${SERVICE_NAME}"
       The status should be success
       The stdout should satisfy display_output
-      The stdout should satisfy spec_expect_message    "Subject.*1 service\(s\) updated, no failures or errors TEST_TITLE"
+      The stdout should satisfy spec_expect_message    "Subject.*1 service\(s\) updated, no failures or errors TEST_\\\\\"\\\\TITLE"
       The stdout should satisfy spec_expect_no_message "Snippet.*${NO_SERVICES_UPDATED}"
       The stdout should satisfy spec_expect_message    "Snippet.*1 ${SERVICES_UPDATED}"
       The stdout should satisfy spec_expect_no_message "Snippet.*failed"
@@ -151,7 +151,7 @@ Describe 'notify'
       local RETURN_VALUE=0
       reset_gantry_env "${SUITE_NAME}" "${SERVICE_NAME}"
       export GANTRY_NOTIFICATION_APPRISE_URL="http://localhost:${APPRISE_PORT}/notify"
-      export GANTRY_NOTIFICATION_TITLE="TEST_TITLE"
+      export GANTRY_NOTIFICATION_TITLE="TEST_\"\\TITLE"
       run_gantry "${SUITE_NAME}" "${TEST_NAME}"
       RETURN_VALUE="${?}"
       _print_and_cleanup_emails
@@ -163,7 +163,7 @@ Describe 'notify'
       When run test_notify_apprise_inspection_failure "${TEST_NAME}" "${SERVICE_NAME}"
       The status should be failure
       The stdout should satisfy display_output
-      The stdout should satisfy spec_expect_message    "Subject.*0 service\(s\) updated, 1 inspection failed TEST_TITLE"
+      The stdout should satisfy spec_expect_message    "Subject.*0 service\(s\) updated, 1 inspection failed TEST_\\\\\"\\\\TITLE"
       The stdout should satisfy spec_expect_message    "Snippet.*${NO_SERVICES_UPDATED}"
       The stdout should satisfy spec_expect_no_message "Snippet.*${NUM_SERVICES_UPDATED}"
       The stdout should satisfy spec_expect_message    "Snippet.*${NUM_SERVICES_INSPECT_FAILED}"
@@ -211,7 +211,7 @@ Describe 'notify'
       local RETURN_VALUE=0
       reset_gantry_env "${SUITE_NAME}" "${SERVICE_NAME}"
       export GANTRY_NOTIFICATION_APPRISE_URL="http://localhost:${APPRISE_PORT}/notify"
-      export GANTRY_NOTIFICATION_TITLE="TEST_TITLE"
+      export GANTRY_NOTIFICATION_TITLE="TEST_\"\\TITLE"
       run_gantry "${SUITE_NAME}" "${TEST_NAME}"
       RETURN_VALUE="${?}"
       _print_and_cleanup_emails
@@ -223,7 +223,7 @@ Describe 'notify'
       When run test_notify_apprise_no_new_image "${TEST_NAME}" "${SERVICE_NAME}"
       The status should be success
       The stdout should satisfy display_output
-      The stdout should satisfy spec_expect_message    "Subject.*0 service\(s\) updated, no failures or errors TEST_TITLE"
+      The stdout should satisfy spec_expect_message    "Subject.*0 service\(s\) updated, no failures or errors TEST_\\\\\"\\\\TITLE"
       The stdout should satisfy spec_expect_message    "Snippet.*${NO_SERVICES_UPDATED}"
       The stdout should satisfy spec_expect_no_message "Snippet.*${NUM_SERVICES_UPDATED}"
       The stdout should satisfy spec_expect_no_message "Snippet.*failed"
@@ -316,7 +316,7 @@ Describe 'notify'
       reset_gantry_env "${SUITE_NAME}" "${SERVICE_NAME}"
       export GANTRY_NOTIFICATION_APPRISE_URL="http://localhost:${APPRISE_PORT}/notify"
       export GANTRY_NOTIFICATION_CONDITION="on-change"
-      export GANTRY_NOTIFICATION_TITLE="TEST_TITLE"
+      export GANTRY_NOTIFICATION_TITLE="TEST_\"\\TITLE"
       run_gantry "${SUITE_NAME}" "${TEST_NAME}"
       RETURN_VALUE="${?}"
       _print_and_cleanup_emails
@@ -328,7 +328,7 @@ Describe 'notify'
       When run test_notify_on_change_new_image "${TEST_NAME}" "${SERVICE_NAME}"
       The status should be success
       The stdout should satisfy display_output
-      The stdout should satisfy spec_expect_message    "Subject.*1 service\(s\) updated, no failures or errors TEST_TITLE"
+      The stdout should satisfy spec_expect_message    "Subject.*1 service\(s\) updated, no failures or errors TEST_\\\\\"\\\\TITLE"
       The stdout should satisfy spec_expect_no_message "Snippet.*${NO_SERVICES_UPDATED}"
       The stdout should satisfy spec_expect_message    "Snippet.*1 ${SERVICES_UPDATED}"
       The stdout should satisfy spec_expect_no_message "Snippet.*failed"
@@ -372,7 +372,7 @@ Describe 'notify'
       local RETURN_VALUE=0
       reset_gantry_env "${SUITE_NAME}" "${SERVICE_NAME}"
       export GANTRY_NOTIFICATION_CONDITION="on-change"
-      export GANTRY_NOTIFICATION_TITLE="TEST_TITLE"
+      export GANTRY_NOTIFICATION_TITLE="TEST_\"\\TITLE"
       run_gantry "${SUITE_NAME}" "${TEST_NAME}"
       RETURN_VALUE="${?}"
       return "${RETURN_VALUE}"
@@ -384,7 +384,7 @@ Describe 'notify'
       The status should be success
       The stdout should satisfy display_output
       The stdout should satisfy spec_expect_no_message ".+"
-      The stdout should satisfy spec_expect_no_message "TEST_TITLE"
+      The stdout should satisfy spec_expect_no_message "TEST_\\\\\"\\\\TITLE"
       The stderr should satisfy display_output
       The stderr should satisfy spec_expect_no_message "${START_WITHOUT_A_SQUARE_BRACKET}"
       The stderr should satisfy spec_expect_message    "${SKIP_UPDATING}.*${SERVICE_NAME}.*${SKIP_REASON_CURRENT_IS_LATEST}"
@@ -428,7 +428,7 @@ Describe 'notify'
       export GANTRY_UPDATE_OPTIONS="--incorrect-option"
       export GANTRY_NOTIFICATION_APPRISE_URL="http://localhost:${APPRISE_PORT}/notify"
       export GANTRY_NOTIFICATION_CONDITION="on-change"
-      export GANTRY_NOTIFICATION_TITLE="TEST_TITLE"
+      export GANTRY_NOTIFICATION_TITLE="TEST_\"\\TITLE"
       run_gantry "${SUITE_NAME}" "${TEST_NAME}"
       RETURN_VALUE="${?}"
       _print_and_cleanup_emails
@@ -440,7 +440,7 @@ Describe 'notify'
       When run test_notify_on_change_errors "${TEST_NAME}" "${SERVICE_NAME}"
       The status should be failure
       The stdout should satisfy display_output
-      The stdout should satisfy spec_expect_message    "Subject.*0 service\(s\) updated, 1 update failed TEST_TITLE"
+      The stdout should satisfy spec_expect_message    "Subject.*0 service\(s\) updated, 1 update failed TEST_\\\\\"\\\\TITLE"
       The stdout should satisfy spec_expect_message    "Snippet.*No services updated"
       The stdout should satisfy spec_expect_no_message "Snippet.*service\(s\) updated"
       The stdout should satisfy spec_expect_no_message "Snippet.*${NUM_SERVICES_INSPECT_FAILED}"
