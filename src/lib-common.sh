@@ -37,7 +37,8 @@ _remove_newline() {
   # N - Appends the next line to the pattern space.
   # $!ba - Loops back to the label a if not the last line ($! means "not last line").
   # s/\n/ /g - Substitutes all newline characters with a space.
-  sed ':a;N;$!ba;s/\n/ /g'
+  # s/\r//g - Substitutes all carriage return characters with nothing.
+  sed ':a;N;$!ba;s/\n/ /g;s/\r//g'
   # Here are a few alternatives to "sed"
   # "echo without quotes" remove carriage returns, tabs and multiple spaces.
   # "echo" is faster than "tr", but it does not preserve the leading space.
@@ -180,6 +181,19 @@ _log_skip_echo_color() {
   esac
 }
 
+# Reads from stdin and outputs the sanitized string to stdout
+# Sanitize the input string to make it safe to be included in JSON string values.
+sanitize_json_string() {
+  sed -E 's/\\/\\\\/g'\
+  | sed -E 's/"/\\"/g'\
+  | sed -E 's/\f/\\f/g'\
+  | sed -E 's/\t/\\t/g'\
+  | sed -E 's/\r/\\r/g'\
+  | sed -E 's/\n/\\n/g'\
+  | sed -E 's/$/\\n/'\
+  | tr -d '\n'
+}
+
 _log_formatter() {
   local TARGET_LEVEL="${LOG_LEVEL:-}";
   local FORMAT="${LOG_FORMAT:-}";
@@ -199,7 +213,7 @@ _log_formatter() {
     LEVEL_STR="\"level\":\"${LEVEL}\","
     [ -n "${LOCATION}" ] && LOC_STR="\"location\":\"${LOCATION}\","
     [ -n "${SCOPE}" ] && SCOPE_STR="\"scope\":\"${SCOPE}\","
-    MSG_STR="\"message\":\"$(echo "${*}" | sed -E 's/"/\\"/g')\","
+    MSG_STR="\"message\":\"$(echo "${*}" | sanitize_json_string)\","
     TIME_STR="\"time\":\"$(date -d "@${EPOCH}" -Isecond)\""
     MSG_LINE="{${LEVEL_STR}${LOC_STR}${MSG_STR}${SCOPE_STR}${TIME_STR}}"
   else

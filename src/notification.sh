@@ -20,11 +20,7 @@
 # Replace newline with '\n'
 _sanitize_apprise_string() {
   local STRING="${1}"
-  echo "${STRING}"\
-    | sed -E 's/\\/\\\\/g'\
-    | sed -E 's/"/\\"/g'\
-    | sed -E 's/$/\\n/'\
-    | tr -d '\n'
+  echo "${STRING}" | sanitize_json_string
 }
 
 _notify_via_apprise() {
