@@ -62,6 +62,9 @@ docker_hub_rate() {
     # Usage: echo "${LOGS}" | log_lines LEVLE
     log_lines() { local LEVEL="${1}"; while read -r LINE; do [ -z "${LINE}" ] && continue; log "${LEVEL}" "${LINE}"; done; }
   fi
+  if ! type is_number 1>/dev/null 2>/dev/null; then
+    is_number() { [ "${1}" -eq "${1}" ] 2>/dev/null; }
+  fi
   if ! _curl_installed; then
     # wget has the following limitation:
     # 1. The `busybox wget` does not send a HEAD request (even with `--spider`), thus it will consume a docker hub rate.
@@ -89,9 +92,12 @@ docker_hub_rate() {
     _docker_hub_echo_error "GET RATE RESPONSE ERROR" "${RESPONSE}"
     return 1
   fi
+  # example ${RESPONSE} :
+  # HTTP/2 200  date: Mon, 22 Jun 2026 21:46:03 GMT content-type: application/vnd.docker.distribution.manifest.v2+json content-length: 527 docker-content-digest: sha256:<sha256> docker-distribution-api-version: registry/2.0 etag: "sha256:<sha256>" strict-transport-security: max-age=31536000 ratelimit-limit: 100;w=21600 ratelimit-remaining: 100;w=21600 docker-ratelimit-source: <ip address>
+  # We also want to ignore "x-ratelimit-remaining: 100;".
   local RATE=
-  RATE=$(echo "${RESPONSE}" | sed -n -E 's/.*ratelimit-remaining: (-?[0-9]+);.*/\1/p' )
-  if [ -z "${RATE}" ]; then
+  RATE=$(echo "${RESPONSE}" | sed -n -E 's/(^|.*[^-])ratelimit-remaining: (-?[0-9]+);.*/\2/p' )
+  if [ -z "${RATE}" ] || ! is_number "${RATE}"; then
     _docker_hub_echo_error "PARSE RATE ERROR" "${RESPONSE}"
     return 1
   fi
