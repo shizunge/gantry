@@ -86,6 +86,7 @@ Describe 'jobs'
       The stderr should satisfy spec_expect_no_message "${REMOVED_IMAGE}.*${IMAGE_WITH_TAG}"
       The stderr should satisfy spec_expect_no_message "${FAILED_TO_REMOVE_IMAGE}.*${IMAGE_WITH_TAG}"
       The stderr should satisfy spec_expect_no_message "${DONE_REMOVING_IMAGES}"
+      The stderr should satisfy spec_expect_no_message "${USED_RATE_NAN}"
     End
   End
   Describe "test_jobs_UPDATE_JOBS_true"
@@ -139,6 +140,7 @@ Describe 'jobs'
       The stderr should satisfy spec_expect_no_message "${REMOVED_IMAGE}.*${IMAGE_WITH_TAG}"
       The stderr should satisfy spec_expect_message    "${FAILED_TO_REMOVE_IMAGE}.*${IMAGE_WITH_TAG}"
       The stderr should satisfy spec_expect_message    "${DONE_REMOVING_IMAGES}"
+      The stderr should satisfy spec_expect_no_message "${USED_RATE_NAN}"
     End
   End
   Describe "test_jobs_label_UPDATE_JOBS_true"
@@ -198,6 +200,7 @@ Describe 'jobs'
       The stderr should satisfy spec_expect_no_message "${REMOVED_IMAGE}.*${IMAGE_WITH_TAG}"
       The stderr should satisfy spec_expect_message    "${FAILED_TO_REMOVE_IMAGE}.*${IMAGE_WITH_TAG}"
       The stderr should satisfy spec_expect_message    "${DONE_REMOVING_IMAGES}"
+      The stderr should satisfy spec_expect_no_message "${USED_RATE_NAN}"
     End
   End
   Describe "test_jobs_no_running_tasks"
@@ -259,6 +262,7 @@ Describe 'jobs'
       The stderr should satisfy spec_expect_message    "${REMOVED_IMAGE}.*${IMAGE_WITH_TAG}"
       The stderr should satisfy spec_expect_no_message "${FAILED_TO_REMOVE_IMAGE}.*${IMAGE_WITH_TAG}"
       The stderr should satisfy spec_expect_message    "${DONE_REMOVING_IMAGES}"
+      The stderr should satisfy spec_expect_no_message "${USED_RATE_NAN}"
     End
   End
 End # Describe 'jobs'

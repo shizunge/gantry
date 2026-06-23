@@ -128,6 +128,7 @@ Describe 'notify'
       The stderr should satisfy spec_expect_message    "${DONE_REMOVING_IMAGES}"
       The stderr should satisfy spec_expect_no_message "${SKIP_NOTIFY_APPRISE}"
       The stderr should satisfy spec_expect_message    "${SEND_NOTIFY_APPRISE}"
+      The stderr should satisfy spec_expect_no_message "${USED_RATE_NAN}"
     End
   End
   Describe "test_notify_apprise_inspection_failure"
@@ -199,6 +200,7 @@ Describe 'notify'
       The stderr should satisfy spec_expect_no_message "${DONE_REMOVING_IMAGES}"
       The stderr should satisfy spec_expect_no_message "${SKIP_NOTIFY_APPRISE}"
       The stderr should satisfy spec_expect_message    "${SEND_NOTIFY_APPRISE}"
+      The stderr should satisfy spec_expect_no_message "${USED_RATE_NAN}"
     End
   End
   Describe "test_notify_apprise_no_new_image"
@@ -256,6 +258,7 @@ Describe 'notify'
       The stderr should satisfy spec_expect_no_message "${DONE_REMOVING_IMAGES}"
       The stderr should satisfy spec_expect_no_message "${SKIP_NOTIFY_APPRISE}"
       The stderr should satisfy spec_expect_message    "${SEND_NOTIFY_APPRISE}"
+      The stderr should satisfy spec_expect_no_message "${USED_RATE_NAN}"
     End
   End
   Describe "test_notify_apprise_bad_url"
@@ -303,6 +306,7 @@ Describe 'notify'
       The stderr should satisfy spec_expect_message    "${DONE_REMOVING_IMAGES}"
       The stderr should satisfy spec_expect_no_message "${SKIP_NOTIFY_APPRISE}"
       The stderr should satisfy spec_expect_message    "Failed to send notification via Apprise"
+      The stderr should satisfy spec_expect_no_message "${USED_RATE_NAN}"
     End
   End
   Describe "test_notify_on_change_new_image"
@@ -360,6 +364,7 @@ Describe 'notify'
       The stderr should satisfy spec_expect_message    "${DONE_REMOVING_IMAGES}"
       The stderr should satisfy spec_expect_no_message "${SKIP_NOTIFY_APPRISE}"
       The stderr should satisfy spec_expect_message    "${SEND_NOTIFY_APPRISE}"
+      The stderr should satisfy spec_expect_no_message "${USED_RATE_NAN}"
     End
   End
   Describe "test_notify_on_change_no_updates"
@@ -413,6 +418,7 @@ Describe 'notify'
       The stderr should satisfy spec_expect_no_message "${DONE_REMOVING_IMAGES}"
       The stderr should satisfy spec_expect_message    "${NO_UPDATES_OR_ERRORS_FOR_NOTIFICATION}"
       The stderr should satisfy spec_expect_message    "${SKIP_SENDING_NOTIFICATION}"
+      The stderr should satisfy spec_expect_no_message "${USED_RATE_NAN}"
     End
   End
   Describe "test_notify_on_change_errors"
@@ -474,6 +480,7 @@ Describe 'notify'
       The stderr should satisfy spec_expect_no_message "${DONE_REMOVING_IMAGES}"
       The stderr should satisfy spec_expect_no_message "${SKIP_NOTIFY_APPRISE}"
       The stderr should satisfy spec_expect_message    "${SEND_NOTIFY_APPRISE}"
+      The stderr should satisfy spec_expect_no_message "${USED_RATE_NAN}"
     End
   End
 End # Describe 'Notify'

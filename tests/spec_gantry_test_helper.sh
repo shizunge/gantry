@@ -76,6 +76,7 @@ export SKIP_REMOVING_IMAGES="Skip removing images"
 export REMOVED_IMAGE="Removed image"
 export FAILED_TO_REMOVE_IMAGE="Failed to remove image"
 export DONE_REMOVING_IMAGES="Done removing images"
+export USED_RATE_NAN="Used rate NaN"
 export SCHEDULE_NEXT_UPDATE_AT="Schedule next update at"
 export WATCH_CHANGES_IN="Watch changes in "
 

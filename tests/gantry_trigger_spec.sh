@@ -103,6 +103,7 @@ Describe 'trigger'
       The stderr should satisfy spec_expect_no_message "${SKIP_REMOVING_IMAGES}"
       The stderr should satisfy spec_expect_no_message "${REMOVED_IMAGE}.*${IMAGE_WITH_TAG}"
       The stderr should satisfy spec_expect_no_message "${FAILED_TO_REMOVE_IMAGE}.*${IMAGE_WITH_TAG}"
+      The stderr should satisfy spec_expect_no_message "${USED_RATE_NAN}"
       The stderr should satisfy spec_expect_no_message "${DONE_REMOVING_IMAGES}"
       The stderr should satisfy spec_expect_no_message "${SCHEDULE_NEXT_UPDATE_AT}"
       The stderr should satisfy spec_expect_no_message "${ALREADY_TIMES_UP}"
@@ -173,6 +174,7 @@ Describe 'trigger'
       The stderr should satisfy spec_expect_no_message "${REMOVED_IMAGE}.*${IMAGE_WITH_TAG}"
       The stderr should satisfy spec_expect_no_message "${FAILED_TO_REMOVE_IMAGE}.*${IMAGE_WITH_TAG}"
       The stderr should satisfy spec_expect_no_message "${DONE_REMOVING_IMAGES}"
+      The stderr should satisfy spec_expect_no_message "${USED_RATE_NAN}"
       # Check messages between iterations.
       The stderr should satisfy spec_expect_message    "${SCHEDULE_NEXT_UPDATE_AT}"
       The stderr should satisfy spec_expect_message    "${ALREADY_TIMES_UP}"
@@ -249,6 +251,7 @@ Describe 'trigger'
       The stderr should satisfy spec_expect_no_message "${REMOVED_IMAGE}.*${IMAGE_WITH_TAG}"
       The stderr should satisfy spec_expect_no_message "${FAILED_TO_REMOVE_IMAGE}.*${IMAGE_WITH_TAG}"
       The stderr should satisfy spec_expect_no_message "${DONE_REMOVING_IMAGES}"
+      The stderr should satisfy spec_expect_no_message "${USED_RATE_NAN}"
       # Check messages between iterations.
       The stderr should satisfy spec_expect_no_message "${SCHEDULE_NEXT_UPDATE_AT}"
       The stderr should satisfy spec_expect_no_message "${ALREADY_TIMES_UP}"
@@ -326,6 +329,7 @@ Describe 'trigger'
       The stderr should satisfy spec_expect_no_message "${REMOVED_IMAGE}.*${IMAGE_WITH_TAG}"
       The stderr should satisfy spec_expect_no_message "${FAILED_TO_REMOVE_IMAGE}.*${IMAGE_WITH_TAG}"
       The stderr should satisfy spec_expect_no_message "${DONE_REMOVING_IMAGES}"
+      The stderr should satisfy spec_expect_no_message "${USED_RATE_NAN}"
       # Check messages between iterations.
       The stderr should satisfy spec_expect_message    "${SCHEDULE_NEXT_UPDATE_AT}"
       The stderr should satisfy spec_expect_no_message "${ALREADY_TIMES_UP}"
@@ -397,6 +401,7 @@ Describe 'trigger'
       The stderr should satisfy spec_expect_no_message "${REMOVED_IMAGE}.*${IMAGE_WITH_TAG}"
       The stderr should satisfy spec_expect_no_message "${FAILED_TO_REMOVE_IMAGE}.*${IMAGE_WITH_TAG}"
       The stderr should satisfy spec_expect_no_message "${DONE_REMOVING_IMAGES}"
+      The stderr should satisfy spec_expect_no_message "${USED_RATE_NAN}"
       # Check messages between iterations.
       The stderr should satisfy spec_expect_message    "${SCHEDULE_NEXT_UPDATE_AT}"
       The stderr should satisfy spec_expect_no_message "${ALREADY_TIMES_UP}"
@@ -467,6 +472,7 @@ Describe 'trigger'
       The stderr should satisfy spec_expect_no_message "${REMOVED_IMAGE}.*${IMAGE_WITH_TAG}"
       The stderr should satisfy spec_expect_no_message "${FAILED_TO_REMOVE_IMAGE}.*${IMAGE_WITH_TAG}"
       The stderr should satisfy spec_expect_no_message "${DONE_REMOVING_IMAGES}"
+      The stderr should satisfy spec_expect_no_message "${USED_RATE_NAN}"
       # Check messages between iterations.
       The stderr should satisfy spec_expect_message    "${SCHEDULE_NEXT_UPDATE_AT}"
       The stderr should satisfy spec_expect_no_message "${ALREADY_TIMES_UP}"

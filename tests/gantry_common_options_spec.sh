@@ -63,6 +63,7 @@ Describe 'common-options'
       The stderr should satisfy spec_expect_no_message "${REMOVED_IMAGE}.*${IMAGE_WITH_TAG}"
       The stderr should satisfy spec_expect_no_message "${FAILED_TO_REMOVE_IMAGE}.*${IMAGE_WITH_TAG}"
       The stderr should satisfy spec_expect_no_message "${DONE_REMOVING_IMAGES}"
+      The stderr should satisfy spec_expect_no_message "${USED_RATE_NAN}"
       The stderr should satisfy spec_expect_no_message "${SCHEDULE_NEXT_UPDATE_AT}"
       The stderr should satisfy spec_expect_no_message "${WATCH_CHANGES_IN}"
     End
@@ -115,6 +116,7 @@ Describe 'common-options'
       The stderr should satisfy spec_expect_message    "${REMOVED_IMAGE}.*${IMAGE_WITH_TAG}"
       The stderr should satisfy spec_expect_no_message "${FAILED_TO_REMOVE_IMAGE}.*${IMAGE_WITH_TAG}"
       The stderr should satisfy spec_expect_message    "${DONE_REMOVING_IMAGES}"
+      The stderr should satisfy spec_expect_no_message "${USED_RATE_NAN}"
       The stderr should satisfy spec_expect_no_message "${SCHEDULE_NEXT_UPDATE_AT}"
     End
   End
@@ -270,6 +272,7 @@ Describe 'common-options'
       The stderr should satisfy spec_expect_message    "TEST_OUTPUT_MULTIPLE_LINES=4$"
       The stderr should satisfy spec_expect_message    "TEST_OUTPUT_MULTIPLE_LINES=5$"
       The stderr should satisfy spec_expect_message    "Finish post-run command with a non-zero return value 1.$"
+      The stderr should satisfy spec_expect_no_message "${USED_RATE_NAN}"
       The stderr should satisfy spec_expect_no_message "${SCHEDULE_NEXT_UPDATE_AT}"
       The stderr should satisfy spec_expect_no_message "${WATCH_CHANGES_IN}"
     End
@@ -321,6 +324,7 @@ Describe 'common-options'
       The stderr should satisfy spec_expect_no_message "${REMOVED_IMAGE}.*"
       The stderr should satisfy spec_expect_no_message "${FAILED_TO_REMOVE_IMAGE}.*"
       The stderr should satisfy spec_expect_no_message "${DONE_REMOVING_IMAGES}"
+      The stderr should satisfy spec_expect_no_message "${USED_RATE_NAN}"
       The stderr should satisfy spec_expect_no_message "${SCHEDULE_NEXT_UPDATE_AT}"
       The stderr should satisfy spec_expect_no_message "${WATCH_CHANGES_IN}"
     End
