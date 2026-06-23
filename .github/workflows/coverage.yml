@@ -44,7 +44,7 @@ jobs:
         run: |
           sudo apt install -y inotify-tools
       - name: Checkout Code
-        uses: actions/checkout@v6
+        uses: actions/checkout@v7
       - name: Generate tests coverage reports
         run: |
           NUM_JOBS=$(ls -1 tests | wc -l)

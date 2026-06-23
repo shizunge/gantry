@@ -17,7 +17,7 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout Code
-        uses: actions/checkout@v6
+        uses: actions/checkout@v7
       - name: Install shellcheck
         run: sudo apt install -y bash shellcheck
       - name: Analyse with shellcheck
@@ -66,7 +66,7 @@ jobs:
         run: |
           sudo apt install -y inotify-tools
       - name: Checkout Code
-        uses: actions/checkout@v6
+        uses: actions/checkout@v7
       - name: Run tests
         run: |
           shellspec -s bash --pattern tests/${{ matrix.test_suit }}
@@ -89,7 +89,7 @@ jobs:
         run: |
           sudo apt install -y inotify-tools
       - name: Checkout Code
-        uses: actions/checkout@v6
+        uses: actions/checkout@v7
       - name: Run container tests
         run: |
           NUM_JOBS=$(ls -1 tests | wc -l)
@@ -110,7 +110,7 @@ jobs:
           echo -n "shellspec version: "
           shellspec --version
       - name: Checkout Code
-        uses: actions/checkout@v6
+        uses: actions/checkout@v7
       - name: Run container tests
         run: |
           export GANTRY_TEST_CONTAINER=true
