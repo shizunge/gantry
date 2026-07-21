@@ -184,13 +184,14 @@ _log_skip_echo_color() {
 # Reads from stdin and outputs the sanitized string to stdout
 # Sanitize the input string to make it safe to be included in JSON string values.
 sanitize_json_string() {
-  sed -E 's/\\/\\\\/g'\
-  | sed -E 's/"/\\"/g'\
-  | sed -E 's/\f/\\f/g'\
-  | sed -E 's/\t/\\t/g'\
-  | sed -E 's/\r/\\r/g'\
-  | sed -E 's/\n/\\n/g'\
-  | sed -E 's/$/\\n/'\
+  sed -E \
+  -e 's/\\/\\\\/g'\
+  -e 's/"/\\"/g'\
+  -e 's/\f/\\f/g'\
+  -e 's/\t/\\t/g'\
+  -e 's/\r/\\r/g'\
+  -e 's/\n/\\n/g'\
+  -e 's/$/\\n/'\
   | tr -d '\n'
 }
 
@@ -641,15 +642,19 @@ _all_tasks_reach_state() {
     # continue
     return 1
   fi
-  # Get return value of the task from the string "task: non-zero exit (1)".
-  local TASK_RETURN_VALUE=
-  TASK_RETURN_VALUE=$(echo "${STATES}" | grep "Failed" | sed -n -E 's/.*task: non-zero exit \(([0-9]+)\).*/\1/p')
-  # Get the first error code.
-  local RETURN_VALUE=
-  RETURN_VALUE=$(_get_first_word "${TASK_RETURN_VALUE:-1}")
-  # break
-  echo "${RETURN_VALUE}"
-  return 0
+  if [ $((NUM_STATES+NUM_FAILS)) = "${NUM_LINES}" ]; then
+    # Get return value of the task from the string "task: non-zero exit (1)".
+    local TASK_RETURN_VALUES=
+    TASK_RETURN_VALUES=$(echo "${STATES}" | grep "Failed" | sed -n -E 's/.*task: non-zero exit \(([0-9]+)\).*/\1/p')
+    # Get the first error code.
+    local RETURN_VALUE=
+    RETURN_VALUE=$(_get_first_word "${TASK_RETURN_VALUES:-1}")
+    # break
+    echo "${RETURN_VALUE}"
+    return 0
+  fi
+  # continue
+  return 1
 }
 
 # Usage: wait_service_state <SERVICE_NAME> [WANT_STATE] [timeout in seconds]
@@ -719,11 +724,14 @@ docker_service_remove() {
 # Works with the service started (e.g. via docker_global_job) with --detach.
 docker_service_follow_logs_wait_complete() {
   local SERVICE_NAME="${1}"
+  local RETURN_VALUE=0
   local PID=
   docker_service_logs_follow "${SERVICE_NAME}" &
   PID="${!}"
   wait_service_state "${SERVICE_NAME}" "Complete"
+  RETURN_VALUE=$?
   docker_service_remove "${SERVICE_NAME}" "wait ${PID}"
+  return "${RETURN_VALUE}"
 }
 
 # We do not expect failures when using docker_global_job.

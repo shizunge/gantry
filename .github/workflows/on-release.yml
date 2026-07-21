@@ -43,7 +43,7 @@ jobs:
           sudo apt install -y inotify-tools
       - name: Checkout Code
         uses: actions/checkout@v7
-      - name: Run tests
+      - name: Run script tests in parallel
         run: |
           NUM_JOBS=$(ls -1 tests | wc -l)
           shellspec -s bash --jobs "${NUM_JOBS}"

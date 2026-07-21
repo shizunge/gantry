@@ -51,18 +51,97 @@ Describe 'cleanup-images'
       The stderr should satisfy spec_expect_no_message "${ROLLING_BACK}.*${SERVICE_NAME}"
       The stderr should satisfy spec_expect_no_message "${FAILED_TO_ROLLBACK}.*${SERVICE_NAME}"
       The stderr should satisfy spec_expect_no_message "${ROLLED_BACK}.*${SERVICE_NAME}"
-      The stderr should satisfy spec_expect_no_message "${NO_SERVICES_UPDATED}"
-      The stderr should satisfy spec_expect_message    "1 ${SERVICES_UPDATED}"
-      The stderr should satisfy spec_expect_no_message "${NUM_SERVICES_UPDATE_FAILED}"
-      The stderr should satisfy spec_expect_no_message "${NUM_SERVICES_INSPECT_FAILED}"
-      The stderr should satisfy spec_expect_no_message "${NUM_SERVICES_ROLLBACK_FAILED}"
-      The stderr should satisfy spec_expect_no_message "${NUM_SERVICES_ERRORS}"
       The stderr should satisfy spec_expect_no_message "${NO_IMAGES_TO_REMOVE}"
       The stderr should satisfy spec_expect_no_message "${REMOVING_NUM_IMAGES}"
       The stderr should satisfy spec_expect_message    "${SKIP_REMOVING_IMAGES}"
       The stderr should satisfy spec_expect_no_message "${REMOVED_IMAGE}.*${IMAGE_WITH_TAG}"
       The stderr should satisfy spec_expect_no_message "${FAILED_TO_REMOVE_IMAGE}.*${IMAGE_WITH_TAG}"
       The stderr should satisfy spec_expect_no_message "${DONE_REMOVING_IMAGES}"
+      The stderr should satisfy spec_expect_no_message "${NO_SERVICES_UPDATED}"
+      The stderr should satisfy spec_expect_message    "1 ${SERVICES_UPDATED}"
+      The stderr should satisfy spec_expect_no_message "${NUM_SERVICES_UPDATE_FAILED}"
+      The stderr should satisfy spec_expect_no_message "${NUM_SERVICES_INSPECT_FAILED}"
+      The stderr should satisfy spec_expect_no_message "${NUM_SERVICES_ERRORS}"
+      The stderr should satisfy spec_expect_no_message "${FAILED_TO_REMOVE_IMAGES}"
+      The stderr should satisfy spec_expect_no_message "${USED_RATE_NAN}"
+    End
+  End
+  Describe "test_cleanup_image_fail"
+    TEST_NAME="test_cleanup_image_fail"
+    IMAGE_WITH_TAG=$(get_image_with_tag "${SUITE_NAME}")
+    SERVICE_NAME=$(get_test_service_name "${TEST_NAME}")
+    SERVICE_NAME0="${SERVICE_NAME}-0"
+    SERVICE_NAME1="${SERVICE_NAME}-1"
+    test_start() {
+      local TEST_NAME="${1}"
+      local IMAGE_WITH_TAG="${2}"
+      local SERVICE_NAME="${3}"
+      local SERVICE_NAME0="${SERVICE_NAME}-0"
+      local SERVICE_NAME1="${SERVICE_NAME}-1"
+      initialize_test "${TEST_NAME}"
+      # create a single image, and two services that use the same image.
+      build_and_push_test_image "${IMAGE_WITH_TAG}"
+      start_replicated_service "${SERVICE_NAME0}" "${IMAGE_WITH_TAG}"
+      start_replicated_service "${SERVICE_NAME1}" "${IMAGE_WITH_TAG}"
+      # create a new image with the same tag.
+      build_and_push_test_image "${IMAGE_WITH_TAG}"
+      # mark one service to skip updating.
+      local LABEL="gantry.services.excluded"
+      docker_service_update --label-add "${LABEL}=true" "${SERVICE_NAME1}"
+    }
+    test_cleanup_image_fail() {
+      local TEST_NAME="${1}"
+      local SERVICE_NAME="${2}"
+      reset_gantry_env "${SUITE_NAME}" "${SERVICE_NAME}"
+      export GANTRY_CLEANUP_IMAGES="true"
+      run_gantry "${SUITE_NAME}" "${TEST_NAME}"
+    }
+    test_end() {
+      local TEST_NAME="${1}"
+      local IMAGE_WITH_TAG="${2}"
+      local SERVICE_NAME="${3}"
+      stop_multiple_services "${SERVICE_NAME}" 0 1
+      prune_local_test_image "${IMAGE_WITH_TAG}"
+      finalize_test "${TEST_NAME}"
+    }
+    BeforeEach "test_start ${TEST_NAME} ${IMAGE_WITH_TAG} ${SERVICE_NAME}"
+    AfterEach "test_end ${TEST_NAME} ${IMAGE_WITH_TAG} ${SERVICE_NAME}"
+    It 'run_test'
+      When run test_cleanup_image_fail "${TEST_NAME}" "${SERVICE_NAME}"
+      The status should be success
+      The stdout should satisfy display_output
+      The stdout should satisfy spec_expect_no_message ".+"
+      The stderr should satisfy display_output
+      The stderr should satisfy spec_expect_no_message "${START_WITHOUT_A_SQUARE_BRACKET}"
+      # we are expecting one service is updated, one is not (excluded).
+      The stderr should satisfy spec_expect_no_message "${EXCLUDE_SERVICE}.*${SERVICE_NAME0}"
+      The stderr should satisfy spec_expect_message    "${EXCLUDE_SERVICE}.*${SERVICE_NAME1}"
+      The stderr should satisfy spec_expect_no_message "${SKIP_UPDATING}.*${SERVICE_NAME0}"
+      The stderr should satisfy spec_expect_message    "${PERFORM_UPDATING}.*${SERVICE_NAME0}.*${PERFORM_REASON_HAS_NEWER_IMAGE}"
+      The stderr should satisfy spec_expect_no_message "${SKIP_UPDATING}.*${SERVICE_NAME1}"
+      The stderr should satisfy spec_expect_no_message "${PERFORM_UPDATING}.*${SERVICE_NAME1}"
+      The stderr should satisfy spec_expect_no_message "${NUM_SERVICES_SKIP_JOBS}"
+      The stderr should satisfy spec_expect_no_message "${NUM_SERVICES_INSPECT_FAILURE}"
+      The stderr should satisfy spec_expect_no_message "${NUM_SERVICES_NO_NEW_IMAGES}"
+      The stderr should satisfy spec_expect_message    "${NUM_SERVICES_UPDATING}"
+      The stderr should satisfy spec_expect_message    "${UPDATED}.*${SERVICE_NAME0}"
+      The stderr should satisfy spec_expect_no_message "${UPDATED}.*${SERVICE_NAME1}"
+      The stderr should satisfy spec_expect_no_message "${NO_UPDATES}"
+      The stderr should satisfy spec_expect_no_message "${ROLLING_BACK}"
+      The stderr should satisfy spec_expect_no_message "${FAILED_TO_ROLLBACK}"
+      The stderr should satisfy spec_expect_no_message "${NO_IMAGES_TO_REMOVE}"
+      The stderr should satisfy spec_expect_message    "${REMOVING_NUM_IMAGES}"
+      The stderr should satisfy spec_expect_no_message "${SKIP_REMOVING_IMAGES}"
+      # remove image should fail.
+      The stderr should satisfy spec_expect_no_message "${REMOVED_IMAGE}.*${IMAGE_WITH_TAG}"
+      The stderr should satisfy spec_expect_message    "${FAILED_TO_REMOVE_IMAGE}.*${IMAGE_WITH_TAG}"
+      The stderr should satisfy spec_expect_message    "${DONE_REMOVING_IMAGES}"
+      The stderr should satisfy spec_expect_no_message "${NO_SERVICES_UPDATED}"
+      The stderr should satisfy spec_expect_message    "1 ${SERVICES_UPDATED}"
+      The stderr should satisfy spec_expect_no_message "${NUM_SERVICES_UPDATE_FAILED}"
+      The stderr should satisfy spec_expect_no_message "${NUM_SERVICES_INSPECT_FAILED}"
+      The stderr should satisfy spec_expect_message    "${NUM_SERVICES_ERRORS}"
+      The stderr should satisfy spec_expect_message    "- ${FAILED_TO_REMOVE_IMAGES}"
       The stderr should satisfy spec_expect_no_message "${USED_RATE_NAN}"
     End
   End
@@ -99,12 +178,6 @@ Describe 'cleanup-images'
       The stderr should satisfy spec_expect_no_message "${ROLLING_BACK}.*${SERVICE_NAME}"
       The stderr should satisfy spec_expect_no_message "${FAILED_TO_ROLLBACK}.*${SERVICE_NAME}"
       The stderr should satisfy spec_expect_no_message "${ROLLED_BACK}.*${SERVICE_NAME}"
-      The stderr should satisfy spec_expect_no_message "${NO_SERVICES_UPDATED}"
-      The stderr should satisfy spec_expect_message    "1 ${SERVICES_UPDATED}"
-      The stderr should satisfy spec_expect_no_message "${NUM_SERVICES_UPDATE_FAILED}"
-      The stderr should satisfy spec_expect_no_message "${NUM_SERVICES_INSPECT_FAILED}"
-      The stderr should satisfy spec_expect_no_message "${NUM_SERVICES_ROLLBACK_FAILED}"
-      The stderr should satisfy spec_expect_no_message "${NUM_SERVICES_ERRORS}"
       The stderr should satisfy spec_expect_no_message "${NO_IMAGES_TO_REMOVE}"
       The stderr should satisfy spec_expect_message    "${REMOVING_NUM_IMAGES}"
       The stderr should satisfy spec_expect_no_message "${SKIP_REMOVING_IMAGES}"
@@ -113,6 +186,12 @@ Describe 'cleanup-images'
       The stderr should satisfy spec_expect_no_message "${REMOVED_IMAGE}.*${IMAGE_WITH_TAG}"
       The stderr should satisfy spec_expect_no_message "${FAILED_TO_REMOVE_IMAGE}.*${IMAGE_WITH_TAG}"
       The stderr should satisfy spec_expect_no_message "${DONE_REMOVING_IMAGES}"
+      The stderr should satisfy spec_expect_no_message "${NO_SERVICES_UPDATED}"
+      The stderr should satisfy spec_expect_message    "1 ${SERVICES_UPDATED}"
+      The stderr should satisfy spec_expect_no_message "${NUM_SERVICES_UPDATE_FAILED}"
+      The stderr should satisfy spec_expect_no_message "${NUM_SERVICES_INSPECT_FAILED}"
+      The stderr should satisfy spec_expect_message    "${NUM_SERVICES_ERRORS}"
+      The stderr should satisfy spec_expect_message    "- ${FAILED_TO_REMOVE_IMAGES}"
       The stderr should satisfy spec_expect_no_message "${USED_RATE_NAN}"
     End
   End
@@ -148,12 +227,6 @@ Describe 'cleanup-images'
       The stderr should satisfy spec_expect_no_message "${ROLLING_BACK}.*${SERVICE_NAME}"
       The stderr should satisfy spec_expect_no_message "${FAILED_TO_ROLLBACK}.*${SERVICE_NAME}"
       The stderr should satisfy spec_expect_no_message "${ROLLED_BACK}.*${SERVICE_NAME}"
-      The stderr should satisfy spec_expect_no_message "${NO_SERVICES_UPDATED}"
-      The stderr should satisfy spec_expect_message    "1 ${SERVICES_UPDATED}"
-      The stderr should satisfy spec_expect_no_message "${NUM_SERVICES_UPDATE_FAILED}"
-      The stderr should satisfy spec_expect_no_message "${NUM_SERVICES_INSPECT_FAILED}"
-      The stderr should satisfy spec_expect_no_message "${NUM_SERVICES_ROLLBACK_FAILED}"
-      The stderr should satisfy spec_expect_no_message "${NUM_SERVICES_ERRORS}"
       The stderr should satisfy spec_expect_no_message "${NO_IMAGES_TO_REMOVE}"
       The stderr should satisfy spec_expect_message    "${REMOVING_NUM_IMAGES}"
       The stderr should satisfy spec_expect_no_message "${SKIP_REMOVING_IMAGES}"
@@ -162,6 +235,12 @@ Describe 'cleanup-images'
       The stderr should satisfy spec_expect_message    "${REMOVED_IMAGE}.*${IMAGE_WITH_TAG}"
       The stderr should satisfy spec_expect_no_message "${FAILED_TO_REMOVE_IMAGE}.*${IMAGE_WITH_TAG}"
       The stderr should satisfy spec_expect_message    "${DONE_REMOVING_IMAGES}"
+      The stderr should satisfy spec_expect_no_message "${NO_SERVICES_UPDATED}"
+      The stderr should satisfy spec_expect_message    "1 ${SERVICES_UPDATED}"
+      The stderr should satisfy spec_expect_no_message "${NUM_SERVICES_UPDATE_FAILED}"
+      The stderr should satisfy spec_expect_no_message "${NUM_SERVICES_INSPECT_FAILED}"
+      The stderr should satisfy spec_expect_no_message "${NUM_SERVICES_ERRORS}"
+      The stderr should satisfy spec_expect_no_message "${FAILED_TO_REMOVE_IMAGES}"
       The stderr should satisfy spec_expect_no_message "${USED_RATE_NAN}"
     End
   End
@@ -223,7 +302,7 @@ Describe 'cleanup-images'
     AfterEach "test_end ${TEST_NAME} ${IMAGE_WITH_TAG} ${SERVICE_NAME}"
     It 'run_test'
       When run test_IMAGES_TO_REMOVE_none_empty "${TEST_NAME}" "${SERVICE_NAME}" "${IMAGE_WITH_TAG}"
-      The status should be success
+      The status should be failure
       The stdout should satisfy display_output
       The stdout should satisfy spec_expect_no_message ".+"
       The stderr should satisfy display_output
@@ -237,4 +316,5 @@ Describe 'cleanup-images'
       The stderr should satisfy spec_expect_no_message "${USED_RATE_NAN}"
     End
   End
-End # Describe 'Single service'
+End # Describe 'cleanup-images'
+

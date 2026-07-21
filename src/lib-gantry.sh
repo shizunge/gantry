@@ -15,6 +15,12 @@
 # along with this program.  If not, see <https://www.gnu.org/licenses/>.
 #
 
+_must_be_a_number_string() {
+  local NAME="${1}"
+  local VALUE="${2}"
+  echo "${NAME} must be a number. Got \"${VALUE}\"."
+}
+
 # This function calls read_env() underneath.
 _read_env_default() {
   local ENV_NAME="${1}"
@@ -33,16 +39,17 @@ _read_env_default() {
 gantry_read_number() {
   local ENV_NAME="${1}"
   local DEFAULT_VALUE="${2}"
-  ! is_number "${DEFAULT_VALUE}" && log ERROR "DEFAULT_VALUE for ${ENV_NAME} must be a number. Got \"${DEFAULT_VALUE}\"." && return 1
+  ! is_number "${DEFAULT_VALUE}" && log ERROR "$(_must_be_a_number_string "DEFAULT_VALUE for ${ENV_NAME}" "${DEFAULT_VALUE}")" && return 1
   local VALUE=
   VALUE=$(_read_env_default "${ENV_NAME}" "${DEFAULT_VALUE}")
+  echo "${VALUE}"
   if ! is_number "${VALUE}"; then
     local READ_VALUE=
     READ_VALUE=$(read_env "${ENV_NAME}" "${DEFAULT_VALUE}")
-    log ERROR "${ENV_NAME} must be a number. Got \"${READ_VALUE}\"."
-    return 1;
+    log ERROR "$(_must_be_a_number_string "${ENV_NAME}" "${READ_VALUE}")"
+    return 1
   fi
-  echo "${VALUE}"
+  return 0
 }
 
 _get_label_from_service() {
@@ -265,11 +272,13 @@ _remove_static_variables_folder() {
 }
 
 _create_static_variables_folder() {
+  local RETURN_VALUE=0
   # In case previous run did not finish gracefully.
   # We need a refresh folder to store the lists of updated services and errors.
-  _remove_static_variables_folder
-  STATIC_VARIABLES_FOLDER=$(_get_static_variables_folder)
+  _remove_static_variables_folder || RETURN_VALUE=1
+  STATIC_VARIABLES_FOLDER=$(_get_static_variables_folder) || RETURN_VALUE=1
   export STATIC_VARIABLES_FOLDER
+  return "${RETURN_VALUE}"
 }
 
 _lock() {
@@ -404,6 +413,7 @@ _remove_container() {
 gantry_remove_images() {
   local IMAGES_TO_REMOVE="${1}"
   local IMAGE_TO_REMOVE SERVICE_IMAGE
+  local RETURN_VALUE=0
   log DEBUG "$(docker_version)"
   for SERVICE_IMAGE in ${IMAGES_TO_REMOVE}; do
     IMAGE_TO_REMOVE=$(_get_name_of_image_to_remove "${SERVICE_IMAGE}")
@@ -419,12 +429,14 @@ gantry_remove_images() {
     if ! RMI_MSG=$(run_cmd docker image rm "${IMAGE_ID}"); then
       echo "${RMI_MSG}" | log_lines ERROR
       log ERROR "Failed to remove image ${SERVICE_IMAGE}.";
+      RETURN_VALUE=1
       continue;
     fi
     echo "${RMI_MSG}" | log_lines DEBUG
     log INFO "Removed image ${SERVICE_IMAGE}.";
   done
   log INFO "Done removing images.";
+  return "${RETURN_VALUE}"
 }
 
 _remove_images() {
@@ -464,26 +476,49 @@ _remove_images() {
   docker_global_job --name "${SERVICE_NAME}" \
     --detach=true \
     --with-registry-auth \
-    --restart-condition on-failure \
-    --restart-max-attempts 1 \
+    --restart-condition none \
     --mount type=bind,source=/var/run/docker.sock,destination=/var/run/docker.sock \
     --env "GANTRY_IMAGES_TO_REMOVE=${IMAGES_TO_REMOVE_LIST}" \
     ${CLEANUP_IMAGES_OPTIONS} \
     "${IMAGES_REMOVER}";
   docker_service_follow_logs_wait_complete "${SERVICE_NAME}"
+  local RETURN_VALUE=$?
+  if [ "${RETURN_VALUE}" != "0" ]; then
+    local ERROR_MSG="Failed to remove images. The global job ${SERVICE_NAME} exited with code ${RETURN_VALUE}."
+    _static_variable_add_unique_to_list STATIC_VAR_ERROR_MESSAGES "${ERROR_MSG}"
+  fi
+  return "${RETURN_VALUE}"
 }
 
-_report_list() {
-  local PRE="${1}";
-  local POST="${2}";
-  shift 2;
+# return 0 if the list is empty, otherwise return 1
+report_if_list_empty() {
+  local LIST="${1}"
+  local EMPTY="${2}"
+  if [ -z "${LIST}" ]; then
+    echo "${EMPTY}"
+    return 0
+  fi
+  return 1
+}
+
+_report_list_title() {
+  local TITLE="${1}";
+  shift 1;
   local LIST="${*}"
   local NUM=
   NUM=$(_get_number_of_elements "${LIST}")
-  local TITLE=
-  [ -n "${PRE}" ] && TITLE="${PRE} "
-  TITLE="${TITLE}${NUM}"
-  [ -n "${POST}" ] && TITLE="${TITLE} ${POST}"
+  TITLE=$(echo "${TITLE}" | sed -E "s/#NUM#/${NUM}/g")
+  echo "${TITLE}"
+}
+
+_report_from_static_variable_single_line() {
+  local VARIABLE_NAME="${1}"
+  local TITLE="${2}"
+  local EMPTY="${3}"
+  local LIST=
+  LIST=$(_static_variable_read_list "${VARIABLE_NAME}")
+  report_if_list_empty "${LIST}" "${EMPTY}" && return 0
+  TITLE=$(_report_list_title "${TITLE}" "${LIST}")
   # :a        # Define a label called "a" (used for looping)
   # N         # Append the Next line to the current pattern space (with \n between)
   # $!ba      # If not ($!) the last line ($), Branch back to label a (ba)
@@ -491,41 +526,23 @@ _report_list() {
   echo "${TITLE}: ${LIST}" | sed -E ':a; N; $!ba; s/\n/, /g'
 }
 
-_report_from_static_variable() {
+_report_from_static_variable_multiple_lines() {
   local VARIABLE_NAME="${1}"
-  local PRE="${2}"
-  local POST="${3}"
-  local EMPTY="${4}"
+  local TITLE="${2}"
+  local EMPTY="${3}"
   local LIST=
   LIST=$(_static_variable_read_list "${VARIABLE_NAME}")
-  if [ -z "${LIST}" ]; then
-    echo "${EMPTY}"
-    return 0
-  fi
-  _report_list "${PRE}" "${POST}" "${LIST}"
-}
-
-_report_services_from_static_variable() {
-  local VARIABLE_NAME="${1}"
-  local PRE="${2}"
-  local POST="${3}"
-  local EMPTY="${4}"
-  if [ -z "${POST}" ]; then
-    POST="service(s)"
-  else
-    POST="service(s) ${POST}"
-  fi
-  _report_from_static_variable "${VARIABLE_NAME}" "${PRE}" "${POST}" "${EMPTY}"
+  report_if_list_empty "${LIST}" "${EMPTY}" && return 0
+  TITLE=$(_report_list_title "${TITLE}" "${LIST}")
+  # Add "- " to the beginning of each line.
+  LIST=$(echo "${LIST}" | sed -E 's/^/- /g')
+  echo -e "${TITLE}:\n${LIST}"
 }
 
 _get_number_of_elements() {
   local LIST="${*}"
   [ -z "${LIST}" ] && echo 0 && return 0
-  # SC2086: Double quote to prevent globbing and word splitting.
-  # shellcheck disable=SC2086
-  set ${LIST}
-  local NUM=$#
-  echo "${NUM}"
+  echo "${LIST}" | wc -l
 }
 
 _get_number_of_elements_in_static_variable() {
@@ -539,28 +556,15 @@ _get_number_of_elements_in_static_variable() {
 _report_services() {
   local CONDITION="${GANTRY_NOTIFICATION_CONDITION:-"all"}"
   local STACK="${1:-gantry}"
-  # ACCUMULATED_ERRORS is the number of errors that are not caused by updating.
-  local ACCUMULATED_ERRORS="${2:-0}"
-  ! is_number "${ACCUMULATED_ERRORS}" && log WARN "ACCUMULATED_ERRORS \"${ACCUMULATED_ERRORS}\" is not a number." && ACCUMULATED_ERRORS=0;
 
-  local UPDATED_MSG=
-  UPDATED_MSG=$(_report_services_from_static_variable STATIC_VAR_SERVICES_UPDATED "" "updated" "No services updated.")
+  local UPDATED_MSG INSPECT_FAILURE_MSG FAILED_MSG ERROR_MSG
+  UPDATED_MSG=$(_report_from_static_variable_single_line STATIC_VAR_SERVICES_UPDATED "#NUM# service(s) updated" "No services updated.")
+  INSPECT_FAILURE_MSG=$(_report_from_static_variable_single_line STATIC_VAR_SERVICES_FAILED_TO_INSPECT "#NUM# service(s) inspection failed")
+  FAILED_MSG=$(_report_from_static_variable_single_line STATIC_VAR_SERVICES_FAILED_TO_UPDATE "#NUM# service(s) update failed")
+  ERROR_MSG=$(_report_from_static_variable_multiple_lines STATIC_VAR_ERROR_MESSAGES "There are #NUM# error(s)")
   echo "${UPDATED_MSG}" | log_lines INFO
-
-  local INSPECT_FAILURE_MSG=
-  INSPECT_FAILURE_MSG=$(_report_services_from_static_variable STATIC_VAR_SERVICES_FAILED_TO_INSPECT "" "inspection failed")
   echo "${INSPECT_FAILURE_MSG}" | log_lines ERROR
-
-  local FAILED_MSG=
-  FAILED_MSG=$(_report_services_from_static_variable STATIC_VAR_SERVICES_FAILED_TO_UPDATE "" "update failed")
   echo "${FAILED_MSG}" | log_lines ERROR
-
-  local ROLLBACK_FAILURE_MSG=
-  ROLLBACK_FAILURE_MSG=$(_report_services_from_static_variable STATIC_VAR_SERVICES_FAILED_TO_ROLLBACK "" "rollback failed")
-  echo "${ROLLBACK_FAILURE_MSG}" | log_lines ERROR
-
-  local ERROR_MSG=
-  ERROR_MSG=$(_report_services_from_static_variable STATIC_VAR_SERVICES_ERROR_OF_INPUTS "Skipped updating" "due to error(s)")
   echo "${ERROR_MSG}" | log_lines ERROR
 
   # Send notification
@@ -568,10 +572,7 @@ _report_services() {
   NUM_UPDATED=$(_get_number_of_elements_in_static_variable STATIC_VAR_SERVICES_UPDATED)
   NUM_INSPECT=$(_get_number_of_elements_in_static_variable STATIC_VAR_SERVICES_FAILED_TO_INSPECT)
   NUM_FAILED=$(_get_number_of_elements_in_static_variable STATIC_VAR_SERVICES_FAILED_TO_UPDATE)
-  NUM_ERRORS=$(_get_number_of_elements_in_static_variable STATIC_VAR_SERVICES_ERROR_OF_INPUTS)
-  if [ "${NUM_INSPECT}" = "0" ] && [ "${NUM_FAILED}" = "0" ] && [ "${NUM_ERRORS}" = "0" ]; then
-    NUM_ERRORS="${ACCUMULATED_ERRORS}"
-  fi
+  NUM_ERRORS=$(_get_number_of_elements_in_static_variable STATIC_VAR_ERROR_MESSAGES)
   local NUM_FAILED_PLUS_ERRORS=$((NUM_INSPECT+NUM_FAILED+NUM_ERRORS))
   local SEND_NOTIFICATION="true"
   case "${CONDITION}" in
@@ -599,7 +600,7 @@ _report_services() {
     [ "${NUM_ERRORS}" != "0" ] && TITLE="${TITLE}, ${NUM_ERRORS} error(s)"
   fi
   local BODY=
-  BODY=$(echo -e "${UPDATED_MSG}\n${INSPECT_FAILURE_MSG}\n${FAILED_MSG}\n${ROLLBACK_FAILURE_MSG}\n${ERROR_MSG}")
+  BODY=$(echo -e "${UPDATED_MSG}\n${INSPECT_FAILURE_MSG}\n${FAILED_MSG}\n${ERROR_MSG}")
   _send_notification "${TYPE}" "${TITLE}" "${BODY}"
 }
 
@@ -746,7 +747,7 @@ _check_auth_config_folder() {
   fi
   log WARN "${AUTH_CONFIG} is not a directory that contains Docker configuration files."
   local MSG="configuration(s) set via GANTRY_REGISTRY_CONFIG or GANTRY_REGISTRY_CONFIGS_FILE"
-  _report_from_static_variable STATIC_VAR_DOCKER_CONFIGS "There are" "${MSG}" "There are no ${MSG}." | log_lines WARN
+  _report_from_static_variable_single_line STATIC_VAR_DOCKER_CONFIGS "There are #NUM# ${MSG}" "There are no ${MSG}." | log_lines WARN
   local DOCKER_CONFIG_DEFAULT=
   if DOCKER_CONFIG_DEFAULT=$(_docker_default_config_is_used); then
     log WARN "User logged in using the default Docker configuration ${DOCKER_CONFIG_DEFAULT}."
@@ -791,7 +792,7 @@ _get_auth_config_from_service_or_image() {
       local MSG="configuration(s) for ${HOST} set via GANTRY_REGISTRY_CONFIG or GANTRY_REGISTRY_CONFIGS_FILE"
       MSG="${MSG}. No \"--config\" will be added to Docker commands"
       MSG="${MSG}. Please add label \"${AUTH_CONFIG_LABEL}=<configuration>\" to the service ${SERVICE_NAME} to select one of the followings"
-      _report_from_static_variable "${DOCKER_CONFIG_STATIC_VARIABLE_NAME}" "There are" "${MSG}" "There are no ${MSG}." | log_lines WARN
+      _report_from_static_variable_single_line "${DOCKER_CONFIG_STATIC_VARIABLE_NAME}" "There are #NUM# ${MSG}" "There are no ${MSG}." | log_lines WARN
       return 1
     fi
   fi
@@ -1101,7 +1102,9 @@ _rollback_service() {
   # SC2086: Double quote to prevent globbing and word splitting.
   # shellcheck disable=SC2086
   if ! ROLLBACK_MSG=$(run_cmd docker ${AUTH_CONFIG} service update --quiet ${AUTOMATIC_OPTIONS} ${ROLLBACK_OPTIONS} --rollback "${SERVICE_NAME}"); then
-    log ERROR "Failed to roll back ${SERVICE_NAME}. ${ROLLBACK_MSG}"
+    local ERROR_MSG="Failed to roll back ${SERVICE_NAME}. ${ROLLBACK_MSG}"
+    log ERROR "${ERROR_MSG}"
+    _static_variable_add_unique_to_list STATIC_VAR_ERROR_MESSAGES "${ERROR_MSG}"
     return 1
   fi
   log INFO "Rolled back ${SERVICE_NAME}."
@@ -1114,8 +1117,10 @@ _get_timeout_command() {
   local UPDATE_TIMEOUT_SECONDS=
   UPDATE_TIMEOUT_SECONDS=$(_read_env_or_label "${SERVICE_NAME}" "GANTRY_UPDATE_TIMEOUT_SECONDS" "gantry.update.timeout_seconds" "0")
   if ! is_number "${UPDATE_TIMEOUT_SECONDS}"; then
-    log ERROR "Updating ${SERVICE_NAME}: UPDATE_TIMEOUT_SECONDS must be a number. Got \"${UPDATE_TIMEOUT_SECONDS}\"."
-    _static_variable_add_unique_to_list STATIC_VAR_SERVICES_ERROR_OF_INPUTS "${SERVICE_NAME}"
+    local ERROR_MSG=
+    ERROR_MSG="Updating ${SERVICE_NAME}: $(_must_be_a_number_string "UPDATE_TIMEOUT_SECONDS" "${UPDATE_TIMEOUT_SECONDS}")"
+    log ERROR "${ERROR_MSG}"
+    _static_variable_add_unique_to_list STATIC_VAR_ERROR_MESSAGES "${ERROR_MSG}"
     return 1
   fi
   local TIMEOUT_COMMAND=
@@ -1143,12 +1148,9 @@ _update_single_service() {
   local UPDATE_OPTIONS=
   UPDATE_OPTIONS=$(_read_env_or_label "${SERVICE_NAME}" "GANTRY_UPDATE_OPTIONS" "gantry.update.options" "")
   local IMAGE_UPDATE_TO="${2}"
-  local INPUT_ERROR=0
-  [ -z "${SERVICE_NAME}" ] && log ERROR "Updating service: SERVICE_NAME must not be empty." && INPUT_ERROR=1 && SERVICE_NAME="unknown-service-name"
-  [ -z "${IMAGE_UPDATE_TO}" ] && log ERROR "Updating ${SERVICE_NAME}: IMAGE_UPDATE_TO must not be empty." && INPUT_ERROR=1
-  if [ "${INPUT_ERROR}" != "0" ]; then
-    _static_variable_add_unique_to_list STATIC_VAR_SERVICES_ERROR_OF_INPUTS "${SERVICE_NAME}"
-    return 1;
+  if [ -z "${SERVICE_NAME}" ] || [ -z "${IMAGE_UPDATE_TO}" ]; then
+    _static_variable_add_unique_to_list STATIC_VAR_ERROR_MESSAGES "Input parameters must be non-empty. SERVICE_NAME=\"${SERVICE_NAME}\", IMAGE_UPDATE_TO=\"${IMAGE_UPDATE_TO}\"."
+    return 1
   fi
   local START_TIME=
   START_TIME=$(date +%s)
@@ -1188,9 +1190,7 @@ _update_single_service() {
     log ERROR "Command \"${UPDATE_COMMAND}\" returns ${UPDATE_RETURN_VALUE}. ${TIMEOUT_MSG}"
     log ERROR "docker service update failed. ${UPDATE_MSG}"
     _static_variable_add_unique_to_list STATIC_VAR_SERVICES_FAILED_TO_UPDATE "${SERVICE_NAME}"
-    if ! _rollback_service "${SERVICE_NAME}" "${AUTH_CONFIG}"; then
-      _static_variable_add_unique_to_list STATIC_VAR_SERVICES_FAILED_TO_ROLLBACK "${SERVICE_NAME}"
-    fi
+    _rollback_service "${SERVICE_NAME}" "${AUTH_CONFIG}"
     return 1
   fi
   local PREVIOUS_IMAGE PREVIOUS_DIGEST
@@ -1276,9 +1276,18 @@ _get_services_filted() {
 
 _gantry_initialize() {
   local STACK="${1:-gantry}"
+  local ACCUMULATED_ERRORS=0
+
   log INFO "Starting Gantry."
+
   _create_static_variables_folder
+  ACCUMULATED_ERRORS=$((ACCUMULATED_ERRORS + $?))
+
   _authenticate_to_registries
+  ACCUMULATED_ERRORS=$((ACCUMULATED_ERRORS + $?))
+
+  # Do not simple return ACCUMULATED_ERRORS, in case it is larger than 255.
+  test "${ACCUMULATED_ERRORS}" = "0"
 }
 
 _gantry_get_services_list() {
@@ -1289,9 +1298,7 @@ _gantry_get_services_list() {
   [ -n "${SERVICES_EXCLUDED_FILTERS}" ] && log DEBUG "SERVICES_EXCLUDED_FILTERS=${SERVICES_EXCLUDED_FILTERS}"
   [ -n "${SERVICES_FILTERS}" ] && log DEBUG "SERVICES_FILTERS=${SERVICES_FILTERS}"
   local SERVICES=
-  if ! SERVICES=$(_get_services_filted "${SERVICES_FILTERS}"); then
-    return 1
-  fi
+  SERVICES=$(_get_services_filted "${SERVICES_FILTERS}") || return 1
   local ALL_EXCLUDED=
   local S=
   for S in ${SERVICES_EXCLUDED}; do
@@ -1299,9 +1306,7 @@ _gantry_get_services_list() {
   done
   if [ -n "${SERVICES_EXCLUDED_FILTERS}" ]; then
     local SERVICES_FROM_EXCLUDED_FILTERS=
-    if ! SERVICES_FROM_EXCLUDED_FILTERS=$(_get_services_filted "${SERVICES_EXCLUDED_FILTERS}"); then
-      return 1
-    fi
+    SERVICES_FROM_EXCLUDED_FILTERS=$(_get_services_filted "${SERVICES_EXCLUDED_FILTERS}") || return 1
     for S in ${SERVICES_FROM_EXCLUDED_FILTERS}; do
       ALL_EXCLUDED=$(add_unique_to_list "${ALL_EXCLUDED}" "${S}")
     done
@@ -1328,16 +1333,20 @@ _gantry_get_services_list() {
 }
 
 _gantry_update_services_list() {
-  local UPDATE_NUM_WORKERS=
-  if ! UPDATE_NUM_WORKERS=$(gantry_read_number GANTRY_UPDATE_NUM_WORKERS 1); then
-    local ERROR_SERVICE="GANTRY_UPDATE_NUM_WORKERS-is-not-a-number"
-    _static_variable_add_unique_to_list STATIC_VAR_SERVICES_ERROR_OF_INPUTS "${ERROR_SERVICE}"
-    return 1
-  fi
   local MANIFEST_NUM_WORKERS=
   if ! MANIFEST_NUM_WORKERS=$(gantry_read_number GANTRY_MANIFEST_NUM_WORKERS 1); then
-    local ERROR_SERVICE="GANTRY_MANIFEST_NUM_WORKERS-is-not-a-number"
-    _static_variable_add_unique_to_list STATIC_VAR_SERVICES_ERROR_OF_INPUTS "${ERROR_SERVICE}"
+    local ERROR_MSG=
+    ERROR_MSG=$(_must_be_a_number_string "GANTRY_MANIFEST_NUM_WORKERS" "${MANIFEST_NUM_WORKERS}")
+    log ERROR "${ERROR_MSG}"
+    _static_variable_add_unique_to_list STATIC_VAR_ERROR_MESSAGES "${ERROR_MSG}"
+    return 1
+  fi
+  local UPDATE_NUM_WORKERS=
+  if ! UPDATE_NUM_WORKERS=$(gantry_read_number GANTRY_UPDATE_NUM_WORKERS 1); then
+    local ERROR_MSG=
+    ERROR_MSG=$(_must_be_a_number_string "GANTRY_UPDATE_NUM_WORKERS" "${UPDATE_NUM_WORKERS}")
+    log ERROR "${ERROR_MSG}"
+    _static_variable_add_unique_to_list STATIC_VAR_ERROR_MESSAGES "${ERROR_MSG}"
     return 1
   fi
   local LIST="${*}"
@@ -1358,40 +1367,45 @@ _gantry_update_services_list() {
   done
   _run_parallel _inspect_service "${MANIFEST_NUM_WORKERS}" STATIC_VAR_SERVICES_TO_INSPECT
 
-  _report_services_from_static_variable STATIC_VAR_SERVICES_NO_UPDATE_SKIP_JOB "Skip updating" "because they are job(s)" | log_lines INFO
-  _report_services_from_static_variable STATIC_VAR_SERVICES_FAILED_TO_INSPECT "Failed to inspect" | log_lines ERROR
-  _report_services_from_static_variable STATIC_VAR_SERVICES_NO_UPDATE_NO_NEW_IMAGE "No new images for" | log_lines INFO
-  _report_services_from_static_variable STATIC_VAR_SERVICES_TO_UPDATE "Updating" | log_lines INFO
+  _report_from_static_variable_single_line STATIC_VAR_SERVICES_NO_UPDATE_SKIP_JOB "Skip updating #NUM# service(s) because they are job(s)" | log_lines INFO
+  _report_from_static_variable_single_line STATIC_VAR_SERVICES_FAILED_TO_INSPECT "Failed to inspect #NUM# service(s)" | log_lines ERROR
+  _report_from_static_variable_single_line STATIC_VAR_SERVICES_NO_UPDATE_NO_NEW_IMAGE "No new images for #NUM# service(s)" | log_lines INFO
+  _report_from_static_variable_single_line STATIC_VAR_SERVICES_TO_UPDATE "Updating #NUM# service(s)" | log_lines INFO
 
   _run_parallel _update_single_service "${UPDATE_NUM_WORKERS}" STATIC_VAR_SERVICES_TO_UPDATE_WITH_IMAGE
 
-  local RETURN_VALUE=0
-  local INSPECT_FAILURE_NUM=
-  INSPECT_FAILURE_NUM=$(_get_number_of_elements_in_static_variable STATIC_VAR_SERVICES_FAILED_TO_INSPECT)
-  [ "${INSPECT_FAILURE_NUM}" != "0" ] && RETURN_VALUE=1
-  local UPDATE_FAILURE_NUM=
-  UPDATE_FAILURE_NUM=$(_get_number_of_elements_in_static_variable STATIC_VAR_SERVICES_FAILED_TO_UPDATE)
-  [ "${UPDATE_FAILURE_NUM}" != "0" ] && RETURN_VALUE=1
-  local ERROR_NUM=
-  ERROR_NUM=$(_get_number_of_elements_in_static_variable STATIC_VAR_SERVICES_ERROR_OF_INPUTS)
-  [ "${ERROR_NUM}" != "0" ] && RETURN_VALUE=1
-  return "${RETURN_VALUE}"
+  local NUM_INSPECT NUM_FAILED NUM_ERRORS
+  NUM_INSPECT=$(_get_number_of_elements_in_static_variable STATIC_VAR_SERVICES_FAILED_TO_INSPECT)
+  NUM_FAILED=$(_get_number_of_elements_in_static_variable STATIC_VAR_SERVICES_FAILED_TO_UPDATE)
+  NUM_ERRORS=$(_get_number_of_elements_in_static_variable STATIC_VAR_ERROR_MESSAGES)
+  local NUM_FAILED_PLUS_ERRORS=$((NUM_INSPECT+NUM_FAILED+NUM_ERRORS))
+  # Do not simple return NUM_FAILED_PLUS_ERRORS, in case it is larger than 255.
+  test "${NUM_FAILED_PLUS_ERRORS}" = "0"
 }
 
 _gantry_finalize() {
   local STACK="${1:-gantry}"
-  local ACCUMULATED_ERRORS="${2:-0}"
-  local RETURN_VALUE=0
-  _remove_images "${STACK}-image-remover" || RETURN_VALUE=1
-  _report_services "${STACK}" "${ACCUMULATED_ERRORS}" || RETURN_VALUE=1
+
+  local ACCUMULATED_ERRORS=0
+  _remove_images "${STACK}-image-remover"
+  # Consider the image removal failure as a warning, not an error.
+  # ACCUMULATED_ERRORS=$((ACCUMULATED_ERRORS + $?))
+
+  _report_services "${STACK}"
+  ACCUMULATED_ERRORS=$((ACCUMULATED_ERRORS + $?))
+
   _remove_static_variables_folder
-  return "${RETURN_VALUE}"
+  ACCUMULATED_ERRORS=$((ACCUMULATED_ERRORS + $?))
+
+  # Do not simple return ACCUMULATED_ERRORS, in case it is larger than 255.
+  test "${ACCUMULATED_ERRORS}" = "0"
 }
 
 gantry_main() {
   local STACK="${1}"
-  local ACCUMULATED_ERRORS="${2:-0}"
-  ! is_number "${ACCUMULATED_ERRORS}" && log WARN "ACCUMULATED_ERRORS \"${ACCUMULATED_ERRORS}\" is not a number." && ACCUMULATED_ERRORS=0;
+  local PREVIOUS_ACCUMULATED_ERRORS="${2:-0}"
+  ! is_number "${PREVIOUS_ACCUMULATED_ERRORS}" && log WARN "PREVIOUS_ACCUMULATED_ERRORS \"${PREVIOUS_ACCUMULATED_ERRORS}\" is not a number." && PREVIOUS_ACCUMULATED_ERRORS=0;
+  local ACCUMULATED_ERRORS=0
 
   _gantry_initialize "${STACK}"
   ACCUMULATED_ERRORS=$((ACCUMULATED_ERRORS + $?))
@@ -1400,15 +1414,18 @@ gantry_main() {
   SERVICES_LIST=$(_gantry_get_services_list)
   ACCUMULATED_ERRORS=$((ACCUMULATED_ERRORS + $?))
 
-  if [ "${ACCUMULATED_ERRORS}" -eq 0 ]; then
+  local TOTAL_ERRORS_BEFORE_UPDATE=$((PREVIOUS_ACCUMULATED_ERRORS+ACCUMULATED_ERRORS))
+  if [ "${TOTAL_ERRORS_BEFORE_UPDATE}" = "0" ]; then
     log INFO "Starting updating."
     _gantry_update_services_list "${SERVICES_LIST}"
     ACCUMULATED_ERRORS=$((ACCUMULATED_ERRORS + $?))
   else
-    log WARN "Skip updating all services due to previous error(s)."
+    local ERROR_MSG="Skip updating all services due to previous ${TOTAL_ERRORS_BEFORE_UPDATE} error(s)."
+    log ERROR "${ERROR_MSG}"
+    _static_variable_add_unique_to_list STATIC_VAR_ERROR_MESSAGES "${ERROR_MSG}"
   fi
 
-  _gantry_finalize "${STACK}" "${ACCUMULATED_ERRORS}"
+  _gantry_finalize "${STACK}"
   ACCUMULATED_ERRORS=$((ACCUMULATED_ERRORS + $?))
 
   # Do not simple return ACCUMULATED_ERRORS, in case it is larger than 255.
