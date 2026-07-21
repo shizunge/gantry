@@ -548,27 +548,27 @@ _report_services() {
   echo "${UPDATED_MSG}" | log_lines INFO
 
   local INSPECT_FAILURE_MSG=
-  INSPECT_FAILURE_MSG=$(_report_services_from_static_variable STATIC_VAR_SERVICES_INSPECT_FAILED "" "inspection failed")
+  INSPECT_FAILURE_MSG=$(_report_services_from_static_variable STATIC_VAR_SERVICES_FAILED_TO_INSPECT "" "inspection failed")
   echo "${INSPECT_FAILURE_MSG}" | log_lines ERROR
 
   local FAILED_MSG=
-  FAILED_MSG=$(_report_services_from_static_variable STATIC_VAR_SERVICES_UPDATE_FAILED "" "update failed")
+  FAILED_MSG=$(_report_services_from_static_variable STATIC_VAR_SERVICES_FAILED_TO_UPDATE "" "update failed")
   echo "${FAILED_MSG}" | log_lines ERROR
 
   local ROLLBACK_FAILURE_MSG=
-  ROLLBACK_FAILURE_MSG=$(_report_services_from_static_variable STATIC_VAR_SERVICES_ROLLBACK_FAILED "" "rollback failed")
+  ROLLBACK_FAILURE_MSG=$(_report_services_from_static_variable STATIC_VAR_SERVICES_FAILED_TO_ROLLBACK "" "rollback failed")
   echo "${ROLLBACK_FAILURE_MSG}" | log_lines ERROR
 
   local ERROR_MSG=
-  ERROR_MSG=$(_report_services_from_static_variable STATIC_VAR_SERVICES_UPDATE_INPUT_ERROR "Skipped updating" "due to error(s)")
+  ERROR_MSG=$(_report_services_from_static_variable STATIC_VAR_SERVICES_ERROR_OF_INPUTS "Skipped updating" "due to error(s)")
   echo "${ERROR_MSG}" | log_lines ERROR
 
   # Send notification
   local NUM_UPDATED NUM_INSPECT NUM_FAILED NUM_ERRORS
   NUM_UPDATED=$(_get_number_of_elements_in_static_variable STATIC_VAR_SERVICES_UPDATED)
-  NUM_INSPECT=$(_get_number_of_elements_in_static_variable STATIC_VAR_SERVICES_INSPECT_FAILED)
-  NUM_FAILED=$(_get_number_of_elements_in_static_variable STATIC_VAR_SERVICES_UPDATE_FAILED)
-  NUM_ERRORS=$(_get_number_of_elements_in_static_variable STATIC_VAR_SERVICES_UPDATE_INPUT_ERROR)
+  NUM_INSPECT=$(_get_number_of_elements_in_static_variable STATIC_VAR_SERVICES_FAILED_TO_INSPECT)
+  NUM_FAILED=$(_get_number_of_elements_in_static_variable STATIC_VAR_SERVICES_FAILED_TO_UPDATE)
+  NUM_ERRORS=$(_get_number_of_elements_in_static_variable STATIC_VAR_SERVICES_ERROR_OF_INPUTS)
   if [ "${NUM_INSPECT}" = "0" ] && [ "${NUM_FAILED}" = "0" ] && [ "${NUM_ERRORS}" = "0" ]; then
     NUM_ERRORS="${ACCUMULATED_ERRORS}"
   fi
@@ -618,18 +618,18 @@ _in_list() {
 # return 1 when there is an error.
 _current_container_name() {
   local CURRENT_CONTAINER_NAME=
-  CURRENT_CONTAINER_NAME=$(_static_variable_read_list STATIC_VAR_CURRENT_CONTAINER_NAME)
+  CURRENT_CONTAINER_NAME=$(_static_variable_read_list STATIC_VAR_NAME_CONTAINER_CURRENT)
   [ -n "${CURRENT_CONTAINER_NAME}" ] && echo "${CURRENT_CONTAINER_NAME}" && return 0
   local NO_CURRENT_CONTAINER_NAME=
-  NO_CURRENT_CONTAINER_NAME=$(_static_variable_read_list STATIC_VAR_NO_CURRENT_CONTAINER_NAME)
+  NO_CURRENT_CONTAINER_NAME=$(_static_variable_read_list STATIC_VAR_NAME_CONTAINER_NO_CURRENT)
   [ -n "${NO_CURRENT_CONTAINER_NAME}" ] && return 0
   local CNAME=
   CNAME=$(docker_current_container_name) || return 1;
   if [ -n "${CNAME}" ]; then
-    _static_variable_add_unique_to_list STATIC_VAR_CURRENT_CONTAINER_NAME "${CNAME}"
+    _static_variable_add_unique_to_list STATIC_VAR_NAME_CONTAINER_CURRENT "${CNAME}"
   else
     # Explicitly set that we cannot find the name of current container.
-    _static_variable_add_unique_to_list STATIC_VAR_NO_CURRENT_CONTAINER_NAME "NO_CURRENT_CONTAINER_NAME"
+    _static_variable_add_unique_to_list STATIC_VAR_NAME_CONTAINER_NO_CURRENT "NO_CURRENT_CONTAINER_NAME"
   fi
   echo "${CNAME}"
   return 0;
@@ -637,7 +637,7 @@ _current_container_name() {
 
 gantry_current_service_name() {
   local CURRENT_SERVICE_NAME=
-  CURRENT_SERVICE_NAME=$(_static_variable_read_list STATIC_VAR_CURRENT_SERVICE_NAME)
+  CURRENT_SERVICE_NAME=$(_static_variable_read_list STATIC_VAR_NAME_SERVICE_CURRENT)
   [ -n "${CURRENT_SERVICE_NAME}" ] && echo "${CURRENT_SERVICE_NAME}" && return 0
   local CNAME=
   CNAME=$(_current_container_name) || return 1
@@ -648,7 +648,7 @@ gantry_current_service_name() {
   SNAME=$(run_cmd docker container inspect "${CNAME}" --format '{{range $key,$value := .Config.Labels}}{{$key}}={{println $value}}{{end}}' \
     | grep "com.docker.swarm.service.name" \
     | sed -n -E "s/com.docker.swarm.service.name=(.*)$/\1/p") || return 1
-  _static_variable_add_unique_to_list STATIC_VAR_CURRENT_SERVICE_NAME "${SNAME}"
+  _static_variable_add_unique_to_list STATIC_VAR_NAME_SERVICE_CURRENT "${SNAME}"
   echo "${SNAME}"
 }
 
@@ -656,11 +656,11 @@ _service_is_self() {
   if [ -z "${GANTRY_SERVICES_SELF}" ]; then
     # If _service_is_self is called inside a subprocess, export won't affect the parent process.
     # Use a static variable to preserve the value between processes. And we only want to log the value is set once.
-    GANTRY_SERVICES_SELF=$(_static_variable_read_list STATIC_VAR_SERVICES_SELF)
+    GANTRY_SERVICES_SELF=$(_static_variable_read_list STATIC_VAR_NAME_SERVICE_SELF)
     if [ -z "${GANTRY_SERVICES_SELF}" ]; then
       GANTRY_SERVICES_SELF=$(gantry_current_service_name)
       export GANTRY_SERVICES_SELF
-      _static_variable_add_unique_to_list STATIC_VAR_SERVICES_SELF "${GANTRY_SERVICES_SELF}"
+      _static_variable_add_unique_to_list STATIC_VAR_NAME_SERVICE_SELF "${GANTRY_SERVICES_SELF}"
       [ -n "${GANTRY_SERVICES_SELF}" ] && log DEBUG "Set GANTRY_SERVICES_SELF to ${GANTRY_SERVICES_SELF}."
     fi
   fi
@@ -894,13 +894,13 @@ _inspect_image() {
     fi
   fi
   local NO_NEW_IMAGES=
-  NO_NEW_IMAGES=$(_static_variable_read_list STATIC_VAR_NO_NEW_IMAGES)
+  NO_NEW_IMAGES=$(_static_variable_read_list STATIC_VAR_IMAGES_NO_NEW)
   if _in_list "${NO_NEW_IMAGES}" "${CURRENT_DIGEST}"; then
     log INFO "Skip updating ${SERVICE_NAME} because there is no known newer version of image ${CURRENT_IMAGE_WITH_DIGEST}."
     return 0
   fi
   local HAS_NEW_IMAGES=
-  HAS_NEW_IMAGES=$(_static_variable_read_list STATIC_VAR_NEW_IMAGES)
+  HAS_NEW_IMAGES=$(_static_variable_read_list STATIC_VAR_IMAGES_NEW)
   if _in_list "${HAS_NEW_IMAGES}" "${CURRENT_DIGEST}"; then
     local NEW_IMAGE_UPDATE_TO
     NEW_IMAGE_UPDATE_TO=$(_static_variable_read_list "STATIC_VAR_${CURRENT_DIGEST}")
@@ -936,11 +936,11 @@ _inspect_image() {
     return 0
   fi
   if [ -n "${CURRENT_DIGEST}" ] && echo "${IMAGE_INFO}" | grep_q "${CURRENT_DIGEST}"; then
-    _static_variable_add_unique_to_list STATIC_VAR_NO_NEW_IMAGES "${CURRENT_DIGEST}"
+    _static_variable_add_unique_to_list STATIC_VAR_IMAGES_NO_NEW "${CURRENT_DIGEST}"
     log INFO "Skip updating ${SERVICE_NAME} because the current version is the latest of image ${CURRENT_IMAGE_WITH_DIGEST}."
     return 0
   fi
-  _static_variable_add_unique_to_list STATIC_VAR_NEW_IMAGES "${CURRENT_DIGEST}"
+  _static_variable_add_unique_to_list STATIC_VAR_IMAGES_NEW "${CURRENT_DIGEST}"
   _static_variable_add_unique_to_list "STATIC_VAR_${CURRENT_DIGEST}" "${IMAGE_UPDATE_TO}"
   log INFO "Perform updating ${SERVICE_NAME} because there is a newer version of image ${CURRENT_IMAGE_WITH_DIGEST}. The new image is ${IMAGE_UPDATE_TO}."
   echo "${IMAGE_UPDATE_TO}"
@@ -953,16 +953,16 @@ _inspect_service() {
   local SERVICE_NAME="${1}"
   local RUN_UPDATE="${2:-false}"
   if _skip_jobs "${SERVICE_NAME}"; then
-    _static_variable_add_unique_to_list STATIC_VAR_SERVICES_SKIP_JOB "${SERVICE_NAME}"
+    _static_variable_add_unique_to_list STATIC_VAR_SERVICES_NO_UPDATE_SKIP_JOB "${SERVICE_NAME}"
     return 1
   fi
   local IMAGE=
   if ! IMAGE=$(_inspect_image "${SERVICE_NAME}"); then
-    _static_variable_add_unique_to_list STATIC_VAR_SERVICES_INSPECT_FAILED "${SERVICE_NAME}"
+    _static_variable_add_unique_to_list STATIC_VAR_SERVICES_FAILED_TO_INSPECT "${SERVICE_NAME}"
     return 1
   fi
   if [ -z "${IMAGE}" ]; then
-    _static_variable_add_unique_to_list STATIC_VAR_SERVICES_NO_NEW_IMAGE "${SERVICE_NAME}"
+    _static_variable_add_unique_to_list STATIC_VAR_SERVICES_NO_UPDATE_NO_NEW_IMAGE "${SERVICE_NAME}"
     return 1
   fi
   if is_true "${RUN_UPDATE}"; then
@@ -970,7 +970,7 @@ _inspect_service() {
     return 1
   fi
   _static_variable_add_unique_to_list STATIC_VAR_SERVICES_TO_UPDATE "${SERVICE_NAME}"
-  _static_variable_add_unique_to_list STATIC_VAR_SERVICES_AND_IMAGES_TO_UPDATE "${SERVICE_NAME} ${IMAGE}"
+  _static_variable_add_unique_to_list STATIC_VAR_SERVICES_TO_UPDATE_WITH_IMAGE "${SERVICE_NAME} ${IMAGE}"
   return 0
 }
 
@@ -1115,7 +1115,7 @@ _get_timeout_command() {
   UPDATE_TIMEOUT_SECONDS=$(_read_env_or_label "${SERVICE_NAME}" "GANTRY_UPDATE_TIMEOUT_SECONDS" "gantry.update.timeout_seconds" "0")
   if ! is_number "${UPDATE_TIMEOUT_SECONDS}"; then
     log ERROR "Updating ${SERVICE_NAME}: UPDATE_TIMEOUT_SECONDS must be a number. Got \"${UPDATE_TIMEOUT_SECONDS}\"."
-    _static_variable_add_unique_to_list STATIC_VAR_SERVICES_UPDATE_INPUT_ERROR "${SERVICE_NAME}"
+    _static_variable_add_unique_to_list STATIC_VAR_SERVICES_ERROR_OF_INPUTS "${SERVICE_NAME}"
     return 1
   fi
   local TIMEOUT_COMMAND=
@@ -1147,7 +1147,7 @@ _update_single_service() {
   [ -z "${SERVICE_NAME}" ] && log ERROR "Updating service: SERVICE_NAME must not be empty." && INPUT_ERROR=1 && SERVICE_NAME="unknown-service-name"
   [ -z "${IMAGE_UPDATE_TO}" ] && log ERROR "Updating ${SERVICE_NAME}: IMAGE_UPDATE_TO must not be empty." && INPUT_ERROR=1
   if [ "${INPUT_ERROR}" != "0" ]; then
-    _static_variable_add_unique_to_list STATIC_VAR_SERVICES_UPDATE_INPUT_ERROR "${SERVICE_NAME}"
+    _static_variable_add_unique_to_list STATIC_VAR_SERVICES_ERROR_OF_INPUTS "${SERVICE_NAME}"
     return 1;
   fi
   local START_TIME=
@@ -1187,9 +1187,9 @@ _update_single_service() {
     fi
     log ERROR "Command \"${UPDATE_COMMAND}\" returns ${UPDATE_RETURN_VALUE}. ${TIMEOUT_MSG}"
     log ERROR "docker service update failed. ${UPDATE_MSG}"
-    _static_variable_add_unique_to_list STATIC_VAR_SERVICES_UPDATE_FAILED "${SERVICE_NAME}"
+    _static_variable_add_unique_to_list STATIC_VAR_SERVICES_FAILED_TO_UPDATE "${SERVICE_NAME}"
     if ! _rollback_service "${SERVICE_NAME}" "${AUTH_CONFIG}"; then
-      _static_variable_add_unique_to_list STATIC_VAR_SERVICES_ROLLBACK_FAILED "${SERVICE_NAME}"
+      _static_variable_add_unique_to_list STATIC_VAR_SERVICES_FAILED_TO_ROLLBACK "${SERVICE_NAME}"
     fi
     return 1
   fi
@@ -1222,13 +1222,13 @@ _update_single_service() {
 _parallel_worker() {
   local FUNCTION="${1}"
   local INDEX="${2}"
-  local STATIC_VAR_LIST_NAME="${3}"
+  local LIST_NAME="${3}"
   local OLD_LOG_SCOPE="${LOG_SCOPE}"
   LOG_SCOPE=$(attach_tag_to_log_scope "worker${INDEX}")
   export LOG_SCOPE
   local ARGUMENTS=
   while true; do
-    ARGUMENTS=$(_static_variable_pop_list "${STATIC_VAR_LIST_NAME}")
+    ARGUMENTS=$(_static_variable_pop_list "${LIST_NAME}")
     [ -z "${ARGUMENTS}" ] && break;
     # SC2086 (info): Double quote to prevent globbing and word splitting.
     # shellcheck disable=SC2086
@@ -1240,13 +1240,13 @@ _parallel_worker() {
 _run_parallel() {
   local FUNCTION="${1}"
   local NUM_WORKERS="${2}"
-  local STATIC_VAR_LIST_NAME="${3}"
+  local LIST_NAME="${3}"
   log DEBUG "Run ${NUM_WORKERS} ${FUNCTION} in parallel."
   local PIDS=
   local INDEX=
   for INDEX in $(seq 0 $((NUM_WORKERS-1)) ); do
     # All workers subscribe to the same list now.
-    _parallel_worker "${FUNCTION}" "${INDEX}" "${STATIC_VAR_LIST_NAME}" &
+    _parallel_worker "${FUNCTION}" "${INDEX}" "${LIST_NAME}" &
     PIDS="${!} ${PIDS}"
   done
   # SC2086 (info): Double quote to prevent globbing and word splitting.
@@ -1331,13 +1331,13 @@ _gantry_update_services_list() {
   local UPDATE_NUM_WORKERS=
   if ! UPDATE_NUM_WORKERS=$(gantry_read_number GANTRY_UPDATE_NUM_WORKERS 1); then
     local ERROR_SERVICE="GANTRY_UPDATE_NUM_WORKERS-is-not-a-number"
-    _static_variable_add_unique_to_list STATIC_VAR_SERVICES_UPDATE_INPUT_ERROR "${ERROR_SERVICE}"
+    _static_variable_add_unique_to_list STATIC_VAR_SERVICES_ERROR_OF_INPUTS "${ERROR_SERVICE}"
     return 1
   fi
   local MANIFEST_NUM_WORKERS=
   if ! MANIFEST_NUM_WORKERS=$(gantry_read_number GANTRY_MANIFEST_NUM_WORKERS 1); then
     local ERROR_SERVICE="GANTRY_MANIFEST_NUM_WORKERS-is-not-a-number"
-    _static_variable_add_unique_to_list STATIC_VAR_SERVICES_UPDATE_INPUT_ERROR "${ERROR_SERVICE}"
+    _static_variable_add_unique_to_list STATIC_VAR_SERVICES_ERROR_OF_INPUTS "${ERROR_SERVICE}"
     return 1
   fi
   local LIST="${*}"
@@ -1358,22 +1358,22 @@ _gantry_update_services_list() {
   done
   _run_parallel _inspect_service "${MANIFEST_NUM_WORKERS}" STATIC_VAR_SERVICES_TO_INSPECT
 
-  _report_services_from_static_variable STATIC_VAR_SERVICES_SKIP_JOB "Skip updating" "due to they are job(s)" | log_lines INFO
-  _report_services_from_static_variable STATIC_VAR_SERVICES_INSPECT_FAILED "Failed to inspect" | log_lines ERROR
-  _report_services_from_static_variable STATIC_VAR_SERVICES_NO_NEW_IMAGE "No new images for" | log_lines INFO
+  _report_services_from_static_variable STATIC_VAR_SERVICES_NO_UPDATE_SKIP_JOB "Skip updating" "because they are job(s)" | log_lines INFO
+  _report_services_from_static_variable STATIC_VAR_SERVICES_FAILED_TO_INSPECT "Failed to inspect" | log_lines ERROR
+  _report_services_from_static_variable STATIC_VAR_SERVICES_NO_UPDATE_NO_NEW_IMAGE "No new images for" | log_lines INFO
   _report_services_from_static_variable STATIC_VAR_SERVICES_TO_UPDATE "Updating" | log_lines INFO
 
-  _run_parallel _update_single_service "${UPDATE_NUM_WORKERS}" STATIC_VAR_SERVICES_AND_IMAGES_TO_UPDATE
+  _run_parallel _update_single_service "${UPDATE_NUM_WORKERS}" STATIC_VAR_SERVICES_TO_UPDATE_WITH_IMAGE
 
   local RETURN_VALUE=0
   local INSPECT_FAILURE_NUM=
-  INSPECT_FAILURE_NUM=$(_get_number_of_elements_in_static_variable STATIC_VAR_SERVICES_INSPECT_FAILED)
+  INSPECT_FAILURE_NUM=$(_get_number_of_elements_in_static_variable STATIC_VAR_SERVICES_FAILED_TO_INSPECT)
   [ "${INSPECT_FAILURE_NUM}" != "0" ] && RETURN_VALUE=1
   local UPDATE_FAILURE_NUM=
-  UPDATE_FAILURE_NUM=$(_get_number_of_elements_in_static_variable STATIC_VAR_SERVICES_UPDATE_FAILED)
+  UPDATE_FAILURE_NUM=$(_get_number_of_elements_in_static_variable STATIC_VAR_SERVICES_FAILED_TO_UPDATE)
   [ "${UPDATE_FAILURE_NUM}" != "0" ] && RETURN_VALUE=1
   local ERROR_NUM=
-  ERROR_NUM=$(_get_number_of_elements_in_static_variable STATIC_VAR_SERVICES_UPDATE_INPUT_ERROR)
+  ERROR_NUM=$(_get_number_of_elements_in_static_variable STATIC_VAR_SERVICES_ERROR_OF_INPUTS)
   [ "${ERROR_NUM}" != "0" ] && RETURN_VALUE=1
   return "${RETURN_VALUE}"
 }
