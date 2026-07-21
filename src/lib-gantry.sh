@@ -1126,6 +1126,16 @@ _get_timeout_command() {
   echo "${TIMEOUT_COMMAND}"
 }
 
+# This function echos the exit status code from `timeout` command in case of timeout.
+_get_timeout_status_code() {
+  # When there is a timeout:
+  # * coreutils timeout returns 124: https://git.savannah.gnu.org/cgit/coreutils.git/tree/src/timeout.c
+  # * busybox timeout returns 143
+  # Add `sh -c` to suppress messages from `timeout`.
+  sh -c 'timeout 1 sleep 10' 1>/dev/null 2>/dev/null
+  echo $?
+}
+
 # return 0 when there is no error or failure.
 # return 1 when there are error(s) or failure(s).
 _update_single_service() {
@@ -1167,14 +1177,13 @@ _update_single_service() {
   UPDATE_MSG=$(run_cmd ${UPDATE_COMMAND} --quiet ${AUTOMATIC_OPTIONS} ${UPDATE_OPTIONS} --image="${IMAGE_UPDATE_TO}" "${SERVICE_NAME}");
   UPDATE_RETURN_VALUE=$?
   if [ "${UPDATE_RETURN_VALUE}" != 0 ]; then
-    # When there is a timeout:
-    # * coreutils timeout returns 124: https://git.savannah.gnu.org/cgit/coreutils.git/tree/src/timeout.c
-    # * busybox timeout returns 143
-    local TIMEOUT_RETURN_CODE=124
-    timeout --help 2>&1 | grep_q_i "BusyBox" && TIMEOUT_RETURN_CODE=143
     local TIMEOUT_MSG=
-    if [ -n "${TIMEOUT_COMMAND}" ] && [ "${UPDATE_RETURN_VALUE}" = "${TIMEOUT_RETURN_CODE}" ]; then
-      TIMEOUT_MSG="The return value ${UPDATE_RETURN_VALUE} indicates the job timed out."
+    if [ -n "${TIMEOUT_COMMAND}" ]; then
+      local TIMEOUT_STATUS_CODE=
+      TIMEOUT_STATUS_CODE=$(_get_timeout_status_code)
+      if [ "${UPDATE_RETURN_VALUE}" = "${TIMEOUT_STATUS_CODE}" ]; then
+        TIMEOUT_MSG="The return value ${UPDATE_RETURN_VALUE} indicates the job timed out."
+      fi
     fi
     log ERROR "Command \"${UPDATE_COMMAND}\" returns ${UPDATE_RETURN_VALUE}. ${TIMEOUT_MSG}"
     log ERROR "docker service update failed. ${UPDATE_MSG}"
