@@ -400,7 +400,10 @@ _remove_container() {
   fi
   local CID CNAME CRM_MSG
   for CID in ${CIDS}; do
-    CNAME=$(run_cmd docker container inspect --format '{{.Name}}' "${CID}");
+    if ! CNAME=$(run_cmd docker container inspect --format '{{.Name}}' "${CID}"); then
+      log ERROR "Failed to obtain the container name for ${CID}. ${CNAME}";
+      CNAME="${CID}"
+    fi
     if ! CRM_MSG=$(run_cmd docker container rm "${CID}"); then
       echo "${CRM_MSG}" | log_lines ERROR
       log ERROR "Failed to remove ${STATUS} container ${CNAME}, which is using image ${IMAGE}.";
@@ -646,9 +649,11 @@ gantry_current_service_name() {
   local SNAME=
   # SC2016 (info): Expressions don't expand in single quotes, use double quotes for that.
   # shellcheck disable=SC2016
-  SNAME=$(run_cmd docker container inspect "${CNAME}" --format '{{range $key,$value := .Config.Labels}}{{$key}}={{println $value}}{{end}}' \
-    | grep "com.docker.swarm.service.name" \
-    | sed -n -E "s/com.docker.swarm.service.name=(.*)$/\1/p") || return 1
+  if ! SNAME=$(run_cmd docker container inspect "${CNAME}" --format '{{index .Config.Labels "com.docker.swarm.service.name"}}'); then
+    log ERROR "Failed to obtain the service name from container ${CNAME}. ${SNAME}"
+    return 1
+  fi
+  # It is said old docker version could return "<no value>" when label is missing, but we cannot reproduce it now.
   _static_variable_add_unique_to_list STATIC_VAR_NAME_SERVICE_CURRENT "${SNAME}"
   echo "${SNAME}"
 }
@@ -673,31 +678,23 @@ _service_is_self() {
 _get_service_image() {
   local SERVICE_NAME="${1}"
   [ -z "${SERVICE_NAME}" ] && return 1
-  local RETURN_VALUE=
   local IMAGE_WITH_DIGEST=
-  IMAGE_WITH_DIGEST=$(run_cmd docker service inspect -f '{{.Spec.TaskTemplate.ContainerSpec.Image}}' "${SERVICE_NAME}")
-  RETURN_VALUE=$?
-  if [ "${RETURN_VALUE}" != "0" ]; then
+  if ! IMAGE_WITH_DIGEST=$(run_cmd docker service inspect -f '{{.Spec.TaskTemplate.ContainerSpec.Image}}' "${SERVICE_NAME}"); then
     log ERROR "Failed to obtain image from service ${SERVICE_NAME}. ${IMAGE_WITH_DIGEST}"
-  else
-    echo "${IMAGE_WITH_DIGEST}"
+    return 1
   fi
-  return "${RETURN_VALUE}"
+  echo "${IMAGE_WITH_DIGEST}"
 }
 
 _get_service_previous_image() {
   local SERVICE_NAME="${1}"
   [ -z "${SERVICE_NAME}" ] && return 1
-  local RETURN_VALUE=
   local IMAGE_WITH_DIGEST=
-  IMAGE_WITH_DIGEST=$(run_cmd docker service inspect -f '{{.PreviousSpec.TaskTemplate.ContainerSpec.Image}}' "${SERVICE_NAME}")
-  RETURN_VALUE=$?
-  if [ "${RETURN_VALUE}" != "0" ]; then
+  if ! IMAGE_WITH_DIGEST=$(run_cmd docker service inspect -f '{{.PreviousSpec.TaskTemplate.ContainerSpec.Image}}' "${SERVICE_NAME}"); then
     log ERROR "Failed to obtain previous image from service ${SERVICE_NAME}. ${IMAGE_WITH_DIGEST}"
-  else
-    echo "${IMAGE_WITH_DIGEST}"
+    return 1
   fi
-  return "${RETURN_VALUE}"
+  echo "${IMAGE_WITH_DIGEST}"
 }
 
 _get_service_mode() {
