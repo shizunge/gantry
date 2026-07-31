@@ -620,7 +620,7 @@ Describe 'login-negative'
       local PASSWORD="${6}"
       check_login_input "${REGISTRY}" "${USERNAME}" "${PASSWORD}" || return 1;
       docker_service_update --label-add "${GANTRY_AUTH_CONFIG_LABEL}=${CONFIG}" "${SERVICE_NAME}"
-      local FILE_NOT_EXIST="/tmp/${CONFIG}"
+      local FILE_NOT_EXIST="${TMPDIR:-/tmp}/${CONFIG}"
       reset_gantry_env "${SUITE_NAME}" "${SERVICE_NAME}"
       export GANTRY_REGISTRY_CONFIG_FILE="${FILE_NOT_EXIST}"
       export GANTRY_REGISTRY_CONFIGS_FILE="${FILE_NOT_EXIST}"

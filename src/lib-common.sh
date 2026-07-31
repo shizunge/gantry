@@ -26,7 +26,7 @@ _pipe_name() {
   TIMESTAMP=$(date +%s)
   local RANDOM_STR=
   RANDOM_STR=$(_random_string)
-  local PIPE_NAME="/tmp/${BASE_NAME}-${PID}-${TIMESTAMP}-${RANDOM_STR}"
+  local PIPE_NAME="${TMPDIR:-/tmp}/${BASE_NAME}-${PID}-${TIMESTAMP}-${RANDOM_STR}"
   echo "${PIPE_NAME}"
 }
 
