@@ -234,7 +234,7 @@ _send_notification() {
 
 _get_static_variables_folder_name() {
   local PID=$$
-  echo "/tmp/gantry-static-variables-folder-${PID}"
+  echo "${TMPDIR:-/tmp}/gantry-static-variables-folder-${PID}"
 }
 
 _make_static_variables_folder() {
