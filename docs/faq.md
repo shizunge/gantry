@@ -10,7 +10,7 @@ At the end of updating, *Gantry* optionally removes the old images.
 
 ## How to update standalone docker containers?
 
-*Gantry* only works for docker swarm services. If you need to update standalone docker containers, you can try [*watchtower*](https://github.com/containrrr/watchtower). *Gantry* can launch *watchtower* via `GANTRY_PRE_RUN_CMD` or `GANTRY_POST_RUN_CMD`. See the [example](../examples/prune-and-watchtower).
+*Gantry* only works for docker swarm services. If you need to update standalone docker containers, you can try [*watchtower*](https://github.com/nicholas-fedor/watchtower). *Gantry* can launch *watchtower* via `GANTRY_PRE_RUN_CMD` or `GANTRY_POST_RUN_CMD`. See the [example](../examples/prune-and-watchtower).
 
 ## How to filters multiple services by name?
 
