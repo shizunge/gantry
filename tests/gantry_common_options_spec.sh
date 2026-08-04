@@ -331,4 +331,40 @@ Describe 'common-options'
       The stderr should satisfy spec_expect_no_message "${WATCH_CHANGES_IN}"
     End
   End
+
+  Describe "test_common_docker_hub_rate_error"
+    TEST_NAME="test_common_docker_hub_rate_error"
+    SERVICE_NAME="non-existent-service"
+    test_common_docker_hub_rate_error() {
+      local TEST_NAME="${1}"
+      local SERVICE_NAME="${2}"
+      curl() {
+        if [ "${1}" = "--version" ]; then
+          command curl "$@"
+        else
+          return 1
+        fi
+      }
+      reset_gantry_env "${SUITE_NAME}" "${SERVICE_NAME}"
+      run_gantry "${SUITE_NAME}" "${TEST_NAME}"
+      local RET=$?
+      unset -f curl
+      return "${RET}"
+    }
+    Skip if "container tests skip" is_container_test
+    It 'run_test'
+      When run test_common_docker_hub_rate_error "${TEST_NAME}" "${SERVICE_NAME}"
+      The status should be success
+      The stdout should satisfy display_output
+      The stdout should satisfy spec_expect_no_message ".+"
+      The stderr should satisfy display_output
+      The stderr should satisfy spec_expect_no_message "${START_WITHOUT_A_SQUARE_BRACKET}"
+      The stderr should satisfy spec_expect_message    "Before updating, Docker Hub rate remains \\[GET TOKEN RESPONSE ERROR\\]"
+      The stderr should satisfy spec_expect_message    "Inspecting 0 service\(s\)."
+      The stderr should satisfy spec_expect_message    "${NO_IMAGES_TO_REMOVE}"
+      The stderr should satisfy spec_expect_message    "${NO_SERVICES_UPDATED}"
+      The stderr should satisfy spec_expect_message    "After updating, Docker Hub rate remains \\[GET TOKEN RESPONSE ERROR\\]"
+      The stderr should satisfy spec_expect_message    "${USED_RATE_NAN}"
+    End
+  End
 End # Describe 'Single service'

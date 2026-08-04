@@ -240,6 +240,12 @@ _get_sut_image() {
   _get_gantry_image "${SUITE_NAME}"
 }
 
+is_container_test() {
+  local SUT_REPO_TAG=
+  SUT_REPO_TAG="$(_get_sut_image "${SUITE_NAME}")"
+  test -n "${SUT_REPO_TAG}"
+}
+
 _get_initial_port() {
   # local BASE="${1}"
   local PID=$$
