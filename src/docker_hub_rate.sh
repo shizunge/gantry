@@ -15,10 +15,6 @@
 # along with this program.  If not, see <https://www.gnu.org/licenses/>.
 #
 
-_curl_installed() {
-  curl --version 1>/dev/null 2>/dev/null;
-}
-
 _docker_hub_rate_token() {
   local IMAGE="${1:-ratelimitpreview/test}"
   local USER_AND_PASS="${2}"
@@ -44,8 +40,10 @@ _docker_hub_echo_error() {
   local TITLE="${1}"
   local RESPONSE="${2}"
   local OLD_LOG_SCOPE="${LOG_SCOPE}"
-  LOG_SCOPE=$(attach_tag_to_log_scope "docker-hub")
-  export LOG_SCOPE
+  if type attach_tag_to_log_scope 1>/dev/null 2>/dev/null; then
+    LOG_SCOPE=$(attach_tag_to_log_scope "docker-hub")
+    export LOG_SCOPE
+  fi
   log DEBUG "${TITLE}: RESPONSE="
   echo "${RESPONSE}" | log_lines DEBUG
   echo "[${TITLE}]"
@@ -65,14 +63,14 @@ docker_hub_rate() {
   if ! type is_number 1>/dev/null 2>/dev/null; then
     is_number() { [ "${1}" -eq "${1}" ] 2>/dev/null; }
   fi
-  if ! _curl_installed; then
+  local RESPONSE=
+  if ! RESPONSE=$(curl --version 2>&1); then
     # wget has the following limitation:
     # 1. The `busybox wget` does not send a HEAD request (even with `--spider`), thus it will consume a docker hub rate.
     # 2. I did not figure out how to pass user name and password using wget.
-    echo "[NO CURL]"
+    _docker_hub_echo_error "NO CURL" "${RESPONSE}"
     return 1
   fi
-  local RESPONSE=
   if ! RESPONSE=$(_docker_hub_rate_token "${IMAGE}" "${USER_AND_PASS}" 2>&1); then
     _docker_hub_echo_error "GET TOKEN RESPONSE ERROR" "${RESPONSE}"
     return 1
@@ -84,16 +82,23 @@ docker_hub_rate() {
     return 1
   fi
   if ! RESPONSE=$(_docker_hub_rate_read_rate "${IMAGE}" "${TOKEN}" 2>&1); then
-    if echo "${RESPONSE}" | grep -q "Too Many Requests" ; then
-      # This occurs when we send request not via the HEAD method.
-      echo "0"
-      return 0
-    fi
     _docker_hub_echo_error "GET RATE RESPONSE ERROR" "${RESPONSE}"
     return 1
   fi
+  # "Too Many Requests" occurs when we send request not via the HEAD method.
+  # if echo "${RESPONSE}" | grep -q "Too Many Requests" ; then echo "0"; return 0; fi
   # example ${RESPONSE} :
-  # HTTP/2 200  date: Mon, 22 Jun 2026 21:46:03 GMT content-type: application/vnd.docker.distribution.manifest.v2+json content-length: 527 docker-content-digest: sha256:<sha256> docker-distribution-api-version: registry/2.0 etag: "sha256:<sha256>" strict-transport-security: max-age=31536000 ratelimit-limit: 100;w=21600 ratelimit-remaining: 100;w=21600 docker-ratelimit-source: <ip address>
+  #   HTTP/2 200
+  #   date: Mon, 22 Jun 2026 21:46:03 GMT
+  #   content-type: application/vnd.docker.distribution.manifest.v2+json
+  #   content-length: 527
+  #   docker-content-digest: sha256:<sha256>
+  #   docker-distribution-api-version: registry/2.0
+  #   etag: "sha256:<sha256>"
+  #   strict-transport-security: max-age=31536000
+  #   ratelimit-limit: 100;w=21600
+  #   ratelimit-remaining: 100;w=21600
+  #   docker-ratelimit-source: <ip address>
   # We also want to ignore "x-ratelimit-remaining: 100;".
   local RATE=
   RATE=$(echo "${RESPONSE}" | sed -n -E 's/(^|.*[^-])ratelimit-remaining: (-?[0-9]+);.*/\2/p' )
