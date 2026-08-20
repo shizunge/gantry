@@ -56,6 +56,7 @@ Describe 'update-options'
       The stdout should satisfy spec_expect_message    "After updating: LABEL_AND_VALUE=.*${SERVICE_NAME}"
       The stderr should satisfy display_output
       The stderr should satisfy spec_expect_no_message "${START_WITHOUT_A_SQUARE_BRACKET}"
+      The stderr should satisfy spec_expect_message    "Inspecting 2 service\(s\)."
       The stderr should satisfy spec_expect_no_message "${SKIP_UPDATING}.*${SERVICE_NAME}"
       The stderr should satisfy spec_expect_message    "${PERFORM_UPDATING}.*${SERVICE_NAME}.*${PERFORM_REASON_HAS_NEWER_IMAGE}"
       The stderr should satisfy spec_expect_no_message "${NUM_SERVICES_SKIP_JOBS}"
@@ -81,7 +82,6 @@ Describe 'update-options'
       The stderr should satisfy spec_expect_no_message "${NUM_SERVICES_INSPECT_FAILED}"
       The stderr should satisfy spec_expect_no_message "${NUM_SERVICES_ERRORS}"
       The stderr should satisfy spec_expect_no_message "${FAILED_TO_REMOVE_IMAGES}"
-      The stderr should satisfy spec_expect_no_message "${USED_RATE_NAN}"
     End
   End
   Describe "test_update_label_UPDATE_OPTIONS"
@@ -118,6 +118,7 @@ Describe 'update-options'
       The stdout should satisfy spec_expect_message    "After updating: LABEL_AND_VALUE=.*${SERVICE_NAME}"
       The stderr should satisfy display_output
       The stderr should satisfy spec_expect_no_message "${START_WITHOUT_A_SQUARE_BRACKET}"
+      The stderr should satisfy spec_expect_message    "Inspecting 2 service\(s\)."
       The stderr should satisfy spec_expect_no_message "${SKIP_UPDATING}.*${SERVICE_NAME}"
       The stderr should satisfy spec_expect_message    "${PERFORM_UPDATING}.*${SERVICE_NAME}.*${PERFORM_REASON_HAS_NEWER_IMAGE}"
       The stderr should satisfy spec_expect_no_message "${NUM_SERVICES_SKIP_JOBS}"
@@ -143,7 +144,6 @@ Describe 'update-options'
       The stderr should satisfy spec_expect_no_message "${NUM_SERVICES_INSPECT_FAILED}"
       The stderr should satisfy spec_expect_no_message "${NUM_SERVICES_ERRORS}"
       The stderr should satisfy spec_expect_no_message "${FAILED_TO_REMOVE_IMAGES}"
-      The stderr should satisfy spec_expect_no_message "${USED_RATE_NAN}"
     End
   End
   Describe "test_update_UPDATE_OPTIONS_bad"
@@ -167,6 +167,7 @@ Describe 'update-options'
       The stdout should satisfy spec_expect_no_message ".+"
       The stderr should satisfy display_output
       The stderr should satisfy spec_expect_no_message "${START_WITHOUT_A_SQUARE_BRACKET}"
+      The stderr should satisfy spec_expect_message    "Inspecting 2 service\(s\)."
       The stderr should satisfy spec_expect_no_message "${SKIP_UPDATING}.*${SERVICE_NAME}"
       The stderr should satisfy spec_expect_message    "${PERFORM_UPDATING}.*${SERVICE_NAME}.*${PERFORM_REASON_HAS_NEWER_IMAGE}"
       The stderr should satisfy spec_expect_no_message "${NUM_SERVICES_SKIP_JOBS}"
@@ -195,7 +196,6 @@ Describe 'update-options'
       The stderr should satisfy spec_expect_message    "${NUM_SERVICES_ERRORS}"
       The stderr should satisfy spec_expect_message    "- ${FAILED_TO_ROLLBACK}.*${SERVICE_NAME}.*${FROM_DOCKER_DOES_NOT_HAVE_A_PREVIOUS_SPEC}"
       The stderr should satisfy spec_expect_no_message "${FAILED_TO_REMOVE_IMAGES}"
-      The stderr should satisfy spec_expect_no_message "${USED_RATE_NAN}"
     End
   End
   Describe "test_update_UPDATE_TIMEOUT_SECONDS_not_a_number"
@@ -218,6 +218,7 @@ Describe 'update-options'
       The stdout should satisfy spec_expect_no_message ".+"
       The stderr should satisfy display_output
       The stderr should satisfy spec_expect_no_message "${START_WITHOUT_A_SQUARE_BRACKET}"
+      The stderr should satisfy spec_expect_message    "Inspecting 2 service\(s\)."
       The stderr should satisfy spec_expect_message    "Updating ${SERVICE_NAME}: UPDATE_TIMEOUT_SECONDS ${MUST_BE_A_NUMBER}"
       The stderr should satisfy spec_expect_no_message "${SKIP_UPDATING}.*${SERVICE_NAME}"
       The stderr should satisfy spec_expect_message    "${PERFORM_UPDATING}.*${SERVICE_NAME}.*${PERFORM_REASON_HAS_NEWER_IMAGE}"
@@ -244,7 +245,6 @@ Describe 'update-options'
       The stderr should satisfy spec_expect_message    "${NUM_SERVICES_ERRORS}"
       The stderr should satisfy spec_expect_message    "- Updating ${SERVICE_NAME}: UPDATE_TIMEOUT_SECONDS ${MUST_BE_A_NUMBER}"
       The stderr should satisfy spec_expect_no_message "${FAILED_TO_REMOVE_IMAGES}"
-      The stderr should satisfy spec_expect_no_message "${USED_RATE_NAN}"
     End
   End
   Describe "test_update_lable_UPDATE_TIMEOUT_SECONDS"
@@ -285,6 +285,7 @@ Describe 'update-options'
       The stdout should satisfy spec_expect_message    "After updating: LABEL_AND_VALUE=.*${SERVICE_NAME}"
       The stderr should satisfy display_output
       The stderr should satisfy spec_expect_no_message "${START_WITHOUT_A_SQUARE_BRACKET}"
+      The stderr should satisfy spec_expect_message    "Inspecting 2 service\(s\)."
       The stderr should satisfy spec_expect_no_message "${SKIP_UPDATING}.*${SERVICE_NAME}"
       The stderr should satisfy spec_expect_message    "${PERFORM_UPDATING}.*${SERVICE_NAME}.*${PERFORM_REASON_HAS_NEWER_IMAGE}"
       The stderr should satisfy spec_expect_no_message "${NUM_SERVICES_SKIP_JOBS}"
@@ -310,7 +311,6 @@ Describe 'update-options'
       The stderr should satisfy spec_expect_no_message "${NUM_SERVICES_INSPECT_FAILED}"
       The stderr should satisfy spec_expect_no_message "${NUM_SERVICES_ERRORS}"
       The stderr should satisfy spec_expect_no_message "${FAILED_TO_REMOVE_IMAGES}"
-      The stderr should satisfy spec_expect_no_message "${USED_RATE_NAN}"
     End
   End
 End # Describe 'update-options'

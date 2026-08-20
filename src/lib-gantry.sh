@@ -1320,13 +1320,13 @@ _gantry_get_services_list() {
       HAS_SELF="${S}"
       continue
     fi
-    LIST="${LIST} ${S}"
+    LIST="${LIST}\n${S}"
   done
   # Add self to the first of the list.
   if [ -n "${HAS_SELF}" ]; then
-    LIST="${HAS_SELF} ${LIST}"
+    LIST="${HAS_SELF}\n${LIST}"
   fi
-  echo "${LIST}"
+  echo -e "${LIST}"
 }
 
 _gantry_update_services_list() {

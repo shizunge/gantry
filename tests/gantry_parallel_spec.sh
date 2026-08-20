@@ -55,6 +55,7 @@ Describe 'service-parallel'
       The stdout should satisfy spec_expect_no_message ".+"
       The stderr should satisfy display_output
       The stderr should satisfy spec_expect_no_message "${START_WITHOUT_A_SQUARE_BRACKET}"
+      The stderr should satisfy spec_expect_message    "Inspecting 11 service\(s\)."
       for NUM in $(seq 0 "${MAX_SERVICES_NUM}"); do
         SERVICE_NAME_NUM="${SERVICE_NAME}-${NUM}"
         The stderr should satisfy spec_expect_no_message "${SKIP_UPDATING}.* ${SERVICE_NAME_NUM} "
@@ -85,7 +86,6 @@ Describe 'service-parallel'
       The stderr should satisfy spec_expect_no_message "${NUM_SERVICES_INSPECT_FAILED}"
       The stderr should satisfy spec_expect_no_message "${NUM_SERVICES_ERRORS}"
       The stderr should satisfy spec_expect_no_message "${FAILED_TO_REMOVE_IMAGES}"
-      The stderr should satisfy spec_expect_no_message "${USED_RATE_NAN}"
     End
   End
   Describe "test_parallel_more_workers"
@@ -112,6 +112,7 @@ Describe 'service-parallel'
       The stdout should satisfy spec_expect_no_message ".+"
       The stderr should satisfy display_output
       The stderr should satisfy spec_expect_no_message "${START_WITHOUT_A_SQUARE_BRACKET}"
+      The stderr should satisfy spec_expect_message    "Inspecting 12 service\(s\)."
       for NUM in $(seq 0 "${MAX_SERVICES_NUM}"); do
         SERVICE_NAME_NUM="${SERVICE_NAME}-${NUM}"
         The stderr should satisfy spec_expect_no_message "${SKIP_UPDATING}.* ${SERVICE_NAME_NUM} "
@@ -135,7 +136,6 @@ Describe 'service-parallel'
       The stderr should satisfy spec_expect_no_message "${NUM_SERVICES_INSPECT_FAILED}"
       The stderr should satisfy spec_expect_no_message "${NUM_SERVICES_ERRORS}"
       The stderr should satisfy spec_expect_no_message "${FAILED_TO_REMOVE_IMAGES}"
-      The stderr should satisfy spec_expect_no_message "${USED_RATE_NAN}"
     End
   End
   Describe "test_parallel_GANTRY_MANIFEST_NUM_WORKERS_not_a_number"
@@ -158,6 +158,7 @@ Describe 'service-parallel'
       The stdout should satisfy spec_expect_no_message ".+"
       The stderr should satisfy display_output
       The stderr should satisfy spec_expect_no_message "${START_WITHOUT_A_SQUARE_BRACKET}"
+      The stderr should satisfy spec_expect_no_message "Inspecting"
       The stderr should satisfy spec_expect_message    "GANTRY_MANIFEST_NUM_WORKERS ${MUST_BE_A_NUMBER}"
       The stderr should satisfy spec_expect_no_message "${SKIP_UPDATING}.*${SERVICE_NAME}"
       The stderr should satisfy spec_expect_no_message "${PERFORM_UPDATING}.*${SERVICE_NAME}.*${PERFORM_REASON_HAS_NEWER_IMAGE}"
@@ -183,7 +184,6 @@ Describe 'service-parallel'
       The stderr should satisfy spec_expect_message    "${NUM_SERVICES_ERRORS}"
       The stderr should satisfy spec_expect_message    "- GANTRY_MANIFEST_NUM_WORKERS ${MUST_BE_A_NUMBER}"
       The stderr should satisfy spec_expect_no_message "${FAILED_TO_REMOVE_IMAGES}"
-      The stderr should satisfy spec_expect_no_message "${USED_RATE_NAN}"
     End
   End
   Describe "test_parallel_GANTRY_UPDATE_NUM_WORKERS_not_a_number"
@@ -206,6 +206,7 @@ Describe 'service-parallel'
       The stdout should satisfy spec_expect_no_message ".+"
       The stderr should satisfy display_output
       The stderr should satisfy spec_expect_no_message "${START_WITHOUT_A_SQUARE_BRACKET}"
+      The stderr should satisfy spec_expect_no_message "Inspecting"
       The stderr should satisfy spec_expect_message    "GANTRY_UPDATE_NUM_WORKERS ${MUST_BE_A_NUMBER}"
       The stderr should satisfy spec_expect_no_message "${SKIP_UPDATING}.*${SERVICE_NAME}"
       The stderr should satisfy spec_expect_no_message "${PERFORM_UPDATING}.*${SERVICE_NAME}.*${PERFORM_REASON_HAS_NEWER_IMAGE}"
@@ -231,7 +232,6 @@ Describe 'service-parallel'
       The stderr should satisfy spec_expect_message    "${NUM_SERVICES_ERRORS}"
       The stderr should satisfy spec_expect_message    "- GANTRY_UPDATE_NUM_WORKERS ${MUST_BE_A_NUMBER}"
       The stderr should satisfy spec_expect_no_message "${FAILED_TO_REMOVE_IMAGES}"
-      The stderr should satisfy spec_expect_no_message "${USED_RATE_NAN}"
     End
   End
 End # Describe 'Multiple services'

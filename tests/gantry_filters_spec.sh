@@ -39,6 +39,7 @@ Describe 'filters'
       The stdout should satisfy spec_expect_no_message ".+"
       The stderr should satisfy display_output
       The stderr should satisfy spec_expect_no_message "${START_WITHOUT_A_SQUARE_BRACKET}"
+      The stderr should satisfy spec_expect_no_message "Inspecting"
       The stderr should satisfy spec_expect_message    "Failed to obtain services list.*"
       The stderr should satisfy spec_expect_message    "${SKIP_UPDATING_ALL}.*${SKIP_REASON_PREVIOUS_ERRORS}"
       The stderr should satisfy spec_expect_no_message "${SKIP_UPDATING}.*${SERVICE_NAME}"
@@ -65,7 +66,6 @@ Describe 'filters'
       The stderr should satisfy spec_expect_message    "${NUM_SERVICES_ERRORS}"
       The stderr should satisfy spec_expect_message    "- ${SKIP_UPDATING_ALL}.*${SKIP_REASON_PREVIOUS_ERRORS}"
       The stderr should satisfy spec_expect_no_message "${FAILED_TO_REMOVE_IMAGES}"
-      The stderr should satisfy spec_expect_no_message "${USED_RATE_NAN}"
     End
   End
   Describe "test_SERVICES_EXCLUDED_multiple_services"
@@ -101,6 +101,7 @@ Describe 'filters'
       The stdout should satisfy spec_expect_no_message ".+"
       The stderr should satisfy display_output
       The stderr should satisfy spec_expect_no_message "${START_WITHOUT_A_SQUARE_BRACKET}"
+      The stderr should satisfy spec_expect_message    "Inspecting 0 service\(s\)."
       The stderr should satisfy spec_expect_no_message "${SKIP_UPDATING_ALL}"
       The stderr should satisfy spec_expect_multiple_messages "${EXCLUDE_SERVICE}.*${SERVICE_NAME}"
       The stderr should satisfy spec_expect_no_message "${SKIP_UPDATING}.*${SERVICE_NAME}"
@@ -126,7 +127,6 @@ Describe 'filters'
       The stderr should satisfy spec_expect_no_message "${NUM_SERVICES_INSPECT_FAILED}"
       The stderr should satisfy spec_expect_no_message "${NUM_SERVICES_ERRORS}"
       The stderr should satisfy spec_expect_no_message "${FAILED_TO_REMOVE_IMAGES}"
-      The stderr should satisfy spec_expect_no_message "${USED_RATE_NAN}"
     End
   End
   Describe "test_SERVICES_EXCLUDED_FILTERS_default"
@@ -156,6 +156,7 @@ Describe 'filters'
       The stdout should satisfy spec_expect_no_message ".+"
       The stderr should satisfy display_output
       The stderr should satisfy spec_expect_no_message "${START_WITHOUT_A_SQUARE_BRACKET}"
+      The stderr should satisfy spec_expect_message    "Inspecting 0 service\(s\)."
       The stderr should satisfy spec_expect_no_message "${SKIP_UPDATING_ALL}"
       The stderr should satisfy spec_expect_no_message "${SKIP_UPDATING}.*${SERVICE_NAME}"
       The stderr should satisfy spec_expect_no_message "${PERFORM_UPDATING}.*${SERVICE_NAME}"
@@ -180,7 +181,6 @@ Describe 'filters'
       The stderr should satisfy spec_expect_no_message "${NUM_SERVICES_INSPECT_FAILED}"
       The stderr should satisfy spec_expect_no_message "${NUM_SERVICES_ERRORS}"
       The stderr should satisfy spec_expect_no_message "${FAILED_TO_REMOVE_IMAGES}"
-      The stderr should satisfy spec_expect_no_message "${USED_RATE_NAN}"
     End
   End
   Describe "test_SERVICES_EXCLUDED_FILTERS_bad"
@@ -203,6 +203,7 @@ Describe 'filters'
       The stdout should satisfy spec_expect_no_message ".+"
       The stderr should satisfy display_output
       The stderr should satisfy spec_expect_no_message "${START_WITHOUT_A_SQUARE_BRACKET}"
+      The stderr should satisfy spec_expect_no_message "Inspecting"
       The stderr should satisfy spec_expect_message    "Failed to obtain services list.*"
       The stderr should satisfy spec_expect_message    "${SKIP_UPDATING_ALL}.*${SKIP_REASON_PREVIOUS_ERRORS}"
       The stderr should satisfy spec_expect_no_message "${SKIP_UPDATING}.*${SERVICE_NAME}"
@@ -229,7 +230,6 @@ Describe 'filters'
       The stderr should satisfy spec_expect_message    "${NUM_SERVICES_ERRORS}"
       The stderr should satisfy spec_expect_message    "- ${SKIP_UPDATING_ALL}.*${SKIP_REASON_PREVIOUS_ERRORS}"
       The stderr should satisfy spec_expect_no_message "${FAILED_TO_REMOVE_IMAGES}"
-      The stderr should satisfy spec_expect_no_message "${USED_RATE_NAN}"
     End
   End
 End # Describe 'Filters'

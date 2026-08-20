@@ -42,6 +42,7 @@ Describe 'rollback'
       The stdout should satisfy spec_expect_no_message ".+"
       The stderr should satisfy display_output
       The stderr should satisfy spec_expect_no_message "${START_WITHOUT_A_SQUARE_BRACKET}"
+      The stderr should satisfy spec_expect_message    "Inspecting 2 service\(s\)."
       The stderr should satisfy spec_expect_no_message "${SKIP_UPDATING}.*${SERVICE_NAME}"
       The stderr should satisfy spec_expect_message    "${PERFORM_UPDATING}.*${SERVICE_NAME}.*${PERFORM_REASON_HAS_NEWER_IMAGE}"
       The stderr should satisfy spec_expect_no_message "${NUM_SERVICES_SKIP_JOBS}"
@@ -69,7 +70,6 @@ Describe 'rollback'
       The stderr should satisfy spec_expect_no_message "${NUM_SERVICES_INSPECT_FAILED}"
       The stderr should satisfy spec_expect_no_message "${NUM_SERVICES_ERRORS}"
       The stderr should satisfy spec_expect_no_message "${FAILED_TO_REMOVE_IMAGES}"
-      The stderr should satisfy spec_expect_no_message "${USED_RATE_NAN}"
     End
   End
   Describe "test_rollback_failed"
@@ -98,6 +98,7 @@ Describe 'rollback'
       The stdout should satisfy spec_expect_no_message ".+"
       The stderr should satisfy display_output
       The stderr should satisfy spec_expect_no_message "${START_WITHOUT_A_SQUARE_BRACKET}"
+      The stderr should satisfy spec_expect_message    "Inspecting 2 service\(s\)."
       The stderr should satisfy spec_expect_no_message "${SKIP_UPDATING}.*${SERVICE_NAME}"
       The stderr should satisfy spec_expect_message    "${PERFORM_UPDATING}.*${SERVICE_NAME}.*${PERFORM_REASON_HAS_NEWER_IMAGE}"
       The stderr should satisfy spec_expect_no_message "${NUM_SERVICES_SKIP_JOBS}"
@@ -126,7 +127,6 @@ Describe 'rollback'
       The stderr should satisfy spec_expect_message    "${NUM_SERVICES_ERRORS}"
       The stderr should satisfy spec_expect_message    "- ${FAILED_TO_ROLLBACK}.*${SERVICE_NAME}"
       The stderr should satisfy spec_expect_no_message "${FAILED_TO_REMOVE_IMAGES}"
-      The stderr should satisfy spec_expect_no_message "${USED_RATE_NAN}"
     End
   End
   Describe "test_rollback_ROLLBACK_ON_FAILURE_false"
@@ -153,6 +153,7 @@ Describe 'rollback'
       The stdout should satisfy spec_expect_no_message ".+"
       The stderr should satisfy display_output
       The stderr should satisfy spec_expect_no_message "${START_WITHOUT_A_SQUARE_BRACKET}"
+      The stderr should satisfy spec_expect_message    "Inspecting 2 service\(s\)."
       The stderr should satisfy spec_expect_no_message "${SKIP_UPDATING}.*${SERVICE_NAME}"
       The stderr should satisfy spec_expect_message    "${PERFORM_UPDATING}.*${SERVICE_NAME}.*${PERFORM_REASON_HAS_NEWER_IMAGE}"
       The stderr should satisfy spec_expect_no_message "${NUM_SERVICES_SKIP_JOBS}"
@@ -180,7 +181,6 @@ Describe 'rollback'
       The stderr should satisfy spec_expect_no_message "${NUM_SERVICES_INSPECT_FAILED}"
       The stderr should satisfy spec_expect_no_message "${NUM_SERVICES_ERRORS}"
       The stderr should satisfy spec_expect_no_message "${FAILED_TO_REMOVE_IMAGES}"
-      The stderr should satisfy spec_expect_no_message "${USED_RATE_NAN}"
     End
   End
   Describe "test_rollback_label_failed"
@@ -212,6 +212,7 @@ Describe 'rollback'
       The stdout should satisfy spec_expect_no_message ".+"
       The stderr should satisfy display_output
       The stderr should satisfy spec_expect_no_message "${START_WITHOUT_A_SQUARE_BRACKET}"
+      The stderr should satisfy spec_expect_message    "Inspecting 2 service\(s\)."
       The stderr should satisfy spec_expect_no_message "${SKIP_UPDATING}.*${SERVICE_NAME}"
       The stderr should satisfy spec_expect_message    "${PERFORM_UPDATING}.*${SERVICE_NAME}.*${PERFORM_REASON_HAS_NEWER_IMAGE}"
       The stderr should satisfy spec_expect_no_message "${NUM_SERVICES_SKIP_JOBS}"
@@ -240,7 +241,6 @@ Describe 'rollback'
       The stderr should satisfy spec_expect_message    "${NUM_SERVICES_ERRORS}"
       The stderr should satisfy spec_expect_message    "- ${FAILED_TO_ROLLBACK}.*${SERVICE_NAME}"
       The stderr should satisfy spec_expect_no_message "${FAILED_TO_REMOVE_IMAGES}"
-      The stderr should satisfy spec_expect_no_message "${USED_RATE_NAN}"
     End
   End
   Describe "test_rollback_label_ROLLBACK_ON_FAILURE_false"
@@ -269,6 +269,7 @@ Describe 'rollback'
       The stdout should satisfy spec_expect_no_message ".+"
       The stderr should satisfy display_output
       The stderr should satisfy spec_expect_no_message "${START_WITHOUT_A_SQUARE_BRACKET}"
+      The stderr should satisfy spec_expect_message    "Inspecting 2 service\(s\)."
       The stderr should satisfy spec_expect_no_message "${SKIP_UPDATING}.*${SERVICE_NAME}"
       The stderr should satisfy spec_expect_message    "${PERFORM_UPDATING}.*${SERVICE_NAME}.*${PERFORM_REASON_HAS_NEWER_IMAGE}"
       The stderr should satisfy spec_expect_no_message "${NUM_SERVICES_SKIP_JOBS}"
@@ -296,7 +297,6 @@ Describe 'rollback'
       The stderr should satisfy spec_expect_no_message "${NUM_SERVICES_INSPECT_FAILED}"
       The stderr should satisfy spec_expect_no_message "${NUM_SERVICES_ERRORS}"
       The stderr should satisfy spec_expect_no_message "${FAILED_TO_REMOVE_IMAGES}"
-      The stderr should satisfy spec_expect_no_message "${USED_RATE_NAN}"
     End
   End
   Describe "test_multiple_services_continue_on_failure"
@@ -350,6 +350,7 @@ Describe 'rollback'
       The stdout should satisfy spec_expect_no_message ".+"
       The stderr should satisfy display_output
       The stderr should satisfy spec_expect_no_message "${START_WITHOUT_A_SQUARE_BRACKET}"
+      The stderr should satisfy spec_expect_message    "Inspecting 3 service\(s\)."
       The stderr should satisfy spec_expect_no_message "${SKIP_UPDATING}.*${SERVICE_NAME0}"
       The stderr should satisfy spec_expect_message    "${PERFORM_UPDATING}.*${SERVICE_NAME0}.*${PERFORM_REASON_HAS_NEWER_IMAGE}"
       The stderr should satisfy spec_expect_no_message "${SKIP_UPDATING}.*${SERVICE_NAME1}"
@@ -386,7 +387,6 @@ Describe 'rollback'
       The stderr should satisfy spec_expect_no_message "${NUM_SERVICES_INSPECT_FAILED}"
       The stderr should satisfy spec_expect_no_message "${NUM_SERVICES_ERRORS}"
       The stderr should satisfy spec_expect_no_message "${FAILED_TO_REMOVE_IMAGES}"
-      The stderr should satisfy spec_expect_no_message "${USED_RATE_NAN}"
     End
   End
 End # Describe 'Rollback'

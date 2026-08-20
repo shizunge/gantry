@@ -82,6 +82,7 @@ Describe 'login-docker-config'
       The stdout should satisfy spec_expect_no_message ".+"
       The stderr should satisfy display_output
       The stderr should satisfy spec_expect_no_message "${START_WITHOUT_A_SQUARE_BRACKET}"
+      The stderr should satisfy spec_expect_message    "Inspecting 2 service\(s\)."
       The stderr should satisfy spec_expect_no_message "${LOGGED_INTO_REGISTRY}.*${DEFAULT_CONFIGURATION}"
       The stderr should satisfy spec_expect_message    "${LOGGED_INTO_REGISTRY}.*${TEST_REGISTRY}.*${AUTH_CONFIG}"
       The stderr should satisfy spec_expect_no_message "${FAILED_TO_LOGIN_TO_REGISTRY}"
@@ -113,7 +114,6 @@ Describe 'login-docker-config'
       The stderr should satisfy spec_expect_no_message "${NUM_SERVICES_INSPECT_FAILED}"
       The stderr should satisfy spec_expect_no_message "${NUM_SERVICES_ERRORS}"
       The stderr should satisfy spec_expect_no_message "${FAILED_TO_REMOVE_IMAGES}"
-      The stderr should satisfy spec_expect_no_message "${USED_RATE_NAN}"
     End
   End
   Describe "test_login_docker_config_default_config"
@@ -160,6 +160,7 @@ Describe 'login-docker-config'
       The stdout should satisfy spec_expect_no_message ".+"
       The stderr should satisfy display_output
       The stderr should satisfy spec_expect_no_message "${START_WITHOUT_A_SQUARE_BRACKET}"
+      The stderr should satisfy spec_expect_message    "Inspecting 2 service\(s\)."
       The stderr should satisfy spec_expect_message    "${LOGGED_INTO_REGISTRY}.*${TEST_REGISTRY}.*${DEFAULT_CONFIGURATION}"
       The stderr should satisfy spec_expect_no_message "${FAILED_TO_LOGIN_TO_REGISTRY}"
       The stderr should satisfy spec_expect_no_message "${CONFIG_IS_NOT_A_DIRECTORY}"
@@ -189,7 +190,6 @@ Describe 'login-docker-config'
       The stderr should satisfy spec_expect_no_message "${NUM_SERVICES_INSPECT_FAILED}"
       The stderr should satisfy spec_expect_no_message "${NUM_SERVICES_ERRORS}"
       The stderr should satisfy spec_expect_no_message "${FAILED_TO_REMOVE_IMAGES}"
-      The stderr should satisfy spec_expect_no_message "${USED_RATE_NAN}"
     End
   End
   Describe "test_login_docker_config_label_override"
@@ -272,6 +272,7 @@ Describe 'login-docker-config'
       The stdout should satisfy spec_expect_no_message ".+"
       The stderr should satisfy display_output
       The stderr should satisfy spec_expect_no_message "${START_WITHOUT_A_SQUARE_BRACKET}"
+      The stderr should satisfy spec_expect_message    "Inspecting 4 service\(s\)."
       The stderr should satisfy spec_expect_message    "${LOGGED_INTO_REGISTRY}.*${TEST_REGISTRY}.*${AUTH_CONFIG}"
       The stderr should satisfy spec_expect_no_message "${FAILED_TO_LOGIN_TO_REGISTRY}"
       The stderr should satisfy spec_expect_message    "${INCORRECT_CONFIG}.*${CONFIG_IS_NOT_A_DIRECTORY}"
@@ -322,7 +323,6 @@ Describe 'login-docker-config'
       The stderr should satisfy spec_expect_message    "${NUM_SERVICES_INSPECT_FAILED}"
       The stderr should satisfy spec_expect_no_message "${NUM_SERVICES_ERRORS}"
       The stderr should satisfy spec_expect_no_message "${FAILED_TO_REMOVE_IMAGES}"
-      The stderr should satisfy spec_expect_no_message "${USED_RATE_NAN}"
     End
   End
 End # Describe 'login-docker-config'

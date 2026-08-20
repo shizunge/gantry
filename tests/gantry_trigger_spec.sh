@@ -79,6 +79,7 @@ Describe 'trigger'
       The stdout should satisfy spec_expect_no_message ".+"
       The stderr should satisfy display_output
       The stderr should satisfy spec_expect_no_message "${START_WITHOUT_A_SQUARE_BRACKET}"
+      The stderr should satisfy spec_expect_no_message "Inspecting"
       The stderr should satisfy spec_expect_message    "GANTRY_SLEEP_SECONDS ${MUST_BE_A_NUMBER}"
       The stderr should satisfy spec_expect_no_message "${SKIP_UPDATING_ALL}"
       The stderr should satisfy spec_expect_no_message "${SKIP_UPDATING}.*${SERVICE_NAME}"
@@ -104,7 +105,6 @@ Describe 'trigger'
       The stderr should satisfy spec_expect_no_message "${NUM_SERVICES_INSPECT_FAILED}"
       The stderr should satisfy spec_expect_no_message "${NUM_SERVICES_ERRORS}"
       The stderr should satisfy spec_expect_no_message "${FAILED_TO_REMOVE_IMAGES}"
-      The stderr should satisfy spec_expect_no_message "${USED_RATE_NAN}"
       The stderr should satisfy spec_expect_no_message "${SCHEDULE_NEXT_UPDATE_AT}"
       The stderr should satisfy spec_expect_no_message "${ALREADY_TIMES_UP}"
       The stderr should satisfy spec_expect_no_message "${SLEEP_SECONDS_BEFORE_NEXT_UPDATE}"
@@ -150,6 +150,7 @@ Describe 'trigger'
       The stderr should satisfy display_output
       # Do not check START_WITHOUT_A_SQUARE_BRACKET because the kill command could cause a "Broken pipe" error.
       # The stderr should satisfy spec_expect_no_message "${START_WITHOUT_A_SQUARE_BRACKET}"
+      The stderr should satisfy spec_expect_multiple_messages "Inspecting 2 service\(s\)."
       The stderr should satisfy spec_expect_multiple_messages "${SKIP_UPDATING}.*${SERVICE_NAME}.*${SKIP_REASON_CURRENT_IS_LATEST}"
       The stderr should satisfy spec_expect_no_message "${PERFORM_UPDATING}.*${SERVICE_NAME}"
       The stderr should satisfy spec_expect_no_message "${NUM_SERVICES_SKIP_JOBS}"
@@ -174,7 +175,6 @@ Describe 'trigger'
       The stderr should satisfy spec_expect_no_message "${NUM_SERVICES_INSPECT_FAILED}"
       The stderr should satisfy spec_expect_no_message "${NUM_SERVICES_ERRORS}"
       The stderr should satisfy spec_expect_no_message "${FAILED_TO_REMOVE_IMAGES}"
-      The stderr should satisfy spec_expect_no_message "${USED_RATE_NAN}"
       # Check messages between iterations.
       The stderr should satisfy spec_expect_message    "${SCHEDULE_NEXT_UPDATE_AT}"
       The stderr should satisfy spec_expect_message    "${ALREADY_TIMES_UP}"
@@ -227,6 +227,7 @@ Describe 'trigger'
       The stderr should satisfy display_output
       # Do not check START_WITHOUT_A_SQUARE_BRACKET because the kill command could cause a "Broken pipe" error.
       # The stderr should satisfy spec_expect_no_message "${START_WITHOUT_A_SQUARE_BRACKET}"
+      The stderr should satisfy spec_expect_multiple_messages "Inspecting 2 service\(s\)."
       The stderr should satisfy spec_expect_multiple_messages "${SKIP_UPDATING}.*${SERVICE_NAME}.*${SKIP_REASON_CURRENT_IS_LATEST}"
       The stderr should satisfy spec_expect_no_message "${PERFORM_UPDATING}.*${SERVICE_NAME}"
       The stderr should satisfy spec_expect_no_message "${NUM_SERVICES_SKIP_JOBS}"
@@ -251,7 +252,6 @@ Describe 'trigger'
       The stderr should satisfy spec_expect_no_message "${NUM_SERVICES_INSPECT_FAILED}"
       The stderr should satisfy spec_expect_no_message "${NUM_SERVICES_ERRORS}"
       The stderr should satisfy spec_expect_no_message "${FAILED_TO_REMOVE_IMAGES}"
-      The stderr should satisfy spec_expect_no_message "${USED_RATE_NAN}"
       # Check messages between iterations.
       The stderr should satisfy spec_expect_no_message "${SCHEDULE_NEXT_UPDATE_AT}"
       The stderr should satisfy spec_expect_no_message "${ALREADY_TIMES_UP}"
@@ -305,6 +305,7 @@ Describe 'trigger'
       The stderr should satisfy display_output
       # Do not check START_WITHOUT_A_SQUARE_BRACKET because the kill command could cause a "Broken pipe" error.
       # The stderr should satisfy spec_expect_no_message "${START_WITHOUT_A_SQUARE_BRACKET}"
+      The stderr should satisfy spec_expect_multiple_messages "Inspecting 2 service\(s\)."
       The stderr should satisfy spec_expect_multiple_messages "${SKIP_UPDATING}.*${SERVICE_NAME}.*${SKIP_REASON_CURRENT_IS_LATEST}"
       The stderr should satisfy spec_expect_no_message "${PERFORM_UPDATING}.*${SERVICE_NAME}"
       The stderr should satisfy spec_expect_no_message "${NUM_SERVICES_SKIP_JOBS}"
@@ -329,7 +330,6 @@ Describe 'trigger'
       The stderr should satisfy spec_expect_no_message "${NUM_SERVICES_INSPECT_FAILED}"
       The stderr should satisfy spec_expect_no_message "${NUM_SERVICES_ERRORS}"
       The stderr should satisfy spec_expect_no_message "${FAILED_TO_REMOVE_IMAGES}"
-      The stderr should satisfy spec_expect_no_message "${USED_RATE_NAN}"
       # Check messages between iterations.
       The stderr should satisfy spec_expect_message    "${SCHEDULE_NEXT_UPDATE_AT}"
       The stderr should satisfy spec_expect_no_message "${ALREADY_TIMES_UP}"
@@ -377,6 +377,7 @@ Describe 'trigger'
       The stderr should satisfy display_output
       # Do not check START_WITHOUT_A_SQUARE_BRACKET because the kill command could cause a "Broken pipe" error.
       # The stderr should satisfy spec_expect_no_message "${START_WITHOUT_A_SQUARE_BRACKET}"
+      The stderr should satisfy spec_expect_multiple_messages "Inspecting 2 service\(s\)."
       The stderr should satisfy spec_expect_multiple_messages "${SKIP_UPDATING}.*${SERVICE_NAME}.*${SKIP_REASON_CURRENT_IS_LATEST}"
       The stderr should satisfy spec_expect_no_message "${PERFORM_UPDATING}.*${SERVICE_NAME}"
       The stderr should satisfy spec_expect_no_message "${NUM_SERVICES_SKIP_JOBS}"
@@ -401,7 +402,6 @@ Describe 'trigger'
       The stderr should satisfy spec_expect_no_message "${NUM_SERVICES_INSPECT_FAILED}"
       The stderr should satisfy spec_expect_no_message "${NUM_SERVICES_ERRORS}"
       The stderr should satisfy spec_expect_no_message "${FAILED_TO_REMOVE_IMAGES}"
-      The stderr should satisfy spec_expect_no_message "${USED_RATE_NAN}"
       # Check messages between iterations.
       The stderr should satisfy spec_expect_message    "${SCHEDULE_NEXT_UPDATE_AT}"
       The stderr should satisfy spec_expect_no_message "${ALREADY_TIMES_UP}"
@@ -448,6 +448,7 @@ Describe 'trigger'
       The stderr should satisfy display_output
       # Do not check START_WITHOUT_A_SQUARE_BRACKET because the kill command could cause a "Broken pipe" error.
       # The stderr should satisfy spec_expect_no_message "${START_WITHOUT_A_SQUARE_BRACKET}"
+      The stderr should satisfy spec_expect_multiple_messages "Inspecting 2 service\(s\)."
       The stderr should satisfy spec_expect_multiple_messages "${SKIP_UPDATING}.*${SERVICE_NAME}.*${SKIP_REASON_CURRENT_IS_LATEST}"
       The stderr should satisfy spec_expect_no_message "${PERFORM_UPDATING}.*${SERVICE_NAME}"
       The stderr should satisfy spec_expect_no_message "${NUM_SERVICES_SKIP_JOBS}"
@@ -472,7 +473,6 @@ Describe 'trigger'
       The stderr should satisfy spec_expect_no_message "${NUM_SERVICES_INSPECT_FAILED}"
       The stderr should satisfy spec_expect_no_message "${NUM_SERVICES_ERRORS}"
       The stderr should satisfy spec_expect_no_message "${FAILED_TO_REMOVE_IMAGES}"
-      The stderr should satisfy spec_expect_no_message "${USED_RATE_NAN}"
       # Check messages between iterations.
       The stderr should satisfy spec_expect_message    "${SCHEDULE_NEXT_UPDATE_AT}"
       The stderr should satisfy spec_expect_no_message "${ALREADY_TIMES_UP}"

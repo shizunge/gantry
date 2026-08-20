@@ -92,6 +92,7 @@ Describe "service-no-running-tasks"
       The stdout should satisfy spec_expect_message    "After updating: REPLICAS_AFTER=0/0"
       The stderr should satisfy display_output
       The stderr should satisfy spec_expect_no_message "${START_WITHOUT_A_SQUARE_BRACKET}"
+      The stderr should satisfy spec_expect_message    "Inspecting 3 service\(s\)."
       # Add "--detach=true" when there is no running tasks.
       # https://github.com/docker/cli/issues/627
       The stderr should satisfy spec_expect_message    "${ADDING_OPTIONS}.*--detach=true.*${AUTOMATICALLY}.*${SERVICE_NAME}\."
@@ -124,7 +125,6 @@ Describe "service-no-running-tasks"
       The stderr should satisfy spec_expect_no_message "${NUM_SERVICES_INSPECT_FAILED}"
       The stderr should satisfy spec_expect_no_message "${NUM_SERVICES_ERRORS}"
       The stderr should satisfy spec_expect_no_message "${FAILED_TO_REMOVE_IMAGES}"
-      The stderr should satisfy spec_expect_no_message "${USED_RATE_NAN}"
     End
   End
   Describe "test_no_running_tasks_replicated_user_replicas"
@@ -189,6 +189,7 @@ Describe "service-no-running-tasks"
       The stdout should satisfy spec_expect_message    "After updating: REPLICAS_AFTER=1/1"
       The stderr should satisfy display_output
       The stderr should satisfy spec_expect_no_message "${START_WITHOUT_A_SQUARE_BRACKET}"
+      The stderr should satisfy spec_expect_message    "Inspecting 3 service\(s\)."
       # Add "--detach=true" when there is no running tasks.
       # https://github.com/docker/cli/issues/627
       The stderr should satisfy spec_expect_message    "${ADDING_OPTIONS}.*--detach=true.*${AUTOMATICALLY}.*${SERVICE_NAME}\."
@@ -221,7 +222,6 @@ Describe "service-no-running-tasks"
       The stderr should satisfy spec_expect_no_message "${NUM_SERVICES_INSPECT_FAILED}"
       The stderr should satisfy spec_expect_no_message "${NUM_SERVICES_ERRORS}"
       The stderr should satisfy spec_expect_no_message "${FAILED_TO_REMOVE_IMAGES}"
-      The stderr should satisfy spec_expect_no_message "${USED_RATE_NAN}"
     End
   End
   Describe "test_no_running_tasks_global"
@@ -257,6 +257,7 @@ Describe "service-no-running-tasks"
       The stdout should satisfy spec_expect_no_message ".+"
       The stderr should satisfy display_output
       The stderr should satisfy spec_expect_no_message "${START_WITHOUT_A_SQUARE_BRACKET}"
+      The stderr should satisfy spec_expect_message    "Inspecting 2 service\(s\)."
       # Add "--detach=true" when there is no running tasks.
       # https://github.com/docker/cli/issues/627
       The stderr should satisfy spec_expect_message    "${ADDING_OPTIONS}.*--detach=true.*${AUTOMATICALLY}.*${SERVICE_NAME}"
@@ -286,7 +287,6 @@ Describe "service-no-running-tasks"
       The stderr should satisfy spec_expect_no_message "${NUM_SERVICES_INSPECT_FAILED}"
       The stderr should satisfy spec_expect_no_message "${NUM_SERVICES_ERRORS}"
       The stderr should satisfy spec_expect_no_message "${FAILED_TO_REMOVE_IMAGES}"
-      The stderr should satisfy spec_expect_no_message "${USED_RATE_NAN}"
     End
   End
 End # Describe "No Running Tasks"

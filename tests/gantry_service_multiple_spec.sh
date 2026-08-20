@@ -67,6 +67,7 @@ Describe 'service-multiple-services'
       The stdout should satisfy spec_expect_no_message ".+"
       The stderr should satisfy display_output
       The stderr should satisfy spec_expect_no_message "${START_WITHOUT_A_SQUARE_BRACKET}"
+      The stderr should satisfy spec_expect_message    "Inspecting 5 service\(s\)."
       # Service 0 and 3 should get updated.
       # Service 1 and 2 should be excluded.
       # Service 4 and 5 created with new image, no update.
@@ -112,7 +113,6 @@ Describe 'service-multiple-services'
       The stderr should satisfy spec_expect_no_message "${NUM_SERVICES_INSPECT_FAILED}"
       The stderr should satisfy spec_expect_message    "${NUM_SERVICES_ERRORS}"
       The stderr should satisfy spec_expect_message    "- ${FAILED_TO_REMOVE_IMAGES}"
-      The stderr should satisfy spec_expect_no_message "${USED_RATE_NAN}"
     End
   End
   Describe "test_multiple_services_update_twice"
@@ -158,6 +158,7 @@ Describe 'service-multiple-services'
       The stdout should satisfy spec_expect_no_message ".+"
       The stderr should satisfy display_output
       The stderr should satisfy spec_expect_no_message "${START_WITHOUT_A_SQUARE_BRACKET}"
+      The stderr should satisfy spec_expect_message    "Inspecting 4 service\(s\)."
       # Service 0 and 3 should get updated.
       # Service 1 and 2 should be excluded.
       # Failed to remove the image as service 1 and 2 are still using it.
@@ -193,7 +194,6 @@ Describe 'service-multiple-services'
       The stderr should satisfy spec_expect_no_message "${NUM_SERVICES_INSPECT_FAILED}"
       The stderr should satisfy spec_expect_no_message "${NUM_SERVICES_ERRORS}"
       The stderr should satisfy spec_expect_no_message "${FAILED_TO_REMOVE_IMAGES}"
-      The stderr should satisfy spec_expect_no_message "${USED_RATE_NAN}"
     End
   End
 End # Describe 'Multiple services'

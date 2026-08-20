@@ -32,19 +32,21 @@ export EMAIL_API_PORT=8025
 _notify_before_all() {
   local SUITE_NAME="${1}"
   initialize_all_tests "${SUITE_NAME}"
-  pull_image_if_not_exist caronc/apprise
+  local APPRISE_IMAGE="ghcr.io/caronc/apprise"
+  pull_image_if_not_exist "${APPRISE_IMAGE}"
   docker stop "${SERVICE_NAME_APPRISE}" 1>/dev/null 2>/dev/null
   docker container remove "${SERVICE_NAME_APPRISE}" 1>/dev/null 2>/dev/null
   docker run -d --restart=on-failure:10 --name="${SERVICE_NAME_APPRISE}" --network=host \
     --label gantry.test=true \
     -e "APPRISE_STATELESS_URLS=mailto://localhost:${SMTP_PORT}?user=userid&pass=password" \
-    caronc/apprise
-  pull_image_if_not_exist axllent/mailpit
+    "${APPRISE_IMAGE}"
+  local MAILPIT_IMAGE="ghcr.io/axllent/mailpit"
+  pull_image_if_not_exist "${MAILPIT_IMAGE}"
   docker stop "${SERVICE_NAME_MAILPIT}" 1>/dev/null 2>/dev/null
   docker container remove "${SERVICE_NAME_MAILPIT}" 1>/dev/null 2>/dev/null
   docker run -d --restart=on-failure:10 --name="${SERVICE_NAME_MAILPIT}" --network=host \
     --label gantry.test=true \
-    axllent/mailpit \
+    "${MAILPIT_IMAGE}" \
     --smtp "localhost:${SMTP_PORT}" --listen "localhost:${EMAIL_API_PORT}" \
     --smtp-auth-accept-any --smtp-auth-allow-insecure
 }
@@ -105,6 +107,7 @@ Describe 'notify'
       The stdout should satisfy spec_expect_message    "${TOTAL_EMAIL_COUNT_IS_ONE}"
       The stderr should satisfy display_output
       The stderr should satisfy spec_expect_no_message "${START_WITHOUT_A_SQUARE_BRACKET}"
+      The stderr should satisfy spec_expect_message    "Inspecting 2 service\(s\)."
       The stderr should satisfy spec_expect_no_message "${SKIP_UPDATING}.*${SERVICE_NAME}"
       The stderr should satisfy spec_expect_message    "${PERFORM_UPDATING}.*${SERVICE_NAME}.*${PERFORM_REASON_HAS_NEWER_IMAGE}"
       The stderr should satisfy spec_expect_no_message "${NUM_SERVICES_SKIP_JOBS}"
@@ -130,7 +133,6 @@ Describe 'notify'
       The stderr should satisfy spec_expect_no_message "${FAILED_TO_REMOVE_IMAGES}"
       The stderr should satisfy spec_expect_no_message "${SKIP_NOTIFY_APPRISE}"
       The stderr should satisfy spec_expect_message    "${SEND_NOTIFY_APPRISE}"
-      The stderr should satisfy spec_expect_no_message "${USED_RATE_NAN}"
     End
   End
   Describe "test_notify_apprise_inspection_failure"
@@ -175,6 +177,7 @@ Describe 'notify'
       The stdout should satisfy spec_expect_message    "${TOTAL_EMAIL_COUNT_IS_ONE}"
       The stderr should satisfy display_output
       The stderr should satisfy spec_expect_no_message "${START_WITHOUT_A_SQUARE_BRACKET}"
+      The stderr should satisfy spec_expect_message    "Inspecting 2 service\(s\)."
       The stderr should satisfy spec_expect_no_message "${ADDING_OPTIONS}"
       The stderr should satisfy spec_expect_message    "Image.*${IMAGE_WITH_TAG}.*${IMAGE_NOT_EXIST}"
       The stderr should satisfy spec_expect_message    "${SKIP_UPDATING}.*${SERVICE_NAME}.*${SKIP_REASON_MANIFEST_FAILURE}"
@@ -202,7 +205,6 @@ Describe 'notify'
       The stderr should satisfy spec_expect_no_message "${FAILED_TO_REMOVE_IMAGES}"
       The stderr should satisfy spec_expect_no_message "${SKIP_NOTIFY_APPRISE}"
       The stderr should satisfy spec_expect_message    "${SEND_NOTIFY_APPRISE}"
-      The stderr should satisfy spec_expect_no_message "${USED_RATE_NAN}"
     End
   End
   Describe "test_notify_apprise_no_new_image"
@@ -236,6 +238,7 @@ Describe 'notify'
       The stdout should satisfy spec_expect_message    "${TOTAL_EMAIL_COUNT_IS_ONE}"
       The stderr should satisfy display_output
       The stderr should satisfy spec_expect_no_message "${START_WITHOUT_A_SQUARE_BRACKET}"
+      The stderr should satisfy spec_expect_message    "Inspecting 2 service\(s\)."
       The stderr should satisfy spec_expect_message    "${SKIP_UPDATING}.*${SERVICE_NAME}.*${SKIP_REASON_CURRENT_IS_LATEST}"
       The stderr should satisfy spec_expect_no_message "${PERFORM_UPDATING}.*${SERVICE_NAME}"
       The stderr should satisfy spec_expect_no_message "${NUM_SERVICES_SKIP_JOBS}"
@@ -262,7 +265,6 @@ Describe 'notify'
       The stderr should satisfy spec_expect_no_message "${FAILED_TO_REMOVE_IMAGES}"
       The stderr should satisfy spec_expect_no_message "${SKIP_NOTIFY_APPRISE}"
       The stderr should satisfy spec_expect_message    "${SEND_NOTIFY_APPRISE}"
-      The stderr should satisfy spec_expect_no_message "${USED_RATE_NAN}"
     End
   End
   Describe "test_notify_apprise_bad_url"
@@ -285,6 +287,7 @@ Describe 'notify'
       The stdout should satisfy spec_expect_no_message ".+"
       The stderr should satisfy display_output
       The stderr should satisfy spec_expect_no_message "${START_WITHOUT_A_SQUARE_BRACKET}"
+      The stderr should satisfy spec_expect_message    "Inspecting 2 service\(s\)."
       The stderr should satisfy spec_expect_no_message "${SKIP_UPDATING}.*${SERVICE_NAME}"
       The stderr should satisfy spec_expect_message    "${PERFORM_UPDATING}.*${SERVICE_NAME}.*${PERFORM_REASON_HAS_NEWER_IMAGE}"
       The stderr should satisfy spec_expect_no_message "${NUM_SERVICES_SKIP_JOBS}"
@@ -310,7 +313,6 @@ Describe 'notify'
       The stderr should satisfy spec_expect_no_message "${FAILED_TO_REMOVE_IMAGES}"
       The stderr should satisfy spec_expect_no_message "${SKIP_NOTIFY_APPRISE}"
       The stderr should satisfy spec_expect_message    "Failed to send notification via Apprise"
-      The stderr should satisfy spec_expect_no_message "${USED_RATE_NAN}"
     End
   End
   Describe "test_notify_on_change_new_image"
@@ -345,6 +347,7 @@ Describe 'notify'
       The stdout should satisfy spec_expect_message    "${TOTAL_EMAIL_COUNT_IS_ONE}"
       The stderr should satisfy display_output
       The stderr should satisfy spec_expect_no_message "${START_WITHOUT_A_SQUARE_BRACKET}"
+      The stderr should satisfy spec_expect_message    "Inspecting 2 service\(s\)."
       The stderr should satisfy spec_expect_no_message "${SKIP_UPDATING}.*${SERVICE_NAME}"
       The stderr should satisfy spec_expect_message    "${PERFORM_UPDATING}.*${SERVICE_NAME}.*${PERFORM_REASON_HAS_NEWER_IMAGE}"
       The stderr should satisfy spec_expect_no_message "${NUM_SERVICES_SKIP_JOBS}"
@@ -370,7 +373,6 @@ Describe 'notify'
       The stderr should satisfy spec_expect_no_message "${FAILED_TO_REMOVE_IMAGES}"
       The stderr should satisfy spec_expect_no_message "${SKIP_NOTIFY_APPRISE}"
       The stderr should satisfy spec_expect_message    "${SEND_NOTIFY_APPRISE}"
-      The stderr should satisfy spec_expect_no_message "${USED_RATE_NAN}"
     End
   End
   Describe "test_notify_on_change_no_updates"
@@ -398,6 +400,7 @@ Describe 'notify'
       The stdout should satisfy spec_expect_no_message "TEST_\\\\\"\\\\TITLE"
       The stderr should satisfy display_output
       The stderr should satisfy spec_expect_no_message "${START_WITHOUT_A_SQUARE_BRACKET}"
+      The stderr should satisfy spec_expect_message    "Inspecting 2 service\(s\)."
       The stderr should satisfy spec_expect_message    "${SKIP_UPDATING}.*${SERVICE_NAME}.*${SKIP_REASON_CURRENT_IS_LATEST}"
       The stderr should satisfy spec_expect_no_message "${PERFORM_UPDATING}.*${SERVICE_NAME}"
       The stderr should satisfy spec_expect_no_message "${NUM_SERVICES_SKIP_JOBS}"
@@ -424,7 +427,6 @@ Describe 'notify'
       The stderr should satisfy spec_expect_no_message "${FAILED_TO_REMOVE_IMAGES}"
       The stderr should satisfy spec_expect_message    "${NO_UPDATES_OR_ERRORS_FOR_NOTIFICATION}"
       The stderr should satisfy spec_expect_message    "${SKIP_SENDING_NOTIFICATION}"
-      The stderr should satisfy spec_expect_no_message "${USED_RATE_NAN}"
     End
   End
   Describe "test_notify_on_change_errors"
@@ -461,6 +463,7 @@ Describe 'notify'
       The stdout should satisfy spec_expect_message    "${TOTAL_EMAIL_COUNT_IS_ONE}"
       The stderr should satisfy display_output
       The stderr should satisfy spec_expect_no_message "${START_WITHOUT_A_SQUARE_BRACKET}"
+      The stderr should satisfy spec_expect_message    "Inspecting 2 service\(s\)."
       The stderr should satisfy spec_expect_no_message "${SKIP_UPDATING}.*${SERVICE_NAME}"
       The stderr should satisfy spec_expect_message    "${PERFORM_UPDATING}.*${SERVICE_NAME}.*${PERFORM_REASON_HAS_NEWER_IMAGE}"
       The stderr should satisfy spec_expect_no_message "${NUM_SERVICES_SKIP_JOBS}"
@@ -487,7 +490,6 @@ Describe 'notify'
       The stderr should satisfy spec_expect_no_message "${FAILED_TO_REMOVE_IMAGES}"
       The stderr should satisfy spec_expect_no_message "${SKIP_NOTIFY_APPRISE}"
       The stderr should satisfy spec_expect_message    "${SEND_NOTIFY_APPRISE}"
-      The stderr should satisfy spec_expect_no_message "${USED_RATE_NAN}"
     End
   End
 End # Describe 'Notify'
