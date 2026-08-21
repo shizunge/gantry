@@ -47,7 +47,8 @@ _remove_newline() {
 }
 
 _get_first_word() {
-  echo "${*}" | _remove_newline | sed -n -E "s/^(\S+).*/\1/p";
+  local LINE="${1}"
+  echo "${LINE%% *}"
 }
 
 # Run "grep -q" and avoid broken pipe errors.
@@ -95,49 +96,38 @@ extract_string() {
   echo "${ECHO_STRING}" | cut -d "${DELIMITER}" -f "${POSITION}"
 }
 
-# All lower or all upper. No mix.
-_log_level_to_upper() {
-  local LEVEL="${1}";
-  # tr is slow.
-  case "${LEVEL}" in
-    "debug") echo "DEBUG"; ;;
-    "info")  echo "INFO";  ;;
-    "warn")  echo "WARN";  ;;
-    "error") echo "ERROR"; ;;
-    "none")  echo "NONE";  ;;
-    *) echo "${LEVEL}"; ;;
-  esac
-}
-
-# Return 0 if the first work is a supported level.
+# Assume the input is a single word.
+# Return 0 if the first word is a supported level.
 # Return 1 else.
-_first_word_is_level() {
-  local MSG="${1}"
-  local LEN="${#MSG}"
-  local LEVEL=
-  [ "${LEN}" -lt 4 ] && return 1
-  if [ "${LEN}" = 4 ] || [ "${MSG:4:1}" = " " ]; then
-    LEVEL="${MSG:0:4}"
-  elif [ "${LEN}" = 5 ] || [ "${MSG:5:1}" = " " ]; then
-    LEVEL="${MSG:0:5}"
-  else
-    return 1
-  fi
-  LEVEL=$(_log_level_to_upper "${LEVEL}")
+_word_is_level() {
+  local LEVEL="${1}"
   case "${LEVEL}" in
-    "DEBUG") return 0; ;;
-    "INFO")  return 0; ;;
-    "WARN")  return 0; ;;
-    "ERROR") return 0; ;;
-    "NONE")  return 0; ;;
+    "DEBUG"|"debug") return 0; ;;
+    "INFO"|"info")   return 0; ;;
+    "WARN"|"warn")   return 0; ;;
+    "ERROR"|"error") return 0; ;;
+    "NONE"|"none")   return 0; ;;
     *) return 1; ;;
   esac
 }
 
-_log_skip_level_echo_color() {
-  local LEVEL="${1}";
+# Echo the color for the given LEVEL.
+# return 0 to skip logging.
+# return 1 otherwise.
+_log_skip_echo_color() {
   # Ideally, one function should do one thing.
   # But by merging two functions "_log_skip" and "log_color" into one, we reduce the number of "case" to improve performance.
+  local TARGET_LEVEL="${1}";
+  local LEVEL="${2}";
+  local TC=4
+  case "${TARGET_LEVEL}" in
+    "DEBUG"|"debug")  TC=0; ;;
+    "INFO"|"info"|"") TC=1; ;;
+    "WARN"|"warn")    TC=2; ;;
+    "ERROR"|"error")  TC=3; ;;
+    "NONE"|"none"|*)  TC=4; ;;
+  esac
+  local LC=4
   # local BLUE='\033[0;34m'
   # local GREEN='\033[0;32m'
   # local ORANGE='\033[0;33m'
@@ -146,39 +136,13 @@ _log_skip_level_echo_color() {
   # SC2028 (info): echo may not expand escape sequences. Use printf.
   # shellcheck disable=SC2028
   case "${LEVEL}" in
-    "DEBUG")   echo "\033[0;34m"; return "${2}"; ;;
-    "INFO"|"") echo "\033[0;32m"; return "${3}"; ;;
-    "WARN")    echo "\033[0;33m"; return "${4}"; ;;
-    "ERROR")   echo "\033[0;31m"; return "${5}"; ;;
-    "NONE"|*)  echo "\033[0m";    return "${6}"; ;;
+    "DEBUG"|"debug")  echo "\033[0;34m"; LC=0; ;;
+    "INFO"|"info"|"") echo "\033[0;32m"; LC=1; ;;
+    "WARN"|"warn")    echo "\033[0;33m"; LC=2; ;;
+    "ERROR"|"error")  echo "\033[0;31m"; LC=3; ;;
+    "NONE"|"none"|*)  echo "\033[0m";    LC=4; ;;
   esac
-}
-
-# Echo the color for the given LEVEL.
-# return 0 to skip logging.
-# return 1 otherwise.
-_log_skip_echo_color() {
-  local TARGET_LEVEL="${1}";
-  local LEVEL="${2}";
-  # This is 10% faster than the following command:
-  # _log_level() {
-  #   local LEVEL="${1}";
-  #   case "${LEVEL}" in
-  #     "DEBUG") echo 0; ;;
-  #     "INFO"|"") echo 1; ;;
-  #     "WARN") echo 2; ;;
-  #     "ERROR") echo 3; ;;
-  #     "NONE"|*) echo 4; ;;
-  #   esac
-  # }
-  # test "$(_log_level "${LEVEL}")" -lt "$(_log_level "${TARGET_LEVEL}")"; return $?
-  case "${TARGET_LEVEL}" in
-    "DEBUG")   _log_skip_level_echo_color "${LEVEL}" 1 1 1 1 1; ;;
-    "INFO"|"") _log_skip_level_echo_color "${LEVEL}" 0 1 1 1 1; ;;
-    "WARN")    _log_skip_level_echo_color "${LEVEL}" 0 0 1 1 1; ;;
-    "ERROR")   _log_skip_level_echo_color "${LEVEL}" 0 0 0 1 1; ;;
-    "NONE"|*)  _log_skip_level_echo_color "${LEVEL}" 0 0 0 0 1; ;;
-  esac
+  test "${LC}" -lt "${TC}"
 }
 
 # Reads from stdin and outputs the sanitized string to stdout
@@ -202,8 +166,6 @@ _log_formatter() {
   local EPOCH="${2}";
   local LOCATION="${3}";
   local SCOPE="${4}";
-  TARGET_LEVEL=$(_log_level_to_upper "${TARGET_LEVEL}")
-  LEVEL=$(_log_level_to_upper "${LEVEL}")
   local LEVEL_COLOR=
   LEVEL_COLOR=$(_log_skip_echo_color "${TARGET_LEVEL}" "${LEVEL}") && return 0;
   shift 4;
@@ -255,9 +217,10 @@ log() {
   local LOCAL_SCOPE="${LOG_SCOPE:-}"
   local LEVEL="INFO";
   local MESSAGE="${*}"
-  if _first_word_is_level "${1}"; then
-    LEVEL=$(_get_first_word "${MESSAGE}");
-    MESSAGE=$(extract_string "${MESSAGE}" ' ' 2-);
+  local FIRST_WORD="${MESSAGE%% *}"
+  if _word_is_level "${FIRST_WORD}"; then
+    LEVEL="${FIRST_WORD}"
+    MESSAGE="${MESSAGE#* }"
   fi
   local EPOCH=
   EPOCH=$(date +%s)
@@ -305,9 +268,10 @@ _log_docker_line() {
     SCOPE="${TASK_DOCKER}"
     # Remove the extra "+" we added above for preserving the leading spaces.
     MESSAGE="${MESSAGE:1}"
-    if _first_word_is_level "${MESSAGE}"; then
-      LEVEL=$(_get_first_word "${MESSAGE}");
-      MESSAGE=$(extract_string "${MESSAGE}" ' ' 2-);
+    local FIRST_WORD="${MESSAGE%% *}"
+    if _word_is_level "${FIRST_WORD}"; then
+      LEVEL="${FIRST_WORD}"
+      MESSAGE="${MESSAGE#* }"
     fi
   else
     # All three are empty, sed failure indicates errors.
